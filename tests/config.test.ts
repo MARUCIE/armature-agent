@@ -21,11 +21,21 @@ describe('config', () => {
 
   describe('resolveConfig', () => {
     it('returns defaults when no config exists', () => {
-      // Override global config's defaultProvider to test the schema default
-      const config = resolveConfig({ cwd: tempDir, flags: { defaultProvider: 'auto' } })
-      expect(config.defaultProvider).toBe('auto')
-      expect(config.maxTurns).toBe(25)
-      expect(config.permissionMode).toBe('default')
+      const originalPermissionMode = process.env.ORCA_PERMISSION_MODE
+      delete process.env.ORCA_PERMISSION_MODE
+      try {
+        // Override global config defaults so the schema defaults are asserted deterministically.
+        const config = resolveConfig({
+          cwd: tempDir,
+          flags: { defaultProvider: 'auto', permissionMode: 'default' },
+        })
+        expect(config.defaultProvider).toBe('auto')
+        expect(config.maxTurns).toBe(25)
+        expect(config.permissionMode).toBe('default')
+      } finally {
+        if (originalPermissionMode === undefined) delete process.env.ORCA_PERMISSION_MODE
+        else process.env.ORCA_PERMISSION_MODE = originalPermissionMode
+      }
     })
 
     it('flags override defaults', () => {
@@ -180,9 +190,15 @@ describe('config', () => {
       const saved = {
         POE_API_KEY: process.env.POE_API_KEY,
         OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+        GH_TOKEN: process.env.GH_TOKEN,
+        COPILOT_API_KEY: process.env.COPILOT_API_KEY,
+        ZENMUX_API_KEY: process.env.ZENMUX_API_KEY,
       }
       delete process.env.POE_API_KEY
       delete process.env.OPENROUTER_API_KEY
+      delete process.env.GH_TOKEN
+      delete process.env.COPILOT_API_KEY
+      delete process.env.ZENMUX_API_KEY
       try {
         const config = resolveConfig({ cwd: tempDir })
         // Also clear any provider configs that might have keys

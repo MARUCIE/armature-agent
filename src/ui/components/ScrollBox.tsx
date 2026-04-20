@@ -4,7 +4,7 @@
  * Implements CC-style viewport scrolling within ink's Yoga layout:
  * - Tracks scrollTop offset, renders content with negative marginTop
  * - stickyScroll: auto-follows bottom when new content is added
- * - Keyboard: PageUp/PageDown/Home/End for navigation
+ * - Keyboard: PageUp/PageDown and vim g/G for navigation
  * - Mouse wheel: via parent-injected onWheel (SGR mouse protocol)
  *
  * Uses ink's overflow="hidden" for viewport clipping.
@@ -27,6 +27,10 @@ export interface ScrollBoxHandle {
   isSticky(): boolean
   /** Current scroll position */
   getScrollTop(): number
+  /** Current total content height */
+  getScrollHeight(): number
+  /** Current visible viewport height */
+  getViewportHeight(): number
 }
 
 interface Props {
@@ -45,15 +49,29 @@ export const ScrollBox = forwardRef<ScrollBoxHandle, Props>(function ScrollBox(
   const [scrollTop, setScrollTop] = useState(0)
   const [sticky, setSticky] = useState(true)
   const [contentHeight, setContentHeight] = useState(0)
+  const [measuredViewportHeight, setMeasuredViewportHeight] = useState<number | null>(null)
+  const viewportRef = useRef<any>(null)
   const contentRef = useRef<any>(null)
-  const viewportHeight = height ?? rows
+  const viewportHeight = height ?? measuredViewportHeight ?? rows
 
-  // Measure content height after render
+  // Measure content and viewport height after render. When ScrollBox lives inside a
+  // flex column, the visible viewport is smaller than the terminal row count.
   useEffect(() => {
     if (contentRef.current) {
       try {
         const { height: h } = measureElement(contentRef.current)
-        setContentHeight(h)
+        setContentHeight(prev => prev === h ? prev : h)
+      } catch {
+        // measureElement may fail in test environment
+      }
+    }
+
+    if (height === undefined && viewportRef.current) {
+      try {
+        const { height: h } = measureElement(viewportRef.current)
+        if (h > 0) {
+          setMeasuredViewportHeight(prev => prev === h ? prev : h)
+        }
       } catch {
         // measureElement may fail in test environment
       }
@@ -98,7 +116,13 @@ export const ScrollBox = forwardRef<ScrollBoxHandle, Props>(function ScrollBox(
     getScrollTop() {
       return scrollTop
     },
-  }), [clampScroll, maxScroll, sticky, scrollTop])
+    getScrollHeight() {
+      return contentHeight
+    },
+    getViewportHeight() {
+      return viewportHeight
+    },
+  }), [clampScroll, contentHeight, maxScroll, scrollTop, sticky, viewportHeight])
 
   // Keyboard scroll (only when explicitly enabled and content overflows)
   useInput(
@@ -146,6 +170,7 @@ export const ScrollBox = forwardRef<ScrollBoxHandle, Props>(function ScrollBox(
 
   return (
     <Box
+      ref={viewportRef}
       flexDirection="column"
       flexGrow={height ? undefined : 1}
       height={height}

@@ -1,0 +1,13 @@
+{
+  "id": "fast-pack-dry-run",
+  "title": "Pack dry-run still ships the built Orca entrypoints",
+  "description": "Release-smoke task for `npm pack --json --dry-run`.",
+  "input": "Run `npm pack --json --dry-run` after ensuring the build output exists, then verify the tarball manifest still includes the shipped Orca bin and dist index entrypoints.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; npm pack --json --dry-run 2>/dev/null | tr -cd \"\\11\\12\\15\\40-\\176\"'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "pack_dry_run_has_orca_bin",
+    "pack_dry_run_has_dist_index"
+  ]
+}

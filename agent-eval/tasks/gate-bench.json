@@ -1,0 +1,15 @@
+{
+  "id": "gate-bench",
+  "title": "Benchmark gate",
+  "description": "Run the shipped benchmark in JSON mode and persist its report for the release bundle.",
+  "input": "Build if needed, run `orca bench --json`, and require a passing benchmark score.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; mkdir -p \"$ORCA_EVAL_RUN_DIR/artifacts\"; node dist/bin/orca.js bench --json | tee \"$ORCA_EVAL_RUN_DIR/artifacts/gate-bench.json\"'",
+  "artifacts": [
+    "${ORCA_EVAL_RUN_DIR}/artifacts/gate-bench.json"
+  ],
+  "graders": [
+    "exit_code_ok",
+    "gate_bench_writes_report",
+    "gate_bench_has_score_100"
+  ]
+}

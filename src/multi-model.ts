@@ -94,7 +94,7 @@ const MULTI_MODEL_SYSTEM = 'You are part of a multi-model council running inside
 
 async function callModel(endpoint: ModelEndpoint, prompt: string, signal?: AbortSignal) {
   return chatOnce(
-    { apiKey: endpoint.apiKey, baseURL: endpoint.baseURL, model: endpoint.model, systemPrompt: MULTI_MODEL_SYSTEM },
+    { apiKey: endpoint.apiKey, baseURL: endpoint.baseURL, model: endpoint.model, systemPrompt: MULTI_MODEL_SYSTEM, headers: endpoint.headers, reasoningEffort: endpoint.reasoningEffort },
     prompt,
     signal,
   )

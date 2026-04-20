@@ -1,0 +1,2510 @@
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/QUICK_START.md orca-cli-pkg/QUICK_START.md
+--- orca-cli-pkg-orig/QUICK_START.md	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/QUICK_START.md	2026-04-20 02:06:16.308667534 +0000
+@@ -1,6 +1,6 @@
+ # @orca-pt/cli - Quick Start Guide
+ 
+-Get your Orca AI agent running in less than 2 minutes! ⚡
++Get your Orca AI agent running from a clean CLI flow.
+ 
+ ## Installation
+ 
+@@ -18,9 +18,9 @@
+ 
+ ```bash
+ npm install -g @orca-pt/cli
+-orcapt kickstart python
++orca kickstart python
+ # or
+-orcapt kickstart node
++orca kickstart node
+ ```
+ 
+ ### Method 3: Install from source
+@@ -29,7 +29,7 @@
+ cd orca-cli
+ npm install
+ npm link
+-orcapt kickstart python  # or node
++orca kickstart python  # or node
+ ```
+ 
+ ## Basic Usage
+@@ -39,13 +39,13 @@
+ **Python Agent:**
+ 
+ ```bash
+-orcapt kickstart python
++orca kickstart python
+ ```
+ 
+ **Node.js Agent:**
+ 
+ ```bash
+-orcapt kickstart node
++orca kickstart node
+ ```
+ 
+ This command will:
+@@ -56,20 +56,20 @@
+ - Set up everything automatically
+ - Start both backend and frontend servers
+ 
+-**Done!** Open http://localhost:3000 in your browser 🎉
++**Done.** Open http://localhost:3000 in your browser.
+ 
+ ### 2. Other Languages
+ 
+ **Node.js (Available Now):**
+ 
+ ```bash
+-orcapt kickstart node
++orca kickstart node
+ ```
+ 
+ **Go (Coming Soon):**
+ 
+ ```bash
+-orcapt kickstart go
++orca kickstart go
+ ```
+ 
+ ### 3. Custom Setup
+@@ -78,26 +78,26 @@
+ 
+ ```bash
+ # Custom directory name
+-orcapt kickstart python --directory my-ai-agent
++orca kickstart python --directory my-ai-agent
+ 
+ # Custom ports
+-orcapt kickstart python --port 8080 --agent-port 8000
++orca kickstart python --port 8080 --agent-port 8000
+ 
+ # Setup without auto-start
+-orcapt kickstart python --no-start
++orca kickstart python --no-start
+ ```
+ 
+ **Node.js:**
+ 
+ ```bash
+ # Custom directory name
+-orcapt kickstart node --directory my-node-agent
++orca kickstart node --directory my-node-agent
+ 
+ # Custom ports
+-orcapt kickstart node --port 8080 --agent-port 8000
++orca kickstart node --port 8080 --agent-port 8000
+ 
+ # Setup without auto-start
+-orcapt kickstart node --no-start
++orca kickstart node --no-start
+ ```
+ 
+ ### 4. Stopping Servers
+@@ -159,7 +159,7 @@
+ 
+ ```bash
+ # Use different ports
+-orcapt kickstart python --port 4000 --agent-port 5000
++orca kickstart python --port 4000 --agent-port 5000
+ ```
+ 
+ ### Directory Already Exists?
+@@ -169,7 +169,7 @@
+ rm -rf orca-kickstart
+ 
+ # Or use a different name
+-orcapt kickstart python --directory my-new-agent
++orca kickstart python --directory my-new-agent
+ ```
+ 
+ ## Manual Control
+@@ -187,16 +187,16 @@
+ python main.py --dev
+ 
+ # In another terminal, start frontend
+-npx -y @orcapt/ui --port=3000 --agent-port=5001
++npx -y @orcapt/ui orca --port=3000 --agent-port=5001
+ ```
+ 
+ ## Example Session
+ 
+ ```bash
+-$ orcapt kickstart python
++$ orca kickstart python
+ 
+ ============================================================
+-🚀 Orca Kickstart - Python
++Orca Kickstart - Python
+ ============================================================
+ 
+ ✓ Python found: python3
+@@ -221,7 +221,7 @@
+ ✓ Frontend started (PID: 12346)
+ 
+ ============================================================
+-🎉 Orca is running!
++Orca is running
+ ============================================================
+ 
+ Frontend: http://localhost:3000
+@@ -238,4 +238,4 @@
+ 
+ ---
+ 
+-**Ready to build amazing AI agents? Let's go! 🚀**
++**Ready to build AI agents.**
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/README.md orca-cli-pkg/README.md
+--- orca-cli-pkg-orig/README.md	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/README.md	2026-04-20 02:06:16.308157331 +0000
+@@ -20,7 +20,7 @@
+ 
+ ## Requirements
+ 
+-- Node.js 14+
++- Node.js 16+
+ - Docker (for `ship deploy`)
+ - Valid workspace token
+ - Access to an Orca API environment
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/bin/orca.js orca-cli-pkg/bin/orca.js
+--- orca-cli-pkg-orig/bin/orca.js	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/bin/orca.js	2026-04-20 02:01:09.706394323 +0000
+@@ -9,25 +9,48 @@
+ const chalk = require('chalk');
+ const path = require('path');
+ const fs = require('fs');
+-const kickstartPython = require('../src/commands/kickstart-python');
+-const kickstartNode = require('../src/commands/kickstart-node');
+ const { login, isLoggedIn, getCredentials, clearCredentials } = require('../src/commands/login');
+-const { uiInit, uiStart, uiRemove } = require('../src/commands/ui');
+-const { dbCreate, dbList, dbRemove } = require('../src/commands/db');
+-const { listAgents, showAgent } = require('../src/commands/agents');
+-const fetchDoc = require('../src/commands/fetch-doc');
+-const {
+-  bucketCreate,
+-  bucketList,
+-  bucketInfo,
+-  bucketDelete,
+-  fileUpload,
+-  fileDownload,
+-  fileList,
+-  fileDelete
+-} = require('../src/commands/storage');
+-const { lambdaDeploy, lambdaList, lambdaInvoke, lambdaLogs, lambdaRemove, lambdaInfo } = require('../src/commands/lambda');
+-const { ec2Deploy, ec2Stop, ec2Status, ec2Logs } = require('../src/commands/ship-ec2');
++
++function lazyCommand(modulePath, exportName) {
++  return (...args) => {
++    const loaded = require(modulePath);
++    const handler = exportName ? loaded[exportName] : loaded;
++    if (typeof handler !== 'function') {
++      throw new Error(`Command handler not found: ${modulePath}${exportName ? `#${exportName}` : ''}`);
++    }
++    return handler(...args);
++  };
++}
++
++const kickstartPython = lazyCommand('../src/commands/kickstart-python');
++const kickstartNode = lazyCommand('../src/commands/kickstart-node');
++const uiInit = lazyCommand('../src/commands/ui', 'uiInit');
++const uiStart = lazyCommand('../src/commands/ui', 'uiStart');
++const uiRemove = lazyCommand('../src/commands/ui', 'uiRemove');
++const dbCreate = lazyCommand('../src/commands/db', 'dbCreate');
++const dbList = lazyCommand('../src/commands/db', 'dbList');
++const dbRemove = lazyCommand('../src/commands/db', 'dbRemove');
++const listAgents = lazyCommand('../src/commands/agents', 'listAgents');
++const showAgent = lazyCommand('../src/commands/agents', 'showAgent');
++const fetchDoc = lazyCommand('../src/commands/fetch-doc');
++const bucketCreate = lazyCommand('../src/commands/storage', 'bucketCreate');
++const bucketList = lazyCommand('../src/commands/storage', 'bucketList');
++const bucketInfo = lazyCommand('../src/commands/storage', 'bucketInfo');
++const bucketDelete = lazyCommand('../src/commands/storage', 'bucketDelete');
++const fileUpload = lazyCommand('../src/commands/storage', 'fileUpload');
++const fileDownload = lazyCommand('../src/commands/storage', 'fileDownload');
++const fileList = lazyCommand('../src/commands/storage', 'fileList');
++const fileDelete = lazyCommand('../src/commands/storage', 'fileDelete');
++const lambdaDeploy = lazyCommand('../src/commands/lambda', 'lambdaDeploy');
++const lambdaList = lazyCommand('../src/commands/lambda', 'lambdaList');
++const lambdaInvoke = lazyCommand('../src/commands/lambda', 'lambdaInvoke');
++const lambdaLogs = lazyCommand('../src/commands/lambda', 'lambdaLogs');
++const lambdaRemove = lazyCommand('../src/commands/lambda', 'lambdaRemove');
++const lambdaInfo = lazyCommand('../src/commands/lambda', 'lambdaInfo');
++const ec2Deploy = lazyCommand('../src/commands/ship-ec2', 'ec2Deploy');
++const ec2Stop = lazyCommand('../src/commands/ship-ec2', 'ec2Stop');
++const ec2Status = lazyCommand('../src/commands/ship-ec2', 'ec2Status');
++const ec2Logs = lazyCommand('../src/commands/ship-ec2', 'ec2Logs');
+ 
+ // Read version from package.json
+ const packageJson = JSON.parse(
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/package-lock.json orca-cli-pkg/package-lock.json
+--- orca-cli-pkg-orig/package-lock.json	2026-04-20 01:57:16.949400077 +0000
++++ orca-cli-pkg/package-lock.json	2026-04-20 02:04:09.684984224 +0000
+@@ -21,7 +21,7 @@
+         "orcapt": "bin/orca.js"
+       },
+       "engines": {
+-        "node": ">=14.0.0"
++        "node": ">=16.0.0"
+       }
+     },
+     "node_modules/@inquirer/external-editor": {
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/package.json orca-cli-pkg/package.json
+--- orca-cli-pkg-orig/package.json	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/package.json	2026-04-20 02:04:46.073089011 +0000
+@@ -8,13 +8,14 @@
+     "orcapt": "bin/orca.js"
+   },
+   "scripts": {
+-    "test": "echo \"Error: no test specified\" && exit 1",
++    "test": "node test/smoke.test.js",
+     "dev": "node bin/orca.js",
+     "link": "npm link",
+     "unlink": "npm unlink -g @orca-pt/cli",
+     "dev:help": "node bin/orca.js --help",
+     "dev:login": "node bin/orca.js login",
+-    "dev:db": "node bin/orca.js db list"
++    "dev:db": "node bin/orca.js db list",
++    "test:syntax": "node test/smoke.test.js --syntax-only"
+   },
+   "keywords": [
+     "orca",
+@@ -27,7 +28,7 @@
+   "author": "Orcapt",
+   "license": "MIT",
+   "engines": {
+-    "node": ">=14.0.0"
++    "node": ">=16.0.0"
+   },
+   "dependencies": {
+     "chalk": "^4.1.2",
+@@ -51,7 +52,8 @@
+     "orca-kickstart/",
+     "README.md",
+     "LICENSE",
+-    "QUICK_START.md"
++    "QUICK_START.md",
++    "test/"
+   ],
+   "publishConfig": {
+     "access": "public"
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/src/commands/agents.js orca-cli-pkg/src/commands/agents.js
+--- orca-cli-pkg-orig/src/commands/agents.js	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/src/commands/agents.js	2026-04-20 02:02:19.256892185 +0000
+@@ -5,11 +5,11 @@
+ 
+ const chalk = require('chalk');
+ const ora = require('ora');
+-const https = require('https');
+-const http = require('http');
+ const { getCredentials } = require('./login');
+ const { API_BASE_URL, API_ENDPOINTS } = require('../config');
+ const { handleError } = require('../utils/errorHandler');
++const { makeJsonRequest } = require('../utils/api');
++const { parseInteger, appendQuery, replacePathParams } = require('../utils/cli');
+ 
+ function formatAgentType(type) {
+   if (type === 'agentic_system') return 'Connected Agentic AI';
+@@ -17,46 +17,16 @@
+   return type || 'n/a';
+ }
+ 
+-function makeApiRequest(method, endpoint, credentials, query = '') {
+-  return new Promise((resolve, reject) => {
+-    const url = new URL(endpoint + query, API_BASE_URL);
+-    const isHttps = url.protocol === 'https:';
+-    const httpModule = isHttps ? https : http;
+-
+-    const options = {
+-      hostname: url.hostname,
+-      port: url.port || (isHttps ? 443 : 80),
+-      path: `${url.pathname}${url.search}`,
+-      method,
+-      headers: {
+-        'X-Workspace': credentials.token,
+-        'X-Tenant': credentials.tenant || credentials.workspace,
+-        'Accept': 'application/json'
+-      }
+-    };
+-
+-    const req = httpModule.request(options, (res) => {
+-      let data = '';
+-      res.on('data', (chunk) => { data += chunk; });
+-      res.on('end', () => {
+-        try {
+-          const response = data ? JSON.parse(data) : {};
+-          if (res.statusCode >= 200 && res.statusCode < 300) {
+-            resolve(response);
+-          } else {
+-            reject({ statusCode: res.statusCode, response });
+-          }
+-        } catch (error) {
+-          reject(new Error(`Invalid response: ${data}`));
+-        }
+-      });
+-    });
+-
+-    req.on('error', reject);
+-    req.end();
++function makeApiRequest(method, endpoint, credentials) {
++  return makeJsonRequest({
++    method,
++    endpoint,
++    credentials,
++    authStyle: 'tenantToken'
+   });
+ }
+ 
++
+ async function listAgents(options = {}) {
+   console.log(chalk.cyan('\n============================================================'));
+   console.log(chalk.cyan('🤖 Listing Agents'));
+@@ -69,14 +39,18 @@
+     process.exit(1);
+   }
+ 
+-  const params = new URLSearchParams();
+-  if (options.search) params.set('search', options.search);
+-  if (options.perPage) params.set('per_page', String(options.perPage));
+-  const query = params.toString() ? `?${params.toString()}` : '';
++  let endpoint;
++  try {
++    const perPage = parseInteger(options.perPage || 50, { name: '--per-page', min: 1, max: 1000 });
++    endpoint = appendQuery(API_ENDPOINTS.AGENTS_LIST, { search: options.search, per_page: perPage });
++  } catch (error) {
++    console.log(chalk.red(`✗ ${error.message}\n`));
++    process.exit(1);
++  }
+ 
+   const spinner = ora('Fetching agents...').start();
+   try {
+-    const response = await makeApiRequest('GET', API_ENDPOINTS.AGENTS_LIST, credentials, query);
++    const response = await makeApiRequest('GET', endpoint, credentials);
+     spinner.succeed(chalk.green('Agents retrieved'));
+ 
+     const payload = response.result || {};
+@@ -118,7 +92,7 @@
+     process.exit(1);
+   }
+ 
+-  const endpoint = API_ENDPOINTS.AGENT_INFO.replace('{identifier}', encodeURIComponent(identifier));
++  const endpoint = replacePathParams(API_ENDPOINTS.AGENT_INFO, { identifier });
+   const spinner = ora('Fetching agent details...').start();
+   try {
+     const response = await makeApiRequest('GET', endpoint, credentials);
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/src/commands/db.js orca-cli-pkg/src/commands/db.js
+--- orca-cli-pkg-orig/src/commands/db.js	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/src/commands/db.js	2026-04-20 02:02:19.256469323 +0000
+@@ -5,60 +5,22 @@
+ 
+ const chalk = require('chalk');
+ const ora = require('ora');
+-const https = require('https');
+-const http = require('http');
+ const { getCredentials } = require('./login');
+ const { API_BASE_URL, API_ENDPOINTS } = require('../config');
+ const { handleError } = require('../utils/errorHandler');
++const { makeJsonRequest } = require('../utils/api');
++const { maskSecret } = require('../utils/cli');
+ 
+ /**
+  * Make API request to orcapt Deploy API
+  */
+-function makeApiRequest(method, path, credentials) {
+-  return new Promise((resolve, reject) => {
+-    const url = new URL(path, API_BASE_URL);
+-    const isHttps = url.protocol === 'https:';
+-    const httpModule = isHttps ? https : http;
+-
+-    const options = {
+-      hostname: url.hostname,
+-      port: url.port || (isHttps ? 443 : 80),
+-      path: url.pathname,
+-      method: method,
+-      headers: {
+-        'x-workspace': credentials.workspace,
+-        'x-token': credentials.token,
+-        'Content-Type': 'application/json',
+-        'x-mode' : credentials.mode || 'team'
+-      }
+-    };
+-
+-    const req = httpModule.request(options, (res) => {
+-      let data = '';
+-
+-      res.on('data', (chunk) => {
+-        data += chunk;
+-      });
+-
+-      res.on('end', () => {
+-        try {
+-          const response = JSON.parse(data);
+-          if (res.statusCode >= 200 && res.statusCode < 300) {
+-            resolve(response);
+-          } else {
+-            reject({ statusCode: res.statusCode, response });
+-          }
+-        } catch (error) {
+-          reject(new Error(`Invalid response: ${data}`));
+-        }
+-      });
+-    });
+-
+-    req.on('error', (error) => {
+-      reject(error);
+-    });
+-
+-    req.end();
++function makeApiRequest(method, endpoint, credentials, body = null) {
++  return makeJsonRequest({
++    method,
++    endpoint,
++    credentials,
++    body,
++    authStyle: 'legacyWorkspaceToken'
+   });
+ }
+ 
+@@ -96,16 +58,17 @@
+     console.log(chalk.white('Database:  '), chalk.yellow(response.database_name));
+     console.log(chalk.white('Schema:    '), chalk.yellow(response.schema_name));
+     console.log(chalk.white('Username:  '), chalk.yellow(response.username));
+-    console.log(chalk.white('Password:  '), chalk.yellow(response.password));
++    console.log(chalk.white('Password:  '), chalk.yellow(maskSecret(response.password)));
++    console.log(chalk.gray('           Full password is only available from the API response; avoid printing it in shared terminals.'));
+     console.log(chalk.white('Workspace: '), chalk.yellow(response.workspace_name));
+     
+     console.log(chalk.cyan('\n📋 Connection String:'));
+     // Use the connection string from the response if available
+     const connString = response.connection_info?.connection_string || 
+       `postgresql://${response.username}:${response.password}@localhost:6432/${response.database_name}?options=-csearch_path%3D${response.schema_name}`;
+-    console.log(chalk.yellow(`   ${connString}`));
++    console.log(chalk.yellow(`   ${connString.replace(response.password || '', maskSecret(response.password || ''))}`));
+     
+-    console.log(chalk.cyan('\n💡 Save these credentials - they won\'t be shown again!'));
++    console.log(chalk.cyan('\n💡 Pull the raw connection details from the API/UI when you are ready to store them in a secret manager.'));
+     console.log(chalk.cyan('============================================================\n'));
+ 
+   } catch (error) {
+@@ -145,7 +108,7 @@
+     
+     if (response.count === 0) {
+       console.log(chalk.yellow('No databases found'));
+-      console.log(chalk.cyan('\nCreate one with:'), chalk.white('orcapt db create --postgres'));
++      console.log(chalk.cyan('\nCreate one with:'), chalk.white('orca db create --postgres'));
+     } else {
+       console.log(chalk.green(`✓ Found ${response.count} database${response.count > 1 ? 's' : ''}`));
+       console.log(chalk.cyan('============================================================\n'));
+@@ -173,7 +136,7 @@
+ async function dbRemove(databaseName) {
+   if (!databaseName) {
+     console.log(chalk.red('\n✗ Database name is required'));
+-    console.log(chalk.cyan('Usage:'), chalk.white('orcapt db remove <database-name>\n'));
++    console.log(chalk.cyan('Usage:'), chalk.white('orca db remove <database-name>\n'));
+     process.exit(1);
+   }
+ 
+@@ -196,7 +159,7 @@
+ 
+   try {
+     // Delete a single schema under the workspace database
+-    const response = await makeApiRequest('DELETE', `${API_ENDPOINTS.DB_DELETE}/${databaseName}`, credentials);
++    const response = await makeApiRequest('DELETE', `${API_ENDPOINTS.DB_DELETE}/${encodeURIComponent(databaseName)}`, credentials);
+ 
+     spinner.succeed(chalk.green('Database deleted successfully!'));
+ 
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/src/commands/kickstart-node.js orca-cli-pkg/src/commands/kickstart-node.js
+--- orca-cli-pkg-orig/src/commands/kickstart-node.js	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/src/commands/kickstart-node.js	2026-04-20 02:03:42.571507292 +0000
+@@ -7,14 +7,15 @@
+ const chalk = require('chalk');
+ const inquirer = require('inquirer');
+ const ora = require('ora');
+-const simpleGit = require('simple-git');
+ const {
+   commandExists,
+   spawnBackground,
++  waitForPort,
+   ensurePortAvailable,
+   print
+ } = require('../utils');
+ const { GITHUB_REPOS } = require('../config');
++const { parsePort } = require('../utils/cli');
+ 
+ const REPO_URL = GITHUB_REPOS.NODE_STARTER;
+ 
+@@ -88,6 +89,7 @@
+   const spinner = ora('Cloning Orcapt Node.js starter kit from GitHub...').start();
+   
+   try {
++    const simpleGit = require('simple-git');
+     const git = simpleGit();
+     await git.clone(REPO_URL, directory);
+     spinner.succeed(chalk.green('Repository cloned successfully'));
+@@ -234,15 +236,12 @@
+   try {
+     const agentProcess = spawnBackground('node', ['main.js', '--dev'], {
+       cwd: projectPath,
+-      env: { ...process.env, PORT: agentPort }
++      env: { ...process.env, PORT: String(agentPort) }
+     });
+ 
+-    // Wait a bit for the server to start
+-    await new Promise(resolve => setTimeout(resolve, 2000));
+-
+-    // Check if process is still running
+-    if (agentProcess.exitCode !== null) {
+-      throw new Error('Agent process exited immediately');
++    const started = await waitForPort(agentPort, 30000);
++    if (!started || agentProcess.exitCode !== null) {
++      throw new Error('Agent process did not become ready on the expected port');
+     }
+ 
+     spinner.succeed(chalk.green(`Agent started (PID: ${agentProcess.pid})`));
+@@ -260,22 +259,30 @@
+   const spinner = ora(`Starting Orcapt-UI server on port ${port}...`).start();
+   
+   try {
+-    const uiProcess = spawnBackground('npx', [
+-      '-y',
+-      '@orcapt/ui',
+-      'orcapt',
+-      `--port=${port}`,
+-      `--agent-port=${agentPort}`
+-    ], {
+-      cwd: projectPath
+-    });
++    const tryStart = async (pkgOrBin) => {
++      const proc = spawnBackground('npx', [
++        '-y',
++        pkgOrBin,
++        'orca',
++        `--port=${port}`,
++        `--agent-port=${agentPort}`
++      ], {
++        cwd: projectPath
++      });
+ 
+-    // Wait for UI to start
+-    await new Promise(resolve => setTimeout(resolve, 3000));
++      const started = await waitForPort(port, 30000);
++      if (!started || proc.exitCode !== null) {
++        if (!proc.killed) proc.kill();
++        throw new Error(`Orcapt-UI process did not become ready (${pkgOrBin})`);
++      }
++      return proc;
++    };
+ 
+-    // Check if process is still running
+-    if (uiProcess.exitCode !== null) {
+-      throw new Error('Orcapt-UI process exited immediately');
++    let uiProcess;
++    try {
++      uiProcess = await tryStart('@orcapt/ui');
++    } catch (_) {
++      uiProcess = await tryStart('orcapt-ui');
+     }
+ 
+     spinner.succeed(chalk.green(`Orcapt-UI started (PID: ${uiProcess.pid})`));
+@@ -291,7 +298,9 @@
+  */
+ async function kickstartNode(options) {
+   try {
+-    const { directory, port, agentPort, start } = options;
++    const { directory, start } = options;
++    const port = parsePort(options.port || 3000, '--port');
++    const agentPort = parsePort(options.agentPort || 5001, '--agent-port');
+     
+     print.title('🚀 Orcapt Kickstart - Node.js');
+ 
+@@ -301,10 +310,17 @@
+     // Check if directory exists
+     const projectPath = path.resolve(process.cwd(), directory);
+     
++    let directoryExists = false;
+     try {
+       await fs.access(projectPath);
++      directoryExists = true;
++    } catch (error) {
++      if (error.code !== 'ENOENT') throw error;
++    }
++
++    if (directoryExists) {
+       print.error(`Directory '${directory}' already exists`);
+-      
++
+       const { shouldRemove } = await inquirer.prompt([
+         {
+           type: 'confirm',
+@@ -319,8 +335,6 @@
+       }
+ 
+       await fs.rm(projectPath, { recursive: true, force: true });
+-    } catch (error) {
+-      // Directory doesn't exist, which is fine
+     }
+ 
+     // Create directory
+@@ -353,7 +367,7 @@
+       console.log(chalk.gray(`  cd ${directory}`));
+       console.log(chalk.gray(`  node main.js --dev`));
+       console.log(chalk.gray(`  # In another terminal:`));
+-      console.log(chalk.gray(`  npx -y @orcapt/ui orcapt --port=${port} --agent-port=${agentPort}`));
++      console.log(chalk.gray(`  npx -y @orcapt/ui orca --port=${port} --agent-port=${agentPort}`));
+       console.log();
+       return;
+     }
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/src/commands/kickstart-python.js orca-cli-pkg/src/commands/kickstart-python.js
+--- orca-cli-pkg-orig/src/commands/kickstart-python.js	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/src/commands/kickstart-python.js	2026-04-20 02:03:42.570678557 +0000
+@@ -7,7 +7,6 @@
+ const chalk = require('chalk');
+ const inquirer = require('inquirer');
+ const ora = require('ora');
+-const simpleGit = require('simple-git');
+ const {
+   commandExists,
+   getPythonCommand,
+@@ -20,6 +19,7 @@
+   print
+ } = require('../utils');
+ const { GITHUB_REPOS } = require('../config');
++const { parsePort } = require('../utils/cli');
+ 
+ const REPO_URL = GITHUB_REPOS.PYTHON_STARTER;
+ 
+@@ -94,6 +94,7 @@
+   const spinner = ora('Cloning Orcapt starter kit from GitHub...').start();
+   
+   try {
++    const simpleGit = require('simple-git');
+     const git = simpleGit();
+     await git.clone(REPO_URL, directory);
+     spinner.succeed(chalk.green('Repository cloned successfully'));
+@@ -152,15 +153,12 @@
+     const pythonPath = path.join(projectPath, venvPaths.python);
+     const backendProcess = spawnBackground(pythonPath, ['main.py', '--dev'], {
+       cwd: projectPath,
+-      env: { ...process.env, PORT: agentPort }
++      env: { ...process.env, PORT: String(agentPort) }
+     });
+ 
+-    // Wait a bit for the server to start
+-    await new Promise(resolve => setTimeout(resolve, 2000));
+-
+-    // Check if process is still running
+-    if (backendProcess.exitCode !== null) {
+-      throw new Error('Backend process exited immediately');
++    const started = await waitForPort(agentPort, 30000);
++    if (!started || backendProcess.exitCode !== null) {
++      throw new Error('Backend process did not become ready on the expected port');
+     }
+ 
+     spinner.succeed(chalk.green(`Agent started (PID: ${backendProcess.pid})`));
+@@ -182,24 +180,23 @@
+       const proc = spawnBackground('npx', [
+         '-y',
+         pkgOrBin,
++        'orca',
+         `--port=${port}`,
+         `--agent-port=${agentPort}`
+       ], { cwd: projectPath });
+-      // Wait for frontend to start
+-      await new Promise(resolve => setTimeout(resolve, 3000));
+-      if (proc.exitCode !== null) {
+-        throw new Error(`Frontend process exited immediately (${pkgOrBin})`);
++      const started = await waitForPort(port, 30000);
++      if (!started || proc.exitCode !== null) {
++        if (!proc.killed) proc.kill();
++        throw new Error(`Frontend process did not become ready (${pkgOrBin})`);
+       }
+       return proc;
+     };
+ 
+     let frontendProcess;
+     try {
+-      // Prefer new bin name
+-      frontendProcess = await tryStart('orcapt-ui');
+-    } catch (_) {
+-      // Fallback to package name
+       frontendProcess = await tryStart('@orcapt/ui');
++    } catch (_) {
++      frontendProcess = await tryStart('orcapt-ui');
+     }
+ 
+     spinner.succeed(chalk.green(`Orcapt-UI started (PID: ${frontendProcess.pid})`));
+@@ -215,7 +212,9 @@
+  */
+ async function kickstart(options) {
+   try {
+-    const { directory, port, agentPort, start } = options;
++    const { directory, start } = options;
++    const port = parsePort(options.port || 3000, '--port');
++    const agentPort = parsePort(options.agentPort || 5001, '--agent-port');
+     
+     print.title('🚀 Orcapt Kickstart - Python');
+ 
+@@ -225,10 +224,17 @@
+     // Check if directory exists
+     const projectPath = path.resolve(process.cwd(), directory);
+     
++    let directoryExists = false;
+     try {
+       await fs.access(projectPath);
++      directoryExists = true;
++    } catch (error) {
++      if (error.code !== 'ENOENT') throw error;
++    }
++
++    if (directoryExists) {
+       print.error(`Directory '${directory}' already exists`);
+-      
++
+       const { shouldRemove } = await inquirer.prompt([
+         {
+           type: 'confirm',
+@@ -243,8 +249,6 @@
+       }
+ 
+       await fs.rm(projectPath, { recursive: true, force: true });
+-    } catch (error) {
+-      // Directory doesn't exist, which is fine
+     }
+ 
+     // Create directory
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/src/commands/lambda.js orca-cli-pkg/src/commands/lambda.js
+--- orca-cli-pkg-orig/src/commands/lambda.js	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/src/commands/lambda.js	2026-04-20 02:02:02.736826799 +0000
+@@ -5,13 +5,13 @@
+ 
+ const chalk = require('chalk');
+ const ora = require('ora');
+-const https = require('https');
+-const http = require('http');
+ const fs = require('fs');
+ const path = require('path');
+ const { getCredentials } = require('./login');
+ const { API_BASE_URL, API_ENDPOINTS } = require('../config');
+ const { handleError } = require('../utils/errorHandler');
++const { makeJsonRequest } = require('../utils/api');
++const { parseInteger, parseKeyValue, displayEnvValue, replacePathParams, appendQuery } = require('../utils/cli');
+ const {
+   checkDockerInstalled,
+   checkDockerImage,
+@@ -23,54 +23,12 @@
+  * Make API request to Orcapt Deploy API
+  */
+ function makeApiRequest(method, endpoint, credentials, body = null) {
+-  return new Promise((resolve, reject) => {
+-    const url = new URL(endpoint, API_BASE_URL);
+-    const isHttps = url.protocol === 'https:';
+-    const httpModule = isHttps ? https : http;
+-
+-    const options = {
+-      hostname: url.hostname,
+-      port: url.port || (isHttps ? 443 : 80),
+-      path: `${url.pathname}${url.search}`,
+-      method: method,
+-      headers: {
+-        'X-Workspace': credentials.token,
+-        'X-Tenant': credentials.tenant || credentials.workspace,
+-        'Content-Type': 'application/json',
+-        'Accept': 'application/json'
+-      }
+-    };
+-
+-    const req = httpModule.request(options, (res) => {
+-      let data = '';
+-
+-      res.on('data', (chunk) => {
+-        data += chunk;
+-      });
+-
+-      res.on('end', () => {
+-        try {
+-          const response = JSON.parse(data);
+-          if (res.statusCode >= 200 && res.statusCode < 300) {
+-            resolve(response);
+-          } else {
+-            reject({ statusCode: res.statusCode, response });
+-          }
+-        } catch (error) {
+-          reject(new Error(`Invalid response: ${data}`));
+-        }
+-      });
+-    });
+-
+-    req.on('error', (error) => {
+-      reject(error);
+-    });
+-
+-    if (body) {
+-      req.write(JSON.stringify(body));
+-    }
+-
+-    req.end();
++  return makeJsonRequest({
++    method,
++    endpoint,
++    credentials,
++    body,
++    authStyle: 'tenantToken'
+   });
+ }
+ 
+@@ -99,7 +57,17 @@
+ 
+   if (!options.image) {
+     console.log(chalk.red('✗ Docker image is required'));
+-    console.log(chalk.cyan('Usage:'), chalk.white('orcapt lambda deploy <function-name> --image <docker-image>\n'));
++    console.log(chalk.cyan('Usage:'), chalk.white('orca ship deploy <function-name> --image <docker-image>\n'));
++    process.exit(1);
++  }
++
++  let memoryMb;
++  let timeoutSeconds;
++  try {
++    memoryMb = parseInteger(options.memory || 512, { name: '--memory', min: 128, max: 10240 });
++    timeoutSeconds = parseInteger(options.timeout || 30, { name: '--timeout', min: 1, max: 900 });
++  } catch (error) {
++    console.log(chalk.red(`✗ ${error.message}\n`));
+     process.exit(1);
+   }
+ 
+@@ -116,21 +84,17 @@
+       }
+       
+       const envFileContent = fs.readFileSync(envFilePath, 'utf8');
+-      envFileContent.split('\n').forEach(line => {
++      envFileContent.split('\n').forEach((line, index) => {
+         line = line.trim();
+-        // Skip empty lines and comments
+         if (!line || line.startsWith('#')) return;
+-        
+-        const [key, ...valueParts] = line.split('=');
+-        if (key && valueParts.length > 0) {
+-          let value = valueParts.join('=').trim();
+-          // Remove quotes if present
+-          if ((value.startsWith('"') && value.endsWith('"')) || 
+-              (value.startsWith("'") && value.endsWith("'"))) {
+-            value = value.slice(1, -1);
+-          }
+-          environmentVars[key.trim()] = value;
++
++        const [key, rawValue] = parseKeyValue(line, `${options.envFile}:${index + 1}`);
++        let value = rawValue.trim();
++        if ((value.startsWith('"') && value.endsWith('"')) ||
++            (value.startsWith("'") && value.endsWith("'"))) {
++          value = value.slice(1, -1);
+         }
++        environmentVars[key] = value;
+       });
+     } catch (error) {
+       console.log(chalk.red(`✗ Failed to read .env file: ${error.message}\n`));
+@@ -140,23 +104,26 @@
+   
+   // Parse from --env flags (these override .env file)
+   if (options.env && Array.isArray(options.env)) {
+-    options.env.forEach(envStr => {
+-      const [key, ...valueParts] = envStr.split('=');
+-      if (key && valueParts.length > 0) {
+-        environmentVars[key.trim()] = valueParts.join('=').trim();
+-      }
+-    });
++    try {
++      options.env.forEach(envStr => {
++        const [key, value] = parseKeyValue(envStr, '--env');
++        environmentVars[key] = value.trim();
++      });
++    } catch (error) {
++      console.log(chalk.red(`✗ ${error.message}\n`));
++      process.exit(1);
++    }
+   }
+ 
+   console.log(chalk.white('Function:  '), chalk.yellow(functionName));
+   console.log(chalk.white('Image:     '), chalk.yellow(options.image));
+-  console.log(chalk.white('Memory:    '), chalk.yellow(`${options.memory || 512} MB`));
+-  console.log(chalk.white('Timeout:   '), chalk.yellow(`${options.timeout || 30}s`));
++  console.log(chalk.white('Memory:    '), chalk.yellow(`${memoryMb} MB`));
++  console.log(chalk.white('Timeout:   '), chalk.yellow(`${timeoutSeconds}s`));
+   console.log(chalk.white('Workspace: '), chalk.yellow(credentials.workspace));
+   if (Object.keys(environmentVars).length > 0) {
+     console.log(chalk.white('Env Vars:'));
+     Object.entries(environmentVars).forEach(([key, value]) => {
+-      console.log(chalk.gray('           '), chalk.cyan(key) + chalk.gray('=') + chalk.yellow(value));
++      console.log(chalk.gray('           '), chalk.cyan(key) + chalk.gray('=') + chalk.yellow(displayEnvValue(key, value)));
+     });
+   }
+   console.log();
+@@ -188,8 +155,8 @@
+       deploymentRequest = await makeApiRequest('POST', API_ENDPOINTS.LAMBDA_DEPLOY, credentials, {
+         function_name: functionName,
+         image_tag: options.image,
+-        memory_mb: options.memory || 512,
+-        timeout_seconds: options.timeout || 30,
++        memory_mb: memoryMb,
++        timeout_seconds: timeoutSeconds,
+         environment_vars: environmentVars
+       });
+     } catch (error) {
+@@ -198,7 +165,7 @@
+       console.log();
+       console.log(chalk.yellow('💡 Troubleshooting tips:'));
+       console.log(chalk.white('  1. Check if backend is running'));
+-      console.log(chalk.white('  2. Verify your authentication: orcapt whoami'));
++      console.log(chalk.white('  2. Verify your authentication: orca status'));
+       console.log(chalk.white('  3. Check backend logs for errors'));
+       console.log(chalk.white('  4. Ensure AWS credentials are configured in backend .env'));
+       console.log();
+@@ -258,8 +225,8 @@
+     console.log(chalk.white('  Name:        '), chalk.yellow(functionName));
+     console.log(chalk.white('  Image:       '), chalk.yellow(remoteImage));
+     console.log(chalk.white('  Region:      '), chalk.yellow(confirmResponse.region || 'us-east-1'));
+-    console.log(chalk.white('  Memory:      '), chalk.yellow(`${options.memory || 512} MB`));
+-    console.log(chalk.white('  Timeout:     '), chalk.yellow(`${options.timeout || 30}s`));
++    console.log(chalk.white('  Memory:      '), chalk.yellow(`${memoryMb} MB`));
++    console.log(chalk.white('  Timeout:     '), chalk.yellow(`${timeoutSeconds}s`));
+     console.log(chalk.white('  Status:      '), chalk.green('Active'));
+ 
+     if (confirmResponse.invoke_url) {
+@@ -267,7 +234,7 @@
+       console.log(chalk.white('  '), chalk.yellow(confirmResponse.invoke_url));
+       console.log(chalk.cyan('\nTry it:'));
+       console.log(chalk.white('  curl'), chalk.cyan(confirmResponse.invoke_url));
+-      console.log(chalk.white('  orcapt lambda invoke'), chalk.cyan(functionName));
++      console.log(chalk.white('  orca ship lambda invoke'), chalk.cyan(functionName));
+     }
+ 
+     if (confirmResponse.sqs_queue_url) {
+@@ -308,7 +275,7 @@
+     
+     if (response.count === 0) {
+       console.log(chalk.yellow('No Lambda functions found'));
+-      console.log(chalk.cyan('\nCreate one with:'), chalk.white('orcapt lambda deploy <function-name> --image <docker-image>'));
++      console.log(chalk.cyan('\nCreate one with:'), chalk.white('orca ship deploy <function-name> --image <docker-image>'));
+     } else {
+       console.log(chalk.green(`✓ Found ${response.count} function${response.count > 1 ? 's' : ''}`));
+       console.log(chalk.cyan('============================================================\n'));
+@@ -375,7 +342,7 @@
+   try {
+     // Call backend API to invoke Lambda function
+     const startTime = Date.now();
+-    const endpoint = API_ENDPOINTS.LAMBDA_INVOKE.replace('{functionName}', functionName);
++    const endpoint = replacePathParams(API_ENDPOINTS.LAMBDA_INVOKE, { functionName });
+     const requestBody = { 
+       payload,
+       path: options.path || 'health' // Default path
+@@ -466,20 +433,18 @@
+   }
+ 
+   const spinner = ora('Fetching logs...').start();
+-  const endpoint = API_ENDPOINTS.LAMBDA_LOGS.replace('{functionName}', functionName);
++  const endpoint = replacePathParams(API_ENDPOINTS.LAMBDA_LOGS, { functionName });
+   
+-  // Build query parameters for pagination
+-  const queryParams = {};
+-  if (options.page) {
+-    queryParams.page = parseInt(options.page) || 1;
+-  }
+-  if (options.perPage) {
+-    queryParams.per_page = Math.min(parseInt(options.perPage) || 100, 1000);
++  let fullEndpoint;
++  try {
++    const page = parseInteger(options.page || 1, { name: '--page', min: 1 });
++    const perPage = parseInteger(options.perPage || 100, { name: '--per-page', min: 1, max: 1000 });
++    fullEndpoint = appendQuery(endpoint, { page, per_page: perPage, since: options.since });
++  } catch (error) {
++    console.log(chalk.red(`✗ ${error.message}\n`));
++    process.exit(1);
+   }
+   
+-  const queryString = new URLSearchParams(queryParams).toString();
+-  const fullEndpoint = queryString ? `${endpoint}?${queryString}` : endpoint;
+-  
+   try {
+     // Call backend API to get logs
+     const response = await makeApiRequest(
+@@ -510,7 +475,7 @@
+     if (!response.logs || response.logs.length === 0) {
+       console.log(chalk.yellow('No logs found in database'));
+       console.log(chalk.cyan('\nTry invoking the function first:'));
+-      console.log(chalk.white('  orcapt lambda invoke'), chalk.cyan(functionName));
++      console.log(chalk.white('  orca ship lambda invoke'), chalk.cyan(functionName));
+     } else {
+       // Show pagination info
+       if (response.pagination) {
+@@ -546,10 +511,10 @@
+         const pagination = response.pagination;
+         console.log(chalk.cyan('\n============================================================'));
+         if (pagination.has_prev_page) {
+-          console.log(chalk.white('  Previous page: '), chalk.cyan(`orcapt lambda logs ${functionName} --page ${pagination.current_page - 1}`));
++          console.log(chalk.white('  Previous page: '), chalk.cyan(`orca ship lambda logs ${functionName} --page ${pagination.current_page - 1}`));
+         }
+         if (pagination.has_next_page) {
+-          console.log(chalk.white('  Next page:     '), chalk.cyan(`orcapt lambda logs ${functionName} --page ${pagination.current_page + 1}`));
++          console.log(chalk.white('  Next page:     '), chalk.cyan(`orca ship lambda logs ${functionName} --page ${pagination.current_page + 1}`));
+         }
+         if (!pagination.has_prev_page && !pagination.has_next_page) {
+           console.log(chalk.gray('  (No more pages)'));
+@@ -592,7 +557,7 @@
+   console.log(chalk.yellow('ECR repository will be kept for potential rollback.\n'));
+ 
+   const spinner = ora('Removing function...').start();
+-  const endpoint = API_ENDPOINTS.LAMBDA_DELETE.replace('{functionName}', functionName);
++  const endpoint = replacePathParams(API_ENDPOINTS.LAMBDA_DELETE, { functionName });
+   try {
+     // Call backend API to delete Lambda function
+     const response = await makeApiRequest(
+@@ -631,7 +596,7 @@
+   const credentials = requireAuth();
+ 
+   const spinner = ora('Fetching function details...').start();
+-  const endpoint = API_ENDPOINTS.LAMBDA_INFO.replace('{functionName}', functionName);
++  const endpoint = replacePathParams(API_ENDPOINTS.LAMBDA_INFO, { functionName });
+   try {
+     // Call backend API to get function details
+     const response = await makeApiRequest(
+@@ -671,12 +636,7 @@
+     if (response.environment_vars && Object.keys(response.environment_vars).length > 0) {
+       console.log(chalk.cyan('\nEnvironment Variables:'));
+       Object.entries(response.environment_vars).forEach(([key, value]) => {
+-        // Hide sensitive values
+-        const displayValue = key.toLowerCase().includes('password') || 
+-                            key.toLowerCase().includes('secret') || 
+-                            key.toLowerCase().includes('key') 
+-                            ? '***hidden***' : value;
+-        console.log(chalk.white(`  ${key}:`.padEnd(20)), chalk.yellow(displayValue));
++        console.log(chalk.white(`  ${key}:`.padEnd(20)), chalk.yellow(displayEnvValue(key, value)));
+       });
+     }
+ 
+@@ -701,10 +661,9 @@
+ 
+     console.log(chalk.cyan('\n============================================================'));
+     console.log(chalk.gray('\nCommands:'));
+-    console.log(chalk.white('  Invoke:  '), chalk.cyan(`orcapt lambda invoke ${functionName}`));
+-    console.log(chalk.white('  Logs:    '), chalk.cyan(`orcapt lambda logs ${functionName}`));
+-    console.log(chalk.white('  Update:  '), chalk.cyan(`orcapt lambda update ${functionName} --image new-image:tag`));
+-    console.log(chalk.white('  Remove:  '), chalk.cyan(`orcapt lambda remove ${functionName}`));
++    console.log(chalk.white('  Invoke:  '), chalk.cyan(`orca ship lambda invoke ${functionName}`));
++    console.log(chalk.white('  Logs:    '), chalk.cyan(`orca ship lambda logs ${functionName}`));
++    console.log(chalk.white('  Remove:  '), chalk.cyan(`orca ship lambda remove ${functionName}`));
+     console.log();
+ 
+   } catch (error) {
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/src/commands/login.js orca-cli-pkg/src/commands/login.js
+--- orca-cli-pkg-orig/src/commands/login.js	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/src/commands/login.js	2026-04-20 02:00:28.152522869 +0000
+@@ -12,6 +12,7 @@
+ const https = require('https');
+ const http = require('http');
+ const { API_BASE_URL, API_ENDPOINTS } = require('../config');
++const { DEFAULT_TIMEOUT_MS } = require('../utils/api');
+ 
+ // Config file location in user's home directory
+ const CONFIG_DIR = path.join(os.homedir(), '.orcapt');
+@@ -66,6 +67,10 @@
+       });
+     });
+ 
++    req.setTimeout(DEFAULT_TIMEOUT_MS, () => {
++      req.destroy(new Error(`Authentication request timed out after ${DEFAULT_TIMEOUT_MS}ms`));
++    });
++
+     req.on('error', (error) => {
+       reject(error);
+     });
+@@ -90,7 +95,9 @@
+   try {
+     // Create .orcapt directory if it doesn't exist
+     if (!fs.existsSync(CONFIG_DIR)) {
+-      fs.mkdirSync(CONFIG_DIR, { recursive: true });
++      fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
++    } else {
++      fs.chmodSync(CONFIG_DIR, 0o700);
+     }
+ 
+     const config = {
+@@ -102,7 +109,8 @@
+       timestamp: new Date().toISOString()
+     };
+ 
+-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
++    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 });
++    fs.chmodSync(CONFIG_FILE, 0o600);
+     return true;
+   } catch (error) {
+     console.error(chalk.red('Failed to save credentials:', error.message));
+@@ -253,7 +261,13 @@
+     }
+ 
+     const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+-    return config.authenticated === true;
++    return Boolean(
++      config &&
++      config.authenticated === true &&
++      typeof config.workspace === 'string' && config.workspace.trim() &&
++      typeof config.token === 'string' && config.token.trim() &&
++      typeof config.tenant === 'string' && config.tenant.trim()
++    );
+   } catch (error) {
+     return false;
+   }
+@@ -268,7 +282,11 @@
+       return null;
+     }
+ 
+-    return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
++    const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
++    if (!config || !config.workspace || !config.token || !config.tenant) {
++      return null;
++    }
++    return config;
+   } catch (error) {
+     return null;
+   }
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/src/commands/ship-ec2.js orca-cli-pkg/src/commands/ship-ec2.js
+--- orca-cli-pkg-orig/src/commands/ship-ec2.js	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/src/commands/ship-ec2.js	2026-04-20 02:02:34.802534433 +0000
+@@ -2,11 +2,11 @@
+ const ora = require('ora');
+ const fs = require('fs');
+ const path = require('path');
+-const http = require('http');
+-const https = require('https');
+ const { getCredentials } = require('./login');
+ const { API_BASE_URL, API_ENDPOINTS } = require('../config');
+ const { handleError } = require('../utils/errorHandler');
++const { makeJsonRequest } = require('../utils/api');
++const { parsePort, parseInteger, parseKeyValue, replacePathParams, appendQuery } = require('../utils/cli');
+ const {
+   checkDockerInstalled,
+   checkDockerImage,
+@@ -26,51 +26,16 @@
+ }
+ 
+ function makeApiRequest(method, endpoint, credentials, body = null) {
+-  return new Promise((resolve, reject) => {
+-    const url = new URL(endpoint, API_BASE_URL);
+-    const isHttps = url.protocol === 'https:';
+-    const httpModule = isHttps ? https : http;
+-
+-    const options = {
+-      hostname: url.hostname,
+-      port: url.port || (isHttps ? 443 : 80),
+-      path: `${url.pathname}${url.search}`,
+-      method,
+-      headers: {
+-        'X-Workspace': credentials.token,
+-        'X-Tenant': credentials.tenant || credentials.workspace,
+-        'Content-Type': 'application/json',
+-        'Accept': 'application/json'
+-      }
+-    };
+-
+-    const req = httpModule.request(options, (res) => {
+-      let data = '';
+-      res.on('data', (chunk) => {
+-        data += chunk;
+-      });
+-      res.on('end', () => {
+-        try {
+-          const response = data ? JSON.parse(data) : {};
+-          if (res.statusCode >= 200 && res.statusCode < 300) {
+-            resolve(response);
+-          } else {
+-            reject({ statusCode: res.statusCode, response });
+-          }
+-        } catch (error) {
+-          reject(new Error(`Invalid response: ${data}`));
+-        }
+-      });
+-    });
+-
+-    req.on('error', reject);
+-    if (body) {
+-      req.write(JSON.stringify(body));
+-    }
+-    req.end();
++  return makeJsonRequest({
++    method,
++    endpoint,
++    credentials,
++    body,
++    authStyle: 'tenantToken'
+   });
+ }
+ 
++
+ function parseEnvVars(options = {}) {
+   const environmentVars = {};
+ 
+@@ -81,39 +46,33 @@
+     }
+ 
+     const envFileContent = fs.readFileSync(envFilePath, 'utf8');
+-    envFileContent.split('\n').forEach((line) => {
++    envFileContent.split('\n').forEach((line, index) => {
+       const trimmed = line.trim();
+-      if (!trimmed || trimmed.startsWith('#')) {
+-        return;
+-      }
++      if (!trimmed || trimmed.startsWith('#')) return;
+ 
+-      const [key, ...valueParts] = trimmed.split('=');
+-      if (!key || valueParts.length === 0) {
+-        return;
+-      }
+-      let value = valueParts.join('=').trim();
++      const [key, rawValue] = parseKeyValue(trimmed, `${options.envFile}:${index + 1}`);
++      let value = rawValue.trim();
+       if (
+         (value.startsWith('"') && value.endsWith('"')) ||
+         (value.startsWith("'") && value.endsWith("'"))
+       ) {
+         value = value.slice(1, -1);
+       }
+-      environmentVars[key.trim()] = value;
++      environmentVars[key] = value;
+     });
+   }
+ 
+   if (Array.isArray(options.env)) {
+     options.env.forEach((envStr) => {
+-      const [key, ...valueParts] = String(envStr).split('=');
+-      if (key && valueParts.length > 0) {
+-        environmentVars[key.trim()] = valueParts.join('=').trim();
+-      }
++      const [key, value] = parseKeyValue(envStr, '--env');
++      environmentVars[key] = value.trim();
+     });
+   }
+ 
+   return environmentVars;
+ }
+ 
++
+ async function ec2Deploy(appName, options = {}) {
+   const credentials = requireAuth();
+ 
+@@ -129,9 +88,11 @@
+     process.exit(1);
+   }
+ 
+-  const internalPort = Number(options.internalPort);
+-  if (!Number.isInteger(internalPort) || internalPort < 1 || internalPort > 65535) {
+-    console.log(chalk.red('\n✗ --internal-port must be a valid port number (1-65535)\n'));
++  let internalPort;
++  try {
++    internalPort = parsePort(options.internalPort, '--internal-port');
++  } catch (error) {
++    console.log(chalk.red(`\n✗ ${error.message}\n`));
+     process.exit(1);
+   }
+ 
+@@ -227,7 +188,7 @@
+   const spinner = ora('Fetching deployment status...').start();
+ 
+   try {
+-    const endpoint = API_ENDPOINTS.EC2_STATUS.replace('{deploymentId}', deploymentId);
++    const endpoint = replacePathParams(API_ENDPOINTS.EC2_STATUS, { deploymentId });
+     const response = await makeApiRequest('GET', endpoint, credentials);
+     spinner.succeed(chalk.green('Status fetched'));
+ 
+@@ -261,7 +222,7 @@
+   const spinner = ora('Queueing stop request...').start();
+ 
+   try {
+-    const endpoint = API_ENDPOINTS.EC2_STOP.replace('{deploymentId}', deploymentId);
++    const endpoint = replacePathParams(API_ENDPOINTS.EC2_STOP, { deploymentId });
+     const response = await makeApiRequest('POST', endpoint, credentials, {});
+     spinner.succeed(chalk.green('Stop request queued'));
+ 
+@@ -287,12 +248,10 @@
+   const spinner = ora('Fetching deployment logs...').start();
+ 
+   try {
+-    const endpoint = API_ENDPOINTS.EC2_LOGS.replace('{deploymentId}', deploymentId);
+-    const params = new URLSearchParams();
+-    if (options.page) params.set('page', String(options.page));
+-    if (options.perPage) params.set('per_page', String(options.perPage));
+-
+-    const fullEndpoint = params.toString() ? `${endpoint}?${params.toString()}` : endpoint;
++    const endpoint = replacePathParams(API_ENDPOINTS.EC2_LOGS, { deploymentId });
++    const page = parseInteger(options.page || 1, { name: '--page', min: 1 });
++    const perPage = parseInteger(options.perPage || 100, { name: '--per-page', min: 1, max: 1000 });
++    const fullEndpoint = appendQuery(endpoint, { page, per_page: perPage });
+     const response = await makeApiRequest('GET', fullEndpoint, credentials);
+     spinner.succeed(chalk.green('Logs fetched'));
+ 
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/src/commands/storage.js orca-cli-pkg/src/commands/storage.js
+--- orca-cli-pkg-orig/src/commands/storage.js	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/src/commands/storage.js	2026-04-20 02:04:26.589973380 +0000
+@@ -12,59 +12,19 @@
+ const { getCredentials } = require('./login');
+ const { API_BASE_URL, API_ENDPOINTS } = require('../config');
+ const { handleError } = require('../utils/errorHandler');
++const { makeJsonRequest, parseJsonResponse, DEFAULT_TIMEOUT_MS } = require('../utils/api');
++const { parseInteger, replacePathParams, appendQuery } = require('../utils/cli');
+ 
+ /**
+  * Make API request to orcapt Deploy API
+  */
+ function makeApiRequest(method, endpoint, credentials, body = null) {
+-  return new Promise((resolve, reject) => {
+-    const url = new URL(endpoint, API_BASE_URL);
+-    const isHttps = url.protocol === 'https:';
+-    const httpModule = isHttps ? https : http;
+-
+-    const options = {
+-      hostname: url.hostname,
+-      port: url.port || (isHttps ? 443 : 80),
+-      path: url.pathname,
+-      method: method,
+-      headers: {
+-        'x-workspace': credentials.workspace,
+-        'x-token': credentials.token,
+-        'x-mode': credentials.mode || 'team',
+-        'Content-Type': 'application/json'
+-      }
+-    };
+-
+-    const req = httpModule.request(options, (res) => {
+-      let data = '';
+-
+-      res.on('data', (chunk) => {
+-        data += chunk;
+-      });
+-
+-      res.on('end', () => {
+-        try {
+-          const response = JSON.parse(data);
+-          if (res.statusCode >= 200 && res.statusCode < 300) {
+-            resolve(response);
+-          } else {
+-            reject({ statusCode: res.statusCode, response });
+-          }
+-        } catch (error) {
+-          reject(new Error(`Invalid response: ${data}`));
+-        }
+-      });
+-    });
+-
+-    req.on('error', (error) => {
+-      reject(error);
+-    });
+-
+-    if (body) {
+-      req.write(JSON.stringify(body));
+-    }
+-
+-    req.end();
++  return makeJsonRequest({
++    method,
++    endpoint,
++    credentials,
++    body,
++    authStyle: 'legacyWorkspaceToken'
+   });
+ }
+ 
+@@ -73,12 +33,13 @@
+  */
+ function uploadFileToApi(endpoint, credentials, filePath, bucketName, options = {}) {
+   return new Promise((resolve, reject) => {
+-    const url = new URL(endpoint.replace('{bucketName}', bucketName), API_BASE_URL);
++    const url = new URL(replacePathParams(endpoint, { bucketName }), API_BASE_URL);
+     const isHttps = url.protocol === 'https:';
+     const httpModule = isHttps ? https : http;
+ 
+     const fileStream = fs.createReadStream(filePath);
+     const fileName = path.basename(filePath);
++    const safeFileName = fileName.replace(/[\r\n"]/g, '_');
+     const boundary = `----FormBoundary${Date.now()}`;
+ 
+     const folderPath = options.folder || '';
+@@ -107,7 +68,7 @@
+ 
+     // Add file field header
+     formData += `--${boundary}\r\n`;
+-    formData += `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n`;
++    formData += `Content-Disposition: form-data; name="file"; filename="${safeFileName}"\r\n`;
+     formData += `Content-Type: application/octet-stream\r\n\r\n`;
+ 
+     const formDataBuffer = Buffer.from(formData, 'utf8');
+@@ -119,7 +80,7 @@
+     const requestOptions = {
+       hostname: url.hostname,
+       port: url.port || (isHttps ? 443 : 80),
+-      path: url.pathname,
++      path: `${url.pathname}${url.search}`,
+       method: 'POST',
+       headers: {
+         'x-workspace': credentials.workspace,
+@@ -139,7 +100,7 @@
+ 
+       res.on('end', () => {
+         try {
+-          const response = JSON.parse(data);
++          const response = parseJsonResponse(data);
+           if (res.statusCode >= 200 && res.statusCode < 300) {
+             resolve(response);
+           } else {
+@@ -151,6 +112,10 @@
+       });
+     });
+ 
++    req.setTimeout(DEFAULT_TIMEOUT_MS, () => {
++      req.destroy(new Error(`Upload request timed out after ${DEFAULT_TIMEOUT_MS}ms`));
++    });
++
+     req.on('error', (error) => {
+       reject(error);
+     });
+@@ -169,6 +134,7 @@
+     });
+ 
+     fileStream.on('error', (error) => {
++      req.destroy(error);
+       reject(error);
+     });
+   });
+@@ -248,8 +214,8 @@
+     console.log(chalk.white('  Encryption: '), chalk.yellow(response.bucket.encryption_enabled ? 'Enabled' : 'Disabled'));
+ 
+     console.log(chalk.cyan('\n💡 Next Steps:'));
+-    console.log(chalk.white('  Upload file:  '), chalk.yellow(`orcapt storage upload ${bucketName} <file-path>`));
+-    console.log(chalk.white('  List files:   '), chalk.yellow(`orcapt storage files ${bucketName}`));
++    console.log(chalk.white('  Upload file:  '), chalk.yellow(`orca storage upload ${bucketName} <file-path>`));
++    console.log(chalk.white('  List files:   '), chalk.yellow(`orca storage files ${bucketName}`));
+     console.log('');
+ 
+   } catch (error) {
+@@ -284,7 +250,7 @@
+     if (response.count === 0) {
+       console.log(chalk.yellow('\n📭 No buckets found'));
+       console.log(chalk.cyan('\n💡 Create your first bucket:'));
+-      console.log(chalk.white('  '), chalk.yellow('orcapt storage bucket create my-bucket'));
++      console.log(chalk.white('  '), chalk.yellow('orca storage bucket create my-bucket'));
+       console.log('');
+       return;
+     }
+@@ -393,8 +359,8 @@
+     }
+ 
+     console.log(chalk.cyan('\n💡 Next Steps:'));
+-    console.log(chalk.white('  List files:   '), chalk.yellow(`orcapt storage files ${bucketName}`));
+-    console.log(chalk.white('  Download:     '), chalk.yellow(`orcapt storage download ${bucketName} ${response.file.file_key}`));
++    console.log(chalk.white('  List files:   '), chalk.yellow(`orca storage files ${bucketName}`));
++    console.log(chalk.white('  Download:     '), chalk.yellow(`orca storage download ${bucketName} ${response.file.file_key}`));
+     console.log('');
+ 
+   } catch (error) {
+@@ -422,10 +388,9 @@
+ 
+   try {
+     // Get pre-signed download URL from API
+-    const encodedFileKey = encodeURIComponent(fileKey);
+     const response = await makeApiRequest(
+       'GET',
+-      API_ENDPOINTS.STORAGE_DOWNLOAD.replace('{bucketName}', bucketName).replace('{fileKey}', encodedFileKey),
++      replacePathParams(API_ENDPOINTS.STORAGE_DOWNLOAD, { bucketName, fileKey }),
+       credentials
+     );
+ 
+@@ -497,7 +462,7 @@
+   try {
+     const response = await makeApiRequest(
+       'GET',
+-      API_ENDPOINTS.STORAGE_BUCKET_LIST.replace('/list', `/${bucketName}`),
++      replacePathParams(API_ENDPOINTS.STORAGE_BUCKET_INFO, { bucketName }),
+       credentials
+     );
+ 
+@@ -550,8 +515,10 @@
+   const spinner = ora('Deleting bucket...').start();
+ 
+   try {
+-    const endpoint = API_ENDPOINTS.STORAGE_BUCKET_LIST.replace('/list', `/${bucketName}`) +
+-      (options.force ? '?force=true' : '');
++    const endpoint = appendQuery(
++      replacePathParams(API_ENDPOINTS.STORAGE_BUCKET_DELETE, { bucketName }),
++      { force: options.force ? 'true' : undefined }
++    );
+ 
+     await makeApiRequest('DELETE', endpoint, credentials);
+ 
+@@ -583,22 +550,12 @@
+   const spinner = ora('Fetching files...').start();
+ 
+   try {
+-    let endpoint = API_ENDPOINTS.STORAGE_FILE_LIST.replace('{bucketName}', bucketName);
+-    const params = [];
+-
+-    if (options.folder) {
+-      params.push(`folder_path=${encodeURIComponent(options.folder)}`);
+-    }
+-    if (options.page) {
+-      params.push(`page=${options.page}`);
+-    }
+-    if (options.perPage) {
+-      params.push(`per_page=${options.perPage}`);
+-    }
+-
+-    if (params.length > 0) {
+-      endpoint += '?' + params.join('&');
+-    }
++    const page = parseInteger(options.page || 1, { name: '--page', min: 1 });
++    const perPage = parseInteger(options.perPage || 50, { name: '--per-page', min: 1, max: 1000 });
++    const endpoint = appendQuery(
++      replacePathParams(API_ENDPOINTS.STORAGE_FILE_LIST, { bucketName }),
++      { folder_path: options.folder, page, per_page: perPage }
++    );
+ 
+     const response = await makeApiRequest('GET', endpoint, credentials);
+ 
+@@ -607,7 +564,7 @@
+     if (response.pagination.total === 0) {
+       console.log(chalk.yellow('\n📭 No files found'));
+       console.log(chalk.cyan('\n💡 Upload a file:'));
+-      console.log(chalk.white('  '), chalk.yellow(`orcapt storage upload ${bucketName} <file-path>`));
++      console.log(chalk.white('  '), chalk.yellow(`orca storage upload ${bucketName} <file-path>`));
+       console.log('');
+       return;
+     }
+@@ -648,7 +605,7 @@
+     if (response.pagination.last_page > 1) {
+       console.log(chalk.gray(`Page ${response.pagination.current_page} of ${response.pagination.last_page}`));
+       if (response.pagination.current_page < response.pagination.last_page) {
+-        console.log(chalk.cyan('Next page: '), chalk.yellow(`orcapt storage files ${bucketName} --page ${response.pagination.current_page + 1}`));
++        console.log(chalk.cyan('Next page: '), chalk.yellow(`orca storage files ${bucketName} --page ${response.pagination.current_page + 1}`));
+       }
+     }
+ 
+@@ -677,10 +634,9 @@
+   const spinner = ora('Deleting file...').start();
+ 
+   try {
+-    const encodedFileKey = encodeURIComponent(fileKey);
+     const endpoint = API_ENDPOINTS.STORAGE_FILE_DELETE
+-      .replace('{bucketName}', bucketName)
+-      .replace('{fileKey}', encodedFileKey);
++      .replace('{bucketName}', encodeURIComponent(bucketName))
++      .replace('{fileKey}', encodeURIComponent(fileKey));
+ 
+     await makeApiRequest('DELETE', endpoint, credentials);
+ 
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/src/commands/ui.js orca-cli-pkg/src/commands/ui.js
+--- orca-cli-pkg-orig/src/commands/ui.js	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/src/commands/ui.js	2026-04-20 02:04:26.589219832 +0000
+@@ -10,6 +10,7 @@
+ const path = require('path');
+ const os = require('os');
+ const { ensurePortAvailable } = require('../utils');
++const { parsePort } = require('../utils/cli');
+ 
+ // Track UI installation status
+ const UI_CONFIG_FILE = path.join(os.homedir(), '.orcapt', 'ui-config.json');
+@@ -54,7 +55,7 @@
+   try {
+     const configDir = path.dirname(UI_CONFIG_FILE);
+     if (!fs.existsSync(configDir)) {
+-      fs.mkdirSync(configDir, { recursive: true });
++      fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
+     }
+ 
+     const config = {
+@@ -63,7 +64,7 @@
+       version: installed ? 'latest' : null
+     };
+ 
+-    fs.writeFileSync(UI_CONFIG_FILE, JSON.stringify(config, null, 2));
++    fs.writeFileSync(UI_CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 });
+     return true;
+   } catch (error) {
+     console.error(chalk.red('Failed to save UI config:', error.message));
+@@ -98,7 +99,7 @@
+   // Check if already installed
+   if (isUIInstalled()) {
+     console.log(chalk.yellow('⚠ orcapt UI is already installed globally'));
+-    console.log(chalk.cyan('\nTo reinstall, run:'), chalk.white('orcapt ui remove'), chalk.cyan('first\n'));
++    console.log(chalk.cyan('\nTo reinstall, run:'), chalk.white('orca ui remove'), chalk.cyan('first\n'));
+     return;
+   }
+ 
+@@ -120,7 +121,7 @@
+       console.log(chalk.white('\n📦 Package:'), chalk.yellow('@orcapt/ui'));
+       console.log(chalk.white('📁 Type:'), chalk.white('React component library with built UI'));
+       console.log(chalk.white('\nYou can now run:'));
+-      console.log(chalk.yellow('  • orcapt ui start --port 3000 --agent-port 5001'));
++      console.log(chalk.yellow('  • orca ui start --port 3000 --agent-port 5001'));
+       console.log(chalk.cyan('============================================================\n'));
+     } else {
+       spinner.fail(chalk.red('Installation failed'));
+@@ -139,8 +140,15 @@
+  * UI Start Command - Run the orcapt UI
+  */
+ async function uiStart(options) {
+-  const port = options.port || '3000';
+-  const agentPort = options.agentPort || '5001';
++  let port;
++  let agentPort;
++  try {
++    port = parsePort(options.port || 3000, '--port');
++    agentPort = parsePort(options.agentPort || 5001, '--agent-port');
++  } catch (error) {
++    console.log(chalk.red(`\n✗ ${error.message}\n`));
++    process.exit(1);
++  }
+ 
+   console.log(chalk.cyan('\n============================================================'));
+   console.log(chalk.cyan('🚀 Starting orcapt UI'));
+@@ -150,7 +158,7 @@
+   
+   if (!isInstalled && !isNpxAvailable()) {
+     console.log(chalk.red('✗ orcapt UI is not installed and npx is not available'));
+-    console.log(chalk.yellow('\nPlease run:'), chalk.white('orcapt ui init'), chalk.yellow('to install\n'));
++    console.log(chalk.yellow('\nPlease run:'), chalk.white('orca ui init'), chalk.yellow('to install\n'));
+     process.exit(1);
+   }
+ 
+@@ -164,7 +172,7 @@
+ 
+   try {
+     // Ensure port is available before starting
+-    await ensurePortAvailable(parseInt(port), 'UI');
++    await ensurePortAvailable(port, 'UI');
+     
+     let uiProcess;
+     
+@@ -184,7 +192,7 @@
+         
+         if (!fs.existsSync(uiDistPath)) {
+           console.log(chalk.red(`\n✗ @orcapt/ui is installed but dist folder not found at: ${uiDistPath}`));
+-          console.log(chalk.yellow('\nTry reinstalling:'), chalk.white('orcapt ui remove && orcapt ui init\n'));
++          console.log(chalk.yellow('\nTry reinstalling:'), chalk.white('orca ui remove && orca ui init\n'));
+           process.exit(1);
+         }
+       }
+@@ -192,7 +200,7 @@
+     
+     if (!uiDistPath) {
+       console.log(chalk.red('\n✗ Could not find @orcapt/ui installation'));
+-      console.log(chalk.yellow('\nPlease run:'), chalk.white('orcapt ui init\n'));
++      console.log(chalk.yellow('\nPlease run:'), chalk.white('orca ui init\n'));
+       process.exit(1);
+     }
+     
+@@ -263,7 +271,7 @@
+       console.log(chalk.green('✓ Uninstallation Complete'));
+       console.log(chalk.cyan('============================================================'));
+       console.log(chalk.white('\n@orcapt/ui package has been removed.'));
+-      console.log(chalk.white('\nTo reinstall, run:'), chalk.yellow('orcapt ui init'));
++      console.log(chalk.white('\nTo reinstall, run:'), chalk.yellow('orca ui init'));
+       console.log(chalk.cyan('============================================================\n'));
+     } else {
+       spinner.fail(chalk.red('Uninstallation failed'));
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/src/index.js orca-cli-pkg/src/index.js
+--- orca-cli-pkg-orig/src/index.js	1970-01-01 00:00:00.000000000 +0000
++++ orca-cli-pkg/src/index.js	2026-04-20 02:00:19.474430184 +0000
+@@ -0,0 +1,17 @@
++/**
++ * Public module surface for programmatic consumers of @orca-pt/cli.
++ */
++
++const loginCommands = require('./commands/login');
++
++module.exports = {
++  ...loginCommands,
++  utils: {
++    ...require('./utils/cli'),
++    ...require('./utils')
++  },
++  commands: {
++    login: loginCommands
++  },
++  config: require('./config')
++};
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/src/utils/api.js orca-cli-pkg/src/utils/api.js
+--- orca-cli-pkg-orig/src/utils/api.js	1970-01-01 00:00:00.000000000 +0000
++++ orca-cli-pkg/src/utils/api.js	2026-04-20 02:00:09.449114808 +0000
+@@ -0,0 +1,107 @@
++/**
++ * Shared HTTP helpers for Orca CLI API calls.
++ */
++
++const http = require('http');
++const https = require('https');
++const { API_BASE_URL } = require('../config');
++
++const DEFAULT_TIMEOUT_MS = Number(process.env.ORCA_HTTP_TIMEOUT_MS || 30000);
++
++function parseJsonResponse(data) {
++  if (!data) return {};
++  try {
++    return JSON.parse(data);
++  } catch (error) {
++    const err = new Error(`Invalid JSON response: ${data.slice(0, 500)}`);
++    err.raw = data;
++    throw err;
++  }
++}
++
++function buildAuthHeaders(credentials, style = 'tenantToken') {
++  if (!credentials) return {};
++
++  if (style === 'legacyWorkspaceToken') {
++    return {
++      'x-workspace': credentials.workspace,
++      'x-token': credentials.token,
++      'x-mode': credentials.mode || 'team'
++    };
++  }
++
++  return {
++    'X-Workspace': credentials.token,
++    'X-Tenant': credentials.tenant || credentials.workspace
++  };
++}
++
++function makeJsonRequest({
++  method = 'GET',
++  endpoint,
++  body = null,
++  credentials = null,
++  authStyle = 'tenantToken',
++  baseUrl = API_BASE_URL,
++  headers = {},
++  timeoutMs = DEFAULT_TIMEOUT_MS
++}) {
++  return new Promise((resolve, reject) => {
++    const url = new URL(endpoint, baseUrl);
++    const isHttps = url.protocol === 'https:';
++    const httpModule = isHttps ? https : http;
++    const bodyText = body === null || body === undefined ? null : JSON.stringify(body);
++
++    const requestHeaders = {
++      Accept: 'application/json',
++      ...buildAuthHeaders(credentials, authStyle),
++      ...headers
++    };
++
++    if (bodyText !== null) {
++      requestHeaders['Content-Type'] = 'application/json';
++      requestHeaders['Content-Length'] = Buffer.byteLength(bodyText);
++    }
++
++    const req = httpModule.request({
++      hostname: url.hostname,
++      port: url.port || (isHttps ? 443 : 80),
++      path: `${url.pathname}${url.search}`,
++      method,
++      headers: requestHeaders
++    }, (res) => {
++      let data = '';
++      res.setEncoding('utf8');
++      res.on('data', (chunk) => {
++        data += chunk;
++      });
++      res.on('end', () => {
++        try {
++          const response = parseJsonResponse(data);
++          if (res.statusCode >= 200 && res.statusCode < 300) {
++            resolve(response);
++          } else {
++            reject({ statusCode: res.statusCode, response });
++          }
++        } catch (error) {
++          reject(error);
++        }
++      });
++    });
++
++    req.setTimeout(timeoutMs, () => {
++      req.destroy(new Error(`Request timed out after ${timeoutMs}ms`));
++    });
++
++    req.on('error', reject);
++    if (bodyText !== null) req.write(bodyText);
++    req.end();
++  });
++}
++
++module.exports = {
++  makeJsonRequest,
++  buildAuthHeaders,
++  parseJsonResponse,
++  DEFAULT_TIMEOUT_MS
++};
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/src/utils/cli.js orca-cli-pkg/src/utils/cli.js
+--- orca-cli-pkg-orig/src/utils/cli.js	1970-01-01 00:00:00.000000000 +0000
++++ orca-cli-pkg/src/utils/cli.js	2026-04-20 02:00:09.441107766 +0000
+@@ -0,0 +1,86 @@
++/**
++ * Shared CLI validation and presentation helpers.
++ */
++
++const SENSITIVE_KEY_PATTERN = /(password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret|auth|credential)/i;
++
++function parseInteger(value, options = {}) {
++  const {
++    name = 'value',
++    min = Number.MIN_SAFE_INTEGER,
++    max = Number.MAX_SAFE_INTEGER,
++    defaultValue
++  } = options;
++
++  if (value === undefined || value === null || value === '') {
++    if (defaultValue !== undefined) return defaultValue;
++    throw new Error(`${name} is required`);
++  }
++
++  const parsed = Number(value);
++  if (!Number.isInteger(parsed)) {
++    throw new Error(`${name} must be an integer`);
++  }
++  if (parsed < min || parsed > max) {
++    throw new Error(`${name} must be between ${min} and ${max}`);
++  }
++  return parsed;
++}
++
++function parsePort(value, name = 'port') {
++  return parseInteger(value, { name, min: 1, max: 65535 });
++}
++
++function isSensitiveKey(key = '') {
++  return SENSITIVE_KEY_PATTERN.test(String(key));
++}
++
++function maskSecret(value) {
++  if (value === undefined || value === null || value === '') return '';
++  const text = String(value);
++  if (text.length <= 4) return '****';
++  return `${text.slice(0, 2)}****${text.slice(-2)}`;
++}
++
++function displayEnvValue(key, value) {
++  return isSensitiveKey(key) ? maskSecret(value) : value;
++}
++
++function parseKeyValue(input, fieldName = '--env') {
++  const index = String(input).indexOf('=');
++  if (index <= 0) {
++    throw new Error(`${fieldName} must use KEY=value format`);
++  }
++  const key = String(input).slice(0, index).trim();
++  const value = String(input).slice(index + 1);
++  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
++    throw new Error(`${fieldName} key must be a valid environment variable name`);
++  }
++  return [key, value];
++}
++
++function replacePathParams(template, params = {}) {
++  return Object.entries(params).reduce((endpoint, [key, value]) => {
++    return endpoint.replace(new RegExp(`\\{${key}\\}`, 'g'), encodeURIComponent(String(value)));
++  }, template);
++}
++
++function appendQuery(endpoint, query = {}) {
++  const entries = Object.entries(query)
++    .filter(([, value]) => value !== undefined && value !== null && value !== '')
++    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
++
++  if (entries.length === 0) return endpoint;
++  return `${endpoint}${endpoint.includes('?') ? '&' : '?'}${entries.join('&')}`;
++}
++
++module.exports = {
++  parseInteger,
++  parsePort,
++  isSensitiveKey,
++  maskSecret,
++  displayEnvValue,
++  parseKeyValue,
++  replacePathParams,
++  appendQuery
++};
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/src/utils/docker-helper.js orca-cli-pkg/src/utils/docker-helper.js
+--- orca-cli-pkg-orig/src/utils/docker-helper.js	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/src/utils/docker-helper.js	2026-04-20 02:03:46.961215044 +0000
+@@ -3,53 +3,43 @@
+  * Helper functions for Docker operations (check, tag, push)
+  */
+ 
+-const { spawn, exec } = require('child_process');
++const { spawn, execFile } = require('child_process');
++const util = require('util');
+ const ora = require('ora');
+ const chalk = require('chalk');
+ 
++const execFilePromise = util.promisify(execFile);
++
+ /**
+  * Check if Docker is installed and running
+  */
+ async function checkDockerInstalled() {
+-  return new Promise((resolve, reject) => {
+-    exec('docker --version', (error, stdout, stderr) => {
+-      if (error) {
+-        reject(new Error('Docker is not installed or not running'));
+-      } else {
+-        resolve(true);
+-      }
+-    });
+-  });
++  try {
++    await execFilePromise('docker', ['--version']);
++    return true;
++  } catch (error) {
++    throw new Error('Docker is not installed or not running');
++  }
+ }
+ 
+ /**
+  * Check if Docker image exists locally
+  */
+ async function checkDockerImage(imageName) {
+-  return new Promise((resolve, reject) => {
+-    exec(`docker images -q ${imageName}`, (error, stdout, stderr) => {
+-      if (error) {
+-        reject(error);
+-      } else {
+-        resolve(stdout.trim().length > 0);
+-      }
+-    });
+-  });
++  try {
++    await execFilePromise('docker', ['image', 'inspect', imageName]);
++    return true;
++  } catch (error) {
++    return false;
++  }
+ }
+ 
+ /**
+  * Get Docker image size
+  */
+ async function getImageSize(imageName) {
+-  return new Promise((resolve, reject) => {
+-    exec(`docker images ${imageName} --format "{{.Size}}"`, (error, stdout, stderr) => {
+-      if (error) {
+-        reject(error);
+-      } else {
+-        resolve(stdout.trim());
+-      }
+-    });
+-  });
++  const { stdout } = await execFilePromise('docker', ['images', imageName, '--format', '{{.Size}}']);
++  return stdout.trim();
+ }
+ 
+ /**
+@@ -61,8 +51,14 @@
+   for (let attempt = 1; attempt <= retries; attempt++) {
+     try {
+       return await new Promise((resolve, reject) => {
+-        const loginProcess = spawn('sh', ['-c', `echo "${password}" | docker login -u ${username} --password-stdin ${registry}`]);
+-        
++        const loginArgs = ['login', '-u', username, '--password-stdin'];
++        if (registry) loginArgs.push(registry);
++        const loginProcess = spawn('docker', loginArgs, {
++          stdio: ['pipe', 'pipe', 'pipe']
++        });
++        loginProcess.stdin.on('error', () => {});
++        loginProcess.stdin.end(`${password}\n`);
++
+         let output = '';
+         let errorOutput = '';
+         let timeoutId;
+@@ -110,15 +106,12 @@
+  * Tag Docker image for registry
+  */
+ async function dockerTag(sourceImage, targetImage) {
+-  return new Promise((resolve, reject) => {
+-    exec(`docker tag ${sourceImage} ${targetImage}`, (error, stdout, stderr) => {
+-      if (error) {
+-        reject(new Error(`Failed to tag image: ${stderr || error.message}`));
+-      } else {
+-        resolve(true);
+-      }
+-    });
+-  });
++  try {
++    await execFilePromise('docker', ['tag', sourceImage, targetImage]);
++    return true;
++  } catch (error) {
++    throw new Error(`Failed to tag image: ${error.stderr || error.message}`);
++  }
+ }
+ 
+ /**
+@@ -225,10 +218,10 @@
+           let overallPercent = 0;
+           
+           if (totalBytes > 0) {
+-            // محاسبه بر اساس bytes واقعی
++            // Calculate from actual uploaded bytes
+             overallPercent = Math.round((uploadedBytes / totalBytes) * 100);
+           } else if (totalLayers > 0) {
+-            // اگر هنوز size نداریم، بر اساس تعداد layer های complete شده
++            // If sizes are not available yet, estimate by completed layers
+             overallPercent = Math.round((completedLayers / totalLayers) * 100);
+           }
+           
+@@ -254,7 +247,7 @@
+       clearInterval(timeoutCheck);
+       
+       if (code === 0) {
+-        // آخرین بار progress را 100% کن
++        // Emit a final 100% progress update
+         if (onProgress && totalLayers > 0) {
+           onProgress(100, totalLayers, totalLayers);
+         }
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/src/utils/index.js orca-cli-pkg/src/utils/index.js
+--- orca-cli-pkg-orig/src/utils/index.js	1985-10-26 08:15:00.000000000 +0000
++++ orca-cli-pkg/src/utils/index.js	2026-04-20 02:00:58.690779467 +0000
+@@ -3,27 +3,27 @@
+  */
+ 
+ const { spawn } = require('cross-spawn');
++const { execFile } = require('child_process');
++const util = require('util');
+ const chalk = require('chalk');
++const { parsePort } = require('./cli');
++
++const execFilePromise = util.promisify(execFile);
+ 
+ /**
+- * Check if a command exists in the system
+- * @param {string} command - Command to check
+- * @returns {Promise<boolean>}
++ * Check if a command exists in the system.
++ * This checks PATH presence instead of relying on `<command> --version`.
+  */
+ async function commandExists(command) {
+   return new Promise((resolve) => {
+-    const child = spawn(command, ['--version'], {
++    const lookupCommand = process.platform === 'win32' ? 'where' : 'which';
++    const child = spawn(lookupCommand, [command], {
+       stdio: 'ignore',
+       shell: false
+     });
+-    
+-    child.on('close', (code) => {
+-      resolve(code === 0);
+-    });
+-    
+-    child.on('error', () => {
+-      resolve(false);
+-    });
++
++    child.on('close', (code) => resolve(code === 0));
++    child.on('error', () => resolve(false));
+   });
+ }
+ 
+@@ -32,12 +32,8 @@
+  * @returns {Promise<string|null>}
+  */
+ async function getPythonCommand() {
+-  if (await commandExists('python3')) {
+-    return 'python3';
+-  }
+-  if (await commandExists('python')) {
+-    return 'python';
+-  }
++  if (await commandExists('python3')) return 'python3';
++  if (await commandExists('python')) return 'python';
+   return null;
+ }
+ 
+@@ -47,7 +43,7 @@
+  */
+ function getVenvPaths() {
+   const isWindows = process.platform === 'win32';
+-  
++
+   return {
+     python: isWindows ? 'orca_env\\Scripts\\python.exe' : 'orca_env/bin/python',
+     pip: isWindows ? 'orca_env\\Scripts\\pip.exe' : 'orca_env/bin/pip',
+@@ -71,16 +67,11 @@
+     });
+ 
+     child.on('close', (code) => {
+-      if (code === 0) {
+-        resolve(code);
+-      } else {
+-        reject(new Error(`Command failed with exit code ${code}`));
+-      }
++      if (code === 0) resolve(code);
++      else reject(new Error(`Command failed with exit code ${code}`));
+     });
+ 
+-    child.on('error', (error) => {
+-      reject(error);
+-    });
++    child.on('error', reject);
+   });
+ }
+ 
+@@ -102,29 +93,15 @@
+     let output = '';
+     let errorOutput = '';
+ 
+-    if (child.stdout) {
+-      child.stdout.on('data', (data) => {
+-        output += data.toString();
+-      });
+-    }
+-
+-    if (child.stderr) {
+-      child.stderr.on('data', (data) => {
+-        errorOutput += data.toString();
+-      });
+-    }
++    if (child.stdout) child.stdout.on('data', (data) => { output += data.toString(); });
++    if (child.stderr) child.stderr.on('data', (data) => { errorOutput += data.toString(); });
+ 
+     child.on('close', (code) => {
+-      if (code === 0) {
+-        resolve(output);
+-      } else {
+-        reject(new Error(errorOutput || output));
+-      }
++      if (code === 0) resolve(output);
++      else reject(new Error(errorOutput || output));
+     });
+ 
+-    child.on('error', (error) => {
+-      reject(error);
+-    });
++    child.on('error', reject);
+   });
+ }
+ 
+@@ -146,40 +123,47 @@
+ 
+ /**
+  * Wait for a port to be ready
+- * @param {number} port - Port to check
++ * @param {number|string} port - Port to check
+  * @param {number} timeout - Timeout in ms
+  * @returns {Promise<boolean>}
+  */
+ async function waitForPort(port, timeout = 10000) {
+   const net = require('net');
++  const normalizedPort = parsePort(port);
+   const startTime = Date.now();
+ 
+   return new Promise((resolve) => {
++    let settled = false;
++
++    const finish = (value) => {
++      if (!settled) {
++        settled = true;
++        resolve(value);
++      }
++    };
++
+     const checkPort = () => {
++      if (settled) return;
+       if (Date.now() - startTime > timeout) {
+-        resolve(false);
++        finish(false);
+         return;
+       }
+ 
+       const socket = new net.Socket();
+-      
+       socket.setTimeout(500);
+-      socket.on('connect', () => {
++      socket.once('connect', () => {
+         socket.destroy();
+-        resolve(true);
++        finish(true);
+       });
+-      
+-      socket.on('timeout', () => {
++      socket.once('timeout', () => {
+         socket.destroy();
+         setTimeout(checkPort, 500);
+       });
+-      
+-      socket.on('error', () => {
++      socket.once('error', () => {
+         socket.destroy();
+         setTimeout(checkPort, 500);
+       });
+-
+-      socket.connect(port, '127.0.0.1');
++      socket.connect(normalizedPort, '127.0.0.1');
+     };
+ 
+     checkPort();
+@@ -188,136 +172,100 @@
+ 
+ /**
+  * Check if a port is in use
+- * @param {number} port - Port to check
++ * @param {number|string} port - Port to check
+  * @returns {Promise<boolean>}
+  */
+ async function isPortInUse(port) {
+   const net = require('net');
+-  
++  const normalizedPort = parsePort(port);
++
+   return new Promise((resolve) => {
+     const server = net.createServer();
+-    
+-    server.once('error', (err) => {
+-      if (err.code === 'EADDRINUSE') {
+-        resolve(true);
+-      } else {
+-        resolve(false);
+-      }
+-    });
+-    
++
++    server.once('error', (err) => resolve(err.code === 'EADDRINUSE'));
+     server.once('listening', () => {
+-      server.close();
+-      resolve(false);
++      server.close(() => resolve(false));
+     });
+-    
+-    server.listen(port, '127.0.0.1');
++    server.listen(normalizedPort, '127.0.0.1');
+   });
+ }
+ 
++async function getPidsForPort(port) {
++  const normalizedPort = parsePort(port);
++
++  if (process.platform === 'win32') {
++    const { stdout } = await execFilePromise('netstat', ['-ano']);
++    return stdout
++      .split(/\r?\n/)
++      .filter((line) => line.includes(`:${normalizedPort}`))
++      .map((line) => line.trim().split(/\s+/).pop())
++      .filter((pid) => pid && pid !== '0');
++  }
++
++  try {
++    const { stdout } = await execFilePromise('lsof', [`-ti:${normalizedPort}`]);
++    return stdout.trim().split(/\s+/).filter(Boolean);
++  } catch (error) {
++    if (process.platform !== 'darwin') {
++      try {
++        const { stdout } = await execFilePromise('fuser', [`${normalizedPort}/tcp`]);
++        return stdout.trim().split(/\s+/).filter(Boolean);
++      } catch (_) {
++        return [];
++      }
++    }
++    return [];
++  }
++}
++
+ /**
+- * Kill process using a specific port
+- * @param {number} port - Port number
++ * Kill process using a specific port.
++ * Port is validated before it reaches OS commands.
++ * @param {number|string} port - Port number
+  * @returns {Promise<boolean>} True if a process was killed
+  */
+ async function killPort(port) {
+-  const { exec } = require('child_process');
+-  const util = require('util');
+-  const execPromise = util.promisify(exec);
+-  
+-  try {
+-    const isWindows = process.platform === 'win32';
+-    const isMac = process.platform === 'darwin';
+-    
+-    if (isWindows) {
+-      // Windows: Find and kill process using the port
+-      try {
+-        const { stdout } = await execPromise(`netstat -ano | findstr :${port}`);
+-        const lines = stdout.trim().split('\n');
+-        const pids = new Set();
+-        
+-        for (const line of lines) {
+-          const parts = line.trim().split(/\s+/);
+-          const pid = parts[parts.length - 1];
+-          if (pid && pid !== '0') {
+-            pids.add(pid);
+-          }
+-        }
+-        
+-        for (const pid of pids) {
+-          try {
+-            await execPromise(`taskkill /F /PID ${pid}`);
+-          } catch (e) {
+-            // Process might already be dead
+-          }
+-        }
+-        
+-        return pids.size > 0;
+-      } catch (error) {
+-        return false;
+-      }
+-    } else if (isMac) {
+-      // macOS: Use lsof to find and kill process
+-      try {
+-        const { stdout } = await execPromise(`lsof -ti:${port}`);
+-        const pids = stdout.trim().split('\n').filter(pid => pid);
+-        
+-        for (const pid of pids) {
+-          try {
+-            await execPromise(`kill -9 ${pid}`);
+-          } catch (e) {
+-            // Process might already be dead
+-          }
+-        }
+-        
+-        return pids.length > 0;
+-      } catch (error) {
+-        return false;
+-      }
+-    } else {
+-      // Linux: Use fuser or lsof
+-      try {
+-        const { stdout } = await execPromise(`lsof -ti:${port} 2>/dev/null || fuser ${port}/tcp 2>/dev/null`);
+-        const pids = stdout.trim().split(/\s+/).filter(pid => pid);
+-        
+-        for (const pid of pids) {
+-          try {
+-            await execPromise(`kill -9 ${pid}`);
+-          } catch (e) {
+-            // Process might already be dead
+-          }
+-        }
+-        
+-        return pids.length > 0;
+-      } catch (error) {
+-        return false;
++  const pids = [...new Set(await getPidsForPort(port))];
++  if (pids.length === 0) return false;
++
++  for (const pid of pids) {
++    try {
++      if (process.platform === 'win32') {
++        await execFilePromise('taskkill', ['/F', '/PID', pid]);
++      } else {
++        process.kill(Number(pid), 'SIGKILL');
+       }
++    } catch (_) {
++      // Process might already be gone.
+     }
+-  } catch (error) {
+-    return false;
+   }
++
++  return pids.length > 0;
+ }
+ 
+ /**
+- * Ensure port is available by killing any process using it
+- * @param {number} port - Port to check and free
++ * Ensure port is available. The safe default is to fail fast instead of killing
++ * unrelated user processes. Pass { killExisting: true } for explicit cleanup.
++ * @param {number|string} port - Port to check and optionally free
+  * @param {string} portName - Name for logging (e.g., 'UI', 'Agent')
++ * @param {Object} options - Options
+  * @returns {Promise<void>}
+  */
+-async function ensurePortAvailable(port, portName = 'Port') {
+-  const chalk = require('chalk');
+-  
+-  if (await isPortInUse(port)) {
+-    console.log(chalk.yellow(`⚠ ${portName} port ${port} is in use, killing the process...`));
+-    const killed = await killPort(port);
+-    
+-    if (killed) {
+-      console.log(chalk.green(`✓ Freed port ${port}`));
+-      // Wait a moment for the port to be fully released
+-      await new Promise(resolve => setTimeout(resolve, 1000));
+-    } else {
+-      console.log(chalk.yellow(`⚠ Could not kill process on port ${port}, will try to start anyway...`));
+-    }
++async function ensurePortAvailable(port, portName = 'Port', options = {}) {
++  const normalizedPort = parsePort(port, `${portName} port`);
++
++  if (!(await isPortInUse(normalizedPort))) return;
++
++  if (!options.killExisting) {
++    throw new Error(`${portName} port ${normalizedPort} is already in use. Choose another port or stop the existing process.`);
+   }
++
++  console.log(chalk.yellow(`⚠ ${portName} port ${normalizedPort} is in use; stopping the process because cleanup was explicitly requested...`));
++  const killed = await killPort(normalizedPort);
++  if (!killed) {
++    throw new Error(`Could not free ${portName} port ${normalizedPort}`);
++  }
++  await new Promise((resolve) => setTimeout(resolve, 1000));
+ }
+ 
+ /**
+@@ -346,4 +294,3 @@
+   ensurePortAvailable,
+   print
+ };
+-
+diff -ruN '--exclude=node_modules' orca-cli-pkg-orig/test/smoke.test.js orca-cli-pkg/test/smoke.test.js
+--- orca-cli-pkg-orig/test/smoke.test.js	1970-01-01 00:00:00.000000000 +0000
++++ orca-cli-pkg/test/smoke.test.js	2026-04-20 02:00:16.671986400 +0000
+@@ -0,0 +1,48 @@
++#!/usr/bin/env node
++
++const assert = require('assert');
++const fs = require('fs');
++const os = require('os');
++const path = require('path');
++const { spawnSync } = require('child_process');
++
++const root = path.resolve(__dirname, '..');
++
++function listJsFiles(dir) {
++  const entries = fs.readdirSync(dir, { withFileTypes: true });
++  const files = [];
++  for (const entry of entries) {
++    const full = path.join(dir, entry.name);
++    if (entry.isDirectory()) files.push(...listJsFiles(full));
++    if (entry.isFile() && entry.name.endsWith('.js')) files.push(full);
++  }
++  return files;
++}
++
++function run(command, args, options = {}) {
++  return spawnSync(command, args, {
++    cwd: root,
++    encoding: 'utf8',
++    ...options
++  });
++}
++
++for (const file of listJsFiles(path.join(root, 'src')).concat(path.join(root, 'bin', 'orca.js'))) {
++  const result = run(process.execPath, ['--check', file]);
++  assert.strictEqual(result.status, 0, `${file} failed syntax check:\n${result.stderr}`);
++}
++
++const help = run(process.execPath, ['bin/orca.js', '--help'], {
++  env: { ...process.env, HOME: fs.mkdtempSync(path.join(os.tmpdir(), 'orca-cli-home-')) }
++});
++assert.strictEqual(help.status, 0, help.stderr || help.stdout);
++assert.match(help.stdout, /Usage: orca/);
++assert.match(help.stdout, /kickstart/);
++
++const index = require(path.join(root, 'src'));
++assert.strictEqual(typeof index.login, 'function');
++assert.strictEqual(typeof index.utils.parsePort, 'function');
++assert.strictEqual(index.utils.parsePort('65535'), 65535);
++assert.throws(() => index.utils.parsePort('0'), /between 1 and 65535/);
++
++console.log('orca-cli smoke tests passed');

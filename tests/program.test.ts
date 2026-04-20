@@ -24,6 +24,12 @@ describe('program', () => {
     expect(commands).toContain('chat')
   })
 
+  it('registers reflect command', () => {
+    const program = createProgram()
+    const commands = program.commands.map(c => c.name())
+    expect(commands).toContain('reflect')
+  })
+
   it('registers doctor command', () => {
     const program = createProgram()
     const commands = program.commands.map(c => c.name())
@@ -50,6 +56,13 @@ describe('program', () => {
     expect(options).toContain('--provider')
     expect(options).toContain('--api-key')
     expect(options).toContain('--json')
+  })
+
+  it('reflect command mirrors chat runtime options', () => {
+    const program = createProgram()
+    const reflect = program.commands.find(c => c.name() === 'reflect')!
+    const options = reflect.options.map(o => o.long)
+    expect(options).toEqual(expect.arrayContaining(['--model', '--provider', '--api-key', '--json']))
   })
 
   it('run command has dangerously option', () => {

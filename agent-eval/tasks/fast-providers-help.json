@@ -1,0 +1,12 @@
+{
+  "id": "fast-providers-help",
+  "title": "Providers help exposes test subcommand",
+  "description": "Command-surface smoke for `orca providers --help`.",
+  "input": "Run `orca providers --help` and verify the test subcommand is still advertised.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; node dist/bin/orca.js providers --help'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "providers_help_has_test_subcommand"
+  ]
+}

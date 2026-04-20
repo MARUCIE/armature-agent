@@ -6,7 +6,7 @@
 
 import { Command } from 'commander'
 import { createInitCommand } from './commands/init.js'
-import { createChatCommand } from './commands/chat.js'
+import { createChatCommand, createReflectCommand } from './commands/chat.js'
 import { createDoctorCommand } from './commands/doctor.js'
 import { createRunCommand } from './commands/run.js'
 import { createCouncilCommand, createRaceCommand, createPipelineCommand } from './commands/multi.js'
@@ -26,9 +26,10 @@ export function createProgram(): Command {
     .passThroughOptions()
     .description(
       'Orca — provider-neutral agent runtime. 41 tools · 11 models · multi-model collaboration.\n\n' +
-      'Commands:\n' +
-      '  chat              Interactive REPL or one-shot query\n' +
-      '  doctor            Run local Orca diagnostics\n' +
+       'Commands:\n' +
+       '  chat              Interactive REPL or one-shot query\n' +
+       '  reflect           Socratic debugging and root-cause investigation\n' +
+       '  doctor            Run local Orca diagnostics\n' +
       '  run               Execute an agent task\n' +
       '  council           Ask N models, judge synthesizes (multi-model)\n' +
       '  race              First model to answer wins (speed race)\n' +
@@ -44,6 +45,7 @@ export function createProgram(): Command {
     )
 
   program.addCommand(createChatCommand())
+  program.addCommand(createReflectCommand())
   program.addCommand(createDoctorCommand())
   program.addCommand(createRunCommand())
   program.addCommand(createCouncilCommand())

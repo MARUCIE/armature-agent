@@ -17,6 +17,30 @@ interface TerminalSize {
 
 const TerminalSizeContext = createContext<TerminalSize>({ rows: 24, cols: 80 })
 
+const sigwinchSubscribers = new Set<() => void>()
+let sigwinchAttached = false
+
+function notifySigwinchSubscribers(): void {
+  for (const subscriber of sigwinchSubscribers) subscriber()
+}
+
+function subscribeSigwinch(subscriber: () => void): () => void {
+  sigwinchSubscribers.add(subscriber)
+
+  if (!sigwinchAttached) {
+    process.on('SIGWINCH', notifySigwinchSubscribers)
+    sigwinchAttached = true
+  }
+
+  return () => {
+    sigwinchSubscribers.delete(subscriber)
+    if (sigwinchAttached && sigwinchSubscribers.size === 0) {
+      process.removeListener('SIGWINCH', notifySigwinchSubscribers)
+      sigwinchAttached = false
+    }
+  }
+}
+
 interface ProviderProps {
   children: React.ReactNode
 }
@@ -38,12 +62,12 @@ export function TerminalSizeProvider({ children }: ProviderProps): React.ReactEl
     if (!stdout) return
 
     stdout.on('resize', handleResize)
-    // Also listen for SIGWINCH as a fallback (some terminals don't emit resize on stdout)
-    process.on('SIGWINCH', handleResize)
+    // Also listen for SIGWINCH as a shared fallback (some terminals don't emit resize on stdout).
+    const unsubscribeSigwinch = subscribeSigwinch(handleResize)
 
     return () => {
       stdout.removeListener('resize', handleResize)
-      process.removeListener('SIGWINCH', handleResize)
+      unsubscribeSigwinch()
     }
   }, [stdout, handleResize])
 

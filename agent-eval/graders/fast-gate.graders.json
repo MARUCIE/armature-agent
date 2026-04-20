@@ -1,0 +1,936 @@
+[
+  {
+    "id": "exit_code_ok",
+    "type": "exit_code",
+    "expected": 0
+  },
+  {
+    "id": "root_help_has_chat",
+    "type": "regex",
+    "pattern": "chat\\s+Interactive REPL or one-shot query",
+    "source": "stdout"
+  },
+  {
+    "id": "bench_quick_has_results",
+    "type": "regex",
+    "pattern": "\"results\"",
+    "source": "stdout"
+  },
+  {
+    "id": "bench_quick_has_score_100",
+    "type": "regex",
+    "pattern": "\"score\"\\s*:\\s*100",
+    "source": "stdout"
+  },
+  {
+    "id": "bench_quick_has_three_scenarios",
+    "type": "regex",
+    "pattern": "\"scenarios\"\\s*:\\s*3",
+    "source": "stdout"
+  },
+  {
+    "id": "bench_quick_human_has_header",
+    "type": "regex",
+    "pattern": "Orca Benchmark",
+    "source": "stdout"
+  },
+  {
+    "id": "bench_quick_human_has_scenarios",
+    "type": "regex",
+    "pattern": "3 scenarios · quick suite",
+    "source": "stdout"
+  },
+  {
+    "id": "bench_quick_human_has_score",
+    "type": "regex",
+    "pattern": "Score: 100%",
+    "source": "stdout"
+  },
+  {
+    "id": "bench_quick_human_has_sota_ready",
+    "type": "regex",
+    "pattern": "SOTA READY",
+    "source": "stdout"
+  },
+  {
+    "id": "chat_image_no_baseurl_has_provider_message",
+    "type": "regex",
+    "pattern": "--image is currently supported only for OpenAI-compatible proxy providers with baseURL configured",
+    "source": "stdout"
+  },
+  {
+    "id": "chat_image_no_baseurl_has_marker",
+    "type": "regex",
+    "pattern": "chat-image-ok",
+    "source": "stdout"
+  },
+  {
+    "id": "root_help_has_session",
+    "type": "regex",
+    "pattern": "session\\s+Manage saved sessions",
+    "source": "stdout"
+  },
+  {
+    "id": "root_help_has_pr",
+    "type": "regex",
+    "pattern": "pr\\s+Checkout a GitHub PR and review it",
+    "source": "stdout"
+  },
+  {
+    "id": "root_help_has_serve",
+    "type": "regex",
+    "pattern": "serve\\s+Start headless agent server",
+    "source": "stdout"
+  },
+  {
+    "id": "root_help_has_providers",
+    "type": "regex",
+    "pattern": "providers\\s+List and test configured providers",
+    "source": "stdout"
+  },
+  {
+    "id": "root_help_has_continue_flag",
+    "type": "regex",
+    "pattern": "--continue",
+    "source": "stdout"
+  },
+  {
+    "id": "root_continue_has_resume_banner",
+    "type": "regex",
+    "pattern": "Resuming session:\\s+2026-04-16T00-00-00-demo",
+    "source": "stdout"
+  },
+  {
+    "id": "root_continue_has_turn_count",
+    "type": "regex",
+    "pattern": "\\(2 turns, 3 messages\\)",
+    "source": "stdout"
+  },
+  {
+    "id": "root_continue_has_bye",
+    "type": "regex",
+    "pattern": "\\bbye\\.",
+    "source": "stdout"
+  },
+  {
+    "id": "root_help_has_safe_flag",
+    "type": "regex",
+    "pattern": "--safe",
+    "source": "stdout"
+  },
+  {
+    "id": "root_help_has_effort_flag",
+    "type": "regex",
+    "pattern": "--effort <level>",
+    "source": "stdout"
+  },
+  {
+    "id": "session_help_has_list",
+    "type": "regex",
+    "pattern": "list\\s+List saved sessions",
+    "source": "stdout"
+  },
+  {
+    "id": "session_help_has_show",
+    "type": "regex",
+    "pattern": "show <id>\\s+Show session messages",
+    "source": "stdout"
+  },
+  {
+    "id": "session_help_has_delete",
+    "type": "regex",
+    "pattern": "delete <id>\\s+Delete a saved session",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_help_has_review_description",
+    "type": "regex",
+    "pattern": "Checkout a GitHub PR and start agent review",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_help_has_number_argument",
+    "type": "regex",
+    "pattern": "number\\s+PR number",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_help_has_prompt_argument",
+    "type": "regex",
+    "pattern": "prompt\\s+Custom review prompt",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_invalid_number_has_error_heading",
+    "type": "regex",
+    "pattern": "Invalid PR number",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_invalid_number_has_value",
+    "type": "regex",
+    "pattern": "abc",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_missing_gh_has_error_heading",
+    "type": "regex",
+    "pattern": "GitHub CLI \\(gh\\) not installed",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_missing_gh_has_install_hint",
+    "type": "regex",
+    "pattern": "brew install gh",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_failure_has_fetching_banner",
+    "type": "regex",
+    "pattern": "Fetching PR #123",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_failure_has_error_heading",
+    "type": "regex",
+    "pattern": "Failed to fetch PR #123",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_failure_has_auth_text",
+    "type": "regex",
+    "pattern": "authentication failed",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_diff_failure_has_error_heading",
+    "type": "regex",
+    "pattern": "Failed to fetch PR #123",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_diff_failure_has_diff_text",
+    "type": "regex",
+    "pattern": "diff failed",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_checkout_failure_has_checkout_banner",
+    "type": "regex",
+    "pattern": "Checking out PR #123: Demo PR",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_checkout_failure_has_error_heading",
+    "type": "regex",
+    "pattern": "Failed to checkout PR #123",
+    "source": "stdout"
+  },
+  {
+    "id": "pr_checkout_failure_has_checkout_text",
+    "type": "regex",
+    "pattern": "checkout failed",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_help_has_test_subcommand",
+    "type": "regex",
+    "pattern": "test \\[provider\\]\\s+Test connectivity to a provider endpoint",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_empty_has_header",
+    "type": "regex",
+    "pattern": "Configured Providers",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_empty_has_empty_state",
+    "type": "regex",
+    "pattern": "\\(none\\) — configure providers in ~/.orca/config.json",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_disabled_has_disabled_label",
+    "type": "regex",
+    "pattern": "disabled",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_disabled_has_inactive_default",
+    "type": "regex",
+    "pattern": "Default provider: openai \\(inactive\\)",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_test_no_baseurl_has_testing_local",
+    "type": "regex",
+    "pattern": "Testing\\s+.*dummy",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_test_no_baseurl_has_fail",
+    "type": "regex",
+    "pattern": "FAIL",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_test_no_baseurl_has_message",
+    "type": "regex",
+    "pattern": "no baseURL configured",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_test_missing_api_key_has_error",
+    "type": "regex",
+    "pattern": "No API key for provider \\\"missing\\\"",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_test_missing_api_key_has_env_hint",
+    "type": "regex",
+    "pattern": "MISSING_API_KEY",
+    "source": "stdout"
+  },
+  {
+    "id": "run_help_has_max_turns",
+    "type": "regex",
+    "pattern": "--max-turns <n>",
+    "source": "stdout"
+  },
+  {
+    "id": "run_help_has_done_when",
+    "type": "regex",
+    "pattern": "--done-when <criteria>",
+    "source": "stdout"
+  },
+  {
+    "id": "run_help_has_mission",
+    "type": "regex",
+    "pattern": "--mission",
+    "source": "stdout"
+  },
+  {
+    "id": "run_goal_loop_has_goal_banner",
+    "type": "regex",
+    "pattern": "goal-loop:\\s+command\\s+—\\s+\"true\"",
+    "source": "stdout"
+  },
+  {
+    "id": "run_goal_loop_has_success",
+    "type": "regex",
+    "pattern": "goal-loop:\\s+PASSED in 1 iteration",
+    "source": "stdout"
+  },
+  {
+    "id": "run_goal_loop_has_provider_path_ok",
+    "type": "regex",
+    "pattern": "provider-path-ok",
+    "source": "stdout"
+  },
+  {
+    "id": "run_mission_no_baseurl_has_error",
+    "type": "regex",
+    "pattern": "error: Mission mode requires a provider with baseURL configured",
+    "source": "stdout"
+  },
+  {
+    "id": "run_mission_no_baseurl_has_message",
+    "type": "regex",
+    "pattern": "status=1",
+    "source": "stdout"
+  },
+  {
+    "id": "run_plan_no_baseurl_has_error",
+    "type": "regex",
+    "pattern": "error: Plan mode requires a provider with baseURL configured",
+    "source": "stdout"
+  },
+  {
+    "id": "run_plan_no_baseurl_has_message",
+    "type": "regex",
+    "pattern": "status=1",
+    "source": "stdout"
+  },
+  {
+    "id": "run_sdk_missing_has_error",
+    "type": "regex",
+    "pattern": "error: @orca/sdk not installed",
+    "source": "stdout"
+  },
+  {
+    "id": "run_sdk_missing_has_package_name",
+    "type": "regex",
+    "pattern": "@orca/sdk",
+    "source": "stdout"
+  },
+  {
+    "id": "init_default_has_global_config_line",
+    "type": "regex",
+    "pattern": "Global config:",
+    "source": "stdout"
+  },
+  {
+    "id": "init_default_has_project_config_line",
+    "type": "regex",
+    "pattern": "Project config:",
+    "source": "stdout"
+  },
+  {
+    "id": "init_default_has_next_steps",
+    "type": "regex",
+    "pattern": "Next steps:",
+    "source": "stdout"
+  },
+  {
+    "id": "init_default_has_marker",
+    "type": "regex",
+    "pattern": "init-created-ok",
+    "source": "stdout"
+  },
+  {
+    "id": "init_global_only_has_marker",
+    "type": "regex",
+    "pattern": "init-global-only-ok",
+    "source": "stdout"
+  },
+  {
+    "id": "init_global_only_preserve_has_marker",
+    "type": "regex",
+    "pattern": "init-global-only-preserve-ok",
+    "source": "stdout"
+  },
+  {
+    "id": "init_preserve_has_marker",
+    "type": "regex",
+    "pattern": "init-preserve-ok",
+    "source": "stdout"
+  },
+  {
+    "id": "session_list_has_header",
+    "type": "regex",
+    "pattern": "Saved Sessions",
+    "source": "stdout"
+  },
+  {
+    "id": "session_list_empty_has_empty_state",
+    "type": "regex",
+    "pattern": "\\(no saved sessions\\)",
+    "source": "stdout"
+  },
+  {
+    "id": "session_list_has_demo_session",
+    "type": "regex",
+    "pattern": "2026-04-15T00-00-00-demo",
+    "source": "stdout"
+  },
+  {
+    "id": "session_list_skip_corrupt_has_alpha_good",
+    "type": "regex",
+    "pattern": "2026-04-16T00-00-00-alpha-go",
+    "source": "stdout"
+  },
+  {
+    "id": "session_list_has_continue_hint",
+    "type": "regex",
+    "pattern": "Continue last: orca -c",
+    "source": "stdout"
+  },
+  {
+    "id": "session_show_has_model",
+    "type": "regex",
+    "pattern": "Model: gpt-5\\.4",
+    "source": "stdout"
+  },
+  {
+    "id": "session_show_has_user_message",
+    "type": "regex",
+    "pattern": "hello from session",
+    "source": "stdout"
+  },
+  {
+    "id": "session_show_has_assistant_message",
+    "type": "regex",
+    "pattern": "session reply",
+    "source": "stdout"
+  },
+  {
+    "id": "session_missing_has_error_heading",
+    "type": "regex",
+    "pattern": "error: session",
+    "source": "stdout"
+  },
+  {
+    "id": "session_missing_has_missing_id",
+    "type": "regex",
+    "pattern": "session \\\"missing\\\" not found",
+    "source": "stdout"
+  },
+  {
+    "id": "session_delete_has_deleted_marker",
+    "type": "regex",
+    "pattern": "deleted:\\s+2026-04-15T00-00-00-demo",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_test_has_testing_local",
+    "type": "regex",
+    "pattern": "Testing\\s+.*local",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_test_has_reachable_401",
+    "type": "regex",
+    "pattern": "reachable \\(HTTP 401\\)",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_test_refused_has_testing_local",
+    "type": "regex",
+    "pattern": "Testing\\s+.*local",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_test_refused_has_fail",
+    "type": "regex",
+    "pattern": "FAIL",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_test_refused_has_fetch_failed",
+    "type": "regex",
+    "pattern": "fetch failed|ECONNREFUSED|connect",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_test_timeout_has_testing_local",
+    "type": "regex",
+    "pattern": "Testing\\s+.*local",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_test_timeout_has_fail",
+    "type": "regex",
+    "pattern": "FAIL",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_test_timeout_has_timeout",
+    "type": "regex",
+    "pattern": "timeout|aborted",
+    "source": "stdout"
+  },
+  {
+    "id": "providers_test_timeout_has_marker",
+    "type": "regex",
+    "pattern": "providers-timeout-ok",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_json_has_project",
+    "type": "regex",
+    "pattern": "\"project\"",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_json_has_provider",
+    "type": "regex",
+    "pattern": "\"provider\"",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_json_has_git",
+    "type": "regex",
+    "pattern": "\"git\"",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_json_has_active_provider_openai",
+    "type": "regex",
+    "pattern": "\"activeProvider\"\\s*:\\s*\"openai\"",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_json_has_single_provider_configured",
+    "type": "regex",
+    "pattern": "\"providersConfigured\"\\s*:\\s*1",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_json_has_config_diagnostics",
+    "type": "regex",
+    "pattern": "\"configDiagnostics\"",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_json_has_invalid_global_config",
+    "type": "regex",
+    "pattern": "\"kind\"\\s*:\\s*\"global-config\"[\\s\\S]*?\"valid\"\\s*:\\s*false",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_json_has_global_config_kind",
+    "type": "regex",
+    "pattern": "\"kind\"\\s*:\\s*\"global-config\"",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_json_has_invalid_project_config",
+    "type": "regex",
+    "pattern": "\"kind\"\\s*:\\s*\"project-config\"[\\s\\S]*?\"valid\"\\s*:\\s*false",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_json_has_project_config_kind",
+    "type": "regex",
+    "pattern": "\"kind\"\\s*:\\s*\"project-config\"",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_json_cwd_has_project_name",
+    "type": "regex",
+    "pattern": "\"name\"\\s*:\\s*\"doctor-json-cwd-box\"",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_json_cwd_has_target_path",
+    "type": "regex",
+    "pattern": "\"cwd\"\\s*:\\s*\"[^\"]*tmp",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_json_unknown_has_project_type",
+    "type": "regex",
+    "pattern": "\"type\"\\s*:\\s*\"unknown\"",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_json_unknown_has_target_path",
+    "type": "regex",
+    "pattern": "\"cwd\"\\s*:\\s*\"[^\"]*tmp",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_human_has_header",
+    "type": "regex",
+    "pattern": "Orca Doctor",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_human_has_config_issues",
+    "type": "regex",
+    "pattern": "config issues:",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_human_has_global_config_kind",
+    "type": "regex",
+    "pattern": "global-config:",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_human_has_project_config_kind",
+    "type": "regex",
+    "pattern": "project-config:",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_cwd_has_project_name",
+    "type": "regex",
+    "pattern": "project:.*doctor-cwd-box",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_cwd_has_target_path",
+    "type": "regex",
+    "pattern": "cwd:.*tmp",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_human_unknown_has_project_type",
+    "type": "regex",
+    "pattern": "project:.*\\(unknown\\)",
+    "source": "stdout"
+  },
+  {
+    "id": "doctor_human_unknown_has_target_path",
+    "type": "regex",
+    "pattern": "cwd:.*tmp",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_health_has_ok_status",
+    "type": "regex",
+    "pattern": "\"status\":\"ok\"",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_health_has_openai_provider",
+    "type": "regex",
+    "pattern": "\"provider\":\"openai\"",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_health_has_model_metadata",
+    "type": "regex",
+    "pattern": "\"modelMetadata\"",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_chat_errors_has_missing_prompt_status",
+    "type": "regex",
+    "pattern": "missing-status=400",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_chat_errors_has_missing_prompt_error",
+    "type": "regex",
+    "pattern": "missing-body=.*Missing.*prompt.*field",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_chat_errors_has_invalid_json_status",
+    "type": "regex",
+    "pattern": "malformed-status=500",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_chat_errors_has_invalid_json_error",
+    "type": "regex",
+    "pattern": "malformed-body=.*Invalid JSON body",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_stream_has_ok_banner",
+    "type": "regex",
+    "pattern": "HTTP/1\\.[01] 200",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_stream_has_text_event",
+    "type": "regex",
+    "pattern": "data: \\{\"type\":\"text\",\"text\":\"stub hello\"\\}",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_stream_has_usage_event",
+    "type": "regex",
+    "pattern": "data: \\{\"type\":\"usage\",\"inputTokens\":\\d+,\"outputTokens\":\\d+\\}",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_stream_has_done_event",
+    "type": "regex",
+    "pattern": "data: \\{\"type\":\"done\"\\}",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_stream_has_terminal_done",
+    "type": "regex",
+    "pattern": "data: \\[DONE\\]",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_stream_has_provider_path_ok",
+    "type": "regex",
+    "pattern": "sse-stream-ok",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_json_has_ok_status",
+    "type": "regex",
+    "pattern": "(^|\\n)200(\\n|$)",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_json_has_text",
+    "type": "regex",
+    "pattern": "\"text\":\"stub json hello\"",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_json_has_model",
+    "type": "regex",
+    "pattern": "\"model\":\"qwen3:32b\"",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_json_has_token_counts",
+    "type": "regex",
+    "pattern": "\"inputTokens\":12.*\"outputTokens\":3",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_json_has_request_capture",
+    "type": "regex",
+    "pattern": "json-chat-ok",
+    "source": "stdout"
+  },
+  {
+    "id": "stats_smoke_has_overview",
+    "type": "regex",
+    "pattern": "OVERVIEW",
+    "source": "stdout"
+  },
+  {
+    "id": "stats_smoke_has_cost_tokens",
+    "type": "regex",
+    "pattern": "COST & TOKENS",
+    "source": "stdout"
+  },
+  {
+    "id": "stats_smoke_has_runtime_health",
+    "type": "regex",
+    "pattern": "RUNTIME HEALTH",
+    "source": "stdout"
+  },
+  {
+    "id": "stats_smoke_has_recent_errors",
+    "type": "regex",
+    "pattern": "Recent Errors",
+    "source": "stdout"
+  },
+  {
+    "id": "stats_smoke_has_marker",
+    "type": "regex",
+    "pattern": "stats-smoke-ok",
+    "source": "stdout"
+  },
+  {
+    "id": "stats_daily_empty_has_empty_state",
+    "type": "regex",
+    "pattern": "\\(no usage data\\)",
+    "source": "stdout"
+  },
+  {
+    "id": "stats_daily_has_header",
+    "type": "regex",
+    "pattern": "Daily Usage",
+    "source": "stdout"
+  },
+  {
+    "id": "stats_daily_has_cost",
+    "type": "regex",
+    "pattern": "\\$0\\.010",
+    "source": "stdout"
+  },
+  {
+    "id": "stats_daily_has_tokens",
+    "type": "regex",
+    "pattern": "\\b150\\b",
+    "source": "stdout"
+  },
+  {
+    "id": "stats_daily_has_marker",
+    "type": "regex",
+    "pattern": "stats-daily-ok",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_metadata_has_default_openai",
+    "type": "regex",
+    "pattern": "\"default\":\"openai\"",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_metadata_has_openai_provider",
+    "type": "regex",
+    "pattern": "\"id\":\"openai\"",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_metadata_has_single_openai_provider_set",
+    "type": "regex",
+    "pattern": "\"providers\":\\[\\{\"id\":\"openai\".*\\}\\],\"default\":\"openai\"",
+    "source": "stdout"
+  },
+  {
+    "id": "pack_dry_run_has_orca_bin",
+    "type": "regex",
+    "pattern": "\"path\"\\s*:\\s*\"dist/bin/orca\\.js\"",
+    "source": "stdout"
+  },
+  {
+    "id": "pack_dry_run_has_dist_index",
+    "type": "regex",
+    "pattern": "\"path\"\\s*:\\s*\"dist/index\\.js\"",
+    "source": "stdout"
+  },
+  {
+    "id": "logs_empty_has_header",
+    "type": "regex",
+    "pattern": "Orca Logs: agent",
+    "source": "stdout"
+  },
+  {
+    "id": "logs_empty_has_empty_state",
+    "type": "regex",
+    "pattern": "\\(no log entries\\)",
+    "source": "stdout"
+  },
+  {
+    "id": "logs_errors_has_header",
+    "type": "regex",
+    "pattern": "Orca Logs: errors",
+    "source": "stdout"
+  },
+  {
+    "id": "logs_errors_has_entry",
+    "type": "regex",
+    "pattern": "boom from black-box logs",
+    "source": "stdout"
+  },
+  {
+    "id": "logs_errors_lines_has_latest_entry",
+    "type": "regex",
+    "pattern": "\\[ERROR\\] three",
+    "source": "stdout"
+  },
+  {
+    "id": "logs_errors_lines_has_marker",
+    "type": "regex",
+    "pattern": "logs-errors-lines-ok",
+    "source": "stdout"
+  },
+  {
+    "id": "logs_unknown_kind_has_agent_label",
+    "type": "regex",
+    "pattern": "Orca Logs: agent",
+    "source": "stdout"
+  },
+  {
+    "id": "logs_unknown_kind_has_entry",
+    "type": "regex",
+    "pattern": "fallback agent entry",
+    "source": "stdout"
+  },
+  {
+    "id": "logs_lines_has_latest_entry",
+    "type": "regex",
+    "pattern": "\\[INFO\\] three",
+    "source": "stdout"
+  },
+  {
+    "id": "logs_lines_has_marker",
+    "type": "regex",
+    "pattern": "logs-lines-ok",
+    "source": "stdout"
+  },
+  {
+    "id": "logs_lines_zero_has_latest_entry",
+    "type": "regex",
+    "pattern": "\\[INFO\\] line two",
+    "source": "stdout"
+  },
+  {
+    "id": "logs_lines_zero_has_marker",
+    "type": "regex",
+    "pattern": "logs-lines-zero-ok",
+    "source": "stdout"
+  },
+  {
+    "id": "human_cli_review",
+    "type": "manual",
+    "note": "Reviewer confirms the command surface remains legible and matches the intended operator workflow."
+  }
+]

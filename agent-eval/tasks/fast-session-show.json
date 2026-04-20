@@ -1,0 +1,14 @@
+{
+  "id": "fast-session-show",
+  "title": "Session show renders saved conversation text",
+  "description": "Black-box smoke for `orca session show <id>` using an isolated ORCA_HOME.",
+  "input": "Create a saved session, run `orca session show demo`, and verify the model metadata plus both conversation messages are rendered.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); mkdir -p \"$TMP_HOME/.orca/sessions\"; cat > \"$TMP_HOME/.orca/sessions/2026-04-15T00-00-00-demo.json\" <<'\"'\"'EOF'\"'\"'\n{\n  \"provider\": \"openai\",\n  \"model\": \"gpt-5.4\",\n  \"history\": [\n    {\"role\": \"user\", \"content\": \"hello from session\"},\n    {\"role\": \"assistant\", \"content\": \"session reply\"}\n  ],\n  \"stats\": {\"turns\": 2, \"inputTokens\": 10, \"outputTokens\": 11},\n  \"savedAt\": \"2026-04-15T00:00:00.000Z\"\n}\nEOF\nenv -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ORCA_HOME=\"$TMP_HOME/.orca\" node dist/bin/orca.js session show demo'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "session_show_has_model",
+    "session_show_has_user_message",
+    "session_show_has_assistant_message"
+  ]
+}

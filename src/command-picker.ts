@@ -13,10 +13,12 @@ export interface CommandDef {
   description: string
 }
 
-const COMMANDS: CommandDef[] = [
+export const COMMANDS: CommandDef[] = [
   { name: '/help', description: 'Show all commands' },
   { name: '/model', description: 'Show/switch model' },
   { name: '/models', description: 'Interactive model picker' },
+  { name: '/mode', description: 'Behavioral profiles' },
+  { name: '/reflect', description: 'Socratic debugging and root-cause investigation' },
   { name: '/council', description: 'Multi-model council (N models + judge)' },
   { name: '/race', description: 'Multi-model race (first wins)' },
   { name: '/pipeline', description: 'Multi-model pipeline (plan→code→review)' },

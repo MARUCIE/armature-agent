@@ -16,7 +16,8 @@ export function createLogsCommand(): Command {
     .argument('[kind]', 'Log kind: agent (default) or errors')
     .action((kindArg?: string, opts?: { lines?: string }) => {
       const kind = kindArg === 'errors' ? 'errors' : 'agent'
-      const lines = Math.max(1, Number(opts?.lines) || 50)
+      const parsedLines = Number(opts?.lines)
+      const lines = Number.isFinite(parsedLines) ? Math.max(1, parsedLines) : 50
       const entries = readLogTail(kind, lines)
 
       console.log()

@@ -12,6 +12,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { executeTool, TOOL_DEFINITIONS } from '../src/tools.js'
 import { writeFileSync, mkdirSync, rmSync, readFileSync, symlinkSync, existsSync } from 'node:fs'
+import { execSync } from 'node:child_process'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 
@@ -125,6 +126,26 @@ describe('Shell injection resistance', () => {
     }, testDir)
     // Should succeed or fail gracefully — not crash
     expect(typeof r.success).toBe('boolean')
+  })
+
+  it('11.8b git_commit — filenames with quotes/spaces are staged safely', () => {
+    const repoDir = join(testDir, 'git-weird-name')
+    mkdirSync(repoDir, { recursive: true })
+    execSync('git init', { cwd: repoDir, stdio: 'pipe' })
+    execSync('git config user.email "test@test.com"', { cwd: repoDir, stdio: 'pipe' })
+    execSync('git config user.name "Test User"', { cwd: repoDir, stdio: 'pipe' })
+
+    const weirdFile = `odd 'quoted' name.txt`
+    writeFileSync(join(repoDir, weirdFile), 'hello weird file')
+
+    const r = executeTool('git_commit', {
+      message: 'test: stage weird filename safely',
+      files: [weirdFile],
+    }, repoDir)
+
+    expect(r.success).toBe(true)
+    const log = execSync('git log --oneline -1', { cwd: repoDir, encoding: 'utf-8', stdio: 'pipe' })
+    expect(log).toContain('test: stage weird filename safely')
   })
 })
 

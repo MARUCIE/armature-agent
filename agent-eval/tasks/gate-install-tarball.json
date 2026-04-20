@@ -1,0 +1,14 @@
+{
+  "id": "gate-install-tarball",
+  "title": "Packed tarball installs into a clean prefix",
+  "description": "Release-only smoke that installs the packed tarball into a temporary prefix and runs the installed `orca` binary.",
+  "input": "Pack the repo, install the tarball into a clean npm prefix, and verify the installed `orca` binary exposes the expected root help surface.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; npm pack --pack-destination \"$TMP_ROOT\" >/dev/null; TAR=$(ls \"$TMP_ROOT\"/*.tgz | head -n1); PREFIX=\"$TMP_ROOT/prefix\"; npm install -g --prefix \"$PREFIX\" \"$TAR\" >/dev/null; \"$PREFIX/bin/orca\" --help'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "install_tarball_has_runtime_tagline",
+    "install_tarball_has_session_command",
+    "install_tarball_has_continue_flag"
+  ]
+}

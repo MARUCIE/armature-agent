@@ -19,9 +19,13 @@ Keep Orca CLI maintainable as a fast-moving CLI runtime while preventing drift a
 | Config failure visibility | Malformed JSON config could degrade into scattered warnings | Surface config parse failures directly in doctor output |
 | Headless parity | `orca serve` originally exposed a thin status surface | Reuse doctor/model metadata in server endpoints instead of inventing a second observability model |
 | Stats visibility | `orca stats` only covered usage/cost | Merge runtime health and error signals into the stats surface |
+| REPL interaction ergonomics | Slash autocomplete can hijack Enter after arguments begin, and theme onboarding can ignore persisted choice | Keep autocomplete token-scoped and honor saved theme preference before showing first-launch UI |
+| Debugging reflection ergonomics | Standard chat can jump too quickly from symptom to rewrite | Add explicit `reflect` surfaces plus conservative auto-triggering that restructures debugging/explanation asks into evidence-backed diagnosis |
 | Command/document parity | README can drift from actual registrations | Treat `src/program.ts` as source of truth and update docs in the same task |
 | Architecture visibility | Historical architecture doc existed, but not repo-specific canonical doc | Maintain `SYSTEM_ARCHITECTURE.md` and `USER_EXPERIENCE_MAP.md` as live docs |
 | Verification discipline | Tests exist but repo-level process docs were missing | Keep task-level verification logged in `deliverable.md` and `notes.md` |
+| Test architecture scaling | The suite has grown to `1280` passing tests, and gate tiers/task-based eval are now executable, but the nightly/release matrix still needs more task inventory | Split growth into fast / nightly / release gates, prioritize command-surface gaps (`pr/session/serve/run/providers test/root/bin`), and back the scenario layer with `AGENT_EVAL_PLAN.md` |
+| Eval system reproducibility | Fast-gate assets existed, but gate execution still depended on one-off scripts and operator memory | Keep `agent-eval/manifests/*.json` and `agent-eval/scripts/run-gate.py` as the canonical release-quality gate system |
 | HTML companion drift | Hand-maintained summaries can diverge from Markdown | Regenerate planning/architecture HTML companions from the canonical `.md` source |
 
 ## Planned Improvements
@@ -30,6 +34,10 @@ Keep Orca CLI maintainable as a fast-moving CLI runtime while preventing drift a
 2. Keep provider/model/tool count claims sourced from code or explicitly dated when narrative docs summarize them.
 3. Add release-time doc verification to ensure README and canonical docs stay aligned with command registration.
 4. Expand headless/API documentation when `orca serve` grows beyond current HTTP + SSE scope.
+5. Move active test-growth goals out of historical flat docs and into PDCA + `AGENT_EVAL_PLAN.md`.
+6. Grow the quality program by matrix lane so count increases stay tied to signal and ownership.
+7. Keep release evidence under `agent-eval/runs/<run_id>/` so build / bench / black-box / CLI journey data stay reviewable after the terminal session ends.
+8. Keep reflect heuristics conservative, deduped, and documented so prompt-intent routing stays helpful rather than noisy.
 
 ## Guardrails
 

@@ -1,8 +1,5 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Orca CLI Platform Optimization Plan</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } }</style></head><body><header><h1>Orca CLI Platform Optimization Plan</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#objective">Objective</a><a href="#current-optimization-targets">Current Optimization Targets</a><a href="#planned-improvements">Planned Improvements</a><a href="#guardrails">Guardrails</a></aside><article class="content markdown-body"><h1>Orca CLI Platform Optimization Plan</h1>
-<h2 id="objective">Objective</h2>
-<p>Keep Orca CLI maintainable as a fast-moving CLI runtime while preventing drift across docs, command surfaces, and provider-routing behavior.</p>
-<h2 id="current-optimization-targets">Current Optimization Targets</h2>
-<table>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Orca CLI Platform Optimization Plan</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } }</style></head><body><header><h1>Orca CLI Platform Optimization Plan</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#objective">Objective</a><a href="#current-optimization-targets">Current Optimization Targets</a><a href="#planned-improvements">Planned Improvements</a><a href="#guardrails">Guardrails</a></aside><article class="content markdown-body"><h1 id="orca-cli-platform-optimization-plan">Orca CLI Platform Optimization Plan</h1><h2 id="objective">Objective</h2><p>Keep Orca CLI maintainable as a fast-moving CLI runtime while preventing drift across docs, command surfaces, and provider-routing behavior.</p>
+<h2 id="current-optimization-targets">Current Optimization Targets</h2><table>
 <thead>
 <tr>
 <th>Area</th>
@@ -66,6 +63,11 @@
 <td>Merge runtime health and error signals into the stats surface</td>
 </tr>
 <tr>
+<td>REPL interaction ergonomics</td>
+<td>Slash autocomplete can hijack Enter after arguments begin, and theme onboarding can ignore persisted choice</td>
+<td>Keep autocomplete token-scoped and honor saved theme preference before showing first-launch UI</td>
+</tr>
+<tr>
 <td>Command/document parity</td>
 <td>README can drift from actual registrations</td>
 <td>Treat <code>src/program.ts</code> as source of truth and update docs in the same task</td>
@@ -81,20 +83,31 @@
 <td>Keep task-level verification logged in <code>deliverable.md</code> and <code>notes.md</code></td>
 </tr>
 <tr>
+<td>Test architecture scaling</td>
+<td>The suite has grown to <code>1280</code> passing tests, and gate tiers/task-based eval are now executable, but the nightly/release matrix still needs more task inventory</td>
+<td>Split growth into fast / nightly / release gates, prioritize command-surface gaps (<code>pr/session/serve/run/providers test/root/bin</code>), and back the scenario layer with <code>AGENT_EVAL_PLAN.md</code></td>
+</tr>
+<tr>
+<td>Eval system reproducibility</td>
+<td>Fast-gate assets existed, but gate execution still depended on one-off scripts and operator memory</td>
+<td>Keep <code>agent-eval/manifests/*.json</code> and <code>agent-eval/scripts/run-gate.py</code> as the canonical release-quality gate system</td>
+</tr>
+<tr>
 <td>HTML companion drift</td>
 <td>Hand-maintained summaries can diverge from Markdown</td>
 <td>Regenerate planning/architecture HTML companions from the canonical <code>.md</code> source</td>
 </tr>
 </tbody></table>
-<h2 id="planned-improvements">Planned Improvements</h2>
-<ol>
+<h2 id="planned-improvements">Planned Improvements</h2><ol>
 <li>Migrate future architecture/product updates into the initiative docs instead of adding new flat docs.</li>
 <li>Keep provider/model/tool count claims sourced from code or explicitly dated when narrative docs summarize them.</li>
 <li>Add release-time doc verification to ensure README and canonical docs stay aligned with command registration.</li>
 <li>Expand headless/API documentation when <code>orca serve</code> grows beyond current HTTP + SSE scope.</li>
+<li>Move active test-growth goals out of historical flat docs and into PDCA + <code>AGENT_EVAL_PLAN.md</code>.</li>
+<li>Grow the quality program by matrix lane so count increases stay tied to signal and ownership.</li>
+<li>Keep release evidence under <code>agent-eval/runs/&lt;run_id&gt;/</code> so build / bench / black-box / CLI journey data stay reviewable after the terminal session ends.</li>
 </ol>
-<h2 id="guardrails">Guardrails</h2>
-<ul>
+<h2 id="guardrails">Guardrails</h2><ul>
 <li>No backward-compatibility shims for obsolete surfaces</li>
 <li>No mock-only validation</li>
 <li>No manual edits in <code>dist/</code></li>

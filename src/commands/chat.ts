@@ -11,398 +11,58 @@ import { Command } from 'commander'
 import { execSync } from 'node:child_process'
 import { basename } from 'node:path'
 import type { OrcaConfig } from '../config.js'
-import { resolveConfig, resolveProvider, getGlobalConfigPath, listProviders, initProjectConfig } from '../config.js'
-import { existsSync, appendFileSync, mkdirSync as fsMkdirSync, readFileSync, writeFileSync, readdirSync, unlinkSync, statSync } from 'node:fs'
-import { join, dirname } from 'node:path'
+import { resolveConfig, resolveProvider } from '../config.js'
+import { existsSync, writeFileSync, unlinkSync, statSync } from 'node:fs'
+import { join, dirname, resolve } from 'node:path'
 import {
   printRichBanner, printBanner, printProviderInfo, printProjectContext, printError,
   streamToken, ensureNewline, setLastNewline, printToolUse, printToolResult,
   printUsageSummary, printSessionSummary, emitJson,
-  askPermission, printDiffPreview,
   printSeparator, printStatusLine, printTurnSummary,
   ProgressIndicator, theme,
 } from '../output.js'
 import type { OutputMode } from '../output.js'
 import { streamChat } from '../providers/openai-compat.js'
-import type { ChatMessage } from '../providers/openai-compat.js'
+import { messageContentToText } from '../providers/openai-compat.js'
+import type { ChatMessage, PromptContent } from '../providers/openai-compat.js'
 import { StreamMarkdown } from '../markdown.js'
 import { buildSystemPrompt } from '../system-prompt.js'
 import { hooks } from '../hooks.js'
-import type { HookInput } from '../hooks.js'
 import { mcpClient } from '../mcp-client.js'
 import { runCommandPicker } from '../command-picker.js'
-import { runCouncil, runRace, runPipeline, pickDiverseModels } from '../multi-model.js'
-import type { PipelineStage } from '../multi-model.js'
-import { TOOL_DEFINITIONS, executeTool, DANGEROUS_TOOLS, setSandboxMode } from '../tools.js'
-import { autoVerify, formatVerifyOutput } from '../auto-verify.js'
+import { TOOL_DEFINITIONS, setSandboxMode } from '../tools.js'
 import { TokenBudgetManager } from '../token-budget.js'
 import { RetryTracker } from '../retry-intelligence.js'
 import { recordUsage } from '../usage-db.js'
-import { consumeCompletedBackgroundJobs, listBackgroundJobs, readBackgroundJobLog } from '../background-jobs.js'
-import { formatContextWindow, formatPricing, getAgenticWarning, getContextWindowForModel, getPricingForModel, listModelChoices, type ModelChoice } from '../model-catalog.js'
+import { consumeCompletedBackgroundJobs, readBackgroundJobLog } from '../background-jobs.js'
+import { getAgenticWarning, getContextWindowForModel, getPricingForModel, listModelChoices, type ModelChoice } from '../model-catalog.js'
 import { logInfo, logWarning } from '../logger.js'
-import { ContextMonitor, LoopDetector, classifyError } from '../harness/index.js'
+import { ContextMonitor, LoopDetector } from '../harness/index.js'
 import { ModeRegistry } from '../modes/index.js'
 import { ThreadManager } from '../memory/threads.js'
 import { matchCognitive, formatCognitiveContext } from '../cognitive-skeleton.js'
 import { PostmortemLog, NotesManager, PromptRepository, LearningJournal } from '../knowledge/index.js'
-import { MissionController } from '../mission/index.js'
-import type { MissionEvent } from '../mission/index.js'
-import { isMultiTaskPrompt, decomposePrompt, decomposeHeuristic, TaskTracker, executePlan } from '../planner/index.js'
 import { preprocessFile } from '../preprocess/index.js'
 import { detectFormat } from '../preprocess/index.js'
-import type { PlanEvent, PlannedTask } from '../planner/index.js'
-
-// ── File Reference Expansion (L0 Input Normalization) ─────────────
-// Matches Claude Code's path-expand hook + Codex stdin pipe pattern.
-//
-// Three modes:
-//   1. Bare path (entire prompt is a path) → read + "What would you like to do?"
-//   2. file:///URL or embedded path → read + inject <file> tag inline
-//   3. Stdin pipe (handled in createChatCommand before REPL) → prepend content
-//
-// Design: Claude Code auto-reads bare paths via UserPromptSubmit hook.
-// Orca does the same here, plus handles file:/// for council/race.
-
-interface FileExpansionResult {
-  text: string
-  /** Absolute paths of files whose content was injected into the prompt */
-  injectedPaths: Set<string>
-}
-
-function expandFileReferences(prompt: string, cwd: string): FileExpansionResult {
-  const home = process.env.HOME || ''
-  const trimmed = prompt.trim()
-  const injectedPaths = new Set<string>()
-
-  // Mode 0: Directory path — entire prompt is a directory path (or prompt ends with one)
-  // Auto-discover and inject key project files so SOTA models have full context.
-  const dirExpansion = tryExpandDirectory(trimmed, home, cwd)
-  if (dirExpansion) {
-    // Collect injected paths from directory expansion
-    for (const m of dirExpansion.matchAll(/<file path="([^"]+)">/g)) {
-      injectedPaths.add(m[1]!)
-    }
-    return { text: appendDedupHint(dirExpansion, injectedPaths), injectedPaths }
-  }
-
-  // Mode 1: Bare path — entire prompt is just a file path
-  // Claude Code behavior: read file, ask "what would you like to do?"
-  const barePath = resolveFilePath(trimmed, home, cwd)
-  if (barePath && !trimmed.includes(' ') && tryReadFile(barePath) !== null) {
-    const content = tryReadFile(barePath)!
-    const truncated = truncateFileContent(content)
-    injectedPaths.add(barePath)
-    const text = `<file path="${barePath}">\n${truncated}\n</file>\n\nThe user shared this file. Analyze it and ask what they'd like to do with it.`
-    return { text: appendDedupHint(text, injectedPaths), injectedPaths }
-  }
-
-  let expanded = prompt
-  const injected = new Set<string>()
-
-  // Mode 2a: file:///path/to/file URLs
-  const fileUrlRegex = /file:\/\/\/([\S]+)/g
-  let match: RegExpExecArray | null
-  while ((match = fileUrlRegex.exec(prompt)) !== null) {
-    const filePath = '/' + match[1]!.replace(/['")\]}>，。；]$/, '') // strip trailing punctuation
-    if (injected.has(filePath)) continue
-    const content = tryReadFile(filePath)
-    if (content !== null) {
-      injected.add(filePath)
-      injectedPaths.add(filePath)
-      const truncated = truncateFileContent(content)
-      expanded += `\n\n<file path="${filePath}">\n${truncated}\n</file>`
-    }
-  }
-
-  // Mode 2b: bare paths with file extensions (/abs/path.ext or ~/path.ext)
-  const barePathRegex = /(?:^|\s)((?:\/[\w.@/-]+|~\/[\w.@/-]+)\.(?:html|htm|md|ts|tsx|js|jsx|json|txt|py|go|rs|css|scss|yaml|yml|toml|xml|csv|sql|sh|zsh|bash|swift|kt|java|c|cpp|h|rb|php|vue|svelte))\b/g
-  while ((match = barePathRegex.exec(prompt)) !== null) {
-    let filePath = match[1]!.trim()
-    filePath = resolveFilePath(filePath, home, cwd) || filePath
-    if (injected.has(filePath)) continue
-    const content = tryReadFile(filePath)
-    if (content !== null) {
-      injected.add(filePath)
-      injectedPaths.add(filePath)
-      const truncated = truncateFileContent(content)
-      expanded += `\n\n<file path="${filePath}">\n${truncated}\n</file>`
-    }
-  }
-
-  // Mode 2c: relative paths (./path or path/to/file.ext)
-  const relPathRegex = /(?:^|\s)(\.\/[\w.@/-]+\.(?:html|md|ts|js|json|txt|py|go|rs|css|yaml|yml|toml))\b/g
-  while ((match = relPathRegex.exec(prompt)) !== null) {
-    const filePath = join(cwd, match[1]!.trim())
-    if (injected.has(filePath)) continue
-    const content = tryReadFile(filePath)
-    if (content !== null) {
-      injected.add(filePath)
-      injectedPaths.add(filePath)
-      const truncated = truncateFileContent(content)
-      expanded += `\n\n<file path="${filePath}">\n${truncated}\n</file>`
-    }
-  }
-
-  if (injectedPaths.size > 0) {
-    expanded = appendDedupHint(expanded, injectedPaths)
-  }
-
-  return { text: expanded, injectedPaths }
-}
-
-/**
- * Append a dedup hint to expanded prompts, telling the model not to re-read injected files.
- * This is the first line of defense against context explosion from duplicate reads.
- */
-function appendDedupHint(text: string, paths: Set<string>): string {
-  if (paths.size === 0) return text
-  return text + `\n\n<context-note>The file content above has been preprocessed and fully injected. Do NOT call read_file on these paths — their content is already complete in context: ${[...paths].join(', ')}</context-note>`
-}
-
-/**
- * MultiModelStart built-in hook: force-inject project context for council/race/pipeline.
- *
- * When multiple SOTA models collaborate, they ALL need project context regardless of
- * whether the user explicitly referenced files. This function:
- *   1. Expands any explicit file/dir references in the prompt
- *   2. Force-injects cwd project files (CLAUDE.md, README, package.json, tree, etc.)
- *   3. Deduplicates — files already injected by step 1 are not re-injected
- *   4. Returns the enriched prompt and all injected paths
- */
-function prepareMultiModelContext(
-  prompt: string,
-  cwd: string,
-  sessionInjectedPaths: Set<string>,
-): { prompt: string; injectedPaths: Set<string> } {
-  // Step 1: expand explicit file/dir references
-  const expansion = expandFileReferences(prompt, cwd)
-  let enriched = expansion.text
-  const allPaths = new Set(expansion.injectedPaths)
-
-  // Step 2: force-inject cwd project context
-  const cwdContext = expandFileReferences(cwd, cwd)
-  if (cwdContext.injectedPaths.size > 0) {
-    const newPaths: string[] = []
-    for (const p of cwdContext.injectedPaths) {
-      if (!allPaths.has(p)) {
-        allPaths.add(p)
-        newPaths.push(p)
-      }
-    }
-    if (newPaths.length > 0) {
-      // Extract <file> tags for files not already in prompt
-      for (const np of newPaths) {
-        const escaped = np.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        const tagMatch = cwdContext.text.match(new RegExp(`<file path="${escaped}">[\\s\\S]*?</file>`))
-        if (tagMatch) enriched += '\n\n' + tagMatch[0]
-      }
-      // Append project tree if not already present
-      if (!enriched.includes('<project-tree') && cwdContext.text.includes('<project-tree')) {
-        const treeMatch = cwdContext.text.match(/<project-tree[\s\S]*?<\/project-tree>/)
-        if (treeMatch) enriched += '\n\n' + treeMatch[0]
-      }
-      process.stderr.write(`\x1b[90m  [MultiModelStart] force-injected ${newPaths.length} project file(s) from ${cwd}\x1b[0m\n`)
-    }
-  }
-
-  // Step 3: dedup hint + track in session
-  for (const p of allPaths) sessionInjectedPaths.add(p)
-  if (allPaths.size > 0) {
-    enriched = appendDedupHint(enriched, allPaths)
-  }
-
-  return { prompt: enriched, injectedPaths: allPaths }
-}
-
-function resolveFilePath(p: string, home: string, cwd: string): string | null {
-  let resolved = p
-  if (resolved.startsWith('file:///')) resolved = '/' + resolved.slice(8)
-  if (resolved.startsWith('~') && home) resolved = home + resolved.slice(1)
-  if (!resolved.startsWith('/')) resolved = join(cwd, resolved)
-  try {
-    if (existsSync(resolved) && !statSync(resolved).isDirectory()) return resolved
-  } catch {}
-  return null
-}
-
-/**
- * Read and preprocess a file — converts non-text formats to Markdown.
- * Uses markitdown/pandoc/ffmpeg for PDF, DOCX, HTML, images, audio, video.
- * Text/code files pass through as-is.
- */
-function tryReadFile(filePath: string): string | null {
-  try {
-    if (!existsSync(filePath)) return null
-    const stat = statSync(filePath)
-    if (stat.isDirectory()) return null
-    if (stat.size > 50 * 1024 * 1024) return null // 50MB max
-
-    const format = detectFormat(filePath)
-
-    // Text/code: read directly (fast, no conversion needed)
-    if (format.category === 'text' || format.converter === 'passthrough') {
-      if (stat.size > 500_000) return null // 500KB max for text
-      return readFileSync(filePath, 'utf-8')
-    }
-
-    // Non-text: preprocess through pipeline (convert to Markdown)
-    const result = preprocessFile(filePath)
-    if (result.success) {
-      const savings = result.savingsRatio > 1.5 ? ` (${result.savingsRatio.toFixed(1)}x smaller)` : ''
-      process.stderr.write(`\x1b[90m  [preprocess] ${result.fileName}: ${result.method} → ${(result.convertedSize / 1024).toFixed(1)}KB${savings}\x1b[0m\n`)
-      return result.markdown
-    }
-
-    // Fallback: try reading as text
-    if (stat.size > 500_000) return null
-    return readFileSync(filePath, 'utf-8')
-  } catch {
-    return null
-  }
-}
-
-function truncateFileContent(content: string): string {
-  if (content.length <= 20_000) return content
-  return content.slice(0, 20_000) + `\n[... truncated at 20KB, original ${(content.length / 1024).toFixed(0)}KB]`
-}
-
-/**
- * Expand a directory path into project context.
- *
- * When the user passes a directory (as the entire prompt, or "prompt /dir/path"),
- * auto-discover and inject key project files so SOTA models get full context
- * without the user having to manually paste files.
- *
- * Discovery order (reads first found in each category):
- *   Config:  CLAUDE.md, README.md, package.json, pyproject.toml, Cargo.toml, go.mod, Makefile
- *   Docs:    AGENTS.md, CODEX.md, doc/index.md
- *   Source:  tree listing (depth 3, max 200 lines)
- */
-function tryExpandDirectory(prompt: string, home: string, cwd: string): string | null {
-  // Extract directory path from prompt — check if entire prompt is a dir, or ends with a dir path
-  let dirPath: string | null = null
-  let userText = ''
-
-  const trimmed = prompt.trim()
-
-  // Case 1: entire prompt is a directory path
-  let resolved = trimmed
-  if (resolved.startsWith('~') && home) resolved = home + resolved.slice(1)
-  if (!resolved.startsWith('/')) resolved = join(cwd, resolved)
-  try {
-    if (existsSync(resolved) && statSync(resolved).isDirectory()) {
-      dirPath = resolved
-    }
-  } catch {}
-
-  // Case 2: prompt is "some text /path/to/dir" — extract trailing directory
-  if (!dirPath) {
-    const trailingDirMatch = trimmed.match(/^(.+?)\s+((?:\/[\w.@/-]+|~\/[\w.@/-]+))\s*$/)
-    if (trailingDirMatch) {
-      let candidate = trailingDirMatch[2]!
-      if (candidate.startsWith('~') && home) candidate = home + candidate.slice(1)
-      try {
-        if (existsSync(candidate) && statSync(candidate).isDirectory()) {
-          dirPath = candidate
-          userText = trailingDirMatch[1]!.trim()
-        }
-      } catch {}
-    }
-  }
-
-  // Case 3: prompt is "/path/to/dir some text" — extract leading directory
-  if (!dirPath) {
-    const leadingDirMatch = trimmed.match(/^((?:\/[\w.@/-]+|~\/[\w.@/-]+))\s+(.+)$/s)
-    if (leadingDirMatch) {
-      let candidate = leadingDirMatch[1]!
-      if (candidate.startsWith('~') && home) candidate = home + candidate.slice(1)
-      try {
-        if (existsSync(candidate) && statSync(candidate).isDirectory()) {
-          dirPath = candidate
-          userText = leadingDirMatch[2]!.trim()
-        }
-      } catch {}
-    }
-  }
-
-  if (!dirPath) return null
-
-  const parts: string[] = []
-  const injected = new Set<string>()
-  let totalChars = 0
-  const MAX_TOTAL = 60_000 // ~15K tokens budget for project context
-
-  // Key project files to auto-discover (ordered by priority)
-  const PROJECT_FILES = [
-    'CLAUDE.md', 'README.md', 'AGENTS.md', 'CODEX.md',
-    'package.json', 'pyproject.toml', 'Cargo.toml', 'go.mod', 'Makefile', 'Dockerfile',
-    'tsconfig.json', '.env.example',
-    'doc/index.md', 'doc/00_project/initiative_*/PRD.md',
-  ]
-
-  for (const pattern of PROJECT_FILES) {
-    if (totalChars >= MAX_TOTAL) break
-    // Simple glob: handle wildcard in path
-    if (pattern.includes('*')) {
-      try {
-        const dir = join(dirPath, pattern.split('*')[0]!)
-        if (existsSync(dir) && statSync(dir).isDirectory()) {
-          const entries = readdirSync(dir)
-          for (const entry of entries) {
-            const fp = join(dir, entry, pattern.split('/').pop()!.replace('*', ''))
-            if (existsSync(fp) && !statSync(fp).isDirectory()) {
-              const content = tryReadFile(fp)
-              if (content && !injected.has(fp)) {
-                injected.add(fp)
-                const truncated = truncateFileContent(content)
-                parts.push(`<file path="${fp}">\n${truncated}\n</file>`)
-                totalChars += truncated.length
-              }
-            }
-          }
-        }
-      } catch {}
-      continue
-    }
-
-    const fp = join(dirPath, pattern)
-    if (!existsSync(fp) || statSync(fp).isDirectory()) continue
-    if (injected.has(fp)) continue
-
-    const content = tryReadFile(fp)
-    if (content === null) continue
-
-    injected.add(fp)
-    const truncated = truncateFileContent(content)
-    parts.push(`<file path="${fp}">\n${truncated}\n</file>`)
-    totalChars += truncated.length
-  }
-
-  // Generate tree listing for source structure overview
-  try {
-    const tree = execSync(
-      `find "${dirPath}" -maxdepth 3 -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' -not -path '*/__pycache__/*' -not -path '*/.orca-worktrees/*' | head -200`,
-      { encoding: 'utf-8', timeout: 5_000 },
-    ).trim()
-    if (tree) {
-      // Convert to relative paths for readability
-      const relTree = tree.split('\n').map(l => l.replace(dirPath!, '.')).join('\n')
-      parts.push(`<project-tree path="${dirPath}">\n${relTree}\n</project-tree>`)
-    }
-  } catch {}
-
-  if (parts.length === 0) return null
-
-  const fileCount = injected.size
-  const header = userText
-    ? userText
-    : `The user shared project directory: ${dirPath}\nAnalyze this project and respond to the user's request.`
-
-  process.stderr.write(`\x1b[90m  [project-expand] ${dirPath}: ${fileCount} files injected, tree included\x1b[0m\n`)
-
-  return `${header}\n\n${parts.join('\n\n')}`
-}
+import {
+  buildImagePromptContent,
+  splitImageArgsAndPrompt,
+} from './chat-input.js'
+import {
+  autoSaveSession,
+  buildChatFlags,
+  detectConfigFiles,
+  saveInputHistory,
+} from './chat-support.js'
+import { executeReplTurn } from './chat-repl-turn.js'
+import { buildPendingContinueRestore, getForcedModeRestoreWarning } from './chat-resume-state.js'
+import { handleMutatingSlashCommand } from './chat-slash-mutations.js'
+import { handleProxyToolCall, ResetSensitiveWaitCanceledError } from './chat-proxy-tool-call.js'
+import { handleAsyncReplSlashCommand } from './chat-repl-async-slash.js'
+import { handleReadonlySlashCommand } from './chat-slash-readonly.js'
+import { resetConversationState } from './chat-session-state.js'
+import { applyModeSystemPrompt } from './mode-system-prompt.js'
+import { buildReflectSystemPrompt, prepareReflectPromptContent } from './reflect-mode.js'
 
 // ── Chat Options ─────────────────────────────────────────────────
 
@@ -417,11 +77,22 @@ interface ChatOptions {
   safe?: boolean
   effort?: string
   continue?: boolean
+  image?: string[]
 }
 
-export function createChatCommand(): Command {
-  return new Command('chat')
-    .description('Start an agent conversation')
+interface ChatCommandPreset {
+  name?: string
+  description?: string
+  forceReflect?: boolean
+  initialModeId?: string
+}
+
+export function createChatCommand(preset: ChatCommandPreset = {}): Command {
+  const commandName = preset.name || 'chat'
+  const commandDescription = preset.description || 'Start an agent conversation'
+
+  return new Command(commandName)
+    .description(commandDescription)
     .argument('[prompt...]', 'Prompt text (omit for interactive mode)')
     .option('-m, --model <model>', 'Model name (e.g., claude-sonnet-4-20250514, gpt-4.1)')
     .option('-p, --provider <provider>', 'Provider (anthropic, openai, google, poe, auto)')
@@ -433,8 +104,11 @@ export function createChatCommand(): Command {
     .option('--safe', 'Enable permission prompts for dangerous tools (default: yolo)')
     .option('--effort <level>', 'Thinking effort: low, medium, high (default), max')
     .option('-c, --continue', 'Resume the most recent saved session')
+    .option('--image <paths...>', 'Attach one or more local image files (proxy one-shot path only)')
     .action(async (promptParts: string[], opts: ChatOptions) => {
-      let prompt = promptParts.join(' ').trim()
+      const parsedImageInput = splitImageArgsAndPrompt(promptParts, opts.image, opts.cwd || process.cwd())
+      let prompt = parsedImageInput.prompt
+      opts.image = parsedImageInput.imagePaths
       const outputMode: OutputMode = opts.json ? 'json' : 'streaming'
 
       // Stdin pipe support: cat file | orca chat "prompt"
@@ -459,15 +133,21 @@ export function createChatCommand(): Command {
       try {
         const config = resolveConfig({
           cwd: opts.cwd || process.cwd(),
-          flags: buildFlags(opts),
+          flags: buildChatFlags(opts),
         })
 
         const resolved = resolveProvider(config)
 
         const cwd = opts.cwd || process.cwd()
+        const reflectSystemPrompt = preset.forceReflect
+          ? buildReflectSystemPrompt(config.systemPrompt || buildSystemPrompt(cwd))
+          : null
 
         if (outputMode === 'streaming') {
-          if (prompt) {
+          const imagePrompt = opts.image?.length ? buildImagePromptContent(prompt, opts.image, cwd) : undefined
+          const hasOneShotInput = Boolean(prompt || imagePrompt)
+
+          if (hasOneShotInput) {
             // One-shot mode: compact banner
             printBanner(TOOL_DEFINITIONS.length)
             printProviderInfo(resolved.provider, resolved.model)
@@ -507,10 +187,36 @@ export function createChatCommand(): Command {
           }
         }
 
-        if (prompt) {
-          await executeOneShot(prompt, resolved, config, outputMode, cwd)
+        const imagePrompt = opts.image?.length ? buildImagePromptContent(prompt, opts.image, cwd) : undefined
+        const oneShotPrompt = imagePrompt ?? prompt
+        if (oneShotPrompt) {
+          if (imagePrompt && !resolved.baseURL) {
+            throw new Error('--image is currently supported only for OpenAI-compatible proxy providers with baseURL configured.')
+          }
+          const oneShotMcpTools = await loadOneShotMcpTools(cwd, !imagePrompt)
+          const preparedPrompt = prepareReflectPromptContent(oneShotPrompt, {
+            force: preset.forceReflect,
+            allowAuto: !preset.forceReflect,
+          })
+          if (preparedPrompt.notice && outputMode === 'streaming') {
+            console.log(`\x1b[90m  ${preparedPrompt.notice}\x1b[0m`)
+          }
+          await executeOneShot(
+            preparedPrompt.prompt,
+            resolved,
+            reflectSystemPrompt ? { ...config, systemPrompt: reflectSystemPrompt } : config,
+            outputMode,
+            cwd,
+            oneShotMcpTools,
+          )
         } else {
-          await runREPL(resolved, config, outputMode, cwd, { safe: opts.safe, effort: opts.effort, continue: opts.continue })
+          await runREPL(resolved, config, outputMode, cwd, {
+            safe: opts.safe,
+            effort: opts.effort,
+            continue: opts.continue,
+            forceReflect: preset.forceReflect,
+            initialModeId: preset.initialModeId,
+          })
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
@@ -524,6 +230,15 @@ export function createChatCommand(): Command {
     })
 }
 
+export function createReflectCommand(): Command {
+  return createChatCommand({
+    name: 'reflect',
+    description: 'Socratic debugging and root-cause investigation',
+    forceReflect: true,
+    initialModeId: 'reflect',
+  })
+}
+
 // ── Types ───────────────────────────────────────────────────────
 
 interface ResolvedProvider {
@@ -532,7 +247,14 @@ interface ResolvedProvider {
   model: string
   baseURL?: string
   sdkProvider: 'anthropic' | 'openai'
+  headers?: Record<string, string>
+  reasoningEffort?: string
 }
+
+type ModelSelectionTarget = string | Pick<ModelChoice, 'model' | 'provider'>
+
+type AsyncSlashCommand = 'council' | 'race' | 'pipeline' | 'mission' | 'plan'
+type SlashCommandResult = 'exit' | 'handled' | 'pick_model' | 'not_command' | AsyncSlashCommand
 
 interface SessionStats {
   turns: number
@@ -543,19 +265,56 @@ interface SessionStats {
   turnTokens: number[]
 }
 
+export async function collectFencedMultilineInput(
+  initialLine: string,
+  readNextLine: () => Promise<string | null>,
+  consumeCanceledWait?: () => boolean,
+): Promise<string | null> {
+  const lines: string[] = [initialLine]
+
+  while (true) {
+    const line = await readNextLine()
+    if (line === null) {
+      if (consumeCanceledWait?.()) return null
+      break
+    }
+    lines.push(line)
+    if (line.trim() === '```') break
+  }
+
+  return lines.join('\n')
+}
+
 // ── One-shot Mode ───────────────────────────────────────────────
 
-async function executeOneShot(
-  prompt: string,
+export async function loadOneShotMcpTools(
+  cwd: string,
+  enableMcp = true,
+): Promise<Array<Record<string, unknown>>> {
+  if (!enableMcp) return []
+  mcpClient.loadConfigs(cwd)
+  if (mcpClient.configuredCount <= 0) return []
+  const connected = await mcpClient.connectAll()
+  if (connected.length <= 0) return []
+  return await mcpClient.getToolDefinitions() as Array<Record<string, unknown>>
+}
+
+export async function executeOneShot(
+  prompt: PromptContent,
   resolved: ResolvedProvider,
   config: OrcaConfig,
   outputMode: OutputMode,
   cwd: string,
+  mcpTools: Array<Record<string, unknown>> = [],
 ): Promise<void> {
-  if (resolved.baseURL) {
-    await runProxyQuery({ prompt, resolved, config, outputMode, cwd })
-  } else {
-    await runSDKQuery({ prompt, resolved, config, outputMode, cwd })
+  try {
+    if (resolved.baseURL) {
+      await runProxyQuery({ prompt, resolved, config, outputMode, cwd, extraToolDefs: mcpTools })
+    } else {
+      await runSDKQuery({ prompt, resolved, config, outputMode, cwd })
+    }
+  } finally {
+    mcpClient.disconnectAll()
   }
 }
 
@@ -570,7 +329,7 @@ async function runREPL(
   config: OrcaConfig,
   outputMode: OutputMode,
   cwd: string,
-  opts: { safe?: boolean; effort?: string; continue?: boolean } = {},
+  opts: { safe?: boolean; effort?: string; continue?: boolean; forceReflect?: boolean; initialModeId?: string } = {},
 ): Promise<void> {
   const { createInterface } = await import('node:readline')
   const { homedir: getHomedir } = await import('node:os')
@@ -593,7 +352,7 @@ async function runREPL(
     // Session
     '/help', '/clear', '/compact', '/status', '/cost', '/doctor',
     // Model
-    '/model', '/models', '/providers', '/effort',
+    '/model', '/models', '/providers', '/effort', '/reflect',
     // Context
     '/history', '/tokens', '/stats', '/system',
     // Session management
@@ -641,10 +400,13 @@ async function runREPL(
 
     // Keyboard shortcuts (legacy mode only — ink handles these via useInput)
     process.stdin.on('keypress', (_ch: string, key: { name?: string; ctrl?: boolean; shift?: boolean; meta?: boolean; sequence?: string }) => {
-      // Ctrl+L: clear screen
+      // Ctrl+L: clear screen and reset conversation state
       if (key && key.ctrl && key.name === 'l') {
+        resetConversationState(history, stats, { tokenBudget, contextMonitor })
+        resetTransientSessionState()
         process.stdout.write('\x1b[2J\x1b[H')
-        rl.prompt()
+        console.log('\x1b[90m  conversation cleared.\x1b[0m')
+        rl.prompt(true)
         return
       }
 
@@ -662,8 +424,8 @@ async function runREPL(
 
       // Ctrl+Z: quick undo (same as /undo)
       if (key && key.ctrl && key.name === 'z') {
-        if (lastWrite?.path) {
-          const { path: undoPath, oldContent } = lastWrite
+        if (undoState.lastWrite?.path) {
+          const { path: undoPath, oldContent } = undoState.lastWrite
           try {
             if (oldContent === null) {
               unlinkSync(undoPath)
@@ -672,7 +434,7 @@ async function runREPL(
               writeFileSync(undoPath, oldContent, 'utf-8')
               process.stderr.write(`\r\x1b[2K\x1b[90m  undo: restored ${undoPath}\x1b[0m\n`)
             }
-            lastWrite = { path: '', oldContent: null }
+            undoState.lastWrite = null
           } catch { /* ignore */ }
         }
         return
@@ -699,6 +461,9 @@ async function runREPL(
   // Multi-turn conversation history
   const history: ChatMessage[] = []
   let sysPrompt = config.systemPrompt || buildSystemPrompt(cwd)
+  if (opts.initialModeId === 'reflect') {
+    sysPrompt = buildReflectSystemPrompt(sysPrompt)
+  }
 
   // Effort-based system prompt modification
   const effortPrefix: Record<string, string> = {
@@ -723,19 +488,36 @@ async function runREPL(
   }
 
   // Session resume: --continue flag loads most recent session
+  let restoredModeId: string | undefined
+  let restoredSelection: { provider?: string; model: string } | undefined
+  let pendingRestoredHistory: ChatMessage[] | undefined
+  let pendingRestoredStats:
+    | { turns: number; totalInputTokens: number; totalOutputTokens: number; startTime: number; turnTokens: number[] }
+    | undefined
+  let pendingRestoredName: string | undefined
   if (opts.continue) {
     const { getLastSession } = await import('./session.js')
     const last = getLastSession()
     if (last) {
-      history.length = 0
-      history.push(...last.session.history.map((m: { role: string; content: string }) => ({
-        role: m.role as 'system' | 'user' | 'assistant',
-        content: m.content,
-      })))
-      stats.turns = last.session.stats?.turns || 0
-      stats.totalInputTokens = last.session.stats?.inputTokens || 0
-      stats.totalOutputTokens = last.session.stats?.outputTokens || 0
-      console.log(`\x1b[90m  Resuming session: ${last.name} (${stats.turns} turns, ${history.length} messages)\x1b[0m`)
+      const pending = buildPendingContinueRestore(last)
+      if (pending.restore) {
+        pendingRestoredHistory = pending.restore.history
+        pendingRestoredStats = pending.restore.stats
+        pendingRestoredName = pending.restore.name
+        restoredModeId = pending.restore.restoredModeId
+        restoredSelection = pending.restore.restoredSelection
+        const forcedModeWarning = getForcedModeRestoreWarning(opts.initialModeId, restoredModeId)
+        if (forcedModeWarning) {
+          console.log(`\x1b[33m  ${forcedModeWarning}\x1b[0m`)
+          pendingRestoredHistory = undefined
+          pendingRestoredStats = undefined
+          pendingRestoredName = undefined
+          restoredModeId = undefined
+          restoredSelection = undefined
+        }
+      } else if (pending.warning) {
+        console.log(`\x1b[33m  ${pending.warning}\x1b[0m`)
+      }
     } else {
       console.log(`\x1b[90m  no saved sessions found — starting fresh.\x1b[0m`)
     }
@@ -749,7 +531,6 @@ async function runREPL(
   let lastPrompt = '' // for /retry
   let currentEffort: import('../output.js').ThinkingEffort =
     (opts.effort as import('../output.js').ThinkingEffort) || 'high'
-
   // Permission mode: yolo (auto-approve all) → auto (approve safe, prompt dangerous) → plan (prompt all)
   type PermMode = 'yolo' | 'auto' | 'plan'
   const PERM_MODES: PermMode[] = ['yolo', 'auto', 'plan']
@@ -771,6 +552,61 @@ async function runREPL(
     try {
       modeRegistry.loadFromFile(customModesPath)
     } catch { /* ignore malformed modes file */ }
+  }
+  if (opts.initialModeId) {
+    modeRegistry.switchTo(opts.initialModeId)
+  }
+  const modeIdBeforeRestore = modeRegistry.getActive().id
+  if (!opts.initialModeId && restoredModeId) {
+    if (!modeRegistry.switchTo(restoredModeId)) {
+      console.log(`\x1b[33m  saved mode unavailable: ${restoredModeId} — starting fresh session.\x1b[0m`)
+      pendingRestoredHistory = undefined
+      pendingRestoredStats = undefined
+      pendingRestoredName = undefined
+      restoredSelection = undefined
+    }
+  }
+
+  if (restoredSelection) {
+    try {
+      const restoredResolved = resolveProvider({
+        ...config,
+        ...(restoredSelection.provider ? { defaultProvider: restoredSelection.provider as OrcaConfig['provider'] } : {}),
+        defaultModel: restoredSelection.model,
+      })
+      resolved.provider = restoredResolved.provider
+      resolved.apiKey = restoredResolved.apiKey
+      resolved.model = restoredResolved.model
+      resolved.baseURL = restoredResolved.baseURL
+      resolved.sdkProvider = restoredResolved.sdkProvider
+      resolved.headers = restoredResolved.headers
+      resolved.reasoningEffort = restoredResolved.reasoningEffort
+      currentModel = restoredResolved.model
+      syncHarnessModel(currentModel)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.log(`\x1b[33m  resume model unavailable: ${message}\x1b[0m`)
+      if (modeRegistry.getActive().id !== modeIdBeforeRestore) {
+        modeRegistry.switchTo(modeIdBeforeRestore)
+      }
+      pendingRestoredHistory = undefined
+      pendingRestoredStats = undefined
+      pendingRestoredName = undefined
+      restoredSelection = undefined
+    }
+  }
+
+  if (pendingRestoredHistory && pendingRestoredStats) {
+    history.length = 0
+    history.push(...pendingRestoredHistory)
+    stats.turns = pendingRestoredStats.turns
+    stats.totalInputTokens = pendingRestoredStats.totalInputTokens
+    stats.totalOutputTokens = pendingRestoredStats.totalOutputTokens
+    stats.startTime = pendingRestoredStats.startTime
+    stats.turnTokens = [...pendingRestoredStats.turnTokens]
+    console.log(
+      `\x1b[90m  Resuming session: ${pendingRestoredName} (${stats.turns} turns, ${history.length} messages)\x1b[0m`,
+    )
   }
 
   const threadManager = new ThreadManager()
@@ -808,8 +644,8 @@ async function runREPL(
         break
       }
       case 'undo': {
-        if (lastWrite?.path) {
-          const { path: undoPath, oldContent } = lastWrite
+        if (undoState.lastWrite?.path) {
+          const { path: undoPath, oldContent } = undoState.lastWrite
           try {
             if (oldContent === null) {
               unlinkSync(undoPath)
@@ -818,7 +654,7 @@ async function runREPL(
               writeFileSync(undoPath, oldContent, 'utf-8')
               session.emitSystemMessage(`undo: restored ${undoPath}`, 'info')
             }
-            lastWrite = { path: '', oldContent: null }
+            undoState.lastWrite = null
           } catch { /* ignore */ }
         } else {
           session.emitSystemMessage('nothing to undo.', 'info')
@@ -827,14 +663,11 @@ async function runREPL(
       }
       case 'clear-screen': {
         // UI already clears blocks; business logic resets conversation state
-        const sys = history.find(m => m.role === 'system')
-        history.length = 0
-        if (sys) history.push(sys)
-        stats.turns = 0
-        stats.totalInputTokens = 0
-        stats.totalOutputTokens = 0
-        contextMonitor.reset()
-        tokenBudget.reset()
+        resetConversationState(history, stats, { tokenBudget, contextMonitor })
+        resetTransientSessionState()
+        session.emitClear()
+        session.emitSystemMessage('conversation cleared.', 'info')
+        session.emitStatusUpdate(getStatusInfo())
         break
       }
     }
@@ -848,13 +681,14 @@ async function runREPL(
       costUsd = (stats.totalInputTokens / 1_000_000) * pricing[0]
              + (stats.totalOutputTokens / 1_000_000) * pricing[1]
     }
-    return {
-      model: currentModel,
-      contextPct: Math.min(100, budget.utilizationPct),
-      permMode: currentPermMode,
-      gitBranch,
-      costUsd,
-      tokPerSec: lastTokPerSec,
+      return {
+        model: currentModel,
+        contextPct: Math.min(100, budget.utilizationPct),
+        permMode: currentPermMode,
+        behaviorMode: modeRegistry.getActive().id,
+        gitBranch,
+        costUsd,
+        tokPerSec: lastTokPerSec,
       turns: stats.turns,
       sparkline: stats.turnTokens.length > 1 ? stats.turnTokens : undefined,
     }
@@ -882,6 +716,62 @@ async function runREPL(
   // Update status bar periodically (ink re-renders on state change)
   const emitStatus = () => session.emitStatusUpdate(getStatusInfo())
 
+  function syncHarnessModel(model: string): void {
+    tokenBudget.setModel(model)
+    contextMonitor.setModelWindow(getContextWindowForModel(model) || 200_000)
+  }
+
+  const emitInlineNotice = (text: string, level: 'info' | 'warn' | 'error' = 'info'): void => {
+    if (useInk) {
+      session.emitSystemMessage(text, level)
+      return
+    }
+    const color = level === 'error' ? '\x1b[31m' : level === 'warn' ? '\x1b[33m' : '\x1b[90m'
+    console.log(`${color}  ${text}\x1b[0m`)
+  }
+
+  const syncHarnessAfterCompaction = (): void => {
+    tokenBudget.clearCurrentUsage()
+    contextMonitor.clearCurrentUsage()
+    emitStatus()
+  }
+
+  const applyModelSelection = (target: ModelSelectionTarget): boolean => {
+    const model = typeof target === 'string' ? target : target.model
+    const providerOverride = typeof target === 'string' ? undefined : target.provider
+    let nextResolved: ReturnType<typeof resolveProvider> | null = null
+
+    // Re-resolve provider if the caller picked an explicit provider/model pair,
+    // or if the current provider cannot route models dynamically.
+    const providerConfig = config.providers[resolved.provider]
+    if (providerOverride || !providerConfig?.aggregator) {
+      try {
+        nextResolved = resolveProvider({
+          ...config,
+          ...(providerOverride ? { defaultProvider: providerOverride } : {}),
+          defaultModel: model,
+        })
+      } catch (err) {
+        emitInlineNotice(`model switch failed: ${err instanceof Error ? err.message : String(err)}`, 'error')
+        return false
+      }
+    }
+
+    currentModel = model
+    resolved.model = model
+    syncHarnessModel(model)
+
+    if (nextResolved) {
+      resolved.provider = nextResolved.provider
+      resolved.apiKey = nextResolved.apiKey
+      resolved.baseURL = nextResolved.baseURL
+      resolved.sdkProvider = nextResolved.sdkProvider
+      resolved.headers = nextResolved.headers
+    }
+
+    return true
+  }
+
   const renderStatusAndPrompt = (): string => {
     if (useInk) {
       // ink handles rendering — just return empty prompt (not used in ink mode)
@@ -894,6 +784,7 @@ async function runREPL(
       currentModel.length > 22 ? currentModel.slice(0, 20) + '..' : currentModel,
       `ctx ${getStatusInfo().contextPct}%`,
       currentPermMode,
+      `mode ${getStatusInfo().behaviorMode || 'default'}`,
       gitBranch || '',
       getStatusInfo().costUsd > 0
         ? (getStatusInfo().costUsd < 0.01 ? `$${getStatusInfo().costUsd.toFixed(4)}` : `$${getStatusInfo().costUsd.toFixed(2)}`)
@@ -982,16 +873,26 @@ async function runREPL(
   const inputHistory: string[] = []
 
   // Undo stack: track last write_file for /undo
-  let lastWrite: { path: string; oldContent: string | null } | null = null
+  const undoState: UndoState = { lastWrite: null }
 
   // Periodic auto-save interval (every 5 turns or 3 minutes)
   let lastAutoSave = Date.now()
   const AUTO_SAVE_INTERVAL_MS = 3 * 60 * 1000
 
+  const resetTransientSessionState = () => {
+    sessionInjectedPaths.clear()
+    lastTokPerSec = 0
+    lastPrompt = ''
+    undoState.lastWrite = null
+    lastAutoSave = Date.now()
+    retryTracker.reset()
+    loopDetector.reset()
+  }
+
   while (true) {
     // Periodic auto-save for crash recovery
-    if (stats.turns > 0 && (Date.now() - lastAutoSave > AUTO_SAVE_INTERVAL_MS)) {
-      autoSaveSession(currentModel, history, stats)
+        if (stats.turns > 0 && (Date.now() - lastAutoSave > AUTO_SAVE_INTERVAL_MS)) {
+      autoSaveSession(resolved.provider, currentModel, history, stats, modeRegistry.getActive().id)
       lastAutoSave = Date.now()
     }
 
@@ -1020,23 +921,21 @@ async function runREPL(
 
     // Multi-line input: ``` opens fence mode
     if (input.startsWith('```')) {
-      const lines: string[] = [input]
-      while (true) {
-        let line: string | null
-        if (useInk) {
-          line = await session.waitForInput()
-        } else {
-          line = await new Promise<string | null>((resolve) => {
+      input = await collectFencedMultilineInput(
+        input,
+        () => {
+          if (useInk) {
+            return session.waitForInput({ cancelOnClear: true })
+          }
+          return new Promise<string | null>((resolve) => {
             if (stdinEnded) { resolve(null); return }
             rl.question('\x1b[90m  ...\x1b[0m ', (answer) => resolve(answer))
             rl.once('close', () => resolve(null))
           })
-        }
-        if (line === null) break
-        lines.push(line)
-        if (line.trim() === '```') break
-      }
-      input = lines.join('\n')
+        },
+        useInk ? () => session.consumeCanceledResetSensitiveWait() : undefined,
+      )
+      if (input === null) continue
     }
 
     // ── Crash-safe turn boundary: uncaught errors here don't kill the session ──
@@ -1110,24 +1009,26 @@ async function runREPL(
           }
           continue
         }
+        const previousMode = modeRegistry.getActive()
         if (modeRegistry.switchTo(modeArg)) {
-          const mode = modeRegistry.getActive()
-          // Rebuild system prompt with mode prefix
-          const sysIdx = history.findIndex(m => m.role === 'system')
-          if (sysIdx >= 0) {
-            const basePrompt = history[sysIdx]!.content
-              .replace(/^You are in \w+ mode\.[^\n]*\n*/m, '') // strip old mode prefix
-            history[sysIdx] = {
-              role: 'system',
-              content: mode.systemPromptPrefix
-                ? mode.systemPromptPrefix + '\n\n' + basePrompt
-                : basePrompt,
+            const mode = modeRegistry.getActive()
+            // Rebuild system prompt with the exact previous mode prefix removed.
+            const sysIdx = history.findIndex(m => m.role === 'system')
+            if (sysIdx >= 0) {
+              history[sysIdx] = {
+                role: 'system',
+                content: applyModeSystemPrompt({
+                  currentSystemPrompt: messageContentToText(history[sysIdx]!.content),
+                  previousModePrefix: previousMode.systemPromptPrefix,
+                  nextModePrefix: mode.systemPromptPrefix,
+                }),
+              }
             }
-          }
           console.log(`\x1b[90m  mode: \x1b[36m${mode.id}\x1b[0m\x1b[90m (${mode.name})\x1b[0m`)
           if (mode.tools) {
             console.log(`\x1b[90m  tools restricted to: ${mode.tools.join(', ')}\x1b[0m`)
           }
+          emitStatus()
         } else {
           console.log(`\x1b[33m  unknown mode: ${modeArg}. Use /mode to list.\x1b[0m`)
         }
@@ -1153,30 +1054,20 @@ async function runREPL(
       } else {
         const handled = handleSlashCommand(input, resolved, history, stats, cwd, {
           getModel: () => currentModel,
-          setModel: (m: string) => {
-            currentModel = m
-            resolved.model = m
-            // Re-resolve provider if the model family changed and we're not on an aggregator
-            const providerConfig = config.providers[resolved.provider]
-            if (!providerConfig?.aggregator) {
-              try {
-                const newResolved = resolveProvider({ ...config, defaultModel: m })
-                resolved.provider = newResolved.provider
-                resolved.apiKey = newResolved.apiKey
-                if (newResolved.baseURL) resolved.baseURL = newResolved.baseURL
-              } catch { /* keep current provider if re-resolve fails */ }
-            }
-          },
+          setModel: applyModelSelection,
           getProvider: () => resolved.provider,
           getChoices,
-        }, { lastWrite }, { tokenBudget, contextMonitor }, modeRegistry, threadManager, useInk ? session : undefined)
+        }, undoState, { tokenBudget, contextMonitor }, modeRegistry, threadManager, () => {
+          resetTransientSessionState()
+          if (useInk) emitStatus()
+        }, useInk ? session : undefined)
         if (handled === 'exit') {
           saveInputHistory(historyFile, inputHistory)
           mcpClient.disconnectAll()
           await hooks.run('SessionEnd', { event: 'SessionEnd', cwd, model: currentModel })
           // Auto-save session on clean exit (if there was any conversation)
           if (stats.turns > 0) {
-            autoSaveSession(currentModel, history, stats)
+            autoSaveSession(resolved.provider, currentModel, history, stats, modeRegistry.getActive().id)
           }
           if (useInk) {
             const costUsd = computeCost(currentModel, stats.totalInputTokens, stats.totalOutputTokens)
@@ -1228,8 +1119,10 @@ async function runREPL(
           const choices = getChoices()
           if (num >= 1 && num <= choices.length) {
             const oldModel = currentModel
-            currentModel = choices[num - 1]!.model
-            resolved.model = currentModel
+            if (!applyModelSelection(choices[num - 1]!)) {
+              continue
+            }
+            emitStatus()
             console.log(`\x1b[90m  model: ${oldModel} → \x1b[36m${currentModel}\x1b[0m`)
             const warning = getAgenticWarning(currentModel)
             if (warning) console.log(`\x1b[33m  model caution: ${warning}\x1b[0m`)
@@ -1240,406 +1133,22 @@ async function runREPL(
           }
           continue
         }
-        if (handled === 'handled') continue
+        if (handled === 'handled') {
+          emitStatus()
+          continue
+        }
 
-        // Multi-model commands — route each model to its provider
-        if ((handled as string) === 'council' || (handled as string) === 'race' || (handled as string) === 'pipeline') {
-          let mmPrompt = input.replace(/^\/(council|race|pipeline)\s*/, '').trim()
-          if (!mmPrompt) continue
-
-          // MultiModelStart hook: force-inject project context for all SOTA models.
-          // Built-in behavior: universal file preprocessing + cwd project injection.
-          // External hooks can add additional context via MultiModelStart event.
-          const mmContext = prepareMultiModelContext(mmPrompt, cwd, sessionInjectedPaths)
-          mmPrompt = mmContext.prompt
-          const mmCommand = (handled as string)
-          await hooks.run('MultiModelStart', {
-            event: 'MultiModelStart',
-            prompt: mmPrompt,
+        if (handled === 'council' || handled === 'race' || handled === 'pipeline' || handled === 'mission' || handled === 'plan') {
+          await handleAsyncReplSlashCommand({
+            command: handled,
+            input,
+            config,
             cwd,
-            model: currentModel,
-            toolInput: { command: mmCommand, injectedFiles: mmContext.injectedPaths.size },
+            currentModel,
+            useInk,
+            session: useInk ? session : undefined,
+            sessionInjectedPaths,
           })
-
-          // Import routing functions
-          const { resolveModelEndpoint, findAggregator } = await import('../config.js')
-          const aggId = findAggregator(config)
-          const resolveEndpoint = (m: string) => resolveModelEndpoint(m, config, aggId)
-
-          if ((handled as string) === 'council') {
-            const candidates = pickDiverseModels(3)
-            // Pre-check: verify endpoints exist before calling
-            const available = candidates.filter(m => resolveEndpoint(m) !== null)
-            const unavailable = candidates.filter(m => resolveEndpoint(m) === null)
-            if (available.length === 0) {
-              console.log(`\x1b[31m  council: no models with available endpoints.\x1b[0m`)
-              console.log(`\x1b[33m  tried: ${candidates.join(', ')}\x1b[0m`)
-              console.log(`\x1b[33m  hint: set multiple API keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY)`)
-              console.log(`        or configure an aggregator provider (poe, openrouter) in .orca.json\x1b[0m\n`)
-              continue
-            }
-            if (unavailable.length > 0) {
-              console.log(`\x1b[33m  note: ${unavailable.join(', ')} unavailable (no endpoint), using ${available.length} models\x1b[0m`)
-            }
-            const models = available
-
-            // Model progress tracking
-            const modelStatus = new Map<string, { done: boolean; ms: number }>()
-            models.forEach(m => modelStatus.set(m, { done: false, ms: 0 }))
-            const councilStart = Date.now()
-
-            if (useInk) {
-              // ink mode: emit multi-model progress events
-              const emitProgress = () => {
-                const elapsed = Date.now() - councilStart
-                session.emitMultiModelProgress('council', models.map(m => {
-                  const s = modelStatus.get(m)!
-                  return { model: m, done: s.done, elapsedMs: s.done ? s.ms : elapsed }
-                }))
-              }
-              emitProgress()
-
-              const result = await runCouncil({
-                prompt: mmPrompt, models, judgeModel: models[0]!, resolveEndpoint,
-                onModelStart: () => emitProgress(),
-                onModelDone: (m, ms) => {
-                  modelStatus.set(m, { done: true, ms })
-                  emitProgress()
-                  session.emitMultiModelResult('council', m, '', ms)
-                },
-              })
-
-              // Emit results as text blocks
-              for (const r of result.responses) {
-                if (r.error) {
-                  session.emitSystemMessage(`✗ ${r.model}: ${r.error}`, 'error')
-                } else {
-                  session.emitText(`\n**${r.model}** (${(r.durationMs/1000).toFixed(1)}s)\n${r.text}\n`)
-                }
-              }
-              session.emitText(`\n**Verdict** (${result.verdict.model}, ${(result.verdict.durationMs/1000).toFixed(1)}s)\n${result.verdict.text}\n`)
-
-              // Cost comparison matrix
-              const pricing = await import('../model-catalog.js').then(m => m.getPricingForModel)
-              const costLines = result.responses.map(r => {
-                const p = pricing(r.model)
-                const cost = p ? ((r.inputTokens || 0) / 1e6 * p[0] + (r.outputTokens || 0) / 1e6 * p[1]) : 0
-                return `  ${r.model.padEnd(24)} ${(r.durationMs/1000).toFixed(1)}s  ${cost > 0 ? '$' + cost.toFixed(4) : 'n/a'}`
-              })
-              session.emitSystemMessage(`${result.responses.length} models · ${(result.totalDurationMs/1000).toFixed(1)}s · agreement: ${result.agreement}`, 'info')
-              if (costLines.some(l => l.includes('$'))) {
-                session.emitSystemMessage('Cost comparison:\n' + costLines.join('\n'), 'info')
-              }
-
-            } else {
-              // legacy mode
-              console.log(`\n\x1b[36m  ╭── Council: ${models.length} models ──╮\x1b[0m`)
-              models.forEach(m => {
-                const ep = resolveEndpoint(m)
-                console.log(`\x1b[90m  │ ${m} → ${ep?.provider || '?'}\x1b[0m`)
-              })
-              let lastLineLen = 0
-              const renderProgress = () => {
-                const elapsed = Date.now() - councilStart
-                const parts = models.map(m => {
-                  const s = modelStatus.get(m)!
-                  const name = m.length > 18 ? m.slice(0, 16) + '..' : m
-                  if (s.done) return `\x1b[32m✓ ${name} ${(s.ms / 1000).toFixed(1)}s\x1b[0m`
-                  return `\x1b[90m● ${name} ${(elapsed / 1000).toFixed(0)}s\x1b[0m`
-                })
-                const line = `  ${parts.join('  ')}`
-                const clearLen = Math.max(lastLineLen, line.length + 10)
-                process.stderr.write(`\r${' '.repeat(clearLen)}\r${line}`)
-                lastLineLen = line.length
-              }
-              const progressTimer = setInterval(renderProgress, 500)
-              const result = await runCouncil({
-                prompt: mmPrompt, models, judgeModel: models[0]!, resolveEndpoint,
-                onModelStart: () => renderProgress(),
-                onModelDone: (m, ms) => {
-                  modelStatus.set(m, { done: true, ms })
-                  renderProgress()
-                },
-              })
-              clearInterval(progressTimer)
-              process.stderr.write(`\r${' '.repeat(lastLineLen + 10)}\r`)
-              console.log()
-              for (const r of result.responses) {
-                if (r.error) { console.log(`\x1b[31m  ✗ ${r.model}: ${r.error}\x1b[0m`) }
-                else { console.log(`\x1b[90m  ── ${r.model} (${(r.durationMs/1000).toFixed(1)}s) ──\x1b[0m\n  ${r.text.slice(0, 500)}${r.text.length > 500 ? '...' : ''}\n`) }
-              }
-              console.log(`\x1b[36m  ★ Verdict\x1b[0m \x1b[90m(${result.verdict.model}, ${(result.verdict.durationMs/1000).toFixed(1)}s)\x1b[0m\n  ${result.verdict.text}\n`)
-              console.log(`\x1b[90m  ─ ${result.responses.length} models · ${(result.totalDurationMs/1000).toFixed(1)}s · agreement: ${result.agreement} ─\x1b[0m\n`)
-            }
-
-          } else if ((handled as string) === 'race') {
-            const candidates = pickDiverseModels(5)
-            const models = candidates.filter(m => resolveEndpoint(m) !== null)
-            if (models.length === 0) {
-              console.log(`\x1b[31m  race: no models with available endpoints. Set multiple API keys.\x1b[0m\n`)
-              continue
-            }
-
-            const raceStatus = new Map<string, { done: boolean; ms: number; won: boolean }>()
-            models.forEach(m => raceStatus.set(m, { done: false, ms: 0, won: false }))
-            const raceStart = Date.now()
-
-            if (useInk) {
-              const emitRaceProgress = () => {
-                const elapsed = Date.now() - raceStart
-                session.emitMultiModelProgress('race', models.map(m => {
-                  const s = raceStatus.get(m)!
-                  return { model: m, done: s.done, elapsedMs: s.done ? s.ms : elapsed }
-                }))
-              }
-              emitRaceProgress()
-
-              const result = await runRace({
-                prompt: mmPrompt, models, resolveEndpoint,
-                onModelStart: () => emitRaceProgress(),
-                onModelDone: (m, ms, won) => {
-                  raceStatus.set(m, { done: true, ms, won: won || false })
-                  emitRaceProgress()
-                  session.emitMultiModelResult('race', m, '', ms)
-                },
-              })
-              session.emitText(`\n**Winner: ${result.winner.model}** (${(result.winner.durationMs/1000).toFixed(1)}s)\n${result.winner.text}\n`)
-              if (result.cancelled.length > 0) {
-                session.emitSystemMessage(`cancelled: ${result.cancelled.join(', ')}`, 'info')
-              }
-              session.emitSystemMessage(`${(result.totalDurationMs/1000).toFixed(1)}s total`, 'info')
-
-            } else {
-              console.log(`\n\x1b[33m  ╭── Race: ${models.length} models ──╮\x1b[0m`)
-              let raceLineLen = 0
-              const renderRaceProgress = () => {
-                const elapsed = Date.now() - raceStart
-                const parts = models.map(m => {
-                  const s = raceStatus.get(m)!
-                  const name = m.length > 16 ? m.slice(0, 14) + '..' : m
-                  if (s.won) return `\x1b[32m★ ${name} ${(s.ms / 1000).toFixed(1)}s\x1b[0m`
-                  if (s.done) return `\x1b[90m✓ ${name}\x1b[0m`
-                  return `\x1b[90m◎ ${name} ${(elapsed / 1000).toFixed(0)}s\x1b[0m`
-                })
-                const line = `  ${parts.join('  ')}`
-                const clearLen = Math.max(raceLineLen, line.length + 10)
-                process.stderr.write(`\r${' '.repeat(clearLen)}\r${line}`)
-                raceLineLen = line.length
-              }
-              const raceTimer = setInterval(renderRaceProgress, 500)
-              const result = await runRace({
-                prompt: mmPrompt, models, resolveEndpoint,
-                onModelStart: () => renderRaceProgress(),
-                onModelDone: (m, ms, won) => {
-                  raceStatus.set(m, { done: true, ms, won: won || false })
-                  renderRaceProgress()
-                },
-              })
-              clearInterval(raceTimer)
-              process.stderr.write(`\r${' '.repeat(raceLineLen + 10)}\r`)
-              console.log(`\n\x1b[32m  Winner: ${result.winner.model} (${(result.winner.durationMs/1000).toFixed(1)}s)\x1b[0m\n  ${result.winner.text}\n`)
-              if (result.cancelled.length > 0) console.log(`\x1b[90m  cancelled: ${result.cancelled.join(', ')}\x1b[0m`)
-              console.log(`\x1b[90m  ─ ${(result.totalDurationMs/1000).toFixed(1)}s total ─\x1b[0m\n`)
-            }
-
-          } else if ((handled as string) === 'pipeline') {
-            const stages: PipelineStage[] = [
-              { role: 'plan', model: 'claude-opus-4.6' },
-              { role: 'code', model: 'gpt-5.4' },
-              { role: 'review', model: 'gemini-3.1-pro' },
-            ]
-
-            if (useInk) {
-              // ink mode: emit progress as each stage runs
-              const stageModels = stages.map(s => ({ model: `${s.role}: ${s.model}`, done: false, elapsedMs: 0 }))
-              session.emitMultiModelProgress('pipeline', stageModels)
-
-              const result = await runPipeline({
-                prompt: mmPrompt, stages, resolveEndpoint,
-                onStageStart: (_s, i) => {
-                  stageModels[i] = { ...stageModels[i]!, done: false, elapsedMs: 0 }
-                  session.emitMultiModelProgress('pipeline', [...stageModels])
-                },
-                onStageDone: (_s, i, ms) => {
-                  stageModels[i] = { ...stageModels[i]!, done: true, elapsedMs: ms }
-                  session.emitMultiModelProgress('pipeline', [...stageModels])
-                },
-              })
-              for (const { stage, response } of result.stages) {
-                if (response.error) {
-                  session.emitSystemMessage(`${stage.role} (${response.model}): ${response.error}`, 'error')
-                } else {
-                  session.emitText(`\n**${stage.role}** (${response.model}, ${(response.durationMs/1000).toFixed(1)}s)\n${response.text}\n`)
-                }
-              }
-              session.emitSystemMessage(`${result.stages.length} stages · ${(result.totalDurationMs/1000).toFixed(1)}s total`, 'info')
-            } else {
-              console.log(`\n\x1b[35m  ╭── Pipeline: ${stages.length} stages ──╮\x1b[0m`)
-              const result = await runPipeline({
-                prompt: mmPrompt, stages, resolveEndpoint,
-                onStageStart: (s, i) => process.stdout.write(`\x1b[90m  ${i+1}. ${s.role} (${s.model})...\x1b[0m`),
-                onStageDone: (_s, _i, ms) => console.log(` \x1b[32m${(ms/1000).toFixed(1)}s\x1b[0m`),
-              })
-              console.log()
-              for (const { stage, response } of result.stages) {
-                console.log(`\x1b[90m  ── ${stage.role} · ${response.model} (${(response.durationMs/1000).toFixed(1)}s) ──\x1b[0m`)
-                if (response.error) { console.log(`\x1b[31m  error: ${response.error}\x1b[0m\n`) }
-                else { console.log(`  ${response.text.slice(0, 800)}${response.text.length > 800 ? '...' : ''}\n`) }
-              }
-              console.log(`\x1b[90m  ─ ${result.stages.length} stages · ${(result.totalDurationMs/1000).toFixed(1)}s total ─\x1b[0m\n`)
-            }
-          }
-          continue
-        }
-
-        // Mission mode — multi-step autonomous execution
-        if ((handled as string) === 'mission') {
-          const missionGoal = input.replace(/^\/mission\s*/, '').trim()
-          if (!missionGoal) continue
-
-          const resolved = resolveProvider(config)
-          if (!resolved.baseURL) {
-            console.log('\x1b[31m  mission: no provider baseURL configured.\x1b[0m')
-            continue
-          }
-          const controller = new MissionController(missionGoal, cwd, {
-            apiKey: resolved.apiKey,
-            baseURL: resolved.baseURL,
-            model: resolved.model,
-          })
-
-          if (useInk) {
-            // ink mode: route mission events through session emitter
-            const levelMap: Record<string, 'info' | 'warn' | 'error'> = {
-              plan_created: 'info', milestone_started: 'info', milestone_passed: 'info',
-              milestone_failed: 'error', feature_started: 'info', feature_completed: 'info',
-              feature_failed: 'warn', validation_started: 'info', validation_passed: 'info',
-              validation_failed: 'error', mission_completed: 'info', mission_failed: 'error',
-              mission_aborted: 'warn',
-            }
-            controller.onEvent((event: MissionEvent) => {
-              session.emitSystemMessage(`[mission] ${event.message}`, levelMap[event.type] || 'info')
-            })
-
-            session.emitSystemMessage(`Mission: ${controller.getState().id}`, 'info')
-            session.emitSystemMessage(`Goal: ${missionGoal.slice(0, 80)}`, 'info')
-            session.emitThinkingStart()
-
-            try {
-              const plan = await controller.plan()
-              session.emitThinkingEnd(Date.now())
-
-              // Plan summary as markdown
-              const planLines = [`**Mission Plan** — ${plan.milestones.length} milestones, ${plan.features.length} features (~${plan.estimatedRuns} runs)`]
-              for (const [i, ms] of plan.milestones.entries()) {
-                const featureNames = ms.featureIds
-                  .map(fid => plan.features.find(f => f.id === fid)?.title || fid)
-                  .map(t => t.slice(0, 50))
-                planLines.push(`\n**M${i + 1}: ${ms.title}**`)
-                for (const fn of featureNames) planLines.push(`- ${fn}`)
-              }
-              session.emitText(planLines.join('\n') + '\n')
-
-              // Execute with progress
-              session.emitThinkingStart()
-              const state = await controller.execute()
-              session.emitThinkingEnd(Date.now())
-
-              session.emitText(`\n${controller.getSummary()}\n`)
-              session.emitSystemMessage(`Mission ${state.phase}`, state.phase === 'completed' ? 'info' : 'error')
-            } catch (err) {
-              controller.abort()
-              session.emitThinkingEnd(Date.now())
-              session.emitSystemMessage(`mission error: ${err instanceof Error ? err.message : String(err)}`, 'error')
-            }
-          } else {
-            // legacy mode
-            controller.onEvent((event: MissionEvent) => {
-              const colors: Record<string, string> = {
-                plan_created: '\x1b[36m', milestone_started: '\x1b[35m', milestone_passed: '\x1b[32m',
-                milestone_failed: '\x1b[31m', feature_started: '\x1b[90m', feature_completed: '\x1b[32m',
-                feature_failed: '\x1b[33m', validation_started: '\x1b[36m', validation_passed: '\x1b[32m',
-                validation_failed: '\x1b[31m', mission_completed: '\x1b[32m', mission_failed: '\x1b[31m',
-                mission_aborted: '\x1b[33m',
-              }
-              const color = colors[event.type] || '\x1b[90m'
-              console.log(`${color}  [mission] ${event.message}\x1b[0m`)
-            })
-
-            console.log(`\n\x1b[36m  ╭── Mission: ${controller.getState().id} ──╮\x1b[0m`)
-            console.log(`\x1b[90m  │ Goal: ${missionGoal.slice(0, 60)}${missionGoal.length > 60 ? '...' : ''}\x1b[0m`)
-            console.log(`\x1b[90m  │ Phase 1: Planning...\x1b[0m`)
-
-            try {
-              const plan = await controller.plan()
-              console.log(`\x1b[90m  │ ${plan.milestones.length} milestones, ${plan.features.length} features\x1b[0m`)
-              console.log(`\x1b[90m  │ Estimated runs: ~${plan.estimatedRuns}\x1b[0m`)
-              for (const [i, ms] of plan.milestones.entries()) {
-                const featureNames = ms.featureIds
-                  .map(fid => plan.features.find(f => f.id === fid)?.title || fid)
-                  .map(t => t.slice(0, 50))
-                console.log(`\x1b[90m  │ M${i + 1}: ${ms.title}\x1b[0m`)
-                for (const fn of featureNames) console.log(`\x1b[90m  │   - ${fn}\x1b[0m`)
-              }
-              console.log(`\x1b[90m  │ Phase 2: Executing...\x1b[0m`)
-              const state = await controller.execute()
-              console.log(`\x1b[90m  ╰── Mission ${state.phase} ──╯\x1b[0m`)
-              console.log()
-              console.log(controller.getSummary())
-              console.log()
-            } catch (err) {
-              controller.abort()
-              console.log(`\x1b[31m  mission error: ${err instanceof Error ? err.message : err}\x1b[0m`)
-            }
-          }
-          continue
-        }
-
-        // Plan mode — decompose prompt into task checklist + execute
-        if ((handled as string) === 'plan') {
-          const planPrompt = input.replace(/^\/plan\s*/, '').trim()
-          if (!planPrompt) continue
-
-          const resolved = resolveProvider(config)
-          if (!resolved.baseURL) {
-            console.log('\x1b[31m  plan: no provider baseURL configured.\x1b[0m')
-            continue
-          }
-
-          console.log(`\x1b[36m  Decomposing tasks...\x1b[0m`)
-
-          try {
-            const plan = await decomposePrompt(planPrompt, {
-              apiKey: resolved.apiKey,
-              baseURL: resolved.baseURL,
-              model: resolved.model,
-            })
-
-            const mainCount = plan.tasks.filter(t => t.type === 'main').length
-            const sideCount = plan.tasks.filter(t => t.type === 'side').length
-            console.log(`\x1b[90m  ${plan.tasks.length} tasks: ${mainCount} main + ${sideCount} side\x1b[0m`)
-            if (plan.reasoning) {
-              console.log(`\x1b[90m  Strategy: ${plan.reasoning.slice(0, 100)}\x1b[0m`)
-            }
-            console.log()
-
-            const { tracker, result } = await executePlan(plan, {
-              apiKey: resolved.apiKey,
-              baseURL: resolved.baseURL,
-              model: resolved.model,
-              cwd,
-            })
-
-            console.log()
-            if (result.success) {
-              console.log(`\x1b[32m  Plan completed: ${result.completed}/${result.totalTasks} tasks\x1b[0m`)
-            } else {
-              console.log(`\x1b[31m  Plan finished: ${result.completed} done, ${result.failed} failed, ${result.skipped} skipped\x1b[0m`)
-            }
-            console.log(`\x1b[90m  tokens: ${result.totalTokens.toLocaleString()} · ${(result.totalDurationMs / 1000).toFixed(1)}s\x1b[0m`)
-          } catch (err) {
-            console.log(`\x1b[31m  plan error: ${err instanceof Error ? err.message : err}\x1b[0m`)
-          }
           continue
         }
 
@@ -1647,291 +1156,50 @@ async function runREPL(
       }
     }
 
-    let messageToSend = (input === '/retry' || input === '/r') ? lastPrompt : input
+    const inlineReflectMatch = /^\/reflect\s+([\s\S]+)$/i.exec(input)
+    const inlineReflect = Boolean(inlineReflectMatch)
+    const messageToSend = (input === '/retry' || input === '/r')
+      ? lastPrompt
+      : inlineReflect
+        ? inlineReflectMatch?.[1]?.trim() || ''
+        : input
     if (!messageToSend) continue
 
     lastPrompt = messageToSend
     inputHistory.push(messageToSend)
 
-    // Auto-detect multi-task prompts and suggest /plan
-    if (isMultiTaskPrompt(messageToSend) && !messageToSend.startsWith('/')) {
-      const taskCount = messageToSend.split(/\n\s*\d+\.\s+|\n\s*[-*]\s+|[；;]/).filter(s => s.trim().length > 5).length
-      console.log(`\x1b[90m  hint: detected ~${taskCount} tasks. Use /plan to auto-decompose and track.\x1b[0m`)
-    }
-
-    // UserPromptSubmit hook
-    if (hooks.hasHooks('UserPromptSubmit')) {
-      const hookResult = await hooks.run('UserPromptSubmit', { event: 'UserPromptSubmit', prompt: messageToSend, cwd })
-      if (!hookResult.continue) {
-        console.log(`\x1b[33m  hook blocked prompt: ${hookResult.stopReason || ''}\x1b[0m`)
-        continue
-      }
-    }
-
-    // File reference expansion: read local files referenced in prompt
-    // Detects file:///path, /absolute/path, ~/home/path patterns
-    // Returns injected paths so tool-level read guard can prevent duplicate reads
-    {
-      const expansion = expandFileReferences(messageToSend, cwd)
-      if (expansion.text !== messageToSend) {
-        messageToSend = expansion.text
-        // Merge newly injected paths into session-wide set
-        for (const p of expansion.injectedPaths) sessionInjectedPaths.add(p)
-        process.stderr.write(`\x1b[90m  [file-expand] injected ${expansion.injectedPaths.size} file(s) into prompt\x1b[0m\n`)
-      }
-    }
-
-    // Cognitive skeleton: match prompt → inject thinking framework
-    const cogMatch = matchCognitive(messageToSend)
-    if (cogMatch) {
-      const cogCtx = formatCognitiveContext(cogMatch)
-      // Inject as system-level context so the model applies the framework
-      history.push({ role: 'system', content: cogCtx })
-      process.stderr.write(`\x1b[90m  [cognitive] ${cogMatch.scenario}: ${cogMatch.models.map(m => m.name).join(', ')}\x1b[0m\n`)
-    }
-
-    // Pre-send context guard: compact BEFORE API call if context is growing
-    const preBudget = tokenBudget.getBudget(history)
-    if (preBudget.utilizationPct >= 50) {
-      // Choose aggressiveness based on severity
-      const keepTurns = preBudget.utilizationPct >= 80 ? 1 : 2
-      const compactResult = tokenBudget.smartCompact(history, keepTurns)
-      if (compactResult.dropped > 0 || compactResult.tokensFreed > 0) {
-        process.stderr.write(`\x1b[33m  [pre-send compact] ${compactResult.summary}\x1b[0m\n`)
-      }
-      // If still over 80% after compact, try nuclear
-      const postBudget = tokenBudget.getBudget(history)
-      if (postBudget.utilizationPct >= 80) {
-        const nuclear = tokenBudget.smartCompact(history, 0)
-        if (nuclear.dropped > 0 || nuclear.tokensFreed > 0) {
-          process.stderr.write(`\x1b[31m  [nuclear compact] ${nuclear.summary}\x1b[0m\n`)
-        }
-        tokenBudget.reset()
-      }
-    }
-
-    // Abort controller for Esc/Ctrl+C during generation
-    const abortController = new AbortController()
-
-    // Listen for Esc/Ctrl+C to interrupt generation
-    let rawMode = false
-    let escHandler: ((data: Buffer) => void) | null = null
-
-    if (useInk) {
-      // In ink mode: InputArea emits abort event via session
-      const abortHandler = () => abortController.abort()
-      session.once('abort', abortHandler)
-      // Cleanup after turn completes
-      escHandler = null // no stdin handler needed
-    } else {
-      // Legacy mode: raw stdin Esc handler
-      rawMode = process.stdin.isTTY || false
-      if (rawMode) {
-        process.stdin.setRawMode(true)
-        process.stdin.resume()
-      }
-      escHandler = (data: Buffer) => {
-        const key = data[0]
-        if (key === 0x1b || key === 0x03) { // Esc or Ctrl+C
-          abortController.abort()
-          if (rawMode) {
-            process.stdin.setRawMode(false)
-            process.stdin.removeListener('data', escHandler!)
-          }
-          ensureNewline()
-          console.log('\x1b[90m  [interrupted]\x1b[0m')
-        }
-      }
-      if (rawMode) {
-        process.stdin.on('data', escHandler)
-      }
-    }
-
-    // Progress indicator (thinking → working with elapsed time + token count)
-    const turnStartTime = Date.now()
-    const progress = useInk ? null : new ProgressIndicator()
-    let firstToken = false
-    if (progress) progress.start()
-    if (useInk) session.emitThinkingStart()
-
-    try {
-      if (resolved.baseURL && !abortController.signal.aborted) {
-        const result = await runProxyTurn({
-          prompt: messageToSend,
-          resolved,
-          config,
-          outputMode,
-          history,
-          cwd,
-          abortSignal: abortController.signal,
-          onFirstToken: () => {
-            firstToken = true
-            if (progress) {
-              const { elapsed } = progress.stop()
-              if (elapsed > 1000) {
-                process.stdout.write(`\x1b[90m  [${(elapsed / 1000).toFixed(1)}s to first token]\x1b[0m\n`)
-              }
-              progress.start()
-              progress.markWorking()
-            }
-            if (useInk) session.emitThinkingEnd(Date.now() - turnStartTime)
-          },
-          onStreamToken: (text: string) => {
-            if (progress) progress.addText(text)
-          },
-          onFileWrite: (path, oldContent) => { lastWrite = { path, oldContent } },
-          safeMode: currentPermMode !== 'yolo',
-          retryTracker,
-          loopDetector,
-          tokenBudget,
-          contextMonitor,
-          extraToolDefs: mcpToolDefs,
-          injectedPaths: sessionInjectedPaths,
-          session: useInk ? session : undefined,
-        })
-        stats.turns++
-        stats.totalInputTokens += result.inputTokens
-        stats.totalOutputTokens += result.outputTokens
-        stats.turnTokens.push(result.outputTokens)
-        tokenBudget.recordUsage(result.inputTokens, result.outputTokens)
-        contextMonitor.recordUsage(result.inputTokens, result.outputTokens)
-
-        // Track tok/s from this turn (output tokens / generation time)
-        const turnElapsed = progress ? progress.stop().elapsed : (Date.now() - turnStartTime)
-        if (turnElapsed > 0 && result.outputTokens > 0) {
-          lastTokPerSec = result.outputTokens / (turnElapsed / 1000)
-        }
-
-        // Turn summary — time, tokens, cost, context %
-        const turnBudget = tokenBudget.getBudget(history)
-        const turnPricing = getPricingForModel(currentModel)
-        let turnCost = 0
-        if (turnPricing) {
-          turnCost = (result.inputTokens / 1_000_000) * turnPricing[0]
-                   + (result.outputTokens / 1_000_000) * turnPricing[1]
-        }
-        if (useInk) {
-          session.emitTurnSummary({
-            inputTokens: result.inputTokens,
-            outputTokens: result.outputTokens,
-            duration: turnElapsed,
-            toolCalls: 0,
-            costUsd: turnCost,
-            model: currentModel,
-          })
-          emitStatus()
-        } else {
-          printTurnSummary({
-            elapsedMs: turnElapsed,
-            inputTokens: result.inputTokens,
-            outputTokens: result.outputTokens,
-            costUsd: turnCost,
-            contextPct: turnBudget.utilizationPct,
-            tokPerSec: lastTokPerSec,
-          })
-        }
-
-        // Harness: context utilization warning with actionable detail
-        const risk = contextMonitor.getRiskLevel()
-        if (risk !== 'green') {
-          const snap = contextMonitor.getSnapshot()
-          const pct = (snap.utilization * 100).toFixed(1)
-          const fmtK = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${Math.round(n / 1000)}K` : String(n)
-          const detail = `${fmtK(snap.inputTokens)}/${fmtK(snap.modelWindow)}`
-          if (risk === 'red') {
-            process.stderr.write(`\x1b[31m  [harness] context ${pct}% RED (${detail}) — run /clear now\x1b[0m\n`)
-          } else if (risk === 'orange') {
-            process.stderr.write(`\x1b[33m  [harness] context ${pct}% ORANGE (${detail}) — run /compact\x1b[0m\n`)
-          } else if (risk === 'yellow') {
-            process.stderr.write(`\x1b[33m  [harness] context ${pct}% YELLOW (${detail}) — consider /compact\x1b[0m\n`)
-          }
-        }
-      } else if (!abortController.signal.aborted) {
-        firstToken = true
-        if (progress) progress.stop()
-        await runSDKQuery({ prompt: messageToSend, resolved, config, outputMode, cwd })
-        stats.turns++
-      }
-    } catch (err) {
-      if (progress) progress.stop()
-      if (!abortController.signal.aborted) {
-        const errMsg = err instanceof Error ? err.message : String(err)
-        const errStatus = (err as { status?: number; statusCode?: number })?.status
-          ?? (err as { status?: number; statusCode?: number })?.statusCode
-        // Auto-recover from 413 (context too large): compact and retry
-        if (errStatus === 413 || errMsg.includes('413') || errMsg.includes('context_length') || errMsg.includes('too large')) {
-          process.stderr.write(`\x1b[33m  [auto-recovery] context overflow — compacting and retrying...\x1b[0m\n`)
-          const compact = tokenBudget.smartCompact(history, 1)
-          if (compact.dropped > 0 || compact.tokensFreed > 0) {
-            process.stderr.write(`\x1b[33m  [auto-compact] ${compact.summary}\x1b[0m\n`)
-            contextMonitor.reset()
-            tokenBudget.reset()
-          }
-          // Retry: re-send the last user message after compaction
-          const lastUserMsg = history.filter(m => m.role === 'user').pop()
-          if (lastUserMsg && resolved.baseURL) {
-            process.stderr.write(`\x1b[36m  [retry] re-sending after compact...\x1b[0m\n`)
-            try {
-              const { chatOnce: retryChat } = await import('../providers/openai-compat.js')
-              const sysPrompt = history.find(m => m.role === 'system')?.content || ''
-              const retryResult = await retryChat(
-                { apiKey: resolved.apiKey, baseURL: resolved.baseURL, model: currentModel, systemPrompt: sysPrompt },
-                lastUserMsg.content,
-              )
-              // Stream the retry result
-              process.stdout.write(retryResult.text)
-              process.stdout.write('\n')
-              stats.turns++
-              stats.totalInputTokens += retryResult.inputTokens
-              stats.totalOutputTokens += retryResult.outputTokens
-              tokenBudget.recordUsage(retryResult.inputTokens, retryResult.outputTokens)
-              contextMonitor.recordUsage(retryResult.inputTokens, retryResult.outputTokens)
-              history.push({ role: 'assistant', content: retryResult.text })
-            } catch (retryErr) {
-              printError(`Retry failed: ${retryErr instanceof Error ? retryErr.message : String(retryErr)}`)
-            }
-          }
-        } else {
-          printError(errMsg)
-        }
-      }
-    } finally {
-      if (progress) progress.stop()
-      if (rawMode && escHandler) {
-        process.stdin.setRawMode(false)
-        process.stdin.removeListener('data', escHandler)
-      }
-    }
-    console.log()
-
-    // ── Auto-compact: smart context management via TokenBudgetManager ──
-    const budget = tokenBudget.getBudget(history)
-    const msgCount = history.filter(m => m.role !== 'system').length
-
-    if (budget.risk === 'red') {
-      hooks.run('PreCompact', { event: 'PreCompact', cwd })
-      // RED: use nuclear compact (keep only system + last user msg)
-      const result = tokenBudget.smartCompact(history, 1)
-      hooks.run('PostCompact', { event: 'PostCompact', cwd })
-      console.log(`\x1b[31m  auto-compact (${budget.utilizationPct}%): ${result.summary}\x1b[0m`)
-      tokenBudget.reset()
-      retryTracker.cleanup()
-      // Auto-save session for recovery
-      autoSaveSession(currentModel, history, stats)
-      console.log(`\x1b[90m  session auto-saved. Context freed — continuing.\x1b[0m`)
-    } else if (budget.risk === 'orange') {
-      hooks.run('PreCompact', { event: 'PreCompact', cwd })
-      const result = tokenBudget.smartCompact(history, 1)
-      hooks.run('PostCompact', { event: 'PostCompact', cwd })
-      console.log(`\x1b[33m  auto-compact (${budget.utilizationPct}%): ${result.summary}\x1b[0m`)
-    } else if (budget.risk === 'yellow') {
-      hooks.run('PreCompact', { event: 'PreCompact', cwd })
-      const result = tokenBudget.smartCompact(history, 2)
-      hooks.run('PostCompact', { event: 'PostCompact', cwd })
-      if (result.dropped > 0 || result.tokensFreed > 0) {
-        console.log(`\x1b[33m  auto-compact (${budget.utilizationPct}%): ${result.summary}\x1b[0m`)
-      }
-    }
+    await executeReplTurn({
+      messageToSend,
+      currentModel,
+      currentPermMode,
+      resolved,
+      config,
+      outputMode,
+      cwd,
+      useInk,
+      history,
+      stats,
+      sessionInjectedPaths,
+      mcpToolDefs,
+      tokenBudget,
+      contextMonitor,
+      retryTracker,
+      loopDetector,
+      session: useInk ? session : undefined,
+      emitStatus,
+      emitInlineNotice,
+      forceReflect: Boolean(opts.forceReflect || inlineReflect || modeRegistry.getActive().id === 'reflect'),
+      autoTriggerReflect: !opts.forceReflect && !inlineReflect && modeRegistry.getActive().id !== 'reflect',
+      activeModeId: modeRegistry.getActive().id,
+      setLastTokPerSec: (value) => {
+        lastTokPerSec = value
+      },
+      onFileWrite: (path, oldContent) => {
+        undoState.lastWrite = { path, oldContent }
+      },
+      runProxyTurn,
+      runSDKQuery,
+    })
 
     } catch (turnErr) {
       // ── Crash-safe: catch ANY uncaught error in this turn, log it, continue REPL ──
@@ -1940,7 +1208,7 @@ async function runREPL(
       console.error(`\x1b[90m  session continues — type /clear to reset if state is corrupted.\x1b[0m`)
       // Auto-save on error for recovery
       if (stats.turns > 0) {
-        autoSaveSession(currentModel, history, stats)
+        autoSaveSession(resolved.provider, currentModel, history, stats, modeRegistry.getActive().id)
       }
     }
   }
@@ -1951,35 +1219,11 @@ async function runREPL(
   rl.close()
 }
 
-function saveInputHistory(historyFile: string, entries: string[]): void {
-  if (entries.length === 0) return
-  try {
-    fsMkdirSync(dirname(historyFile), { recursive: true })
-    appendFileSync(historyFile, entries.join('\n') + '\n', 'utf-8')
-  } catch { /* ignore write errors */ }
-}
-
-function autoSaveSession(model: string, history: ChatMessage[], stats: SessionStats): void {
-  try {
-    const sessDir = join(process.env.HOME || '/tmp', '.orca', 'sessions')
-    fsMkdirSync(sessDir, { recursive: true })
-    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-    const sessFile = join(sessDir, `auto-${ts}.json`)
-    writeFileSync(sessFile, JSON.stringify({
-      model,
-      history,
-      stats: { turns: stats.turns, inputTokens: stats.totalInputTokens, outputTokens: stats.totalOutputTokens },
-      savedAt: new Date().toISOString(),
-    }, null, 2), 'utf-8')
-    console.log(`\x1b[90m  session auto-saved: auto-${ts}\x1b[0m`)
-  } catch { /* ignore */ }
-}
-
 // ── Slash Commands ──────────────────────────────────────────────
 
 interface ModelControl {
   getModel: () => string
-  setModel: (m: string) => void
+  setModel: (target: ModelSelectionTarget) => boolean
   getProvider: () => string
   getChoices: () => ModelChoice[]
 }
@@ -1999,876 +1243,48 @@ function handleSlashCommand(
   harness?: { tokenBudget: TokenBudgetManager; contextMonitor: ContextMonitor },
   modeRegistry?: ModeRegistry,
   threadManager?: ThreadManager,
+  onSessionReset?: () => void,
   session?: import('../ui/session.js').ChatSessionEmitter,
-): 'exit' | 'handled' | 'pick_model' | 'not_command' {
+): SlashCommandResult {
   const parts = input.split(/\s+/)
   const cmd = parts[0]!.toLowerCase()
   const arg = parts.slice(1).join(' ').trim()
 
-  switch (cmd) {
-    case '/exit':
-    case '/quit':
-    case '/q':
-      return 'exit'
-
-    case '/help':
-    case '/h':
-    case '/?': {
-      if (session) {
-        // ink mode: emit markdown help text
-        session.emitText([
-          '**Session**                  | **Model**',
-          '`/clear`   Clear history     | `/model`    Show/switch model',
-          '`/compact` Smart compaction  | `/models`   List all models',
-          '`/status`  Session overview  | `/effort`   Thinking effort',
-          '`/cost`    Token breakdown   | `/providers` List providers',
-          '`/save`    Save session      | `/mode`     Behavioral profiles',
-          '',
-          '**Git**                      | **Multi-Model**',
-          '`/diff`    Show git diff     | `/council`  N models + judge',
-          '`/commit`  Create commit     | `/race`     First answer wins',
-          '`/undo`    Revert last write | `/pipeline` Plan-Code-Review',
-          '`/git`     Run git command   | `/mission`  Autonomous mission',
-          '                             | `/plan`     Task decomposition',
-          '',
-          '**Knowledge**                | **System**',
-          '`/notes`   Observations      | `/mcp`      MCP servers',
-          '`/postmortem` Error patterns | `/hooks`    Registered hooks',
-          '`/prompts` Template library  | `/doctor`   Health check',
-          '`/learn`   Evolution rules   | `/thread`   Conversation memory',
-          '',
-          '**Tips**: `!cmd` shell escape · `Tab` auto-complete · `/` command picker · `Ctrl+J` newline',
-        ].join('\n'))
-      } else {
-        const d = '\x1b[90m', b = '\x1b[1m', r = '\x1b[0m'
-        const row = (l: string, ri: string) => `${d}  ${l.padEnd(28)}${d}│${r} ${d}${ri}${r}`
-        console.log()
-        console.log(`${d}  ${b}Session${r}${d}                       ${d}│ ${b}Model${r}`)
-        console.log(row('/clear    Clear history',      '/model    Show/switch model'))
-        console.log(row('/compact  Smart compaction',   '/models   List all models'))
-        console.log(row('/status   Session overview',   '/effort   Thinking effort'))
-        console.log(row('/cost     Token breakdown',    '/providers List providers'))
-        console.log(row('/save     Save session',       '/mode     Behavioral profiles'))
-        console.log()
-        console.log(`${d}  ${b}Git${r}${d}                            ${d}│ ${b}Multi-Model${r}`)
-        console.log(row('/diff     Show git diff',      '/council  N models + judge'))
-        console.log(row('/commit   Create commit',      '/race     First answer wins'))
-        console.log(row('/undo     Revert last write',  '/pipeline Plan-Code-Review'))
-        console.log(row('/git      Run git command',    '/mission  Autonomous mission'))
-        console.log(row('',                             '/plan     Task decomposition'))
-        console.log()
-        console.log(`${d}  ${b}Knowledge${r}${d}                      ${d}│ ${b}System${r}`)
-        console.log(row('/notes    Observations',       '/mcp      MCP servers'))
-        console.log(row('/postmortem Error patterns',   '/hooks    Registered hooks'))
-        console.log(row('/prompts  Template library',   '/doctor   Health check'))
-        console.log(row('/learn    Evolution rules',    '/thread   Conversation memory'))
-        console.log()
-        console.log(`${d}  ${b}Tips${r}`)
-        console.log(row('!cmd      Shell escape',       'Ctrl+L   Clear screen'))
-        console.log(row('Tab       Auto-complete',      'Ctrl+Z   Undo last write'))
-        console.log(row('/         Command picker',     'Shift+Tab Mode cycle'))
-        console.log(r)
-      }
-      return 'handled'
-    }
-
-    case '/model':
-    case '/m':
-      if (arg.startsWith('set ') || arg.startsWith('use ')) {
-        const newModel = arg.replace(/^(set|use)\s+/, '').trim()
-        if (!newModel) {
-          console.log('\x1b[33m  usage: /model set <name>  (e.g., /model set GPT-4o)\x1b[0m')
-          return 'handled'
-        }
-        const oldModel = mc.getModel()
-        mc.setModel(newModel)
-        console.log(`\x1b[90m  model: ${oldModel} → \x1b[36m${newModel}\x1b[0m \x1b[90m(${mc.getProvider()})\x1b[0m`)
-        const warning = getAgenticWarning(newModel)
-        if (warning) console.log(`\x1b[33m  caution: ${warning}\x1b[0m`)
-        logInfo('model switched via command', { from: oldModel, to: newModel, provider: mc.getProvider() })
-        if (warning) logWarning('model caution', { model: newModel, provider: mc.getProvider(), warning })
-        return 'handled'
-      }
-      {
-        const current = mc.getChoices().find((choice) => choice.model === mc.getModel())
-        console.log(`\x1b[90m  provider: ${mc.getProvider()}  model: \x1b[36m${mc.getModel()}\x1b[0m`)
-        if (current) {
-          console.log(`\x1b[90m  context: ${formatContextWindow(current.contextWindow)}  max out: ${formatContextWindow(current.maxOutput)}  pricing: ${formatPricing(current.pricing)} per 1M in/out\x1b[0m`)
-          if (current.note) console.log(`\x1b[33m  caution: ${current.note}\x1b[0m`)
-        }
-      }
-      return 'handled'
-
-    case '/models':
-      console.log('\x1b[90m  Available models:\x1b[0m')
-      for (const [i, choice] of mc.getChoices().entries()) {
-        const m = choice.model
-        const current = m === mc.getModel()
-        const idx = `${i + 1}`.padStart(2)
-        const marker = current ? '\x1b[36m' : '\x1b[90m'
-        const arrow = current ? ' →' : '  '
-        console.log(`${marker}  ${idx}.${arrow} ${m}\x1b[0m`)
-        console.log(`\x1b[90m      ${choice.provider} · ${formatContextWindow(choice.contextWindow)} ctx · ${formatPricing(choice.pricing)} per 1M in/out${choice.agentic === 'caution' ? ' · caution' : ''}\x1b[0m`)
-      }
-      console.log('\x1b[90m  Enter number (1-' + mc.getChoices().length + '):\x1b[0m')
-      return 'pick_model'
-
-    case '/clear':
-      // Reset conversation + context monitors + clear screen
-      {
-        const sysMsg = history.find(m => m.role === 'system')
-        history.length = 0
-        if (sysMsg) history.push(sysMsg)
-        stats.turns = 0
-        stats.totalInputTokens = 0
-        stats.totalOutputTokens = 0
-        // Reset BOTH context monitor and token budget to zero
-        harness?.contextMonitor.reset()
-        harness?.tokenBudget.reset()
-        if (session) {
-          session.emitClear()
-          session.emitSystemMessage('conversation cleared.', 'info')
-        } else {
-          process.stdout.write('\x1b[2J\x1b[H')
-          console.log('\x1b[90m  conversation cleared.\x1b[0m')
-        }
-      }
-      return 'handled'
-
-    case '/compact':
-      // Smart compaction: drop old messages + truncate large ones
-      {
-        hooks.run('PreCompact', { event: 'PreCompact', cwd })
-        if (harness?.tokenBudget) {
-          const result = harness.tokenBudget.smartCompact(history)
-          if (result.dropped > 0 || result.tokensFreed > 0) {
-            console.log(`\x1b[90m  ${result.summary}\x1b[0m`)
-            harness.contextMonitor.reset()
-          } else {
-            console.log(`\x1b[90m  ${result.summary}\x1b[0m`)
-          }
-        } else {
-          // Fallback: naive compaction
-          const sysMsg = history.find(m => m.role === 'system')
-          const convMsgs = history.filter(m => m.role !== 'system')
-          if (convMsgs.length <= 4) {
-            console.log(`\x1b[90m  nothing to compact (${convMsgs.length} messages).\x1b[0m`)
-          } else {
-            const keep = convMsgs.slice(-4)
-            const dropped = convMsgs.length - keep.length
-            history.length = 0
-            if (sysMsg) history.push(sysMsg)
-            history.push(...keep)
-            console.log(`\x1b[90m  compacted: kept last 2 turns, dropped ${dropped} messages.\x1b[0m`)
-          }
-        }
-        hooks.run('PostCompact', { event: 'PostCompact', cwd })
-      }
-      return 'handled'
-
-    case '/system':
-      if (!arg) {
-        const current = history.find(m => m.role === 'system')
-        if (current) {
-          console.log(`\x1b[90m  system: ${current.content.slice(0, 120)}${current.content.length > 120 ? '...' : ''}\x1b[0m`)
-        } else {
-          console.log('\x1b[90m  no system prompt set. Usage: /system <prompt>\x1b[0m')
-        }
-        return 'handled'
-      }
-      {
-        const existingIdx = history.findIndex(m => m.role === 'system')
-        if (existingIdx >= 0) {
-          history[existingIdx] = { role: 'system', content: arg }
-        } else {
-          history.unshift({ role: 'system', content: arg })
-        }
-        console.log(`\x1b[90m  system prompt updated (${arg.length} chars).\x1b[0m`)
-      }
-      return 'handled'
-
-    case '/history':
-      {
-        const userMsgs = history.filter(m => m.role === 'user').length
-        const assistantMsgs = history.filter(m => m.role === 'assistant').length
-        const sysMsgs = history.filter(m => m.role === 'system').length
-        const totalChars = history.reduce((sum, m) => sum + m.content.length, 0)
-        console.log(`\x1b[90m  ${userMsgs} user + ${assistantMsgs} assistant + ${sysMsgs} system (${totalChars.toLocaleString()} chars)\x1b[0m`)
-      }
-      return 'handled'
-
-    case '/tokens':
-      {
-        const totalTokens = stats.totalInputTokens + stats.totalOutputTokens
-        console.log('\x1b[90m')
-        console.log(`  input:  ${stats.totalInputTokens.toLocaleString()} tokens`)
-        console.log(`  output: ${stats.totalOutputTokens.toLocaleString()} tokens`)
-        console.log(`  total:  ${totalTokens.toLocaleString()} tokens`)
-        console.log('\x1b[0m')
-      }
-      return 'handled'
-
-    case '/stats': {
-      const elapsed = ((Date.now() - stats.startTime) / 1000).toFixed(0)
-      const totalTokens = stats.totalInputTokens + stats.totalOutputTokens
-      const historyChars = history.reduce((sum, m) => sum + m.content.length, 0)
-      console.log('\x1b[90m')
-      console.log(`  model:    ${mc.getModel()}`)
-      console.log(`  turns:    ${stats.turns}`)
-      console.log(`  tokens:   ${totalTokens.toLocaleString()} (in: ${stats.totalInputTokens.toLocaleString()} / out: ${stats.totalOutputTokens.toLocaleString()})`)
-      console.log(`  context:  ${historyChars.toLocaleString()} chars in ${history.length} messages`)
-      console.log(`  duration: ${elapsed}s`)
-      console.log('\x1b[0m')
-      return 'handled'
-    }
-
-    case '/cwd':
-      console.log(`\x1b[90m  ${cwd}\x1b[0m`)
-      return 'handled'
-
-    case '/hooks':
-      hooks.printStatus()
-      return 'handled'
-
-    case '/council': {
-      if (!arg) {
-        console.log('\x1b[33m  usage: /council <prompt>  (asks 3 diverse models + judge)\x1b[0m')
-        return 'handled'
-      }
-      // Mark as async — needs to be handled in the REPL loop
-      return 'council' as 'handled'
-    }
-
-    case '/race': {
-      if (!arg) {
-        console.log('\x1b[33m  usage: /race <prompt>  (first model to answer wins)\x1b[0m')
-        return 'handled'
-      }
-      return 'race' as 'handled'
-    }
-
-    case '/pipeline': {
-      if (!arg) {
-        console.log('\x1b[33m  usage: /pipeline <prompt>  (plan→code→review chain)\x1b[0m')
-        return 'handled'
-      }
-      return 'pipeline' as 'handled'
-    }
-
-    case '/mission': {
-      if (!arg) {
-        console.log('\x1b[33m  usage: /mission <goal>  (multi-step autonomous task execution)\x1b[0m')
-        console.log('\x1b[90m  Droid-style: plan → decompose → implement → validate → iterate\x1b[0m')
-        return 'handled'
-      }
-      return 'mission' as 'handled'
-    }
-
-    case '/plan': {
-      if (!arg) {
-        console.log('\x1b[33m  usage: /plan <tasks>  (decompose prompt into task checklist)\x1b[0m')
-        console.log('\x1b[90m  Auto-splits into main (sequential) + side (concurrent) tasks\x1b[0m')
-        return 'handled'
-      }
-      return 'plan' as 'handled'
-    }
-
-    case '/diff': {
-      try {
-        const diff = execSync('git diff --stat && echo "---" && git diff --no-color', {
-          cwd, encoding: 'utf-8', timeout: 10_000, maxBuffer: 1024 * 1024,
-        })
-        if (diff.trim()) {
-          if (session) {
-            session.emitText('```diff\n' + diff.slice(0, 4000) + '\n```\n')
-            if (diff.length > 4000) session.emitSystemMessage('(truncated)', 'info')
-          } else {
-            console.log(`\x1b[90m${diff.slice(0, 3000)}\x1b[0m`)
-            if (diff.length > 3000) console.log('\x1b[90m  ... (truncated)\x1b[0m')
-          }
-        } else {
-          if (session) session.emitSystemMessage('no changes.', 'info')
-          else console.log('\x1b[90m  no changes.\x1b[0m')
-        }
-      } catch (err) {
-        const msg = `git diff failed: ${err instanceof Error ? err.message : err}`
-        if (session) session.emitSystemMessage(msg, 'error')
-        else console.log(`\x1b[31m  ${msg}\x1b[0m`)
-      }
-      return 'handled'
-    }
-
-    case '/git': {
-      if (!arg) {
-        console.log('\x1b[33m  usage: /git <command>  (e.g., /git status, /git log --oneline -5)\x1b[0m')
-        return 'handled'
-      }
-      try {
-        // execSync imported at top level
-        const output = execSync(`git ${arg}`, {
-          cwd, encoding: 'utf-8', timeout: 10_000, maxBuffer: 1024 * 1024,
-        })
-        console.log(`\x1b[90m${output.slice(0, 3000)}\x1b[0m`)
-        if (output.length > 3000) console.log('\x1b[90m  ... (truncated)\x1b[0m')
-      } catch (err) {
-        const execErr = err as { stdout?: string; stderr?: string; message: string }
-        console.log(`\x1b[31m  ${(execErr.stderr || execErr.stdout || execErr.message).slice(0, 500)}\x1b[0m`)
-      }
-      return 'handled'
-    }
-
-    case '/save': {
-      const sessionName = arg || `session-${Date.now()}`
-      const sessDir = join(process.env.HOME || '/tmp', '.orca', 'sessions')
-      try {
-        fsMkdirSync(sessDir, { recursive: true })
-        const sessFile = join(sessDir, `${sessionName}.json`)
-        writeFileSync(sessFile, JSON.stringify({
-          model: mc.getModel(),
-          history,
-          stats: { turns: stats.turns, inputTokens: stats.totalInputTokens, outputTokens: stats.totalOutputTokens },
-          savedAt: new Date().toISOString(),
-        }, null, 2), 'utf-8')
-        console.log(`\x1b[90m  saved: ${sessFile}\x1b[0m`)
-      } catch (err) {
-        console.log(`\x1b[31m  save failed: ${err instanceof Error ? err.message : err}\x1b[0m`)
-      }
-      return 'handled'
-    }
-
-    case '/load': {
-      if (!arg) {
-        console.log('\x1b[33m  usage: /load <name>  (see /sessions for available)\x1b[0m')
-        return 'handled'
-      }
-      const sessDir = join(process.env.HOME || '/tmp', '.orca', 'sessions')
-      const sessFile = join(sessDir, arg.endsWith('.json') ? arg : `${arg}.json`)
-      try {
-        const data = JSON.parse(readFileSync(sessFile, 'utf-8'))
-        history.length = 0
-        if (Array.isArray(data.history)) {
-          for (const m of data.history) history.push(m)
-        }
-        if (data.model) {
-          mc.setModel(data.model)
-        }
-        stats.turns = data.stats?.turns || 0
-        stats.totalInputTokens = data.stats?.inputTokens || 0
-        stats.totalOutputTokens = data.stats?.outputTokens || 0
-        const msgCount = history.filter(m => m.role !== 'system').length
-        console.log(`\x1b[90m  loaded: ${msgCount} messages, model: ${mc.getModel()}\x1b[0m`)
-      } catch (err) {
-        console.log(`\x1b[31m  load failed: ${err instanceof Error ? err.message : err}\x1b[0m`)
-      }
-      return 'handled'
-    }
-
-    case '/sessions': {
-      const sessDir = join(process.env.HOME || '/tmp', '.orca', 'sessions')
-      try {
-        if (!existsSync(sessDir)) {
-          console.log('\x1b[90m  no saved sessions.\x1b[0m')
-          return 'handled'
-        }
-        const files = readdirSync(sessDir).filter(f => f.endsWith('.json')).sort().reverse()
-        if (files.length === 0) {
-          console.log('\x1b[90m  no saved sessions.\x1b[0m')
-          return 'handled'
-        }
-        console.log('\x1b[90m  Saved sessions:\x1b[0m')
-        for (const f of files.slice(0, 10)) {
-          const name = f.replace('.json', '')
-          try {
-            const data = JSON.parse(readFileSync(join(sessDir, f), 'utf-8'))
-            const turns = data.stats?.turns || 0
-            const savedAt = data.savedAt ? new Date(data.savedAt).toLocaleString() : '?'
-            console.log(`\x1b[90m    ${name}\x1b[0m  \x1b[90m${turns} turns · ${savedAt}\x1b[0m`)
-          } catch {
-            console.log(`\x1b[90m    ${name}\x1b[0m`)
-          }
-        }
-        if (files.length > 10) {
-          console.log(`\x1b[90m    ... and ${files.length - 10} more\x1b[0m`)
-        }
-      } catch {
-        console.log('\x1b[90m  no saved sessions.\x1b[0m')
-      }
-      return 'handled'
-    }
-
-    case '/jobs': {
-      const jobs = listBackgroundJobs(10)
-      if (jobs.length === 0) {
-        console.log('\x1b[90m  no background jobs.\x1b[0m')
-        return 'handled'
-      }
-      console.log('\x1b[90m  Background jobs:\x1b[0m')
-      for (const job of jobs) {
-        const completed = job.completedAt ? ` · ${job.completedAt}` : ''
-        const status = job.status === 'completed'
-          ? '\x1b[32mcompleted\x1b[0m'
-          : job.status === 'failed'
-            ? '\x1b[31mfailed\x1b[0m'
-            : '\x1b[33mrunning\x1b[0m'
-        console.log(`\x1b[90m    ${job.id}\x1b[0m ${status}\x1b[90m${completed}\x1b[0m`)
-        console.log(`\x1b[90m      ${job.command.slice(0, 90)}${job.command.length > 90 ? '...' : ''}\x1b[0m`)
-      }
-      return 'handled'
-    }
-
-    case '/undo': {
-      if (!undo?.lastWrite) {
-        console.log('\x1b[90m  nothing to undo.\x1b[0m')
-        return 'handled'
-      }
-      const { path: undoPath, oldContent } = undo.lastWrite
-      try {
-        if (oldContent === null) {
-          // File was newly created — delete it
-          unlinkSync(undoPath)
-          console.log(`\x1b[90m  undo: deleted ${undoPath} (was newly created)\x1b[0m`)
-        } else {
-          // File was overwritten — restore old content
-          writeFileSync(undoPath, oldContent, 'utf-8')
-          console.log(`\x1b[90m  undo: restored ${undoPath} (${oldContent.length} bytes)\x1b[0m`)
-        }
-        undo.lastWrite = null
-      } catch (err) {
-        console.log(`\x1b[31m  undo failed: ${err instanceof Error ? err.message : err}\x1b[0m`)
-      }
-      return 'handled'
-    }
-
-    // ── CC/Codex compatible commands ──────────────────────────────
-
-    case '/cost': {
-      const pricing = getPricingForModel(mc.getModel())
-      const cost = pricing
-        ? (stats.totalInputTokens * pricing[0] + stats.totalOutputTokens * pricing[1]) / 1_000_000
-        : 0
-      const costDisplay = cost >= 0.01 ? `$${cost.toFixed(2)}` : cost > 0 ? `${(cost * 100).toFixed(1)}c` : '$0'
-      if (session) {
-        const pricingLabel = pricing ? `$${pricing[0]}/$${pricing[1]} per 1M` : 'n/a'
-        session.emitText([
-          `**Cost** — ${mc.getModel()} (${pricingLabel})`,
-          `| Metric | Value |`,
-          `|--------|-------|`,
-          `| Input | ${stats.totalInputTokens.toLocaleString()} tokens |`,
-          `| Output | ${stats.totalOutputTokens.toLocaleString()} tokens |`,
-          `| Total | ${(stats.totalInputTokens + stats.totalOutputTokens).toLocaleString()} tokens |`,
-          `| Cost | **${costDisplay}** |`,
-          `| Turns | ${stats.turns} |`,
-          `| Time | ${((Date.now() - stats.startTime) / 1000 / 60).toFixed(1)} min |`,
-        ].join('\n') + '\n')
-      } else {
-        const pricingLabel = pricing ? `$${pricing[0]}/$${pricing[1]} per 1M in/out` : 'pricing unavailable'
-        console.log('\x1b[90m  Cost breakdown:\x1b[0m')
-        console.log(`\x1b[90m    model:   ${mc.getModel()} (${pricingLabel})\x1b[0m`)
-        console.log(`\x1b[90m    input:   ${stats.totalInputTokens.toLocaleString()} tokens\x1b[0m`)
-        console.log(`\x1b[90m    output:  ${stats.totalOutputTokens.toLocaleString()} tokens\x1b[0m`)
-        console.log(`\x1b[90m    total:   ${(stats.totalInputTokens + stats.totalOutputTokens).toLocaleString()} tokens\x1b[0m`)
-        console.log(`\x1b[90m    cost:    \x1b[36m${costDisplay}\x1b[0m`)
-        console.log(`\x1b[90m    turns:   ${stats.turns}\x1b[0m`)
-        console.log(`\x1b[90m    time:    ${((Date.now() - stats.startTime) / 1000 / 60).toFixed(1)} min\x1b[0m`)
-      }
-      return 'handled'
-    }
-
-    case '/status': {
-      const msgs = history.filter(m => m.role !== 'system').length
-      const budget = harness?.tokenBudget.getBudget(history)
-      const ctxLine = budget
-        ? `${budget.utilizationPct}% (${budget.historyTokensEst.toLocaleString()} / ${budget.contextWindow.toLocaleString()} tokens)`
-        : `~${Math.ceil(history.reduce((s, m) => s + m.content.length, 0) / 4).toLocaleString()} tokens (est)`
-      if (session) {
-        session.emitText([
-          `**Status** — ${mc.getProvider()}/${mc.getModel()}`,
-          `| | |`,
-          `|---|---|`,
-          `| Turns | ${stats.turns} |`,
-          `| Messages | ${msgs} |`,
-          `| Context | ${ctxLine} |`,
-          `| Consumed | ${(stats.totalInputTokens + stats.totalOutputTokens).toLocaleString()} tokens |`,
-          `| cwd | \`${cwd}\` |`,
-          `| Hooks | ${hooks.totalHooks} |`,
-          `| MCP | ${mcpClient.configuredCount} servers |`,
-        ].join('\n') + '\n')
-      } else {
-        console.log('\x1b[90m  Session status:\x1b[0m')
-        console.log(`\x1b[90m    provider: \x1b[36m${mc.getProvider()}/${mc.getModel()}\x1b[0m`)
-        console.log(`\x1b[90m    turns:    ${stats.turns}\x1b[0m`)
-        console.log(`\x1b[90m    messages: ${msgs}\x1b[0m`)
-        console.log(`\x1b[90m    context:  ${ctxLine}\x1b[0m`)
-        console.log(`\x1b[90m    consumed: ${(stats.totalInputTokens + stats.totalOutputTokens).toLocaleString()} tokens (cumulative)\x1b[0m`)
-        console.log(`\x1b[90m    cwd:      ${cwd}\x1b[0m`)
-        console.log(`\x1b[90m    hooks:    ${hooks.totalHooks}\x1b[0m`)
-        console.log(`\x1b[90m    mcp:      ${mcpClient.configuredCount} servers\x1b[0m`)
-      }
-      return 'handled'
-    }
-
-    case '/doctor': {
-      console.log('\x1b[90m  Health check:\x1b[0m')
-      // Provider
-      const provOk = !!resolved.apiKey && !!resolved.baseURL
-      console.log(`\x1b[90m    provider: ${provOk ? '\x1b[32mOK\x1b[0m' : '\x1b[31mNO KEY\x1b[0m'} (${resolved.provider})\x1b[0m`)
-      // Proxy
-      const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || '(system auto-detect)'
-      console.log(`\x1b[90m    proxy:    ${proxy}\x1b[0m`)
-      // Git
-      try {
-        execSync('git --version', { stdio: 'pipe' })
-        console.log(`\x1b[90m    git:      \x1b[32mOK\x1b[0m`)
-      } catch { console.log(`\x1b[90m    git:      \x1b[31mNOT FOUND\x1b[0m`) }
-      // Node
-      console.log(`\x1b[90m    node:     ${process.version}\x1b[0m`)
-      // Hooks
-      console.log(`\x1b[90m    hooks:    ${hooks.totalHooks}\x1b[0m`)
-      // MCP
-      console.log(`\x1b[90m    mcp:      ${mcpClient.configuredCount} configured\x1b[0m`)
-      // Tools
-      console.log(`\x1b[90m    tools:    ${TOOL_DEFINITIONS.length}\x1b[0m`)
-      return 'handled'
-    }
-
-    case '/config': {
-      console.log(`\x1b[90m  Config files:\x1b[0m`)
-      console.log(`\x1b[90m    global: ${getGlobalConfigPath()}\x1b[0m`)
-      console.log(`\x1b[90m    project: ${join(cwd, '.orca.json')}\x1b[0m`)
-      console.log(`\x1b[90m  Current:\x1b[0m`)
-      console.log(`\x1b[90m    provider: ${mc.getProvider()}\x1b[0m`)
-      console.log(`\x1b[90m    model:    ${mc.getModel()}\x1b[0m`)
-      console.log(`\x1b[90m    mode:     ${undo ? 'yolo' : 'safe'}\x1b[0m`)
-      console.log(`\x1b[90m  Edit: orca init (project) or ~/.orca/config.json (global)\x1b[0m`)
-      return 'handled'
-    }
-
-    case '/continue': {
-      // Load most recent auto-saved session
-      try {
-        const sessDir = join(process.env.HOME || '/tmp', '.orca', 'sessions')
-        const files = readdirSync(sessDir).filter(f => f.endsWith('.json')).sort().reverse()
-        if (files.length === 0) {
-          console.log('\x1b[90m  no saved sessions found.\x1b[0m')
-          return 'handled'
-        }
-        const latest = files[0]!
-        const sess = JSON.parse(readFileSync(join(sessDir, latest), 'utf-8'))
-        if (sess.history && Array.isArray(sess.history)) {
-          history.length = 0
-          history.push(...sess.history)
-          stats.turns = sess.stats?.turns || 0
-          stats.totalInputTokens = sess.stats?.inputTokens || 0
-          stats.totalOutputTokens = sess.stats?.outputTokens || 0
-          console.log(`\x1b[90m  restored session: ${latest} (${stats.turns} turns, ${history.length} messages)\x1b[0m`)
-        }
-      } catch (err) {
-        console.log(`\x1b[31m  continue failed: ${err instanceof Error ? err.message : err}\x1b[0m`)
-      }
-      return 'handled'
-    }
-
-    case '/commit': {
-      try {
-        const status = execSync('git status --porcelain', { cwd, encoding: 'utf-8', timeout: 5000 }).trim()
-        if (!status) {
-          console.log('\x1b[90m  nothing to commit (working tree clean).\x1b[0m')
-        } else {
-          // Send as a prompt to the agent: "create a git commit for the current changes"
-          return 'not_command' // fall through — let the model handle the commit
-        }
-      } catch { return 'not_command' }
-      return 'handled'
-    }
-
-    case '/review': {
-      // Fall through to model — treat as prompt "review my current changes"
-      return 'not_command'
-    }
-
-    case '/pr': {
-      // Fall through to model — treat as prompt "create a PR for current changes"
-      return 'not_command'
-    }
-
-    case '/mcp': {
-      // Subcommands: enable <name>, disable <name>, connect <name>
-      if (arg.startsWith('disable ')) {
-        const serverName = arg.slice(8).trim()
-        if (mcpClient.disableServer(serverName)) {
-          console.log(`\x1b[90m  disabled: ${serverName}\x1b[0m`)
-        } else {
-          console.log(`\x1b[31m  server not found: ${serverName}\x1b[0m`)
-        }
-        return 'handled'
-      }
-      if (arg.startsWith('enable ')) {
-        const serverName = arg.slice(7).trim()
-        if (mcpClient.enableServer(serverName)) {
-          console.log(`\x1b[90m  enabled: ${serverName}\x1b[0m`)
-          // Auto-connect after enable
-          mcpClient.connect(serverName).then(ok => {
-            if (ok) console.log(`\x1b[32m  connected: ${serverName}\x1b[0m`)
-            else console.log(`\x1b[33m  enabled but failed to connect: ${serverName}\x1b[0m`)
-          }).catch(() => {})
-        } else {
-          console.log(`\x1b[31m  server not found: ${serverName}\x1b[0m`)
-        }
-        return 'handled'
-      }
-      if (arg.startsWith('connect ')) {
-        const serverName = arg.slice(8).trim()
-        mcpClient.connect(serverName).then(ok => {
-          if (ok) console.log(`\x1b[32m  connected: ${serverName}\x1b[0m`)
-          else console.log(`\x1b[31m  failed to connect: ${serverName}\x1b[0m`)
-        }).catch(() => {})
-        return 'handled'
-      }
-
-      const servers = mcpClient.listServers()
-      if (servers.length === 0) {
-        console.log('\x1b[90m  no MCP servers configured.\x1b[0m')
-      } else {
-        console.log(`\x1b[90m  MCP servers: ${servers.length} configured, ${mcpClient.connectedCount} connected\x1b[0m`)
-        for (const s of servers) {
-          const status = s.disabled
-            ? '\x1b[90mdisabled\x1b[0m'
-            : s.initialized
-              ? `\x1b[32mconnected\x1b[0m (pid ${s.pid})`
-              : s.pid > 0
-                ? '\x1b[33mstarting\x1b[0m'
-                : '\x1b[90mnot connected\x1b[0m'
-          console.log(`    ${s.name}  ${status}`)
-        }
-        console.log('\x1b[90m  commands: /mcp enable <name> | disable <name> | connect <name>\x1b[0m')
-      }
-      return 'handled'
-    }
-
-    case '/thread':
-    case '/threads': {
-      if (!threadManager) {
-        console.log('\x1b[90m  thread manager not available.\x1b[0m')
-        return 'handled'
-      }
-      const subcmd = arg.split(/\s+/)[0] || ''
-      const subarg = arg.slice(subcmd.length).trim()
-
-      if (!subcmd || subcmd === 'list') {
-        const threads = threadManager.list(10)
-        if (threads.length === 0) {
-          console.log('\x1b[90m  no threads saved.\x1b[0m')
-        } else {
-          console.log('\x1b[90m  Threads:\x1b[0m')
-          for (const t of threads) {
-            const msgs = t.messages.length
-            const date = new Date(t.updatedAt).toLocaleString()
-            console.log(`\x1b[90m    ${t.id}  ${t.title.slice(0, 40)}  (${msgs} msgs · ${date})\x1b[0m`)
-          }
-        }
-      } else if (subcmd === 'save') {
-        const title = subarg || `Chat ${new Date().toLocaleString()}`
-        const convMsgs = history.filter(m => m.role !== 'system')
-        const thread = threadManager.create(title, convMsgs.map(m => ({ role: m.role, content: m.content })))
-        console.log(`\x1b[90m  thread saved: ${thread.id} (${thread.title})\x1b[0m`)
-      } else if (subcmd === 'load') {
-        if (!subarg) {
-          console.log('\x1b[33m  usage: /thread load <id>\x1b[0m')
-        } else {
-          const thread = threadManager.load(subarg)
-          if (!thread) {
-            console.log(`\x1b[31m  thread not found: ${subarg}\x1b[0m`)
-          } else {
-            const sysMsg = history.find(m => m.role === 'system')
-            history.length = 0
-            if (sysMsg) history.push(sysMsg)
-            for (const m of thread.messages) {
-              history.push({ role: m.role as 'user' | 'assistant', content: m.content })
-            }
-            console.log(`\x1b[90m  loaded thread: ${thread.title} (${thread.messages.length} messages)\x1b[0m`)
-          }
-        }
-      } else if (subcmd === 'search') {
-        if (!subarg) {
-          console.log('\x1b[33m  usage: /thread search <query>\x1b[0m')
-        } else {
-          const results = threadManager.search(subarg, 5)
-          if (results.length === 0) {
-            console.log(`\x1b[90m  no threads matching "${subarg}".\x1b[0m`)
-          } else {
-            console.log(`\x1b[90m  Found ${results.length} thread(s):\x1b[0m`)
-            for (const t of results) {
-              console.log(`\x1b[90m    ${t.id}  ${t.title.slice(0, 40)}\x1b[0m`)
-            }
-          }
-        }
-      } else if (subcmd === 'delete') {
-        if (!subarg) {
-          console.log('\x1b[33m  usage: /thread delete <id>\x1b[0m')
-        } else if (threadManager.delete(subarg)) {
-          console.log(`\x1b[90m  deleted thread: ${subarg}\x1b[0m`)
-        } else {
-          console.log(`\x1b[31m  thread not found: ${subarg}\x1b[0m`)
-        }
-      } else {
-        console.log('\x1b[33m  usage: /thread [list|save|load|search|delete]\x1b[0m')
-      }
-      return 'handled'
-    }
-
-    case '/providers': {
-      const resolvedConfig = resolveConfig({ cwd })
-      const providers = listProviders(resolvedConfig)
-      console.log('\x1b[90m  Providers:\x1b[0m')
-      for (const p of providers) {
-        const status = p.disabled ? '\x1b[90mdisabled\x1b[0m' : p.hasKey ? '\x1b[32mready\x1b[0m' : '\x1b[31mno key\x1b[0m'
-        const active = p.id === mc.getProvider() ? ' \x1b[36m←\x1b[0m' : ''
-        console.log(`\x1b[90m    ${p.id.padEnd(14)} ${p.model.padEnd(24)} ${status}${active}\x1b[0m`)
-      }
-      return 'handled'
-    }
-
-    case '/init': {
-      const configPath = initProjectConfig(cwd)
-      console.log(`\x1b[90m  created: ${configPath}\x1b[0m`)
-      return 'handled'
-    }
-
-    // ── Knowledge Management Commands ──────────────────────────
-    case '/notes': {
-      const notes = new NotesManager()
-      const subcmd = arg.split(/\s+/)[0] || ''
-      const subarg = arg.slice(subcmd.length).trim()
-
-      if (!subcmd || subcmd === 'list') {
-        const list = notes.list(10)
-        if (list.length === 0) { console.log('\x1b[90m  no notes.\x1b[0m') }
-        else {
-          for (const n of list) {
-            const tags = n.tags.length > 0 ? ` [${n.tags.join(', ')}]` : ''
-            console.log(`\x1b[90m  ${n.id.slice(0, 20)}  ${n.content.slice(0, 60)}${tags}\x1b[0m`)
-          }
-        }
-      } else if (subcmd === 'add') {
-        if (!subarg) { console.log('\x1b[33m  usage: /notes add <content> [#tag1 #tag2]\x1b[0m') }
-        else {
-          const tags = [...subarg.matchAll(/#(\S+)/g)].map(m => m[1]!)
-          const content = subarg.replace(/#\S+/g, '').trim()
-          const note = notes.create(content, tags, undefined, cwd.split('/').pop())
-          console.log(`\x1b[90m  note saved: ${note.id}\x1b[0m`)
-        }
-      } else if (subcmd === 'search') {
-        const results = notes.search(subarg || '', 5)
-        if (results.length === 0) { console.log('\x1b[90m  no matches.\x1b[0m') }
-        else { for (const n of results) console.log(`\x1b[90m  ${n.id.slice(0, 20)}  ${n.content.slice(0, 60)}\x1b[0m`) }
-      } else {
-        console.log('\x1b[33m  usage: /notes [list|add|search]\x1b[0m')
-      }
-      return 'handled'
-    }
-
-    case '/postmortem': {
-      const pmLog = new PostmortemLog()
-      const subcmd = arg.split(/\s+/)[0] || ''
-
-      if (!subcmd || subcmd === 'list') {
-        const list = pmLog.list(10)
-        if (list.length === 0) { console.log('\x1b[90m  no postmortems.\x1b[0m') }
-        else {
-          for (const pm of list) {
-            const sev = { low: '\x1b[90m', medium: '\x1b[33m', high: '\x1b[31m', critical: '\x1b[31;1m' }[pm.severity]
-            console.log(`${sev}  ${pm.id.slice(0, 16)}  ${pm.problem.slice(0, 50)}  applied:${pm.appliedCount}\x1b[0m`)
-          }
-        }
-      } else if (subcmd === 'search') {
-        const query = arg.slice(subcmd.length).trim()
-        const matches = pmLog.match(query)
-        if (matches.length === 0) { console.log('\x1b[90m  no matches.\x1b[0m') }
-        else { console.log(pmLog.formatForContext(matches)) }
-      } else {
-        console.log('\x1b[33m  usage: /postmortem [list|search <error>]\x1b[0m')
-      }
-      return 'handled'
-    }
-
-    case '/prompts': {
-      const repo = new PromptRepository()
-      const subcmd = arg.split(/\s+/)[0] || ''
-      const subarg = arg.slice(subcmd.length).trim()
-
-      if (!subcmd || subcmd === 'list') {
-        const list = repo.list(10)
-        if (list.length === 0) { console.log('\x1b[90m  no prompts saved.\x1b[0m') }
-        else {
-          for (const p of list) {
-            const rate = p.usageCount > 0 ? Math.round((p.successCount / p.usageCount) * 100) : 0
-            console.log(`\x1b[90m  ${p.name.padEnd(20)} [${p.category}]  used:${p.usageCount} success:${rate}%\x1b[0m`)
-          }
-        }
-      } else if (subcmd === 'find') {
-        const found = repo.find(subarg)
-        for (const p of found) console.log(`\x1b[90m  ${p.id}  ${p.name}  [${p.category}]\x1b[0m`)
-      } else {
-        console.log('\x1b[33m  usage: /prompts [list|find <query>]\x1b[0m')
-      }
-      return 'handled'
-    }
-
-    case '/learn': {
-      const journal = new LearningJournal()
-      const subcmd = arg.split(/\s+/)[0] || ''
-      const subarg = arg.slice(subcmd.length).trim()
-
-      if (!subcmd || subcmd === 'rules') {
-        const rules = journal.getPromotedRules()
-        if (rules.length === 0) { console.log('\x1b[90m  no promoted rules yet.\x1b[0m') }
-        else {
-          console.log('\x1b[90m  Promoted rules:\x1b[0m')
-          for (const r of rules) console.log(`\x1b[32m  + ${r.content.slice(0, 70)}\x1b[0m`)
-        }
-      } else if (subcmd === 'observe') {
-        if (!subarg) { console.log('\x1b[33m  usage: /learn observe <observation>\x1b[0m') }
-        else {
-          const entry = journal.observe(subarg, [], cwd.split('/').pop())
-          console.log(`\x1b[90m  recorded: ${entry.id}\x1b[0m`)
-        }
-      } else if (subcmd === 'status') {
-        const obs = journal.listByStatus('observation').length
-        const hyp = journal.listByStatus('hypothesis').length
-        const pro = journal.listByStatus('promoted').length
-        const rej = journal.listByStatus('rejected').length
-        console.log(`\x1b[90m  observations:${obs}  hypotheses:${hyp}  promoted:${pro}  rejected:${rej}\x1b[0m`)
-      } else {
-        console.log('\x1b[33m  usage: /learn [rules|observe|status]\x1b[0m')
-      }
-      return 'handled'
-    }
-
-    default:
-      // Check if it's a model number (e.g., "/1" to "/11")
-      if (/^\/\d+$/.test(cmd)) {
-        const idx = parseInt(cmd.slice(1), 10) - 1
-        const choices = mc.getChoices()
-        if (idx >= 0 && idx < choices.length) {
-          const newModel = choices[idx]!.model
-          const oldModel = mc.getModel()
-          mc.setModel(newModel)
-          console.log(`\x1b[90m  model: ${oldModel} → \x1b[36m${newModel}\x1b[0m`)
-          const warning = getAgenticWarning(newModel)
-          if (warning) console.log(`\x1b[33m  caution: ${warning}\x1b[0m`)
-          logInfo('model switched via numeric shortcut', { from: oldModel, to: newModel, provider: mc.getProvider() })
-          if (warning) logWarning('model caution', { model: newModel, provider: mc.getProvider(), warning })
-          return 'handled'
-        }
-      }
-      return 'not_command'
+  const readonlyResult = handleReadonlySlashCommand({
+    cmd,
+    arg,
+    resolved,
+    history,
+    stats,
+    cwd,
+    mc,
+    harness,
+    session,
+    modeLabel: modeRegistry?.getActive().id || 'default',
+  })
+  if (readonlyResult !== 'not_handled') {
+    return readonlyResult
   }
+  return handleMutatingSlashCommand({
+    cmd,
+    arg,
+    history,
+    stats,
+    cwd,
+    mc,
+    undo,
+    harness,
+    onSessionReset,
+    modeRegistry,
+    threadManager,
+    session,
+  })
 }
 
 // ── Proxy Multi-turn Path ───────────────────────────────────────
 
 interface ProxyTurnOptions {
-  prompt: string
+  prompt: PromptContent
   resolved: ResolvedProvider
   config: OrcaConfig
   outputMode: OutputMode
@@ -2889,10 +1305,12 @@ interface ProxyTurnOptions {
   injectedPaths?: Set<string>
   /** Session emitter for ink UI — when set, streaming events go to ink instead of stdout */
   session?: import('../ui/session.js').ChatSessionEmitter
+  /** Callback for high-frequency status refresh during streaming */
+  onStreamingStatus?: (tokPerSec: number) => void
 }
 
-async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTokens: number; outputTokens: number }> {
-  const { prompt, resolved, config, outputMode, history, cwd, abortSignal, onFirstToken, onStreamToken, onFileWrite, safeMode, retryTracker, loopDetector, tokenBudget, contextMonitor, extraToolDefs, injectedPaths, session: emitterOpt } = options
+export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTokens: number; outputTokens: number }> {
+  const { prompt, resolved, config, outputMode, history, cwd, abortSignal, onFirstToken, onStreamToken, onFileWrite, safeMode, retryTracker, loopDetector, tokenBudget, contextMonitor, extraToolDefs, injectedPaths, session: emitterOpt, onStreamingStatus } = options
 
   const startTime = Date.now()
   let inputTokens = 0
@@ -2906,284 +1324,37 @@ async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTokens: n
   let lastTokUpdate = startTime
 
   for await (const event of streamChat(
-    { apiKey: resolved.apiKey, baseURL: resolved.baseURL!, model: resolved.model, systemPrompt: config.systemPrompt },
+    { apiKey: resolved.apiKey, baseURL: resolved.baseURL!, model: resolved.model, systemPrompt: config.systemPrompt, headers: resolved.headers, reasoningEffort: resolved.reasoningEffort },
     prompt,
     history,
     {
       onToolCall: async (name, args) => {
-        // Permission gate for dangerous tools
-        if (DANGEROUS_TOOLS.has(name)) {
-          // Track undo state for file writes
-          if ((name === 'write_file' || name === 'edit_file' || name === 'multi_edit') && args.path) {
-            const { resolve: resolvePath } = await import('node:path')
-            const fullPath = resolvePath(cwd, String(args.path))
-            let oldContent: string | null = null
-            if (existsSync(fullPath)) {
-              try { oldContent = readFileSync(fullPath, 'utf-8') } catch { /* ignore */ }
-            }
-            if (onFileWrite) onFileWrite(fullPath, oldContent)
-          }
-
-          // YOLO mode (default): auto-approve, no prompt
-          // Safe mode (--safe): show diff + ask permission
-          if (safeMode) {
-            let preview: string
-            if (name === 'write_file') {
-              preview = `write ${String(args.content || '').length} bytes to ${String(args.path || '')}`
-            } else if (name === 'edit_file' || name === 'multi_edit') {
-              preview = `edit ${String(args.path || '')}`
-            } else if (name === 'delete_file') {
-              preview = `delete ${String(args.path || '')}`
-            } else if (name === 'move_file') {
-              preview = `move ${String(args.source || '')} → ${String(args.destination || '')}`
-            } else if (name === 'git_commit') {
-              preview = `commit: ${String(args.message || '').slice(0, 60)}`
-            } else if (name === 'run_command' || name === 'run_background') {
-              preview = `run: ${String(args.command || '').slice(0, 80)}`
-            } else {
-              preview = `${name}: ${JSON.stringify(args).slice(0, 80)}`
-            }
-
-            // Diff data for file writes in safe mode
-            let diffData: { filePath: string; oldContent: string; newContent: string } | undefined
-            if ((name === 'write_file' || name === 'edit_file') && args.path) {
-              const { resolve: resolvePath } = await import('node:path')
-              const fullPath = resolvePath(cwd, String(args.path))
-              if (existsSync(fullPath)) {
-                try {
-                  const old = readFileSync(fullPath, 'utf-8')
-                  const newContent = name === 'write_file'
-                    ? String(args.content || '')
-                    : old.replace(String(args.old_string || ''), String(args.new_string || ''))
-                  diffData = { filePath: String(args.path), oldContent: old, newContent }
-                } catch { /* ignore */ }
-              }
-            }
-
-            let allowed: boolean
-            if (emitterOpt) {
-              // ink mode: route through session emitter with diff data → DiffPreview + PermissionPrompt
-              allowed = await emitterOpt.emitPermissionRequest({ toolName: name, preview, diff: diffData })
-            } else {
-              // legacy mode: print diff + ask permission via readline
-              if (diffData) printDiffPreview(diffData.oldContent, diffData.newContent)
-              allowed = await askPermission(name, preview)
-            }
-            if (!allowed) {
-              return { success: false, output: 'User denied permission.' }
-            }
-          }
-        }
-
-        // PreToolUse hook — can block or modify tool input
-        if (hooks.hasHooks('PreToolUse')) {
-          const hookResult = await hooks.run('PreToolUse', {
-            event: 'PreToolUse', toolName: name, toolInput: args, cwd,
+        try {
+          return await handleProxyToolCall({
+            name,
+            args,
+            cwd,
+            history,
+            resolved: {
+              model: resolved.model,
+              apiKey: resolved.apiKey,
+              baseURL: resolved.baseURL,
+            },
+            onFileWrite,
+            safeMode,
+            retryTracker,
+            loopDetector,
+            tokenBudget,
+            contextMonitor,
+            injectedPaths,
+            session: emitterOpt,
           })
-          if (!hookResult.continue) {
-            return { success: false, output: `Blocked by hook: ${hookResult.stopReason || 'PreToolUse hook denied'}` }
+        } catch (error) {
+          if (error instanceof ResetSensitiveWaitCanceledError && emitterOpt) {
+            emitterOpt.emitToolEnd({ name, success: false, output: '', durationMs: 0 })
           }
-          if (hookResult.updatedInput) {
-            Object.assign(args, hookResult.updatedInput)
-          }
-          if (hookResult.systemMessage) {
-            console.log(`\x1b[33m  hook: ${hookResult.systemMessage}\x1b[0m`)
-          }
+          throw error
         }
-
-        // Sub-agent tools — fork a child process with restricted tools
-        if (name === 'spawn_agent' || name === 'delegate_task') {
-          const subTask = String(args.task || args.context || '')
-          if (!subTask) return { success: false, output: 'task is required.' }
-
-          await hooks.run('SubagentStart', { event: 'SubagentStart', cwd, model: resolved.model })
-          console.log(`\x1b[90m  spawning sub-agent...\x1b[0m`)
-
-          const { spawnSubAgent, READ_ONLY_TOOLS, DELEGATE_TOOLS } = await import('../agent/sub-agent.js')
-          const toolSet = name === 'spawn_agent' ? READ_ONLY_TOOLS : DELEGATE_TOOLS
-          const result = await spawnSubAgent(
-            { task: subTask, cwd, tools: toolSet, timeout: 120_000 },
-            { model: resolved.model, apiKey: resolved.apiKey, baseURL: resolved.baseURL || '' },
-          )
-
-          console.log(`\x1b[90m  sub-agent done (${(result.duration / 1000).toFixed(1)}s, ${result.tokensUsed} tokens)\x1b[0m`)
-          return { success: result.success, output: result.output }
-
-        // ask_user — prompt user for input
-        } else if (name === 'ask_user') {
-          const question = String(args.question || 'What would you like to do?')
-          const optionsList = args.options as string[] | undefined
-
-          if (emitterOpt) {
-            // ink mode: emit the question as system message, then wait for input via session
-            emitterOpt.emitSystemMessage(`? ${question}`, 'info')
-            if (optionsList && optionsList.length > 0) {
-              optionsList.forEach((o, i) => emitterOpt.emitSystemMessage(`  ${i + 1}. ${o}`, 'info'))
-            }
-            emitterOpt.emitPromptReady()
-            const answer = await emitterOpt.waitForInput()
-            return { success: true, output: answer?.trim() || '(no response)' }
-          } else {
-            // legacy mode: readline
-            console.log(`\n\x1b[36m  ? ${question}\x1b[0m`)
-            if (optionsList && optionsList.length > 0) {
-              optionsList.forEach((o, i) => console.log(`\x1b[90m    ${i + 1}. ${o}\x1b[0m`))
-            }
-            const { createInterface } = await import('node:readline')
-            const askRl = createInterface({ input: process.stdin, output: process.stdout })
-            const answer = await new Promise<string>((res) => {
-              askRl.question('\x1b[90m  > \x1b[0m', (a) => { askRl.close(); res(a.trim()) })
-            })
-            return { success: true, output: answer || '(no response)' }
-          }
-
-        // MCP tools — async server communication
-        } else if (name === 'mcp_list_resources') {
-          try {
-            const resources = await mcpClient.listResources(args.server ? String(args.server) : undefined)
-            if (resources.length === 0) return { success: true, output: 'No resources available from connected MCP servers.' }
-            const lines = resources.map(r => `${r.uri} — ${r.name}${r.description ? ': ' + r.description : ''}`)
-            return { success: true, output: lines.join('\n') }
-          } catch (err) {
-            return { success: false, output: `MCP error: ${err instanceof Error ? err.message : String(err)}` }
-          }
-
-        } else if (name === 'mcp_read_resource') {
-          const uri = String(args.uri || '')
-          if (!uri) return { success: false, output: 'uri is required.' }
-          try {
-            const content = await mcpClient.readResource(uri)
-            return { success: true, output: content.slice(0, 20_000) }
-          } catch (err) {
-            return { success: false, output: `MCP error: ${err instanceof Error ? err.message : String(err)}` }
-          }
-
-        // MCP server tools — route mcp__<server>__<tool> calls
-        } else if (name.startsWith('mcp__')) {
-          try {
-            const result = await mcpClient.routeToolCall(name, args)
-            if (result) return result
-            return { success: false, output: `MCP tool not found: ${name}` }
-          } catch (err) {
-            return { success: false, output: `MCP error: ${err instanceof Error ? err.message : String(err)}` }
-          }
-
-        // sleep — actually wait
-        } else if (name === 'sleep') {
-          const seconds = Math.min(Number(args.seconds) || 1, 60)
-          const reason = String(args.reason || '')
-          if (reason) console.log(`\x1b[90m  waiting ${seconds}s: ${reason}\x1b[0m`)
-          await new Promise(r => setTimeout(r, seconds * 1000))
-          return { success: true, output: `Waited ${seconds}s.` }
-        }
-
-        // Live diff preview: emit diff before write_file/edit_file executes
-        if (emitterOpt && (name === 'write_file' || name === 'edit_file') && args.path) {
-          const { resolve: resolvePath } = await import('node:path')
-          const fullPath = resolvePath(cwd, String(args.path))
-          if (existsSync(fullPath)) {
-            try {
-              const old = readFileSync(fullPath, 'utf-8')
-              const newContent = name === 'write_file'
-                ? String(args.content || '')
-                : old.replace(String(args.old_string || ''), String(args.new_string || ''))
-              // Compute a compact diff summary
-              const oldLines = old.split('\n')
-              const newLines = newContent.split('\n')
-              const added = newLines.filter((l, i) => l !== oldLines[i]).length
-              const removed = oldLines.filter((l, i) => l !== newLines[i]).length
-              if (added > 0 || removed > 0) {
-                emitterOpt.emitSystemMessage(`diff ${String(args.path)}: +${added} -${removed} lines`, 'info')
-              }
-            } catch { /* best-effort */ }
-          }
-        }
-
-        const result = executeTool(name, args, cwd, injectedPaths)
-
-        // ── Retry intelligence: track success/failure ──
-        if (retryTracker) {
-          if (result.success) {
-            retryTracker.recordSuccess(name, args)
-          } else {
-            const hint = retryTracker.recordFailure(name, args, result.output)
-            if (hint.shouldWarn) {
-              result.output += `\n\n${hint.hint}`
-            }
-          }
-        }
-
-        // ── Error classifier: add recovery suggestion ──
-        if (!result.success) {
-          const classified = classifyError(result.output)
-          result.output += `\n[error-classifier] ${classified.category}: ${classified.suggestion}`
-          if (classified.retryable) {
-            result.output += ` (retryable after ${classified.retryDelay || 0}ms)`
-          }
-        }
-
-        // ── Loop detector: catch stuck patterns ──
-        if (loopDetector) {
-          const argsKey = String(args.path || args.pattern || args.command || name)
-          if (result.success) {
-            loopDetector.recordSuccess(name, argsKey)
-          } else {
-            const action = loopDetector.recordFailure(name, argsKey, result.output)
-            if (action === 'pivot') {
-              const suggestion = loopDetector.getPivotSuggestion(name, argsKey)
-              result.output += `\n[loop-detector] PIVOT — ${suggestion}`
-            } else if (action === 'escalate') {
-              result.output += `\n[loop-detector] ESCALATE — this tool has failed 3+ times on the same target. Stop and ask the user for guidance.`
-              process.stderr.write(`\x1b[31m  [harness] loop detected: ${name} failed 3+ times — escalating to user\x1b[0m\n`)
-            }
-
-            // Postmortem auto-match: search error patterns for known fixes
-            try {
-              const pmLog = new PostmortemLog()
-              const matches = pmLog.match(result.output)
-              if (matches.length > 0) {
-                const ctx = pmLog.formatForContext(matches)
-                result.output += `\n${ctx}`
-                process.stderr.write(`\x1b[90m  [postmortem] matched ${matches.length} known fix(es)\x1b[0m\n`)
-                for (const m of matches) pmLog.markApplied(m.id)
-              }
-            } catch { /* postmortem search is best-effort */ }
-          }
-        }
-
-        // ── Auto-verify: run checks after file modifications ──
-        if (result.success && ['write_file', 'edit_file', 'multi_edit'].includes(name) && args.path) {
-          const { resolve: resolvePath } = await import('node:path')
-          const fullPath = resolvePath(cwd, String(args.path))
-          const verifyResult = autoVerify(fullPath, cwd)
-          const verifyOutput = formatVerifyOutput(verifyResult)
-          if (verifyOutput) {
-            result.output += verifyOutput
-          }
-        }
-
-        // PostToolUse hook — for logging/modification
-        if (hooks.hasHooks('PostToolUse')) {
-          await hooks.run('PostToolUse', {
-            event: 'PostToolUse', toolName: name, toolInput: args,
-            toolOutput: result.output, toolSuccess: result.success, cwd,
-          })
-        }
-
-        // Built-in context guard (mandatory, not user-configurable)
-        // Fires after every tool use to prevent context explosion
-        if (tokenBudget) {
-          const guardBudget = tokenBudget.getBudget(history)
-          if (guardBudget.utilizationPct >= 60) {
-            const compactResult = tokenBudget.smartCompact(history)
-            if (compactResult.dropped > 0) {
-              process.stderr.write(`\x1b[33m  [context-guard] auto-compact: ${compactResult.summary}\x1b[0m\n`)
-              if (contextMonitor) contextMonitor.reset()
-            }
-          }
-        }
-
-        return result
       },
       abortSignal,
     },
@@ -3210,14 +1381,7 @@ async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTokens: n
             if (now - lastTokUpdate >= 500) {
               const elapsed = (now - startTime) / 1000
               if (elapsed > 0) {
-                emitterOpt.emitStatusUpdate({
-                  model: resolved.model,
-                  contextPct: tokenBudget?.getBudget(history).utilizationPct ?? 0,
-                  permMode: (config.permissionMode as 'yolo' | 'auto' | 'plan') ?? 'yolo',
-                  costUsd: 0,
-                  tokPerSec: Math.round(streamTokenCount / elapsed),
-                  turns: 0,
-                })
+                onStreamingStatus?.(Math.round(streamTokenCount / elapsed))
               }
               lastTokUpdate = now
             }
@@ -3273,7 +1437,7 @@ async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTokens: n
   md.flush()
 
   // Append to conversation history
-  history.push({ role: 'user', content: prompt })
+  history.push({ role: 'user', content: messageContentToText(prompt) })
   if (responseText) {
     history.push({ role: 'assistant', content: responseText })
   }
@@ -3309,10 +1473,11 @@ async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTokens: n
 // ── One-shot Proxy Path ─────────────────────────────────────────
 
 interface ProxyQueryOptions {
-  prompt: string
+  prompt: PromptContent
   resolved: ResolvedProvider
   config: OrcaConfig
   outputMode: OutputMode
+  extraToolDefs?: Array<Record<string, unknown>>
 }
 
 async function runProxyQuery(options: ProxyQueryOptions & { cwd?: string }): Promise<void> {
@@ -3320,21 +1485,26 @@ async function runProxyQuery(options: ProxyQueryOptions & { cwd?: string }): Pro
     ...options,
     history: [],
     cwd: options.cwd || process.cwd(),
+    extraToolDefs: options.extraToolDefs,
   })
 }
 
 // ── SDK Agent Loop Path ─────────────────────────────────────────
 
 interface SDKQueryOptions {
-  prompt: string
+  prompt: PromptContent
   resolved: ResolvedProvider
   config: OrcaConfig
   outputMode: OutputMode
   cwd: string
+  history?: ChatMessage[]
 }
 
-async function runSDKQuery(options: SDKQueryOptions): Promise<void> {
-  const { prompt, resolved, config, outputMode, cwd } = options
+async function runSDKQuery(options: SDKQueryOptions): Promise<{ inputTokens: number; outputTokens: number; turns: number; text: string }> {
+  const { prompt, resolved, config, outputMode, cwd, history = [] } = options
+  if (typeof prompt !== 'string') {
+    throw new Error('SDK path does not yet support multimodal prompt content. Use a proxy provider for --image.')
+  }
 
   let sdk: { createAgent: (opts: Record<string, unknown>) => { query: (p: string) => AsyncIterable<unknown> } }
   try {
@@ -3363,8 +1533,9 @@ async function runSDKQuery(options: SDKQueryOptions): Promise<void> {
   let inputTokens = 0
   let outputTokens = 0
   let turns = 0
+  let responseText = ''
 
-  for await (const event of agent.query(prompt)) {
+  for await (const event of agent.query(buildSDKReplayPrompt(history, prompt))) {
     if (outputMode === 'json') {
       emitJson(event as unknown as Record<string, unknown>)
       continue
@@ -3375,7 +1546,10 @@ async function runSDKQuery(options: SDKQueryOptions): Promise<void> {
 
     if (type === 'text' || type === 'content_block_delta') {
       const text = (ev.text as string) || (ev.delta as Record<string, unknown>)?.text as string || ''
-      if (text) streamToken(text)
+      if (text) {
+        responseText += text
+        streamToken(text)
+      }
     } else if (type === 'tool_use' || type === 'tool_call') {
       const toolName = (ev.name as string) || (ev.tool as string) || 'tool'
       let input: string | undefined
@@ -3410,6 +1584,28 @@ async function runSDKQuery(options: SDKQueryOptions): Promise<void> {
     turns,
     command: 'chat-sdk',
   })
+
+  return { inputTokens, outputTokens, turns, text: responseText }
+}
+
+function buildSDKReplayPrompt(history: ChatMessage[], prompt: string): string {
+  const conversation = history
+    .filter((message) => message.role !== 'system')
+    .map((message) => {
+      const roleLabel = message.role === 'assistant' ? 'Assistant' : 'User'
+      return `${roleLabel}:\n${messageContentToText(message.content)}`
+    })
+    .join('\n\n')
+
+  if (!conversation.trim()) return prompt
+
+  return [
+    'Conversation so far:',
+    conversation,
+    '',
+    'Latest user message:',
+    prompt,
+  ].join('\n')
 }
 
 // ── Cost Computation ───────────────────────────────────────────
@@ -3423,32 +1619,3 @@ function computeCost(model: string, inputTokens: number, outputTokens: number): 
 }
 
 // ── Helpers ─────────────────────────────────────────────────────
-
-function detectConfigFiles(cwd: string): string[] {
-  const found: string[] = []
-  const candidates = [
-    '.orca.json',
-    'CLAUDE.md',
-    '.claude/settings.json',
-    'AGENTS.md',
-    '.codex/config.toml',
-    'package.json',
-  ]
-  for (const name of candidates) {
-    if (existsSync(join(cwd, name))) {
-      found.push(name)
-    }
-  }
-  return found
-}
-
-function buildFlags(opts: ChatOptions): Partial<OrcaConfig> {
-  const flags: Partial<OrcaConfig> = {}
-  if (opts.model) flags.model = opts.model
-  if (opts.provider) flags.provider = opts.provider as OrcaConfig['provider']
-  if (opts.apiKey) flags.apiKey = opts.apiKey
-  if (opts.maxTurns) flags.maxTurns = parseInt(opts.maxTurns, 10)
-  if (opts.systemPrompt) flags.systemPrompt = opts.systemPrompt
-  if (opts.safe) flags.permissionMode = 'default'
-  return flags
-}

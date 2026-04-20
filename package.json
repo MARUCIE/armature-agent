@@ -20,6 +20,9 @@
     "lint": "tsc --noEmit",
     "dev": "tsc --watch",
     "bench": "node dist/bin/orca.js bench",
+    "eval:fast": "python3 agent-eval/scripts/run-gate.py --manifest fast",
+    "eval:nightly": "python3 agent-eval/scripts/run-gate.py --manifest nightly",
+    "eval:release": "python3 agent-eval/scripts/run-gate.py --manifest release",
     "prepublishOnly": "npm run build && npm test && npm run bench"
   },
   "dependencies": {

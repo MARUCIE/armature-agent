@@ -1,0 +1,14 @@
+{
+  "id": "gate-cli-journey",
+  "title": "Release CLI journey artifact",
+  "description": "Record a representative offline CLI journey as a human-readable release artifact.",
+  "input": "Run the release CLI journey script and require it to write a markdown artifact inside the current run directory.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/release-cli-journey.sh'",
+  "artifacts": [
+    "${ORCA_EVAL_RUN_DIR}/manual/release-cli-journey.md"
+  ],
+  "graders": [
+    "exit_code_ok",
+    "release_cli_journey_written"
+  ]
+}

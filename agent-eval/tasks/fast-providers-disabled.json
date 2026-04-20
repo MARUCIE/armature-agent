@@ -1,0 +1,13 @@
+{
+  "id": "fast-providers-disabled",
+  "title": "Providers list renders disabled default providers as inactive",
+  "description": "Black-box smoke for `orca providers` when the configured default provider is explicitly disabled.",
+  "input": "Create a config where `openai` is disabled, run `orca providers`, and verify the provider is labeled disabled while the default provider is shown as inactive rather than active.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home\"; cat > \"$TMP_ROOT/.orca.json\" <<EOF\n{\n  \"providers\": {\n    \"openai\": {\n      \"apiKey\": \"test-openai-key\",\n      \"baseURL\": \"https://api.openai.com/v1/\",\n      \"defaultModel\": \"gpt-5.4\",\n      \"disabled\": true\n    }\n  },\n  \"defaultProvider\": \"openai\"\n}\nEOF\n(cd \"$TMP_ROOT\" && env -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ORCA_HOME=\"$TMP_ROOT/home/.orca\" node \"$REPO_ROOT/dist/bin/orca.js\" providers)'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "providers_disabled_has_disabled_label",
+    "providers_disabled_has_inactive_default"
+  ]
+}

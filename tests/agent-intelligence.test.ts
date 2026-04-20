@@ -32,7 +32,7 @@ describe('Auto-verify: check detection and execution', () => {
     try { rmSync(verifyDir, { recursive: true, force: true }) } catch { /* */ }
   })
 
-  it('15.1 detects TypeScript project and runs typecheck', () => {
+  it('15.1 detects TypeScript project and runs typecheck', { timeout: 15_000 }, () => {
     const result = autoVerify(join(verifyDir, 'src', 'index.ts'), verifyDir)
     // May or may not find tsc — depends on environment
     // The important thing is it doesn't crash

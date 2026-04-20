@@ -6,7 +6,7 @@
  * <repo>/.orca-worktrees/<id>.
  */
 
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 
@@ -34,7 +34,7 @@ export class WorktreeManager {
     const base = baseBranch ?? 'HEAD'
 
     try {
-      execSync(`git worktree add -b ${branch} "${worktreePath}" ${base}`, {
+      execFileSync('git', ['worktree', 'add', '-b', branch, worktreePath, base], {
         cwd,
         encoding: 'utf-8',
         stdio: 'pipe',
@@ -63,7 +63,7 @@ export class WorktreeManager {
     }
 
     try {
-      const output = execSync(`git merge ${agent.branch}`, {
+      const output = execFileSync('git', ['merge', agent.branch], {
         cwd,
         encoding: 'utf-8',
         stdio: 'pipe',
@@ -83,7 +83,7 @@ export class WorktreeManager {
     if (!agent) return { warnings }
 
     try {
-      execSync(`git worktree remove "${agent.worktreePath}"`, {
+      execFileSync('git', ['worktree', 'remove', agent.worktreePath], {
         cwd,
         encoding: 'utf-8',
         stdio: 'pipe',
@@ -96,7 +96,7 @@ export class WorktreeManager {
     }
 
     try {
-      execSync(`git branch -d ${agent.branch}`, {
+      execFileSync('git', ['branch', '-d', agent.branch], {
         cwd,
         encoding: 'utf-8',
         stdio: 'pipe',

@@ -50,6 +50,15 @@ export class ContextMonitor {
   }
 
   /**
+   * Clear only the latest prompt-size reading after compaction.
+   *
+   * Keeps cumulative totals intact for session-level accounting.
+   */
+  clearCurrentUsage(): void {
+    this.lastInputTokens = 0
+  }
+
+  /**
    * Get current utilization as a fraction (0.0 - 1.0).
    *
    * Uses the last turn's inputTokens as the authoritative context window fill,

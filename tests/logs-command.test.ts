@@ -45,4 +45,31 @@ describe('logs command', () => {
     expect(logs.join('\n')).toContain('Orca Logs: errors')
     expect(logs.join('\n')).toContain('boom')
   })
+
+  it('falls back to agent logs for unknown log kinds', async () => {
+    logInfo('fallback agent entry')
+    const logs: string[] = []
+    vi.spyOn(console, 'log').mockImplementation((...args) => { logs.push(args.join(' ')) })
+
+    const command = createLogsCommand()
+    await command.parseAsync(['node', 'logs', 'nonsense'])
+
+    const output = logs.join('\n')
+    expect(output).toContain('Orca Logs: agent')
+    expect(output).toContain('fallback agent entry')
+  })
+
+  it('clamps --lines 0 down to the newest entry', async () => {
+    logInfo('line one')
+    logInfo('line two')
+    const logs: string[] = []
+    vi.spyOn(console, 'log').mockImplementation((...args) => { logs.push(args.join(' ')) })
+
+    const command = createLogsCommand()
+    await command.parseAsync(['node', 'logs', '--lines', '0'])
+
+    const output = logs.join('\n')
+    expect(output).toContain('line two')
+    expect(output).not.toContain('line one')
+  })
 })

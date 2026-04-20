@@ -210,8 +210,8 @@ describe('ModeRegistry: behavioral profiles', () => {
     registry = new ModeRegistry()
   })
 
-  it('25.1 has 5 builtin modes', () => {
-    expect(registry.modeCount).toBe(5)
+  it('25.1 has 6 builtin modes', () => {
+    expect(registry.modeCount).toBe(6)
   })
 
   it('25.2 default mode is active on construction', () => {
@@ -251,11 +251,12 @@ describe('ModeRegistry: behavioral profiles', () => {
 
   it('25.8 listModes returns all modes', () => {
     const modes = registry.listModes()
-    expect(modes.length).toBe(5)
+    expect(modes.length).toBe(6)
     const ids = modes.map(m => m.id)
     expect(ids).toContain('default')
     expect(ids).toContain('code-review')
     expect(ids).toContain('debug')
+    expect(ids).toContain('reflect')
     expect(ids).toContain('architect')
     expect(ids).toContain('docs')
   })
@@ -279,7 +280,7 @@ describe('ModeRegistry: behavioral profiles', () => {
     ]))
 
     registry.loadFromFile(modesPath)
-    expect(registry.modeCount).toBe(6)
+    expect(registry.modeCount).toBe(7)
     expect(registry.getMode('security')!.name).toBe('Security Audit')
     expect(registry.switchTo('security')).toBe(true)
 
@@ -299,7 +300,7 @@ describe('ModeRegistry: behavioral profiles', () => {
     registry.loadFromFile(modesPath)
     expect(registry.getMode('good')).toBeDefined()
     // bad entries should be skipped
-    expect(registry.modeCount).toBe(6)
+    expect(registry.modeCount).toBe(7)
 
     rmSync(tmpDir, { recursive: true, force: true })
   })

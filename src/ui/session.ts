@@ -28,6 +28,10 @@ import type {
 } from './types.js'
 
 export class ChatSessionEmitter extends EventEmitter {
+  private inputWait: { resolve: (input: string | null) => void; cancelOnClear: boolean } | null = null
+  private bufferedInput: string | null | undefined = undefined
+  private canceledResetSensitiveWait = false
+
   /** Emit a raw UIEvent */
   emitUI(event: UIEvent): void {
     this.emit(event.type, event)
@@ -103,7 +107,20 @@ export class ChatSessionEmitter extends EventEmitter {
   }
 
   emitClear(): void {
+    this.bufferedInput = undefined
+    if (this.inputWait?.cancelOnClear) {
+      const { resolve } = this.inputWait
+      this.inputWait = null
+      this.canceledResetSensitiveWait = true
+      resolve(null)
+    }
     this.emitUI({ type: 'clear' })
+  }
+
+  consumeCanceledResetSensitiveWait(): boolean {
+    const canceled = this.canceledResetSensitiveWait
+    this.canceledResetSensitiveWait = false
+    return canceled
   }
 
   // ── UI commands (UI → business logic) ─────────────────────
@@ -120,14 +137,11 @@ export class ChatSessionEmitter extends EventEmitter {
 
   // ── Input from UI to business logic ───────────────────────
 
-  private inputResolve: ((input: string | null) => void) | null = null
-  private bufferedInput: string | null | undefined = undefined
-
   /** Called by UI when user submits input. Resolves pending waitForInput or buffers for later. */
   submitInput(input: string | null): void {
-    if (this.inputResolve) {
-      const resolve = this.inputResolve
-      this.inputResolve = null
+    if (this.inputWait) {
+      const { resolve } = this.inputWait
+      this.inputWait = null
       resolve(input)
     } else {
       // Buffer: user pressed Enter before business logic called waitForInput
@@ -136,8 +150,7 @@ export class ChatSessionEmitter extends EventEmitter {
   }
 
   /** Called by business logic to wait for user input. Returns buffered input or waits. */
-  waitForInput(): Promise<string | null> {
-    this.emitPromptReady()
+  waitForInput(options?: { cancelOnClear?: boolean }): Promise<string | null> {
     // Return buffered input immediately if user already submitted
     if (this.bufferedInput !== undefined) {
       const input = this.bufferedInput
@@ -145,7 +158,8 @@ export class ChatSessionEmitter extends EventEmitter {
       return Promise.resolve(input)
     }
     return new Promise((resolve) => {
-      this.inputResolve = resolve
+      this.inputWait = { resolve, cancelOnClear: options?.cancelOnClear === true }
+      this.emitPromptReady()
     })
   }
 }

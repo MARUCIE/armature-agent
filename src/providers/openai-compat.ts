@@ -16,6 +16,10 @@ export interface OpenAICompatOptions {
   model: string
   systemPrompt?: string
   maxTokens?: number
+  /** Extra HTTP headers (e.g. for GitHub Copilot API) */
+  headers?: Record<string, string>
+  /** Reasoning effort level for models that support it (e.g. GPT-5.x via Copilot) */
+  reasoningEffort?: string
 }
 
 export interface StreamEvent {
@@ -33,6 +37,29 @@ export interface StreamEvent {
 export interface ToolCallbacks {
   onToolCall?: (name: string, args: Record<string, unknown>) => Promise<{ success: boolean; output: string }> | { success: boolean; output: string }
   abortSignal?: AbortSignal
+}
+
+export interface ChatContentPartText {
+  type: 'text'
+  text: string
+}
+
+export interface ChatContentPartImage {
+  type: 'image_url'
+  image_url: {
+    url: string
+  }
+}
+
+export type PromptContent = string | Array<ChatContentPartText | ChatContentPartImage>
+
+export function messageContentToText(content: PromptContent): string {
+  if (typeof content === 'string') return content
+  return content
+    .map((part) => part.type === 'text'
+      ? part.text
+      : `[image:${part.image_url.url.slice(0, 48)}]`)
+    .join('\n')
 }
 
 /**
@@ -141,10 +168,43 @@ function getModelContextWindow(model: string): number {
   return 128_000 // safe fallback
 }
 
+function getToolLimitForBaseURL(baseURL: string | undefined): number | undefined {
+  if (!baseURL) return undefined
+  if (baseURL.includes('githubcopilot.com')) return 128
+  return undefined
+}
+
+function limitToolsForProvider<T>(baseURL: string | undefined, tools: T[] | undefined): T[] | undefined {
+  if (!tools || tools.length === 0) return tools
+  const maxTools = getToolLimitForBaseURL(baseURL)
+  if (!maxTools || tools.length <= maxTools) return tools
+  logWarning('truncating tools for provider limit', {
+    baseURL,
+    requested: tools.length,
+    sent: maxTools,
+  })
+  return tools.slice(0, maxTools)
+}
+
+function shouldSkipReasoningEffortForChatCompletions(
+  options: Pick<OpenAICompatOptions, 'baseURL' | 'model' | 'reasoningEffort'>,
+  tools: Array<Record<string, unknown>> | undefined,
+): boolean {
+  if (!options.reasoningEffort || !tools || tools.length === 0) return false
+  const isGpt5Family = options.model.toLowerCase().includes('gpt-5')
+  if (!isGpt5Family) return false
+  const usesChatCompletionsCompat =
+    options.baseURL?.includes('githubcopilot.com') ||
+    options.baseURL?.includes('api.openai.com')
+  return Boolean(usesChatCompletionsCompat)
+}
+
 let proxyWarningShown = false
 
-async function createOpenAIClient(apiKey: string, baseURL: string) {
+async function createOpenAIClient(apiKey: string, baseURL: string, extraHeaders?: Record<string, string>) {
   const { default: OpenAI } = await import('openai')
+
+  const defaultHeaders = extraHeaders && Object.keys(extraHeaders).length > 0 ? extraHeaders : undefined
 
   const proxyUrl = resolveProxy()
   if (proxyUrl) {
@@ -158,10 +218,10 @@ async function createOpenAIClient(apiKey: string, baseURL: string) {
     const dispatcher = new ProxyAgent(proxyUrl)
     const proxyFetch = (url: string | URL | Request, init?: RequestInit) =>
       undiciFetch(url as string, { ...(init as Record<string, unknown>), dispatcher } as Parameters<typeof undiciFetch>[1]) as unknown as Promise<Response>
-    return new OpenAI({ apiKey, baseURL, fetch: proxyFetch, maxRetries: 0 })
+    return new OpenAI({ apiKey, baseURL, fetch: proxyFetch, maxRetries: 0, defaultHeaders })
   }
 
-  return new OpenAI({ apiKey, baseURL, maxRetries: 0 })
+  return new OpenAI({ apiKey, baseURL, maxRetries: 0, defaultHeaders })
 }
 
 /**
@@ -175,8 +235,10 @@ async function withRateLimitRetry<T>(fn: () => Promise<T>, label?: string): Prom
       return await fn()
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      const is429 = message.includes('429') || message.includes('rate')
-      if (!is429 || attempt === MAX_RETRIES) throw err
+      // GitHub Copilot API returns 403 for rate limits (non-standard), treat same as 429
+      const isRateLimit = message.includes('429') || message.includes('rate') ||
+        (message.includes('403') && message.includes('forbidden'))
+      if (!isRateLimit || attempt === MAX_RETRIES) throw err
 
       const delay = Math.pow(2, attempt + 1) * 1000 // 2s, 4s, 8s
       console.error(`\x1b[33m  rate limited${label ? ` (${label})` : ''} — retrying in ${delay / 1000}s (${attempt + 1}/${MAX_RETRIES})\x1b[0m`)
@@ -191,16 +253,18 @@ async function withRateLimitRetry<T>(fn: () => Promise<T>, label?: string): Prom
  * Stream a chat completion from an OpenAI-compatible endpoint.
  * Yields StreamEvent objects for the CLI to render.
  */
-export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string }
+export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: PromptContent }
 
 export async function* streamChat(
   options: OpenAICompatOptions,
-  prompt: string,
+  prompt: PromptContent,
   history?: ChatMessage[],
   toolCallbacks?: ToolCallbacks,
   tools?: Array<Record<string, unknown>>,
 ): AsyncGenerator<StreamEvent> {
-  const client = await createOpenAIClient(options.apiKey, options.baseURL)
+  const client = await createOpenAIClient(options.apiKey, options.baseURL, options.headers)
+  const requestTools = limitToolsForProvider(options.baseURL, tools)
+  const skipReasoningEffort = shouldSkipReasoningEffortForChatCompletions(options, requestTools)
 
   // Build message array with history
   const messages: Array<Record<string, unknown>> = []
@@ -231,6 +295,7 @@ export async function* streamChat(
   const TOOL_BUDGET_CHARS = 50_000
   let cumulativeToolChars = 0
   let toolBudgetExhausted = false
+  let consecutiveNoopCount = 0 // detect degenerate loops (e.g. run_command "true" spam)
 
   // Dynamic per-result limit: starts at 4000, shrinks as budget fills
   function getMaxToolResultChars(): number {
@@ -254,8 +319,8 @@ export async function* streamChat(
       // Before each API call, check total message size. If exceeding 85%
       // of context window, inject a stop signal and break the tool loop.
       const estimatedChars = messages.reduce((sum, m) => {
-        const c = m.content as string | null | undefined
-        return sum + (typeof c === 'string' ? c.length : 0)
+        const c = m.content as PromptContent | null | undefined
+        return sum + (c ? messageContentToText(c).length : 0)
       }, 0)
       const estimatedTokens = Math.ceil(estimatedChars / 3) // conservative estimate
 
@@ -285,17 +350,20 @@ export async function* streamChat(
         }
       }
 
-      // Build request params
+      // Build request params — use max_completion_tokens for APIs that require it (Copilot, newer OpenAI)
+      const maxOut = options.maxTokens || getModelMaxOutput(options.model)
+      const useNewTokenParam = options.baseURL?.includes('githubcopilot.com') || options.baseURL?.includes('api.openai.com')
       const params: Record<string, unknown> = {
         model: options.model,
         messages,
         stream: true,
-        max_tokens: options.maxTokens || getModelMaxOutput(options.model),
+        ...(useNewTokenParam ? { max_completion_tokens: maxOut } : { max_tokens: maxOut }),
+        ...(!skipReasoningEffort && options.reasoningEffort ? { reasoning_effort: options.reasoningEffort } : {}),
       }
 
       // Include tools if available (function calling)
-      if (tools && tools.length > 0 && toolCallbacks?.onToolCall) {
-        params.tools = tools
+      if (requestTools && requestTools.length > 0 && toolCallbacks?.onToolCall) {
+        params.tools = requestTools
       }
 
       // Force stream=true typing with unknown cast (params built dynamically for tool support)
@@ -357,6 +425,25 @@ export async function* streamChat(
 
       // If model wants to call tools
       if (finishReason === 'tool_calls' && toolCalls.length > 0 && toolCallbacks?.onToolCall) {
+        // ── Noop loop detector: catch degenerate patterns like run_command("true") spam ──
+        const isNoop = toolCalls.every(tc => {
+          const args = tc.arguments.trim()
+          return (tc.name === 'run_command' && (args === '{"command":"true"}' || args === '{"command": "true"}' || args === '{}')) ||
+                 (tc.name === 'sleep') ||
+                 (args === '{}' && tc.name !== 'task_list' && tc.name !== 'mcp_list_servers')
+        })
+        if (isNoop) {
+          consecutiveNoopCount++
+          if (consecutiveNoopCount >= 3) {
+            yield { type: 'text', text: '\n[loop-guard: detected degenerate tool loop — forcing stop]\n' }
+            yield { type: 'usage', inputTokens: totalInputTokens, outputTokens: totalOutputTokens }
+            yield { type: 'done' }
+            return
+          }
+        } else {
+          consecutiveNoopCount = 0
+        }
+
         // Add assistant message with tool calls to conversation
         messages.push({
           role: 'assistant',
@@ -385,7 +472,7 @@ export async function* streamChat(
 
           if (toolBudgetExhausted) {
             // Budget already exhausted — return minimal response
-            toolContent = `[TOOL BUDGET EXHAUSTED] ${cumulativeToolChars} chars used of ${TOOL_BUDGET_CHARS} budget. Result suppressed to prevent context overflow. Work with the information already gathered — do not call more read operations.`
+            toolContent = `[TOOL BUDGET EXHAUSTED] ${cumulativeToolChars} chars used of ${TOOL_BUDGET_CHARS} budget. STOP calling tools immediately. Do NOT call any more tools — no read_file, no run_command, no search. Produce your final answer using the information already gathered.`
           } else {
             const maxChars = getMaxToolResultChars()
             if (toolContent.length > maxChars) {
@@ -472,31 +559,42 @@ export async function* streamChat(
  */
 export async function chatOnce(
   options: OpenAICompatOptions,
-  prompt: string,
+  prompt: PromptContent,
   signal?: AbortSignal,
 ): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
-  const client = await createOpenAIClient(options.apiKey, options.baseURL)
+  const client = await createOpenAIClient(options.apiKey, options.baseURL, options.headers)
 
-  const messages: Array<{ role: 'system' | 'user'; content: string }> = []
+  const messages: Array<Record<string, unknown>> = []
 
   if (options.systemPrompt) {
     messages.push({ role: 'system', content: options.systemPrompt })
   }
   messages.push({ role: 'user', content: prompt })
 
+  const maxOut = options.maxTokens || getModelMaxOutput(options.model)
+  const useNewTokenParam = options.baseURL?.includes('githubcopilot.com') || options.baseURL?.includes('api.openai.com')
   const response = await withRateLimitRetry(
     () => client.chat.completions.create({
       model: options.model,
       messages,
-      max_tokens: options.maxTokens || getModelMaxOutput(options.model),
-    }, signal ? { signal } : undefined),
+      ...(useNewTokenParam ? { max_completion_tokens: maxOut } : { max_tokens: maxOut }),
+    } as unknown as Parameters<typeof client.chat.completions.create>[0], signal ? { signal } : undefined),
     options.model,
   )
 
-  const choice = response.choices?.[0]
+  const parsed = response as unknown as Record<string, unknown>
+  const choices = parsed.choices as Array<Record<string, unknown>> | undefined
+  const choice = choices?.[0]
+  const message = choice?.message as Record<string, unknown> | undefined
+  const content = message?.content as PromptContent | undefined
+  const usage = parsed.usage as Record<string, number> | undefined
   return {
-    text: choice?.message?.content || '',
-    inputTokens: response.usage?.prompt_tokens || 0,
-    outputTokens: response.usage?.completion_tokens || 0,
+    text: content
+      ? (typeof content === 'string'
+          ? content
+          : messageContentToText(content as PromptContent))
+      : '',
+    inputTokens: usage?.prompt_tokens || 0,
+    outputTokens: usage?.completion_tokens || 0,
   }
 }

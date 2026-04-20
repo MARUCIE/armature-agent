@@ -1,0 +1,13 @@
+{
+  "id": "fast-providers-test-local",
+  "title": "Providers test treats reachable 401 endpoints as connectivity success",
+  "description": "Black-box smoke for `orca providers test local` using a temporary project config and a local stub endpoint.",
+  "input": "Create a temporary `.orca.json` that points `local` at a stub `/v1/models` endpoint returning HTTP 401, run `orca providers test local`, and verify the command still reports the endpoint as reachable.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_PROJECT=$(mktemp -d); mkdir -p \"$TMP_PROJECT/home\"; PORT=$(node -e '\"'\"'const net=require(\"node:net\"); const s=net.createServer(); s.listen(0,\"127.0.0.1\",()=>{console.log(s.address().port); s.close();});'\"'\"'); cat > \"$TMP_PROJECT/.orca.json\" <<EOF\n{\n  \"providers\": {\n    \"local\": {\n      \"apiKey\": \"test-local-key\",\n      \"baseURL\": \"http://127.0.0.1:$PORT/v1\",\n      \"defaultModel\": \"qwen3:32b\"\n    }\n  },\n  \"defaultProvider\": \"local\"\n}\nEOF\nnode -e '\"'\"'const http=require(\"node:http\"); const port=Number(process.argv[1]); const server=http.createServer((req,res)=>{ if(req.url===\"/v1/models\"){ res.writeHead(401,{\"content-type\":\"application/json\"}); res.end(JSON.stringify({error:\"unauthorized\"})); return;} res.writeHead(404); res.end();}); server.listen(port,\"127.0.0.1\"); setTimeout(()=>server.close(),15000);'\"'\"' \"$PORT\" > \"$TMP_PROJECT/stub.out\" 2>&1 & STUB_PID=$!; trap \"kill $STUB_PID 2>/dev/null\" EXIT; bash agent-eval/scripts/wait-for-http.sh \"http://127.0.0.1:$PORT/v1/models\" \"^(401)$\" 50 0.1; (cd \"$TMP_PROJECT\" && env -i PATH=\"$PATH\" HOME=\"$TMP_PROJECT/home\" ORCA_HOME=\"$TMP_PROJECT/home/.orca\" node \"$REPO_ROOT/dist/bin/orca.js\" providers test local)'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "providers_test_has_testing_local",
+    "providers_test_has_reachable_401"
+  ]
+}

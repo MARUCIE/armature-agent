@@ -22,6 +22,13 @@ describe('Cursor: word boundary', () => {
     expect(C.prevWordPos('foo.bar', 4)).toBe(0) // dot skipped, back to "foo"
   })
 
+  it('treats unicode letters as word chars', () => {
+    expect(C.prevWordPos('你好 世界', 5)).toBe(3)
+    expect(C.prevWordPos('你好 世界', 3)).toBe(0)
+    expect(C.nextWordPos('你好 世界', 0)).toBe(3)
+    expect(C.nextWordPos('你好 世界', 3)).toBe(5)
+  })
+
   it('nextWordPos skips word chars then whitespace', () => {
     expect(C.nextWordPos('hello world', 0)).toBe(6) // from start of "hello" to start of "world"
     expect(C.nextWordPos('hello world', 6)).toBe(11) // from start of "world" to end
@@ -115,6 +122,13 @@ describe('Cursor: editing', () => {
     expect(state.text).toBe('world')
     expect(state.pos).toBe(0)
     expect(killed).toBe('hello ')
+  })
+
+  it('deleteWordBefore removes unicode words', () => {
+    const { state, killed } = C.deleteWordBefore({ text: '你好 世界', pos: 5 })
+    expect(state.text).toBe('你好 ')
+    expect(state.pos).toBe(3)
+    expect(killed).toBe('世界')
   })
 
   it('deleteToLineEnd kills to newline', () => {

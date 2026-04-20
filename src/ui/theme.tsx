@@ -9,7 +9,8 @@
  *         ocean (blue/dark), warm (yellow/dark), mono (white/dark)
  */
 
-import React, { createContext, useContext } from 'react'
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { readFileSync } from 'node:fs'
 
 export interface InkTheme {
   name: string
@@ -136,21 +137,36 @@ const THEMES: Record<string, InkTheme> = {
 
 function readThemeFile(): string | null {
   try {
-    const fs = require('fs') as typeof import('fs')
     const home = process.env.HOME || process.env.USERPROFILE || ''
     if (!home) return null
-    return fs.readFileSync(`${home}/.orca/theme`, 'utf-8').trim().toLowerCase()
+    return readFileSync(`${home}/.orca/theme`, 'utf-8').trim().toLowerCase()
   } catch {
     return null
   }
 }
 
+function getConfiguredThemeId(): string | null {
+  const envTheme = (process.env.ORCA_THEME || '').toLowerCase()
+  if (envTheme && THEMES[envTheme]) return envTheme
+  const fileTheme = readThemeFile()
+  if (fileTheme && THEMES[fileTheme]) return fileTheme
+  return null
+}
+
+export function hasConfiguredThemePreference(): boolean {
+  return getConfiguredThemeId() !== null
+}
+
 function resolveTheme(): InkTheme {
   // Priority: env var > file > auto-detect
-  const envTheme = (process.env.ORCA_THEME || '').toLowerCase()
-  if (envTheme && THEMES[envTheme]) return THEMES[envTheme]!
-  const fileTheme = readThemeFile()
-  if (fileTheme && THEMES[fileTheme]) return THEMES[fileTheme]!
+  const configuredTheme = getConfiguredThemeId()
+  if (configuredTheme) return THEMES[configuredTheme]!
+  // Auto-detect: dark → default (cyan), light → light (blue)
+  return isDark ? THEMES['default']! : THEMES['light']!
+}
+
+function resolveThemeFromId(themeId: string | null): InkTheme {
+  if (themeId && THEMES[themeId]) return THEMES[themeId]!
   // Auto-detect: dark → default (cyan), light → light (blue)
   return isDark ? THEMES['default']! : THEMES['light']!
 }
@@ -158,19 +174,41 @@ function resolveTheme(): InkTheme {
 /** Available theme IDs for external use (e.g. ThemePicker) */
 export const THEME_IDS = Object.keys(THEMES)
 
-const currentTheme: InkTheme = resolveTheme()
+interface ThemeContextValue {
+  theme: InkTheme
+  setThemeId: (themeId: string) => void
+}
 
-const ThemeContext = createContext<InkTheme>(currentTheme)
+const ThemeContext = createContext<ThemeContextValue>({
+  theme: resolveTheme(),
+  setThemeId: () => {},
+})
 
 export function ThemeProvider({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <ThemeContext.Provider value={currentTheme}>{children}</ThemeContext.Provider>
+  const [themeId, setThemeIdState] = useState<string | null>(() => getConfiguredThemeId())
+
+  const setThemeId = useCallback((nextThemeId: string) => {
+    if (!THEMES[nextThemeId]) return
+    process.env.ORCA_THEME = nextThemeId
+    setThemeIdState(nextThemeId)
+  }, [])
+
+  const theme = useMemo(() => resolveThemeFromId(themeId), [themeId])
+  const value = useMemo(() => ({ theme, setThemeId }), [theme, setThemeId])
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
 
 export function useTheme(): InkTheme {
-  return useContext(ThemeContext)
+  return useContext(ThemeContext).theme
+}
+
+export function useThemeController(): { setThemeId: (themeId: string) => void } {
+  const { setThemeId } = useContext(ThemeContext)
+  return { setThemeId }
 }
 
 /** Get the resolved theme without React context (for non-component code) */
 export function getTheme(): InkTheme {
-  return currentTheme
+  return resolveTheme()
 }

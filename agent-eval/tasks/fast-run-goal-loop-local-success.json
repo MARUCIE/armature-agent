@@ -1,0 +1,14 @@
+{
+  "id": "fast-run-goal-loop-local-success",
+  "title": "Run goal-loop succeeds against a local OpenAI-compatible stub",
+  "description": "Black-box smoke for `orca run --done-when` using a local provider stub and a trivially passing command criterion.",
+  "input": "Start a localhost OpenAI-compatible stub, run `orca run \"say hello\" --provider local --done-when \"exit 0: true\" --max-turns 1`, and verify the goal-loop passes on the first iteration while capturing the request payload.",
+  "command": "bash agent-eval/scripts/run-run-goal-loop-local-success.sh",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "run_goal_loop_has_goal_banner",
+    "run_goal_loop_has_success",
+    "run_goal_loop_has_provider_path_ok"
+  ]
+}

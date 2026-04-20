@@ -14,9 +14,11 @@ export interface CursorState {
 
 // ── Word boundary detection ──
 
-/** Is this character a word character? (alphanumeric + underscore) */
+const WORD_CHAR_RE = /[\p{L}\p{N}\p{M}_]/u
+
+/** Is this character a word character? (unicode letters/numbers/marks + underscore) */
 function isWordChar(ch: string): boolean {
-  return /[\w]/.test(ch)
+  return WORD_CHAR_RE.test(ch)
 }
 
 /** Find the start of the previous word from position */

@@ -1,7 +1,7 @@
 # Orca CLI System Architecture
 
 <!-- AI-FLEET:PROJECT_DIR:START -->
-- `PROJECT_DIR`: `/Users/mauricewen/Projects/MARUCIE-orca-cli`
+- `PROJECT_DIR`: `/Users/mauricewen/Projects/orca-cli`
 <!-- AI-FLEET:PROJECT_DIR:END -->
 
 ## Architecture Summary
@@ -29,6 +29,10 @@ flowchart TD
   Usage[src/usage-db.ts]
   Output[src/output.ts<br/>src/markdown.ts]
   Tests[tests/*.test.ts]
+  EvalPlan[AGENT_EVAL_PLAN.md]
+  EvalManifests[agent-eval/manifests/*.json]
+  EvalScripts[agent-eval/scripts/run-gate.py<br/>release-cli-journey.sh]
+  EvalRuns[agent-eval/tasks<br/>graders<br/>runs]
 
   User --> Bin --> Program --> Commands
   Commands --> Runtime
@@ -50,6 +54,12 @@ flowchart TD
   Tests --> Hooks
   Tests --> Provider
   Tests --> Tools
+  EvalPlan --> Tests
+  EvalPlan --> EvalManifests
+  EvalManifests --> EvalScripts
+  EvalScripts --> EvalRuns
+  EvalPlan --> EvalRuns
+  EvalPlan --> Commands
 
   subgraph InkUI[ink Terminal UI]
     Render[src/ui/render.tsx]
@@ -82,20 +92,23 @@ flowchart TD
 | --- | --- | --- |
 | Entry | `src/bin/orca.ts` | Shell entry point and signal handling |
 | Command assembly | `src/program.ts` | Registers commands and default prompt passthrough |
-| Command modules | `src/commands/*.ts` | User-facing CLI flows (`chat`, `run`, `multi`, `bench`, `providers`, `stats`, `session`, `pr`, `serve`, `init`) |
-| Runtime/config | `src/config.ts`, `src/context.ts`, `src/system-prompt.ts`, `src/token-budget.ts`, `src/model-catalog.ts`, `src/doctor.ts` | Resolve providers, model metadata, runtime diagnostics, context, prompts, and runtime limits |
+| Command modules | `src/commands/*.ts` | User-facing CLI flows (`chat`, `reflect`, `run`, `multi`, `bench`, `providers`, `stats`, `session`, `pr`, `serve`, `init`) |
+| Runtime/config | `src/config.ts`, `src/context.ts`, `src/system-prompt.ts`, `src/token-budget.ts`, `src/model-catalog.ts`, `src/doctor.ts`, `src/commands/reflect-mode.ts`, `src/modes/registry.ts` | Resolve providers, model metadata, runtime diagnostics, context, prompts, runtime limits, and reflect/debugging behavior |
 | Provider bridge | `src/providers/openai-compat.ts` | Provider-neutral transport and model interaction |
+  Note: proxy path now supports multimodal one-shot prompt content (`text` + `image_url` parts) for local image attachments.
 | Agent runtime | `src/tools.ts`, `src/background-jobs.ts`, `src/logger.ts`, `src/hooks.ts`, `src/mcp-client.ts`, `src/retry-intelligence.ts`, `src/auto-verify.ts` | Tool execution, detached job tracking, local runtime logging, hooks, MCP, retry behavior, verification helpers |
 | ink UI | `src/ui/` (18 files) | React terminal UI: App, ScrollBox, InputArea, StatusBar, Banner, Footer, ThinkingSpinner, ToolCallBlock, DiffPreview, MarkdownText, FileLink, PermissionPrompt, MultiModelProgress, CommandPicker, TurnSummary, AlternateScreen + hooks (useTerminalSize, useMouseWheel, usePasteHandler) + modules (cursor, theme, session, types, utils) |
+| IDE integration | `integrations/vscode-orca/` | VS Code extension skeleton that launches `orca` terminal workflows and MCP server directly |
 | Presentation (legacy) | `src/output.ts`, `src/markdown.ts`, `src/command-picker.ts` | Legacy terminal rendering (pre-ink fallback) |
 | Persistence | `src/usage-db.ts` | Persistent usage/cost tracking |
-| Verification | `tests/*.test.ts` | Automated verification across tool, runtime, hook, SOTA, and multi-model paths |
+| Verification | `tests/*.test.ts`, `AGENT_EVAL_PLAN.md`, `agent-eval/` | Deterministic regression coverage plus manifest-driven black-box gate execution for release-grade CLI evaluation |
 
 ## Command Surface Map
 
 | Command | Source File | Purpose |
 | --- | --- | --- |
 | `orca` / `orca chat` | `src/commands/chat.ts` | Interactive REPL and one-shot prompting |
+| `orca reflect` | `src/commands/chat.ts`, `src/commands/reflect-mode.ts` | Socratic debugging and root-cause investigation surface |
 | `orca run` | `src/commands/run.ts` | Agent task execution |
 | `orca council` / `orca race` / `orca pipeline` | `src/commands/multi.ts` | Multi-model collaboration flows |
 | `orca bench` | `src/commands/bench.ts` | Benchmark and self-evaluation |
@@ -112,10 +125,12 @@ flowchart TD
 
 - Web routes: `N/A`
 - Primary interaction surface: terminal commands and REPL slash-style workflows
+- Reflect/debugging surface: `orca reflect`, `/reflect`, `/mode reflect`, plus conservative prompt-intent auto-triggering in standard chat
 - Headless HTTP surface: `orca serve` (see `src/commands/serve.ts`)
 - Detached job state: `~/.orca/background-jobs/` or `$ORCA_HOME/background-jobs/`
 - Runtime logs: `~/.orca/logs/` or `$ORCA_HOME/logs/`
-- Serve diagnostics: `/health`, `/providers`, `/doctor`
+- Quality gate surfaces: `npm test`, `AGENT_EVAL_PLAN.md`, and future `agent-eval/{tasks,graders,runs}`
+- Quality gate surfaces: `npm run eval:fast`, `npm run eval:nightly`, `npm run eval:release`, plus `agent-eval/{tasks,graders,manifests,runs}`
 - Serve diagnostics: `/health`, `/providers`, `/doctor`
 
 ## Legacy Documentation Cross-References

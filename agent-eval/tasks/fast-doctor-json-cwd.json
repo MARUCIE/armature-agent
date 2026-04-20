@@ -1,0 +1,13 @@
+{
+  "id": "fast-doctor-json-cwd",
+  "title": "Doctor JSON uses the explicit --cwd target",
+  "description": "Black-box smoke for `orca doctor --json --cwd <dir>` with an isolated runtime home and a temporary target project.",
+  "input": "Create a temporary target project with a package.json, run `orca doctor --json --cwd <dir>`, and verify the JSON output reports that target project's name and cwd.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); TMP_PROJECT=$(mktemp -d); trap \"rm -rf $TMP_HOME $TMP_PROJECT\" EXIT; mkdir -p \"$TMP_HOME/.orca\"; cat > \"$TMP_PROJECT/package.json\" <<EOF\n{\"name\":\"doctor-json-cwd-box\",\"devDependencies\":{\"vitest\":\"^1.0.0\"}}\nEOF\nenv -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ORCA_HOME=\"$TMP_HOME/.orca\" ORCA_PROVIDER=openai OPENAI_API_KEY=test-openai-key node dist/bin/orca.js doctor --json --cwd \"$TMP_PROJECT\"'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "doctor_json_cwd_has_project_name",
+    "doctor_json_cwd_has_target_path"
+  ]
+}

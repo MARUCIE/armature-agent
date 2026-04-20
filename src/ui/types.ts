@@ -12,6 +12,7 @@ export interface StatusInfo {
   model: string
   contextPct: number
   permMode: 'yolo' | 'auto' | 'plan'
+  behaviorMode?: string
   gitBranch?: string
   costUsd: number
   tokPerSec?: number

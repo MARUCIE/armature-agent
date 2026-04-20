@@ -7,7 +7,7 @@
  */
 
 import { Command } from 'commander'
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import { resolveConfig, resolveProvider } from '../config.js'
 import { printBanner, printProviderInfo, printError } from '../output.js'
 
@@ -41,9 +41,9 @@ export function createPRCommand(): Command {
       let prBody: string
       let prDiff: string
       try {
-        prTitle = execSync(`gh pr view ${num} --json title -q .title`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim()
-        prBody = execSync(`gh pr view ${num} --json body -q .body`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim()
-        prDiff = execSync(`gh pr diff ${num}`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim()
+        prTitle = execFileSync('gh', ['pr', 'view', String(num), '--json', 'title', '-q', '.title'], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim()
+        prBody = execFileSync('gh', ['pr', 'view', String(num), '--json', 'body', '-q', '.body'], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim()
+        prDiff = execFileSync('gh', ['pr', 'diff', String(num)], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim()
       } catch (err) {
         printError(`Failed to fetch PR #${num}: ${err instanceof Error ? err.message : String(err)}`)
         process.exit(1)
@@ -52,7 +52,7 @@ export function createPRCommand(): Command {
       // Checkout PR branch
       console.log(`\x1b[90m  Checking out PR #${num}: ${prTitle}\x1b[0m`)
       try {
-        execSync(`gh pr checkout ${num}`, { stdio: 'pipe' })
+        execFileSync('gh', ['pr', 'checkout', String(num)], { stdio: 'pipe' })
       } catch (err) {
         printError(`Failed to checkout PR #${num}: ${err instanceof Error ? err.message : String(err)}`)
         process.exit(1)

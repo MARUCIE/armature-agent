@@ -8,6 +8,7 @@
  */
 
 import { readFileSync } from 'node:fs'
+import { getReflectSystemPromptPrefix } from '../commands/reflect-mode.js'
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -62,6 +63,25 @@ const BUILTIN_MODES: Mode[] = [
       'git_diff',
       'git_status',
       'list_directory',
+    ],
+  },
+  {
+    id: 'reflect',
+    name: 'Reflect',
+    description: 'Socratic debugging and root-cause investigation',
+    systemPromptPrefix: getReflectSystemPromptPrefix(),
+    tools: [
+      'read_file',
+      'search_files',
+      'glob_files',
+      'find_definition',
+      'find_references',
+      'run_command',
+      'edit_file',
+      'git_diff',
+      'git_status',
+      'list_directory',
+      'directory_tree',
     ],
   },
   {

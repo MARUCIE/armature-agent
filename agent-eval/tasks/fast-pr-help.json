@@ -1,0 +1,14 @@
+{
+  "id": "fast-pr-help",
+  "title": "PR help exposes review contract",
+  "description": "Command-surface smoke for `orca pr --help`.",
+  "input": "Run `orca pr --help` and verify the PR number argument and review prompt contract remain visible.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; node dist/bin/orca.js pr --help'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "pr_help_has_review_description",
+    "pr_help_has_number_argument",
+    "pr_help_has_prompt_argument"
+  ]
+}

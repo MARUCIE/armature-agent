@@ -11,7 +11,7 @@ import { join, resolve } from 'node:path'
 import { basename } from 'node:path'
 import { homedir } from 'node:os'
 import { createHash } from 'node:crypto'
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import { startBackgroundJob } from './background-jobs.js'
 import { executeSandboxed } from './sandbox/index.js'
 import type { SandboxPolicy } from './sandbox/index.js'
@@ -245,10 +245,23 @@ export function executeTool(name: string, args: Record<string, unknown>, cwd: st
       case 'file_info': return executeFileInfo(normalizedArgs, cwd)
       case 'find_definition': return executeFindDefinition(normalizedArgs, cwd)
       case 'find_references': {
-        const refName = shellEscape(String(normalizedArgs.name || ''))
-        const refPath = shellEscape(resolve(cwd, String(normalizedArgs.path || '.')))
-        const refIncludes = ['ts','js','py','go','rs','java','c','cpp','h','rb'].map(e => `--include='*.${e}'`).join(' ')
-        return execShellTool(`grep -rn '\\b${refName}\\b' '${refPath}' ${refIncludes} 2>/dev/null | head -30`, cwd)
+        const refName = String(normalizedArgs.name || '')
+        const refPath = resolve(cwd, String(normalizedArgs.path || '.'))
+        const refIncludes = ['ts','js','py','go','rs','java','c','cpp','h','rb'].map(e => `--include=*.${e}`)
+        try {
+          const output = execFileSync('grep', ['-rn', '-E', ...refIncludes, `\\b${escapeRegexLiteral(refName)}\\b`, refPath], {
+            encoding: 'utf-8',
+            timeout: 10_000,
+            maxBuffer: 512 * 1024,
+            stdio: ['pipe', 'pipe', 'pipe'],
+          })
+          const limited = output.split('\n').filter(Boolean).slice(0, 30).join('\n')
+          return { success: true, output: limited || `No references found for "${refName}"` }
+        } catch (err) {
+          const e = err as { status?: number; stdout?: string; stderr?: string; message?: string }
+          if (e.status === 1) return { success: true, output: `No references found for "${refName}"` }
+          return { success: false, output: ((e.stdout || '') + (e.stderr || '') || e.message || 'find_references failed').slice(0, 5_000) }
+        }
       }
       case 'directory_tree': return execShellTool(`find '${shellEscape(resolve(cwd, String(normalizedArgs.path || '.')))}' -maxdepth ${Number(normalizedArgs.depth) || 3} -not -path '*/\\.*' -not -path '*/node_modules/*' 2>/dev/null | head -200 | sort`, cwd)
       case 'count_lines': return execShellTool(`find '${shellEscape(resolve(cwd, String(normalizedArgs.path || '.')))}' -type f -not -path '*/\\.*' -not -path '*/node_modules/*' -not -path '*/dist/*' | xargs wc -l 2>/dev/null | sort -rn | head -30`, cwd)
@@ -296,6 +309,76 @@ export function executeTool(name: string, args: Record<string, unknown>, cwd: st
 /** Escape a string for safe use inside single-quoted shell arguments. */
 function shellEscape(s: string): string {
   return s.replace(/'/g, "'\\''")
+}
+
+function escapeRegexLiteral(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function normalizeRelativePath(path: string): string {
+  return path.split('\\').join('/')
+}
+
+function globPatternToRegex(pattern: string): RegExp {
+  const normalized = normalizeRelativePath(pattern)
+  let regex = '^'
+  for (let i = 0; i < normalized.length; i++) {
+    const ch = normalized[i]!
+    const next = normalized[i + 1]
+    if (ch === '*' && next === '*') {
+      regex += '.*'
+      i++
+      continue
+    }
+    if (ch === '*') {
+      regex += '[^/]*'
+      continue
+    }
+    if (ch === '?') {
+      regex += '.'
+      continue
+    }
+    regex += escapeRegexLiteral(ch)
+  }
+  regex += '$'
+  return new RegExp(regex)
+}
+
+function walkFiles(basePath: string, limit = 500): string[] {
+  const results: string[] = []
+  const stack = [basePath]
+  const ignored = new Set(['.git', 'node_modules', 'dist', '.orca-worktrees'])
+
+  while (stack.length > 0 && results.length < limit) {
+    const current = stack.pop()!
+    let entries: string[]
+    try {
+      entries = readdirSync(current)
+    } catch {
+      continue
+    }
+
+    entries.sort().reverse()
+    for (const entry of entries) {
+      if (ignored.has(entry)) continue
+      const fullPath = join(current, entry)
+      let stat
+      try {
+        stat = statSync(fullPath)
+      } catch {
+        continue
+      }
+
+      if (stat.isDirectory()) {
+        stack.push(fullPath)
+      } else if (stat.isFile()) {
+        results.push(fullPath)
+        if (results.length >= limit) break
+      }
+    }
+  }
+
+  return results.sort()
 }
 
 function normalizeToolArgs(name: string, args: Record<string, unknown>): Record<string, unknown> {
@@ -567,14 +650,23 @@ function executeRunBackground(args: Record<string, unknown>, cwd: string): ToolR
 function executeSearchFiles(args: Record<string, unknown>, cwd: string): ToolResult {
   const pattern = String(args.pattern || '')
   const searchPath = resolve(cwd, String(args.path || '.'))
-  const fileGlob = args.file_glob ? `--include='${shellEscape(String(args.file_glob))}'` : ''
-
-  const cmd = `grep -rn ${fileGlob} '${shellEscape(pattern)}' '${shellEscape(searchPath)}' 2>/dev/null | head -50`
   try {
-    const output = execSync(cmd, { encoding: 'utf-8', timeout: 10_000, maxBuffer: 512 * 1024 })
-    return { success: true, output: smartTruncate(output) || 'No matches found.' }
-  } catch {
-    return { success: true, output: 'No matches found.' }
+    const grepArgs = ['-rn']
+    if (args.file_glob) grepArgs.push(`--include=${String(args.file_glob)}`)
+    grepArgs.push(pattern, searchPath)
+
+    const output = execFileSync('grep', grepArgs, {
+      encoding: 'utf-8',
+      timeout: 10_000,
+      maxBuffer: 512 * 1024,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    const limited = output.split('\n').filter(Boolean).slice(0, 50).join('\n')
+    return { success: true, output: smartTruncate(limited) || 'No matches found.' }
+  } catch (err) {
+    const e = err as { status?: number; stdout?: string; stderr?: string; message?: string }
+    if (e.status === 1) return { success: true, output: 'No matches found.' }
+    return { success: false, output: ((e.stdout || '') + (e.stderr || '') || e.message || 'search failed').slice(0, 5_000) }
   }
 }
 
@@ -653,22 +745,17 @@ function executeGlobFiles(args: Record<string, unknown>, cwd: string): ToolResul
   if (!pattern) return { success: false, output: 'pattern is required.' }
 
   try {
-    const escaped = pattern.replace(/'/g, "'\\''")
-    let cmd: string
-    if (pattern.includes('/') || pattern.includes('**')) {
-      const regex = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*').replace(/\?/g, '.')
-      cmd = `cd '${shellEscape(basePath)}' && git ls-files --cached --others --exclude-standard 2>/dev/null | grep -E '${shellEscape(regex)}' | head -100`
-    } else {
-      cmd = `cd '${shellEscape(basePath)}' && find . -type f -name '${escaped}' 2>/dev/null | sed 's|^\\./||' | head -100`
-    }
-
-    const output = execSync(cmd, { encoding: 'utf-8', timeout: 10_000, maxBuffer: 512 * 1024 })
-    const files = output.trim().split('\n').filter(Boolean)
+    const matcher = globPatternToRegex(pattern)
+    const matchFullPath = pattern.includes('/') || pattern.includes('**')
+    const files = walkFiles(basePath)
+      .map(file => normalizeRelativePath(file.slice(basePath.length + (basePath.endsWith('/') ? 0 : 1))))
+      .filter(rel => matcher.test(matchFullPath ? rel : rel.split('/').pop() || rel))
+      .slice(0, 100)
     return files.length === 0
       ? { success: true, output: 'No files matched.' }
       : { success: true, output: files.join('\n') }
-  } catch {
-    return { success: true, output: 'No files matched.' }
+  } catch (err) {
+    return { success: false, output: err instanceof Error ? err.message : String(err) }
   }
 }
 
@@ -699,29 +786,37 @@ function executeFindDefinition(args: Record<string, unknown>, cwd: string): Tool
   const name = String(args.name || '')
   const searchPath = resolve(cwd, String(args.path || '.'))
   if (!name) return { success: false, output: 'name is required. Provide a function, class, or variable name to search for.' }
+  const literalName = escapeRegexLiteral(name)
 
   // Language-aware definition patterns
   const patterns = [
-    `function\\s+${name}`,           // JS/TS/Go
-    `const\\s+${name}\\s*=`,         // JS/TS const
-    `let\\s+${name}\\s*=`,           // JS/TS let
-    `class\\s+${name}`,              // JS/TS/Python/Java
-    `interface\\s+${name}`,          // TS
-    `type\\s+${name}`,               // TS/Go
-    `def\\s+${name}`,                // Python
-    `fn\\s+${name}`,                 // Rust
-    `func\\s+${name}`,               // Go
-    `export\\s+(default\\s+)?.*${name}`, // ES module exports
+    `function\\s+${literalName}`,           // JS/TS/Go
+    `const\\s+${literalName}\\s*=`,         // JS/TS const
+    `let\\s+${literalName}\\s*=`,           // JS/TS let
+    `class\\s+${literalName}`,              // JS/TS/Python/Java
+    `interface\\s+${literalName}`,          // TS
+    `type\\s+${literalName}`,               // TS/Go
+    `def\\s+${literalName}`,                // Python
+    `fn\\s+${literalName}`,                 // Rust
+    `func\\s+${literalName}`,               // Go
+    `export\\s+(default\\s+)?.*${literalName}`, // ES module exports
   ]
 
   const combined = patterns.join('|')
-  const includes = ['ts','tsx','js','jsx','py','go','rs','java','c','cpp','h','rb','swift','kt'].map(e => `--include='*.${e}'`).join(' ')
+  const includes = ['ts','tsx','js','jsx','py','go','rs','java','c','cpp','h','rb','swift','kt'].map(e => `--include=*.${e}`)
   try {
-    const cmd = `grep -rn -E '${shellEscape(combined)}' '${shellEscape(searchPath)}' ${includes} 2>/dev/null | head -20`
-    const output = execSync(cmd, { encoding: 'utf-8', timeout: 10_000, maxBuffer: 512 * 1024 })
-    return { success: true, output: output || `No definition found for "${name}"` }
-  } catch {
-    return { success: true, output: `No definition found for "${name}"` }
+    const output = execFileSync('grep', ['-rn', '-E', ...includes, combined, searchPath], {
+      encoding: 'utf-8',
+      timeout: 10_000,
+      maxBuffer: 512 * 1024,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    const limited = output.split('\n').filter(Boolean).slice(0, 20).join('\n')
+    return { success: true, output: limited || `No definition found for "${name}"` }
+  } catch (err) {
+    const e = err as { status?: number; stdout?: string; stderr?: string; message?: string }
+    if (e.status === 1) return { success: true, output: `No definition found for "${name}"` }
+    return { success: false, output: ((e.stdout || '') + (e.stderr || '') || e.message || 'find_definition failed').slice(0, 5_000) }
   }
 }
 
@@ -732,21 +827,21 @@ function executeGitCommit(args: Record<string, unknown>, cwd: string): ToolResul
   try {
     const files = args.files as string[] | undefined
     if (files && files.length > 0) {
-      execSync(`git add ${files.map(f => `'${f}'`).join(' ')}`, {
+      execFileSync('git', ['add', '--', ...files.map(String)], {
         cwd,
         encoding: 'utf-8',
         timeout: 10_000,
         stdio: ['pipe', 'pipe', 'pipe'],
       })
     } else {
-      execSync('git add -A', {
+      execFileSync('git', ['add', '-A'], {
         cwd,
         encoding: 'utf-8',
         timeout: 10_000,
         stdio: ['pipe', 'pipe', 'pipe'],
       })
     }
-    const output = execSync(`git commit -m '${message.replace(/'/g, "'\\''")}'`, {
+    const output = execFileSync('git', ['commit', '-m', message], {
       cwd,
       encoding: 'utf-8',
       timeout: 10_000,
@@ -765,12 +860,14 @@ function executeFetchUrl(args: Record<string, unknown>): ToolResult {
 
   try {
     const format = String(args.format || 'text')
-    const safeUrl = shellEscape(url)
-    const cmd = format === 'headers'
-      ? `curl -sI '${safeUrl}' 2>/dev/null | head -30`
-      : `curl -sL '${safeUrl}' 2>/dev/null | head -500`
-    const output = execSync(cmd, { encoding: 'utf-8', timeout: 15_000, maxBuffer: 2 * 1024 * 1024 })
-    return { success: true, output: smartTruncate(output, 20_000) }
+    const output = execFileSync('curl', format === 'headers' ? ['-sI', url] : ['-sL', url], {
+      encoding: 'utf-8',
+      timeout: 15_000,
+      maxBuffer: 2 * 1024 * 1024,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    const limited = output.split('\n').slice(0, format === 'headers' ? 30 : 500).join('\n')
+    return { success: true, output: smartTruncate(limited, 20_000) }
   } catch (err) {
     return { success: false, output: err instanceof Error ? err.message : String(err) }
   }
@@ -897,10 +994,18 @@ function executeWebSearch(args: Record<string, unknown>): ToolResult {
   if (!query) return { success: false, output: 'query is required.' }
   try {
     const encoded = encodeURIComponent(query)
-    const cmd = `curl -sL 'https://html.duckduckgo.com/html/?q=${encoded}' 2>/dev/null | grep -oP 'href="https?://[^"]*"' | head -${Number(args.count) || 5} | sed 's/href="//;s/"$//'`
-    const output = execSync(cmd, { encoding: 'utf-8', timeout: 15_000, maxBuffer: 1024 * 1024 })
-    if (!output.trim()) return { success: true, output: `No results for "${query}". Try fetch_url with a specific URL.` }
-    return { success: true, output: `Search results for "${query}":\n${output}` }
+    const count = Number(args.count) || 5
+    const html = execFileSync('curl', ['-sL', `https://html.duckduckgo.com/html/?q=${encoded}`], {
+      encoding: 'utf-8',
+      timeout: 15_000,
+      maxBuffer: 1024 * 1024,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    const urls = Array.from(html.matchAll(/href="(https?:\/\/[^"]+)"/g), m => m[1]!)
+      .filter((url, index, arr) => arr.indexOf(url) === index)
+      .slice(0, count)
+    if (urls.length === 0) return { success: true, output: `No results for "${query}". Try fetch_url with a specific URL.` }
+    return { success: true, output: `Search results for "${query}":\n${urls.join('\n')}` }
   } catch {
     return { success: false, output: `Web search failed. Try fetch_url with a known URL instead.` }
   }

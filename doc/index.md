@@ -26,10 +26,14 @@ This file is the canonical path index for the `Orca CLI` repository.
 | Hooks | `src/hooks.ts` | Lifecycle hook loader and execution |
 | Usage persistence | `src/usage-db.ts` | Usage and cost persistence |
 | Tests | `tests/` | Vitest suites for CLI, runtime, hooks, multi-model, and SOTA behavior |
+| Quality plan | `AGENT_EVAL_PLAN.md` | Canonical task / grader / gate plan for large-scale CLI evaluation |
+| Evaluation assets | `agent-eval/` | Task, grader, manifest, runbook, and run artifacts for black-box CLI evaluation |
+| Evaluation manifests | `agent-eval/manifests/` | `fast`, `nightly`, and `release` gate definitions |
+| Evaluation scripts | `agent-eval/scripts/` | Shared gate runner, fast wrapper, readiness helpers, and release CLI journey recorder |
 | Build output | `dist/` | Generated artifacts, not hand-edited |
 | Legacy docs | `doc/THREE_TIER_ARCHITECTURE.md` | Historical architecture inventory |
 | Legacy docs | `doc/MULTI_MODEL_COLLABORATION.md` | Design note for council/race/pipeline |
-| Legacy docs | `doc/SOTA_TEST_PLAN.md` | Historical test hardening plan |
+| Legacy docs | `doc/SOTA_TEST_PLAN.md` | Historical test hardening snapshot, not the current canonical baseline |
 <!-- AI-FLEET:PATH_INDEX:END -->
 
 ## Documentation Layout

@@ -1,29 +1,23 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Orca CLI PRD</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } }</style></head><body><header><h1>Orca CLI PRD</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#product-snapshot">Product Snapshot</a><a href="#problem">Problem</a><a href="#goals">Goals</a><a href="#non-goals">Non-Goals</a><a href="#key-user-jobs">Key User Jobs</a><a href="#core-capabilities">Core Capabilities</a><a href="#success-signals">Success Signals</a><a href="#current-risks">Current Risks</a><a href="#immediate-priorities">Immediate Priorities</a></aside><article class="content markdown-body"><h1>Orca CLI PRD</h1>
-<h2 id="product-snapshot">Product Snapshot</h2>
-<ul>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Orca CLI PRD</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } }</style></head><body><header><h1>Orca CLI PRD</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#product-snapshot">Product Snapshot</a><a href="#problem">Problem</a><a href="#goals">Goals</a><a href="#non-goals">Non-Goals</a><a href="#key-user-jobs">Key User Jobs</a><a href="#core-capabilities">Core Capabilities</a><a href="#success-signals">Success Signals</a><a href="#large-scale-test-expansion-initiative-2026-04-14">Large-Scale Test Expansion Initiative (2026-04-14)</a><a href="#current-risks">Current Risks</a><a href="#immediate-priorities">Immediate Priorities</a></aside><article class="content markdown-body"><h1 id="orca-cli-prd">Orca CLI PRD</h1><h2 id="product-snapshot">Product Snapshot</h2><ul>
 <li>Product: Orca CLI</li>
 <li>Package: <code>orca-cli</code></li>
 <li>Domain: provider-neutral coding-agent CLI</li>
 <li>Primary users: developers who need coding-agent workflows across multiple model vendors</li>
 <li>Current repo status: active TypeScript CLI with runtime, multi-model collaboration, session management, PR review, serve mode, benchmark tooling, and Hermes-inspired runtime ergonomics</li>
 </ul>
-<h2 id="problem">Problem</h2>
-<p>Single-vendor coding CLIs force users into one model family per session. Orca CLI exists to give developers a single terminal-native workflow that can route across providers, run agent tasks, and coordinate multiple models when that meaningfully improves quality or speed.</p>
-<h2 id="goals">Goals</h2>
-<ol>
+<h2 id="problem">Problem</h2><p>Single-vendor coding CLIs force users into one model family per session. Orca CLI exists to give developers a single terminal-native workflow that can route across providers, run agent tasks, and coordinate multiple models when that meaningfully improves quality or speed.</p>
+<h2 id="goals">Goals</h2><ol>
 <li>Provide a production-grade CLI for coding-agent usage with predictable provider/model routing.</li>
 <li>Support multi-model collaboration modes that no single-vendor CLI can offer.</li>
 <li>Preserve strong developer ergonomics: REPL, one-shot execution, saved sessions, PR review, stats, and headless serving.</li>
 <li>Keep runtime behavior testable and inspectable through a large automated suite.</li>
 </ol>
-<h2 id="non-goals">Non-Goals</h2>
-<ul>
+<h2 id="non-goals">Non-Goals</h2><ul>
 <li>Browser-first UX</li>
 <li>Backward-compatibility shims for outdated command or config formats</li>
 <li>Mock-only validation in place of real CLI/runtime verification</li>
 </ul>
-<h2 id="key-user-jobs">Key User Jobs</h2>
-<table>
+<h2 id="key-user-jobs">Key User Jobs</h2><table>
 <thead>
 <tr>
 <th>User Job</th>
@@ -77,8 +71,7 @@
 <td><code>src/commands/bench.ts</code></td>
 </tr>
 </tbody></table>
-<h2 id="core-capabilities">Core Capabilities</h2>
-<ul>
+<h2 id="core-capabilities">Core Capabilities</h2><ul>
 <li>Provider-neutral config and endpoint resolution</li>
 <li>OpenAI-compatible transport bridge</li>
 <li>Agent tool loop and runtime orchestration</li>
@@ -86,6 +79,8 @@
 <li>Hook loading and lifecycle execution</li>
 <li>Session persistence and usage tracking</li>
 <li>CLI output rendering and markdown streaming</li>
+<li>Slash-command autocomplete that yields to full command submission once the user starts typing arguments</li>
+<li>Theme preference persistence that suppresses first-launch onboarding once <code>ORCA_THEME</code> or <code>~/.orca/theme</code> is already set</li>
 <li>Tool argument coercion for model-emitted string values</li>
 <li>Oversized tool result persistence with artifact paths</li>
 <li>Background job tracking with completion notifications</li>
@@ -97,25 +92,73 @@
 <li>Headless server endpoints that surface the same runtime/provider diagnostics as the CLI</li>
 <li>A unified stats dashboard that combines usage, runtime health, and recent error signals</li>
 </ul>
-<h2 id="success-signals">Success Signals</h2>
-<ul>
+<h2 id="success-signals">Success Signals</h2><ul>
 <li><code>npm test</code> stays green for runtime, tool, hook, and multi-model suites</li>
+<li><code>npm run eval:fast</code>, <code>npm run eval:nightly</code>, and <code>npm run eval:release</code> provide reproducible gate artifacts under <code>agent-eval/runs/</code></li>
 <li><code>README.md</code> matches actual command surface and provider/model claims</li>
 <li>Project docs under <code>doc/00_project/initiative_orca/</code> remain current with source layout</li>
 <li>Future feature work lands without reintroducing single-provider coupling</li>
 </ul>
-<h2 id="current-risks">Current Risks</h2>
-<ul>
+<h2 id="large-scale-test-expansion-initiative-2026-04-14">Large-Scale Test Expansion Initiative (2026-04-14)</h2><ul>
+<li>Baseline: the current measured automated baseline is <code>1280/1280</code> passing tests from <code>npm test</code>; the planning track started from <code>1263/1263</code>, and historical flat docs no longer reflect the canonical total.</li>
+<li>Outcome target:<ol>
+<li>Fast gate: <code>550-650</code> selected deterministic cases + <code>12</code> task-eval scenarios</li>
+<li>Nightly gate: <code>~1700</code> deterministic cases + <code>36</code> task-eval scenarios</li>
+<li>Release gate: <code>~2210</code> deterministic cases + <code>72</code> task-eval scenarios backed by <code>10-12</code> reusable graders</li>
+</ol>
+</li>
+<li>Breadth priorities:<ol>
+<li>command / flag / help / program registration matrix</li>
+<li>provider / model / config / doctor / stats / providers matrix</li>
+<li>REPL / ink input / session / background-job / output matrix</li>
+<li>serve / headless / IDE integration matrix</li>
+</ol>
+</li>
+<li>Depth priorities:<ol>
+<li>long-horizon agent loop and retry / recovery flows</li>
+<li>multi-step bug-fix / feature / refactor scenarios</li>
+<li>adversarial, malformed-input, and safety boundary scenarios</li>
+<li>large-codebase and multi-model arbitration workflows</li>
+</ol>
+</li>
+<li>Immediate command-surface gaps to close first:<ol>
+<li><code>pr</code></li>
+<li><code>session</code></li>
+<li><code>serve</code></li>
+<li><code>run</code></li>
+<li><code>providers test</code></li>
+<li>root/bin and packaging entrypoints</li>
+</ol>
+</li>
+<li>Landed gate system:<ol>
+<li><code>agent-eval/manifests/{fast,nightly,release}.json</code> define the tiered bundles</li>
+<li><code>agent-eval/scripts/run-gate.py</code> is the shared manifest runner</li>
+<li><code>npm run eval:fast|nightly|release</code> are the canonical maintainer entrypoints</li>
+<li>release verification now records a CLI journey artifact in each run directory</li>
+</ol>
+</li>
+<li>Quality gates:<ol>
+<li>Fast gate: targeted critical-path suites and doc / metadata parity checks</li>
+<li>Nightly gate: full Vitest corpus plus deep scenario tranches</li>
+<li>Release gate: nightly gate + <code>npm run build</code> + <code>npm run bench</code> + task-eval run pack + manual CLI journey review + packaging/bin smokes</li>
+</ol>
+</li>
+</ul>
+<h2 id="current-risks">Current Risks</h2><ul>
 <li>Legacy flat docs in <code>doc/</code> can drift from current project-level canonical docs</li>
 <li>Marketing-style counts in README/docs can become stale as tool/provider inventories evolve</li>
 <li>Provider routing complexity can leak across unrelated modules if not kept centralized</li>
 <li>Some Hermes-inspired ergonomics are currently Orca-local and not yet extracted to the shared SDK</li>
+<li>Test counts can grow faster than signal unless gate tiers and task-based eval ownership stay explicit</li>
+<li>Operator-facing command contracts can remain under-tested even while total suite size keeps rising</li>
+<li>Gate definitions can drift from task/grader assets unless manifest integrity stays under test</li>
 </ul>
-<h2 id="immediate-priorities">Immediate Priorities</h2>
-<ol>
+<h2 id="immediate-priorities">Immediate Priorities</h2><ol>
 <li>Keep the new project-level documentation tree as the canonical operating surface.</li>
 <li>Maintain command/runtime verification discipline (<code>lint</code>, <code>test</code>, <code>build</code>, bench when relevant).</li>
 <li>Consolidate future architecture and UX updates in the initiative docs instead of adding more flat reference files.</li>
 <li>Internalize high-value Hermes runtime behavior where the boundary is clearly CLI/runtime focused.</li>
+<li>Turn the current <code>1280</code>-test baseline into a tiered breadth/depth expansion program instead of continuing ad hoc suite growth.</li>
+<li>Keep the manifest-based eval system canonical so release verification is reproducible instead of ad hoc shell history.</li>
 </ol>
 </article></main></body></html>

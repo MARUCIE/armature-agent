@@ -13,6 +13,9 @@
 - [task_plan](./task_plan.md)
 - [notes](./notes.md)
 - [deliverable](./deliverable.md)
+- [AGENT_EVAL_PLAN](../../../AGENT_EVAL_PLAN.md)
+- [agent-eval README](../../../agent-eval/README.md)
+- [agent-eval RUNBOOK](../../../agent-eval/RUNBOOK.md)
 
 ## HTML Companions
 

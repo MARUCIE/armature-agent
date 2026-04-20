@@ -60,6 +60,8 @@ export function StatusBar({ status }: Props): React.ReactElement {
   const permColor = status.permMode === 'yolo' ? theme.warning
     : status.permMode === 'plan' ? theme.accent
     : theme.success
+  const behaviorMode = status.behaviorMode || 'default'
+  const behaviorColor = behaviorMode === 'reflect' ? theme.accent : theme.text
 
   return (
     <Box flexDirection="column" width={cols}>
@@ -85,6 +87,8 @@ export function StatusBar({ status }: Props): React.ReactElement {
       <Box>
         <Text color={permColor} bold>{'\u25B8\u25B8'}</Text>
         <Text color={permColor}> {permLabel}</Text>
+        <Text dimColor> {' \u00B7 '}</Text>
+        <Text color={behaviorColor}>mode: {behaviorMode}</Text>
         <Text dimColor> (shift+tab to cycle)</Text>
       </Box>
     </Box>

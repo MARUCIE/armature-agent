@@ -222,6 +222,42 @@ describe('CommandPicker', () => {
   })
 })
 
+describe('ThemeProvider', () => {
+  it('applies selected theme immediately in the current session', async () => {
+    const originalOrcaTheme = process.env.ORCA_THEME
+    delete process.env.ORCA_THEME
+
+    const { ThemeProvider, useTheme, useThemeController } = await import('../src/ui/theme.js')
+
+    function ThemeProbe(): React.ReactElement {
+      const theme = useTheme()
+      const { setThemeId } = useThemeController()
+
+      React.useEffect(() => {
+        setThemeId('ocean')
+      }, [setThemeId])
+
+      return <Text>{theme.name}</Text>
+    }
+
+    try {
+      const { lastFrame } = render(
+        <ThemeProvider>
+          <ThemeProbe />
+        </ThemeProvider>,
+      )
+
+      await new Promise(resolve => setTimeout(resolve, 20))
+
+      expect(lastFrame()).toContain('ocean')
+      expect(process.env.ORCA_THEME).toBe('ocean')
+    } finally {
+      if (originalOrcaTheme === undefined) delete process.env.ORCA_THEME
+      else process.env.ORCA_THEME = originalOrcaTheme
+    }
+  })
+})
+
 describe('Footer', () => {
   it('shows interrupt hint when generating', async () => {
     const { Footer } = await import('../src/ui/components/Footer.js')
@@ -295,6 +331,41 @@ describe('ScrollBox', () => {
       </TerminalSizeProvider>,
     )
     expect(ref.current.isSticky()).toBe(true)
+  })
+
+  it('measures viewport height from parent flex layout instead of terminal rows', async () => {
+    const { Box } = await import('ink')
+    const { ScrollBox } = await import('../src/ui/components/ScrollBox.js')
+    const ref = React.createRef<any>()
+    const { lastFrame } = render(
+      <TerminalSizeProvider>
+        <Box flexDirection="column" height={5}>
+          <ScrollBox ref={ref}>
+            <Text>line-1</Text>
+            <Text>line-2</Text>
+            <Text>line-3</Text>
+            <Text>line-4</Text>
+            <Text>line-5</Text>
+          </ScrollBox>
+          <Box height={2} flexShrink={0}>
+            <Text>bottom-panel</Text>
+          </Box>
+        </Box>
+      </TerminalSizeProvider>,
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 20))
+
+    expect(ref.current.getViewportHeight()).toBe(3)
+    expect(lastFrame()).toContain('line-5')
+    expect(lastFrame()).not.toContain('line-1')
+
+    ref.current.scrollBy(-2)
+    await new Promise(resolve => setTimeout(resolve, 20))
+
+    expect(ref.current.getScrollTop()).toBe(0)
+    expect(lastFrame()).toContain('line-1')
+    expect(lastFrame()).not.toContain('line-5')
   })
 })
 

@@ -1,0 +1,14 @@
+{
+  "id": "fast-session-list",
+  "title": "Session list skips corrupted newest files",
+  "description": "Black-box smoke for `orca session list` using an isolated ORCA_HOME with one valid session and one corrupted file.",
+  "input": "Create one valid saved session plus one broken JSON file, run `orca session list`, and verify the valid session remains visible while the corrupted file does not leak into the output.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); mkdir -p \"$TMP_HOME/.orca/sessions\"; cat > \"$TMP_HOME/.orca/sessions/2026-04-15T00-00-00-demo.json\" <<'\"'\"'EOF'\"'\"'\n{\n  \"provider\": \"openai\",\n  \"model\": \"gpt-5.4\",\n  \"history\": [\n    {\"role\": \"user\", \"content\": \"hello from session\"},\n    {\"role\": \"assistant\", \"content\": \"session reply\"}\n  ],\n  \"stats\": {\"turns\": 2, \"inputTokens\": 10, \"outputTokens\": 11},\n  \"savedAt\": \"2026-04-15T00:00:00.000Z\"\n}\nEOF\nprintf \"{bad json\\n\" > \"$TMP_HOME/.orca/sessions/2026-04-15T00-01-00-broken.json\"; OUTPUT=$(env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ORCA_HOME=\"$TMP_HOME/.orca\" node dist/bin/orca.js session list); printf \"%s\\n\" \"$OUTPUT\"; ! printf \"%s\" \"$OUTPUT\" | grep -q \"broken\"'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "session_list_has_header",
+    "session_list_has_demo_session",
+    "session_list_has_continue_hint"
+  ]
+}

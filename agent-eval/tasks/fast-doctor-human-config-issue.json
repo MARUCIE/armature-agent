@@ -1,0 +1,14 @@
+{
+  "id": "fast-doctor-human-config-issue",
+  "title": "Doctor human-readable output shows malformed config issues",
+  "description": "Black-box smoke for `orca doctor` when the global config file exists but contains invalid JSON.",
+  "input": "Write an invalid `config.json` under an isolated ORCA_HOME, run `orca doctor`, and verify the human-readable output surfaces the config issue block and the affected config kind.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home/.orca\"; printf \"{bad json\\n\" > \"$TMP_ROOT/home/.orca/config.json\"; env -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ORCA_HOME=\"$TMP_ROOT/home/.orca\" ORCA_PROVIDER=openai OPENAI_API_KEY=test-openai-key node dist/bin/orca.js doctor'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "doctor_human_has_header",
+    "doctor_human_has_config_issues",
+    "doctor_human_has_global_config_kind"
+  ]
+}

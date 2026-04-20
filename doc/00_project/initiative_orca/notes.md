@@ -1,5 +1,310 @@
 # Notes
 
+## 2026-04-18 — reflect mode
+
+- User requested porting the spirit of GitHub Copilot CLI Rubber Duck into Orca, but under a renamed, more SOTA surface.
+- Naming decision captured through structured confirmation:
+  - public name: `reflect`
+  - scope: full surface (`orca reflect`, `/reflect`, docs/tests)
+  - positioning nuance: keep the auto-trigger spirit rather than shipping a plain alias
+- Public-reference research summary:
+  - Copilot CLI does publicly use a named Rubber Duck / critic-style checkpoint reviewer
+  - public guidance suggests automatic invocation at checkpoints and as a focused second-opinion agent
+  - safe reinterpretation for Orca: renamed explicit-first flow, visible triggers, no GitHub branding clone
+- Implementation landed:
+  - added `src/commands/reflect-mode.ts` for shared reflect heuristics + prompt shaping
+  - added `reflect` built-in mode in `src/modes/registry.ts`
+  - added public command `orca reflect` through `src/commands/chat.ts` + `src/program.ts`
+  - added `/reflect` discoverability in REPL help, picker, and ink UI command list
+  - added conservative prompt-intent auto-triggering for clear debugging/explanation asks in normal chat
+  - added regression coverage:
+    - `tests/reflect-mode.test.ts`
+    - `tests/program.test.ts`
+    - `tests/command-contracts.test.ts`
+    - `tests/chat-slash-mutations.test.ts`
+    - `tests/chat-repl-turn.test.ts`
+
+## 2026-04-16 — manifest-based SOTA gate system
+
+- User requested reading the SOTA gap / difference docs and turning Orca's seeded evaluation assets into a real system without stopping at plan-only output.
+- Relevant canonical sources read before implementation:
+  - `AGENT_EVAL_PLAN.md`
+  - `doc/00_project/initiative_orca/PRD.md`
+  - `doc/00_project/initiative_orca/USER_EXPERIENCE_MAP.md`
+  - `doc/00_project/initiative_orca/SYSTEM_ARCHITECTURE.md`
+  - `doc/00_project/initiative_orca/ORCA_SOTA_ARCHITECTURE.md`
+  - `agent-eval/README.md`
+  - `agent-eval/RUNBOOK.md`
+- Concrete gap found:
+  - Orca had a seeded `12`-task fast-gate pack and a single-purpose runner, but no canonical manifest layer, no nightly/release execution surface, and no release artifact that recorded a representative CLI journey.
+- System landed:
+  - added `agent-eval/manifests/fast.json`
+  - added `agent-eval/manifests/nightly.json`
+  - added `agent-eval/manifests/release.json`
+  - added shared runner `agent-eval/scripts/run-gate.py`
+  - kept `agent-eval/scripts/run-fast-gate.py` as a compatibility wrapper onto the shared runner
+  - added release CLI artifact recorder `agent-eval/scripts/release-cli-journey.sh`
+  - added gate tasks:
+    - `gate-lint`
+    - `gate-test`
+    - `gate-build`
+    - `gate-bench`
+    - `gate-cli-journey`
+  - added extra local black-box tasks:
+    - `fast-session-delete`
+    - `fast-serve-chat-errors`
+  - added `tests/agent-eval-manifests.test.ts` so manifest/task/grader drift fails in the deterministic suite
+  - added `package.json` scripts:
+    - `npm run eval:fast`
+    - `npm run eval:nightly`
+    - `npm run eval:release`
+- First validation tranche:
+  - `python3 -m py_compile agent-eval/scripts/run-gate.py agent-eval/scripts/run-fast-gate.py` passed
+  - `vitest tests/agent-eval-manifests.test.ts` passed
+  - first fast run failed only because the missing-prompt regex grader was too literal
+  - grader relaxed to `missing-body=.*Missing.*prompt.*field`
+  - rerun passed:
+    - run id: `20260415-170300`
+    - manifest: `fast`
+    - result: `14/14` passed
+- full verification follow-up:
+  - `npm run lint` passed
+  - `npm test` passed (`1280/1280`)
+  - `npm run build` passed
+  - `npm run bench` passed (`10/10`, `100%`)
+  - `npm run eval:nightly`
+    - run id: `20260415-170928-285763`
+    - result: `17/17` passed
+  - `npm run eval:release`
+    - run id: `20260415-170955-202845`
+    - result: `19/19` passed
+- concurrency hardening follow-up:
+  - running nightly + release concurrently exposed two runner issues:
+    - second-level run ids could collide
+    - concurrent gates could cause false negatives in `gate-test`
+  - fix landed in `agent-eval/scripts/run-gate.py`:
+    - run ids now include microseconds
+    - `.gate.lock` prevents simultaneous gate execution in the same repo
+- root `--continue` follow-up:
+  - added `fast-root-continue.json` and included it in `fast` / `nightly` / `release`
+  - first attempt exposed shell quoting debt in the task command; replaced the shell pipeline with an inline Python runner
+  - also verified `.gate.lock` by triggering a concurrent run and observing a hard refusal instead of silent interference
+  - latest reruns:
+    - `npm run eval:fast`
+      - run id: `20260416-001810-863933`
+      - result: `15/15` passed
+    - `npm run eval:release`
+      - run id: `20260416-001824-129010`
+      - result: `20/20` passed
+- next black-box tranche:
+  - added `fast-pr-fetch-failure.json`
+  - added `fast-providers-test-refused.json`
+  - added `gate-install-tarball.json`
+  - release CLI journey now also records:
+    - root `--continue`
+    - PR fetch failure
+    - providers transport failure
+    - installed tarball help
+  - latest reruns:
+    - `npm run eval:fast`
+      - run id: `20260416-002655-853331`
+      - result: `17/17` passed
+    - `npm run eval:release`
+      - run id: `20260416-011648-663304`
+      - result: `23/23` passed
+- nightly alignment follow-up:
+  - ralph context snapshot written to `.omx/context/orca-sota-gates-20260416T013842Z.md`
+  - `.omx/plans/prd-orca-sota-gates.md` and `.omx/plans/test-spec-orca-sota-gates.md` created to satisfy current ralph gate expectations
+  - `npm run eval:nightly`
+    - run id: `20260416-013921-141221`
+    - result: `20/20` passed
+- attacker review follow-up:
+  - attempted `security-reviewer` subagent review for the eval-system delta; the helper did not return before shutdown, so final review was completed manually on:
+    - `agent-eval/scripts/run-gate.py`
+    - `agent-eval/scripts/release-cli-journey.sh`
+    - `agent-eval/tasks/*.json`
+    - `agent-eval/manifests/*.json`
+  - manual review result:
+    - no critical privilege-escalation or path-escape issue found inside the new gate system
+    - principal trust boundary remains repo-owned executable assets: manifests/tasks are effectively code because `run-gate.py` executes task commands via `shell=True`
+    - tarball-install smoke is acceptable for trusted branches because it installs the repo’s own packed artifact into a temp prefix, but it should not be run against unreviewed third-party code
+- goal-loop black-box follow-up:
+  - accepted the test-engineer subagent recommendation to add a local `run --done-when` success path instead of expanding more static help coverage
+  - landed `fast-run-goal-loop-local-success.json` plus helper script `agent-eval/scripts/run-run-goal-loop-local-success.sh`
+  - the first two implementations failed due shell/heredoc brittleness; converged on a repo-owned helper script and stable CLI-only assertions
+  - latest reruns:
+    - `npm run eval:fast`
+      - run id: `20260416-015801-186345`
+      - result: `19/19` passed
+    - `npm run eval:nightly`
+      - run id: `20260416-015823-743470`
+      - result: `22/22` passed
+    - `npm run eval:release`
+      - run id: `20260416-015823-744159`
+      - result: `25/25` passed
+- serve happy-path follow-up:
+  - added `fast-serve-chat-stream-local-success.json` plus helper script `agent-eval/scripts/run-serve-chat-stream-local-success.sh`
+  - first attempt failed because `openai-compat` fell back to macOS system proxy and turned localhost provider traffic into `Connection error.`
+  - fixed by injecting a local `scutil` shim into the helper script PATH so the test runs in deterministic no-proxy mode
+  - latest reruns:
+    - `npm run eval:fast`
+      - run id: `20260416-021921-676771`
+      - result: `20/20` passed
+    - `npm run eval:nightly`
+      - run id: `20260416-021947-546367`
+      - result: `23/23` passed
+    - `npm run eval:release`
+      - run id: `20260416-022023-268366`
+      - result: `26/26` passed
+- serve non-stream happy-path follow-up:
+  - added `fast-serve-chat-json-local-success.json` plus helper script `agent-eval/scripts/run-serve-chat-json-local-success.sh`
+  - a test-engineer subagent suggested a non-stream task but assumed a response shape `{ ok, usage }`; actual `serve.ts` contract is `{ text, model, inputTokens, outputTokens }`, so the landed task follows the real contract
+  - latest reruns:
+    - `npm run eval:fast`
+      - run id: `20260416-022442-985932`
+      - result: `21/21` passed
+    - `npm run eval:nightly`
+      - run id: `20260416-022502-233065`
+      - result: `24/24` passed
+    - `npm run eval:release`
+      - run id: `20260416-022543-363128`
+      - result: `27/27` passed
+- providers timeout follow-up:
+  - added `fast-providers-test-timeout.json` plus helper script `agent-eval/scripts/run-providers-test-timeout.sh`
+  - local contract anchored to the real CLI wording from manual reproduction:
+    - `FAIL`
+    - `The operation was aborted due to timeout`
+  - latest reruns:
+    - `npm run eval:fast`
+      - run id: `20260416-024521-132881`
+      - result: `22/22` passed
+    - `npm run eval:nightly`
+      - run id: `20260416-024557-825871`
+      - result: `25/25` passed
+    - `npm run eval:release`
+      - run id: `20260416-024639-810942`
+      - result: `28/28` passed
+- release-journey refresh follow-up:
+  - expanded `agent-eval/scripts/release-cli-journey.sh` to include:
+    - providers timeout
+    - run goal-loop success
+    - serve chat stream success
+    - serve chat json success
+  - reran release to refresh the human-readable artifact without changing gate shape
+    - `npm run eval:release`
+      - run id: `20260416-024906-955054`
+      - result: `28/28` passed
+- release hardening follow-up:
+  - `gate-cli-journey` initially failed because complex multi-line shell fragments were embedded as literal `\\n` strings inside `bash -lc`
+  - fixed by pre-building PR/provider fixtures in `release-cli-journey.sh` and capturing only simple execution commands
+  - `gate-test` also showed load-sensitive flake on a handful of slow integration tests, so those tests/hooks now declare explicit higher timeouts instead of relying on Vitest defaults
+- post-refresh gate growth follow-up:
+  - added `fast-pr-gh-missing.json`
+  - added `fast-serve-chat-stream-local-success.json`
+  - added `fast-serve-chat-json-local-success.json`
+  - latest reruns:
+    - `npm run eval:fast`
+      - run id: `20260416-025122-895826`
+      - result: `23/23` passed
+    - `npm run eval:nightly`
+      - run id: `20260416-025203-735063`
+      - result: `26/26` passed
+    - `npm run eval:release`
+      - run id: `20260416-025253-525020`
+      - result: `29/29` passed
+
+## 2026-04-14 — large-scale test expansion planning
+
+- User requested a new large-scale testing plan for `/Users/mauricewen/Projects/orca-cli`, with breadth and depth expansion beyond the old "~1300-case" framing and with PDCA as the canonical planning surface.
+- Measured planning-start baseline:
+  - `npm test` => `1263/1263`
+  - this superseded the last explicitly logged maintainability checkpoint of `1260/1260`; the planning tranche measured current repository state before any new quality-program tests were added
+  - `66` passing test files in the latest full run at planning start
+  - regex sizing pass found roughly `1231` explicit `it(`/`test(` blocks and `294` `describe(`/`suite(` declarations; useful as sizing hints, not as the canonical total
+- Historical drift:
+  - `doc/SOTA_TEST_PLAN.md` still captures much earlier `262` / `447` era snapshots and should remain a historical reference only
+  - current canonical baseline should live in PDCA docs plus `AGENT_EVAL_PLAN.md`
+- Evaluation-plan bootstrap:
+  - generated repo-root `AGENT_EVAL_PLAN.md` with `ai agent-eval /Users/mauricewen/Projects/orca-cli plan --owner "Maurice"`
+  - the work no longer sits in `plan-only` mode; `agent-eval/` is scaffolded and the first breadth tranche is now landed
+- Planning decision:
+  - initial pass proposed a moderate deterministic target band, but the follow-up test-engineer audit showed the command-surface gap is larger than that first cut suggested
+  - refined gate targets now use:
+    - fast: `550-650` selected deterministic cases + `12` eval tasks
+    - nightly: `~1700` deterministic cases + `36` eval tasks
+    - release: `~2210` deterministic cases + `72` eval tasks
+  - keep `10-12` reusable graders
+  - split execution into fast / nightly / release gates instead of growing a single undifferentiated suite
+- Test-engineer audit highlights:
+  - strongest current areas: agent/runtime/planner safety, chat/REPL/UI, provider/tools/hooks/config
+  - thinnest current area: public command contracts
+  - priority command gaps: `pr`, `session`, `serve`, `run`, `providers test`, root entry / `--continue`, packaging/bin
+  - wording correction applied after critique:
+    - `serve` already has metadata smoke coverage and should not be treated as zero-coverage
+    - `session` is exercised indirectly today, but still lacks a dedicated command lifecycle suite
+- agent-eval initialization follow-up:
+  - ran `ai agent-eval /Users/mauricewen/Projects/orca-cli init --owner "Maurice"`
+  - replaced the generic sample files with the first Orca-specific fast-gate pack:
+    - `fast-root-help`
+    - `fast-session-help`
+    - `fast-pr-help`
+    - `fast-providers-help`
+    - `fast-doctor-json`
+    - `fast-serve-health`
+  - added `agent-eval/graders/fast-gate.graders.json`
+  - first run failed `fast-serve-health`
+    - root cause: the original task command backgrounded the full `&&` chain, so shell variables such as `TMP_HOME` and `PORT` were created in a background subshell and disappeared before `curl`
+    - fix: keep variable setup in the foreground shell and background only the `orca serve` process
+  - reran `ai agent-eval /Users/mauricewen/Projects/orca-cli run`
+    - run id: `20260415-011603`
+    - result: `6/6` passed
+    - seeded pack is now executable, not just scaffolded
+  - added `tests/command-contracts.test.ts`
+    - covers root command presence + root flags (`--safe`, `--effort`, `--continue`)
+    - covers `session` lifecycle subcommands, `pr` argument + routing flags, `providers test`, and `serve` transport flags
+  - reran full verification after the first breadth tranche:
+    - `npm test` => `1268/1268`
+    - `67` passing test files in the latest full run
+  - added `tests/session-command.test.ts`
+    - uncovered and fixed a concrete command bug: the default `session` action recursively called `parseAsync()` and could overflow the stack
+    - centralized session storage/recovery in `src/session-store.ts`
+    - `session`, `/continue`, `/save`, `/load`, auto-save, and `/sessions` now share the same `ORCA_HOME`-aware session directory behavior
+    - latest-session resume now skips corrupted newest files instead of failing closed
+  - extended `tests/serve-command.test.ts`
+    - added malformed `/chat` JSON and missing-prompt request coverage
+  - added `tests/packaging-smoke.test.ts`
+    - `npm run build` emits `dist/bin/orca.js` and `dist/index.js`
+    - `npm pack --json --dry-run` includes the shipped dist entrypoints
+    - built-bin `--help` and `doctor --json` work with an isolated runtime home
+  - reran full release-style verification after depth + packaging tranches:
+    - targeted tranche run: `9/9`
+    - `npm test` => `1276/1276`
+    - `69` passing test files in the latest full run
+    - `npm run build` passed
+    - `npm run bench` passed (`10/10`, `100%`)
+    - `ai agent-eval /Users/mauricewen/Projects/orca-cli run`
+      - run id: `20260415-012934`
+      - result: `6/6` passed
+  - expanded the fast-gate eval pack to the planned `12`-task baseline:
+    - added `fast-run-help`
+    - added `fast-session-list`
+    - added `fast-session-show`
+    - added `fast-providers-test-local`
+    - added `fast-serve-metadata`
+    - added `fast-pack-dry-run`
+  - reran the expanded fast gate and wrote standard run artifacts:
+    - run id: `20260415-014815`
+    - result: `12/12` passed
+    - fast gate now covers root/run help, session list/show smoke, providers connectivity smoke, serve metadata endpoints, and packaging manifest smoke
+  - critique hardening follow-up:
+    - added `agent-eval/scripts/prepare-fast-gate.sh` so fast-gate tasks rebuild when `src/` or build config is newer than `dist/`
+    - added `agent-eval/scripts/wait-for-http.sh` and replaced fixed sleeps with bounded readiness polling
+    - added `agent-eval/scripts/run-fast-gate.py` as a repo-local runner that writes relative-path run artifacts without assuming external `ai` CLI availability
+    - removed hard-coded repo paths from fast-gate task commands and isolated provider/serve/doctor scenarios under clean envs
+    - reran the hardened pack:
+      - run id: `20260415-020102`
+      - result: `12/12` passed
+
 ## 2026-04-12
 
 - User provided explicit `PROJECT_DIR`: `/Users/mauricewen/Projects/MARUCIE-orca-cli`
@@ -86,6 +391,21 @@
 
 ## 2026-04-14
 
+- REPL UX regression follow-up:
+  - root cause for "many slash commands invalid" was not missing handlers; the ink `CommandPicker` stayed active even after the user started typing arguments
+  - because `InputArea` defers Enter while the picker is active, commands like `/council <prompt>` could lose their arguments and behave like a bare command invocation
+  - fix landed in `src/ui/utils.ts` so picker visibility is limited to the command token itself; argument-entry whitespace now hands Enter back to normal submission
+- Theme onboarding follow-up:
+  - startup still showed `ThemePicker` even though `/Users/mauricewen/.orca/theme` already existed and contained `default`
+  - root cause: `App.tsx` gated onboarding only on `ORCA_THEME`, and `src/ui/theme.tsx` still used CommonJS `require('fs')` inside an ESM runtime, so persisted file reads silently failed
+  - fix landed in `src/ui/theme.tsx` + `src/ui/components/App.tsx` so onboarding respects both env and persisted theme file with ESM-safe file access
+- Verification follow-up:
+  - targeted suite passed: `tests/ui-utils.test.ts`, `tests/ink-ui.test.tsx`, `tests/chat-slash-readonly.test.ts`, `tests/chat-slash-mutations.test.ts` (`67/67`)
+  - repo-wide verification passed again: `npm run lint`, `npm test`, `npm run build`
+- Review-follow-up fixes:
+  - the command picker visibility rule now matches slash-command dispatch case-insensitively, so `/H` and `/Help` still surface picker guidance instead of hiding it unexpectedly
+  - `ThemeProvider` is now stateful, so selecting a theme in `ThemePicker` applies immediately in the current session instead of only persisting for the next launch
+  - the installed global Orca package was refreshed again after these review fixes
 - ink UI CC-parity deep source comparison (3-round swarm audit)
 - Round 1: Rendering pipeline (AlternateScreen, FullscreenLayout, ScrollBox, Resize)
 - Round 2: Input system (Cursor class, paste handler, focus model, submit flow)
@@ -122,7 +442,7 @@
      - 6 themes: default/light/dark/ocean/warm/mono
      - Components migrated: ToolCallBlock, StatusBar, App (system messages), InputArea
   6. **Mouse wheel scrolling** — SGR mouse protocol integration
-     - useMouseWheel hook: enables \x1b[?1003h\x1b[?1006h, parses SGR events
+     - useMouseWheel hook: enables \x1b[?1000h\x1b[?1006h, parses SGR events
      - Wheel up/down → ScrollBox.scrollBy(+/-3 rows)
      - Clean teardown on unmount
      - File: `src/ui/useMouseWheel.ts`, wired in App.tsx
@@ -144,3 +464,459 @@
      - 修复了键序：新行检测在 submit 之前，避免 Shift+Enter 误提交
 - Final test count: 1203
 - Final parity: 15/17 差距修复（88%），CC parity 65/80（81%）
+
+## 2026-04-14 12:02 CST
+
+- Re-audit result: report v3 is directionally useful but no longer matches repo state one-to-one.
+- Observed drift:
+  - `task_plan.md` / `notes.md` describe the CC-parity branch as effectively complete, but source still retains several behavior-accuracy gaps.
+  - `SYSTEM_ARCHITECTURE.md` and `USER_EXPERIENCE_MAP.md` still point to `/Users/mauricewen/Projects/MARUCIE-orca-cli`, while the real git root is `/Users/mauricewen/Projects/orca-cli`.
+- Ranked remaining code gaps after source comparison:
+  1. `src/ui/components/ScrollBox.tsx`: `viewportHeight = height ?? rows` uses full terminal rows instead of the rendered viewport height inside the flex layout.
+     - Evidence for: App mounts `ScrollBox` above a fixed bottom section; measured visible region is smaller than terminal rows.
+     - Impact: moderate/high for long conversations near the overflow threshold; scroll can under-clamp or fail to activate soon enough.
+  2. `src/ui/components/AlternateScreen.tsx`: alt-screen enter is still in `useEffect`, while CC uses insertion-phase write to beat the first frame.
+     - Evidence for: source directly imports `useEffect`; report already flagged this as the one remaining render-phase gap.
+     - Impact: low/medium; mostly visible as a potential first-frame echo/flicker window.
+  3. `src/ui/cursor.ts`: word-boundary regex still relies on ASCII `\\w`.
+     - Evidence for: `isWordChar()` is `/[\\w]/`; CC reference uses Unicode-aware word semantics.
+     - Impact: medium for Chinese / non-ASCII editing because Option+Arrow / Ctrl+W semantics degrade.
+- Down-ranked / not selected this round:
+  - Full CC `ScrollBox.scrollToElement()` + virtualization stack: valuable, but much broader than the currently observable bug.
+  - Full CC image-paste pipeline: still absent, but materially larger and not required for the current text-first parity gap.
+
+## 2026-04-14 12:10 CST
+
+- Implemented behavior-accuracy fixes:
+  - `src/ui/components/ScrollBox.tsx`
+    - Added viewport self-measurement via outer box ref + `measureElement()`
+    - `maxScroll` now uses actual rendered viewport height in flex layouts, not terminal rows
+    - Exposed `getScrollHeight()` / `getViewportHeight()` on the imperative handle for regression checks
+  - `src/ui/components/AlternateScreen.tsx`
+    - Switched alt-screen enter/exit to pre-paint hook alias (`useInsertionEffect` with layout fallback)
+    - Added `flexShrink={0}` to keep viewport clamped to terminal rows
+  - `src/ui/cursor.ts`
+    - Replaced ASCII `\\w` word detection with Unicode-aware `[\p{L}\p{N}\p{M}_]`
+  - `src/ui/useTerminalSize.tsx`
+    - Reworked `SIGWINCH` fallback into a shared module-level subscription to avoid `MaxListenersExceededWarning`
+- Regression coverage added:
+  - `tests/ink-ui.test.tsx`
+    - new flex-layout `ScrollBox` viewport regression
+  - `tests/cursor.test.ts`
+    - new Unicode word-boundary movement/deletion regression
+- Docs corrected:
+  - `SYSTEM_ARCHITECTURE.md` / `USER_EXPERIENCE_MAP.md` now point to `/Users/mauricewen/Projects/orca-cli`
+  - Rolling ledger records the `PROJECT_DIR` correction explicitly
+- Verification completed:
+  - `npm run lint` passed
+  - targeted UI regression run passed (`83/83`)
+  - full `npm test` passed (`1206/1206`)
+  - `npm run build` passed
+  - `npm run bench` intentionally skipped because no benchmark/provider-selection logic changed
+
+## 2026-04-14 12:36 CST
+
+- Follow-up gap selection:
+  - Did not continue deeper into CC's unused `ScrollBox.scrollToElement()` / virtualization API because Orca currently has no real call sites for it.
+  - Chose the next higher-value real gap instead: file-path normalization between ink input and the existing preprocessing pipeline.
+- Implemented prompt/file expansion hardening in `src/commands/chat.ts`:
+  - added shared path normalization for:
+    - quoted paths
+    - shell-escaped spaces (`\\ `)
+    - `file:///...%20...` URLs
+  - bare-path detection now accepts standalone quoted / escaped-space paths
+  - embedded expansion now also injects:
+    - quoted file paths
+    - shell-escaped absolute/home/relative paths
+    - percent-encoded file URLs
+- Why this matters:
+  - Orca already had preprocess support for images/PDF/HTML/etc.
+  - The real missing link was that drag-pasted file paths with spaces were often not recognized, so the preprocess path never ran.
+  - This closes a practical parity gap without inventing a new attachment protocol.
+- Regression coverage added:
+  - `tests/chat-file-expansion.test.ts`
+    - shell-escaped spaces
+    - quoted paths
+    - percent-encoded file URLs
+    - embedded path expansion into `<file>` tags
+- Verification completed:
+  - `npm run lint` passed
+  - `vitest run tests/chat-file-expansion.test.ts tests/file-expansion.test.ts` passed (`70/70`)
+  - full `npm test` passed (`1212/1212`)
+  - `npm run build` passed
+
+## 2026-04-14 12:41 CST
+
+- Directory-path follow-up:
+  - `tryExpandDirectory()` now accepts:
+    - quoted directory paths with spaces
+    - shell-escaped directory paths with spaces
+    - both leading and trailing mixed-prompt forms
+- This closes the remaining gap where project bootstrap only worked reliably for no-space directory paths.
+- Regression coverage added in `tests/chat-file-expansion.test.ts`:
+  - quoted directory path with spaces
+  - shell-escaped directory path with spaces
+- Verification completed:
+  - `npm run lint` passed
+  - `vitest run tests/chat-file-expansion.test.ts` passed (`8/8`)
+  - full `npm test` passed (`1214/1214`)
+  - `npm run build` passed
+- Current architectural boundary:
+  - true clipboard-image / multimodal chat support is not just an input problem
+  - `src/providers/openai-compat.ts` still models `ChatMessage` as `content: string`
+  - finishing that lane requires provider/message-schema changes, not another regex pass
+
+## 2026-04-14 12:48 CST
+
+- Repo-wide code review follow-up identified a high-risk class of issues:
+  - shell-string interpolation around file paths / git args in:
+    - `src/preprocess/convert.ts`
+    - `src/agent/worktree.ts`
+    - `src/tools.ts` (`git_commit`)
+    - `src/commands/chat.ts` project-tree generation
+- Fixes implemented:
+  - switched path-bearing converter calls to `execFileSync(..., args[])`
+  - switched worktree create/merge/cleanup to `execFileSync`
+  - switched `git_commit` staging/commit path to `execFileSync`
+  - switched `project-expand` tree generation from shell `find ... | head` to `execFileSync('find', args)` + JS truncation
+- Why this matters:
+  - Orca is explicitly positioned as a coding agent CLI; path/branch/commit strings are often user-controlled or model-controlled
+  - keeping them inside shell-built command strings is below the security bar for a SOTA-grade agent runtime
+- Regression coverage added:
+  - `tests/adversarial.test.ts`
+    - `git_commit` with weird quoted filename now succeeds as a real git commit
+  - `tests/chat-file-expansion.test.ts`
+    - project directory with single quote in the name still expands safely
+- Verification completed:
+  - `npm run lint` passed
+  - `vitest run tests/adversarial.test.ts tests/preprocess.test.ts tests/phase1-agent.test.ts` passed (`134/134`)
+  - full `npm test` passed (`1216/1216`)
+  - `npm run build` passed
+- Remaining large review findings after this fix batch:
+  - `src/providers/openai-compat.ts` still exposes only string-only `ChatMessage`, which blocks true multimodal message transport
+  - `src/commands/chat.ts` still concentrates very large control flow (`runREPL`, `handleSlashCommand`, `runProxyTurn`) and is now the main maintainability hotspot
+
+## 2026-04-14 13:40 CST
+
+- IDE integration follow-up:
+  - Added a zero-dependency VS Code extension skeleton under `integrations/vscode-orca/`
+  - Commands currently included:
+    - open chat
+    - analyze current file
+    - review selection
+    - start MCP server
+    - run doctor
+- Design choice:
+  - launch `orca` directly as terminal `shellPath`/`shellArgs`
+  - avoid shell-string command composition inside the extension as well
+  - keep the first slice dependency-free so the repo does not need a new extension toolchain yet
+- Verification completed:
+  - `npm run lint` passed
+  - `vitest run tests/vscode-extension.test.ts` passed (`3/3`)
+  - full `npm test` passed (`1219/1219`)
+  - `npm run build` passed
+- Updated product docs:
+  - `README.md` now advertises the extension skeleton
+  - architecture and UX docs now include the VS Code surface
+
+## 2026-04-14 15:17 CST
+
+- Multimodal protocol follow-up:
+  - `src/providers/openai-compat.ts`
+    - added `PromptContent` support for one-shot / streaming prompt payloads
+    - added `messageContentToText()` to flatten multimodal content into text for logging/budgeting paths
+  - `src/commands/chat.ts`
+    - added `--image <paths...>` for one-shot chat
+    - added `buildImagePromptContent()` to resolve local images → data URLs
+    - proxy path accepts multimodal content; SDK path explicitly rejects it for now
+- Why this matters:
+  - Orca no longer treats multimodal support as a documentation-only future item
+  - There is now a real, user-facing one-shot image path without pretending the interactive/session/history stack is fully multimodal
+- Regression coverage added:
+  - `tests/openai-compat-multimodal.test.ts`
+  - `tests/chat-image-option.test.ts`
+- Verification completed:
+  - `npm run lint` passed
+  - targeted multimodal suite passed (`36/36`)
+  - full `npm test` passed (`1226/1226`)
+  - `npm run build` passed
+- Current boundary after this slice:
+  - interactive ink REPL still does not accept clipboard image paste
+  - session save/load and compaction remain string-history oriented
+  - multimodal is currently available through one-shot proxy chat, not the whole runtime
+
+## 2026-04-14 15:30 CST
+
+- Multimodal compatibility follow-up:
+  - `ChatMessage` now accepts `PromptContent`, not just `string`
+  - `TokenBudgetManager` now estimates and compacts via `messageContentToText(...)`
+  - session display uses flattened text rendering instead of assuming `.slice()` on raw content
+  - chat resume/status/system/thread-save paths now flatten where human-readable text is required
+- Why this matters:
+  - one-shot multimodal support is no longer an isolated branch in provider code
+  - the surrounding runtime now tolerates multimodal history objects without immediately breaking budget/session/display paths
+- Verification completed:
+  - `npm run lint` passed
+  - targeted multimodal+budget suite passed (`78/78`)
+  - full `npm test` passed (`1227/1227`)
+  - `npm run build` passed
+- Remaining architectural limit:
+  - these layers are now compatible via text flattening, not rich multimodal persistence semantics
+  - interactive image paste and full session-native multimodal replay remain future work
+
+## 2026-04-14 15:53 CST
+
+- `chat.ts` maintainability follow-up:
+  - created `src/commands/chat-input.ts`
+  - moved two helper concerns first:
+    - safe `/git` command tokenization + allowlist validation
+    - `buildImagePromptContent()` for `--image`
+  - updated helper-focused tests to import from the new module directly
+- Why only partial extraction:
+  - the file-expansion + project-bootstrap block is larger and more entangled with current imports
+  - current repo state is safer if refactored incrementally instead of attempting a single giant move under active feature work
+- Verification completed:
+  - `npm run lint` passed
+  - `vitest run tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/openai-compat-multimodal.test.ts tests/chat-file-expansion.test.ts` passed (`16/16`)
+  - full `npm test` passed (`1227/1227`)
+  - `npm run build` passed
+- Current maintainability status:
+  - `chat.ts` is still too large
+  - but helper decomposition has started with a real module boundary, not just TODO notes
+
+## 2026-04-14 19:22 CST
+
+- `chat.ts` extraction follow-up:
+  - `src/commands/chat-input.ts` now owns:
+    - safe `/git` parsing
+    - image prompt construction
+    - file/path expansion
+    - project bootstrap / multi-model prompt preparation
+  - `src/commands/chat-support.ts` now owns:
+    - config-file detection
+    - CLI flag shaping
+    - input history persistence
+    - session autosave persistence
+- Why this matters:
+  - `chat.ts` no longer needs to carry the entire path/bootstrap helper stack inline
+  - the new module boundaries are test-backed and reduce future merge risk when continuing to split REPL/slash/proxy control flow
+- Additional verification completed:
+  - `vitest run tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts tests/openai-compat-multimodal.test.ts tests/vscode-extension.test.ts` passed (`19/19`)
+  - full `npm test` passed (`1238/1238`)
+  - `npm run build` passed
+- One unrelated brittle test was also hardened:
+  - `tests/config.test.ts` now clears `GH_TOKEN` as well, so the aggregator assertion no longer depends on host environment state
+
+## 2026-04-14 19:40 CST
+
+- `chat.ts` readonly-slash maintainability follow-up:
+  - added `src/commands/chat-slash-readonly.ts`
+  - moved read-only help/status/display flows out of `handleSlashCommand()`:
+    - `/help`
+    - read-only `/model`
+    - `/models`
+    - `/history`, `/tokens`, `/stats`, `/cwd`
+    - `/diff`, `/git`
+    - `/sessions`, `/jobs`
+    - `/cost`, `/status`, `/doctor`, `/config`, `/providers`
+  - `handleSlashCommand()` now delegates that tranche and uses an explicit `SlashCommandResult` union instead of the previous `as string` dispatch pattern for async slash flows
+- Why this matters:
+  - this is the first real cut through the slash-command hotspot, not just another helper buried inside `chat.ts`
+  - the remaining work is now more clearly separated into:
+    - mutating/session slash flows
+    - `runREPL()` orchestration
+    - `runProxyTurn()` tool orchestration
+- Regression coverage added:
+  - `tests/chat-slash-readonly.test.ts`
+    - ink-mode `/help`
+    - ink-mode `/status`
+    - `/models` picker return
+    - `/model set ...` falls through to the mutating dispatcher
+- Verification completed:
+  - `npm run lint` passed
+  - `vitest run tests/chat-slash-readonly.test.ts tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts` passed (`18/18`)
+  - full `npm test` passed (`1242/1242`)
+  - `npm run build` passed
+- Updated handoff target:
+  - the next highest-value structural slice is now `runProxyTurn()` tool orchestration extraction, since the read-only slash tranche is no longer the top hotspot
+
+## 2026-04-14 19:50 CST
+
+- `chat.ts` proxy-tool maintainability follow-up:
+  - added `src/commands/chat-proxy-tool-call.ts`
+  - moved the `runProxyTurn()` `onToolCall` body out of `chat.ts`
+  - the extracted helper now owns:
+    - dangerous-tool permission gating + diff previews
+    - `PreToolUse` handling
+    - sub-agent / `ask_user` / MCP / `sleep` async tool routing
+    - post-tool retry intelligence, error classification, loop detection, postmortem matching, auto-verify, and context guarding
+- Why this matters:
+  - `runProxyTurn()` now reads as stream wiring instead of a mixed transport + orchestration + recovery monolith
+  - the remaining structural hotspots are clearer:
+    - mutating/session slash flows
+    - `runREPL()` orchestration
+- Regression coverage added:
+  - `tests/chat-proxy-tool-call.test.ts`
+    - safe-mode permission denial
+    - ink-mode `ask_user`
+    - failed tool retry/classifier hints
+    - successful write auto-verify append
+- Verification completed:
+  - `npm run lint` passed
+  - `vitest run tests/chat-proxy-tool-call.test.ts tests/chat-slash-readonly.test.ts tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts` passed (`22/22`)
+  - full `npm test` passed (`1246/1246`)
+  - `npm run build` passed
+- Updated handoff target:
+  - the next highest-value structural slice is now the remaining mutating/session slash flow extraction from `handleSlashCommand()`
+
+## 2026-04-14 20:00 CST
+
+- `chat.ts` mutating-slash maintainability follow-up:
+  - added `src/commands/chat-slash-mutations.ts`
+  - moved the remaining mutating/session slash switch out of `handleSlashCommand()`
+  - the extracted helper now owns:
+    - model switching, clear/compact/system/hooks
+    - async slash sentinels for `/council`, `/race`, `/pipeline`, `/mission`, `/plan`
+    - session persistence / continue / undo
+    - `/commit`, `/review`, `/pr` fallthrough behavior
+    - `/mcp`, `/thread`, `/init`, `/notes`, `/postmortem`, `/prompts`, `/learn`
+- Why this matters:
+  - `handleSlashCommand()` is now a thin dispatcher over readonly + mutating helpers instead of a monolithic mixed switch
+  - after this cut, the dominant remaining `chat.ts` hotspot is `runREPL()` orchestration rather than slash dispatch
+- Regression coverage added:
+  - `tests/chat-slash-mutations.test.ts`
+    - `/model set ...`
+    - `/clear`
+    - `/commit` fallthrough
+    - `/council` async sentinel
+- Verification completed:
+  - `npm run lint` passed
+  - `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-slash-mutations.test.ts tests/chat-proxy-tool-call.test.ts tests/chat-slash-readonly.test.ts tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts` passed (`26/26`)
+  - full `npm test` passed (`1250/1250`)
+  - `npm run build` passed
+- Updated handoff target:
+  - the next highest-value structural slice is now `runREPL()` orchestration extraction
+
+## 2026-04-14 20:10 CST
+
+- `chat.ts` async-REPL-slash maintainability follow-up:
+  - added `src/commands/chat-repl-async-slash.ts`
+  - moved async slash follow-up execution out of `runREPL()`
+  - the extracted helper now owns:
+    - `/council`, `/race`, `/pipeline` multi-model execution flow
+    - `/mission` controller wrapper
+    - `/plan` decomposition + execution wrapper
+    - both ink and legacy rendering for those async slash branches
+- Why this matters:
+  - `runREPL()` no longer inlines the full async slash execution subtree after `handleSlashCommand()`
+  - after this cut, the remaining REPL complexity is more concentrated around prompt lifecycle, abort handling, background surfacing, and compact/cleanup flow
+- Regression coverage added:
+  - `tests/chat-repl-async-slash.test.ts`
+    - council unavailable-endpoint warning
+    - legacy pipeline execution
+    - mission missing-provider error
+    - plan decomposition + execution
+- Verification completed:
+  - `npm run lint` passed
+  - `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-repl-async-slash.test.ts tests/chat-slash-mutations.test.ts tests/chat-proxy-tool-call.test.ts tests/chat-slash-readonly.test.ts tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts` passed (`30/30`)
+  - full `npm test` passed (`1254/1254`)
+  - `npm run build` passed
+- Updated handoff target:
+  - the next highest-value structural slice is now the remaining `runREPL()` turn lifecycle
+
+## 2026-04-14 20:22 CST
+
+- `chat.ts` REPL-turn maintainability follow-up:
+  - added `src/commands/chat-repl-turn.ts`
+  - moved the normal prompt turn lifecycle out of `runREPL()`
+  - the extracted helper now owns:
+    - multi-task hinting
+    - `UserPromptSubmit` hook gating
+    - file expansion + cognitive skeleton injection
+    - pre-send compaction
+    - abort/progress lifecycle
+    - proxy/SDK turn dispatch
+    - 413 auto-recovery retry
+    - post-turn compaction + session autosave
+- Why this matters:
+  - `runREPL()` no longer inlines the dominant normal-turn execution subtree after input/slash dispatch
+  - after this cut, the remaining REPL complexity is more concentrated around background-job surfacing, prompt acquisition, shell dispatch, and inline slash special-cases
+- Regression coverage added:
+  - `tests/chat-repl-turn.test.ts`
+    - blocked `UserPromptSubmit`
+    - successful proxy-turn stats/summary update
+    - 413 retry recovery
+    - red/orange/yellow post-turn compaction behavior
+- Verification completed:
+  - `npm run lint` passed
+  - `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-repl-turn.test.ts` passed (`6/6`)
+  - full `npm test` passed (`1260/1260`)
+  - `npm run build` passed
+- Updated handoff target:
+  - the next highest-value structural slice is now the remaining `runREPL()` input/discovery/dispatch front-half
+
+## 2026-04-16 05:40 CST
+
+- `session delete missing` follow-up:
+  - added `fast-session-delete-missing.json`
+  - latest reruns:
+    - `npm run eval:fast`
+      - run id: `20260416-053301-268531`
+      - result: `26/26` passed
+    - `npm run eval:nightly`
+      - run id: `20260416-053354-618607`
+      - result: `29/29` passed
+    - `npm run eval:release`
+      - run id: `20260416-053519-395123`
+      - result: `32/32` passed
+- Working conclusion update:
+  - `session` surface now has black-box coverage for:
+    - list empty
+    - list valid
+    - show valid
+    - show missing
+    - delete valid
+    - delete missing
+
+## 2026-04-17 00:55 CST
+
+- logs + doctor + init black-box follow-up:
+  - added `fast-logs-empty`, `fast-logs-errors-empty`, `fast-logs-errors`, `fast-logs-lines-limit`, `fast-logs-errors-lines-limit`, `fast-logs-unknown-kind-fallback`
+  - fixed a real bug in `src/commands/logs.ts`: `--lines 0` previously fell back to `50` because `Number(opts?.lines) || 50` swallowed zero; parsing now clamps zero to `1`
+  - added `fast-doctor-human-config-issue`, `fast-doctor-json-cwd`, `fast-doctor-json-project-config-issue`, `fast-doctor-human-project-config-issue`
+  - added `fast-init-default`, `fast-init-global-only`, `fast-init-preserves-existing`
+  - latest reruns:
+    - `npm run eval:fast`
+      - run id: `20260416-234730-723737`
+      - result: `53/53` passed
+    - `npm run eval:nightly`
+      - run id: `20260416-234832-356143`
+      - result: `56/56` passed
+    - `npm run eval:release`
+      - run id: `20260416-234927-481894`
+      - result: `59/59` passed
+
+## 2026-04-16 06:30 CST
+
+- provider empty/baseURL follow-up:
+  - added `fast-providers-empty.json`
+  - added `fast-providers-test-no-baseurl.json`
+  - `local` provider could not exercise the no-baseURL branch because config resolution backfilled `http://localhost:11434/v1`; switched the task to a custom `dummy` provider id so the branch became reachable
+  - latest reruns:
+    - `npm run eval:fast`
+      - run id: `20260416-062236-077460`
+      - result: `29/29` passed
+    - `npm run eval:nightly`
+      - run id: `20260416-062314-588580`
+      - result: `32/32` passed
+    - `npm run eval:release`
+      - run id: `20260416-062401-087130`
+      - result: `35/35` passed
+- working conclusion update:
+  - `providers` surface now has black-box coverage for:
+    - empty list
+    - help
+    - no baseURL
+    - reachable local endpoint
+    - refused connection
+    - timeout

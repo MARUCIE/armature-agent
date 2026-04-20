@@ -25,7 +25,10 @@ export function createProvidersCommand(): Command {
     let activeId: string | undefined
     try {
       const resolved = resolveProvider(config)
-      activeId = resolved.provider
+      const selected = providers.find((provider) => provider.id === resolved.provider)
+      if (selected && !selected.disabled) {
+        activeId = resolved.provider
+      }
     } catch { /* no valid provider */ }
 
     console.log()
@@ -70,6 +73,8 @@ export function createProvidersCommand(): Command {
     console.log()
     if (activeId) {
       console.log(`  \x1b[90mDefault provider: ${activeId}\x1b[0m`)
+    } else if (config.defaultProvider && config.defaultProvider !== 'auto') {
+      console.log(`  \x1b[90mDefault provider: ${config.defaultProvider} (inactive)\x1b[0m`)
     }
     console.log(`  \x1b[90mConfig: ~/.orca/config.json\x1b[0m`)
     console.log()

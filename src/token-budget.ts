@@ -10,7 +10,7 @@
  * preserves these while dropping verbose explanatory text.
  */
 
-import type { ChatMessage } from './providers/openai-compat.js'
+import { messageContentToText, type ChatMessage, type PromptContent } from './providers/openai-compat.js'
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -40,6 +40,77 @@ export interface CompactionResult {
   tokensFreed: number
   /** Summary of what was dropped */
   summary: string
+}
+
+function truncateContent(content: PromptContent, maxChars: number, suffix: string): PromptContent {
+  if (typeof content === 'string') {
+    return content.length > maxChars ? content.slice(0, maxChars) + suffix : content
+  }
+
+  let remaining = maxChars
+  let truncated = false
+  let markerAdded = false
+  const next: Exclude<PromptContent, string> = []
+
+  for (const part of content) {
+    if (part.type === 'image_url') {
+      if (part.image_url.url.startsWith('data:')) {
+        const mime = part.image_url.url.match(/^data:([^;]+)/)?.[1] || 'image'
+        next.push({ type: 'text', text: `[inline image omitted during compaction: ${mime}]` })
+        truncated = true
+        markerAdded = true
+      } else {
+        next.push({ type: 'image_url', image_url: { url: part.image_url.url } })
+      }
+      continue
+    }
+
+    if (remaining <= 0) {
+      truncated = true
+      continue
+    }
+
+    if (part.text.length <= remaining) {
+      next.push({ type: 'text', text: part.text })
+      remaining -= part.text.length
+      continue
+    }
+
+    next.push({ type: 'text', text: part.text.slice(0, remaining) + suffix })
+    remaining = 0
+    truncated = true
+    markerAdded = true
+  }
+
+  if (truncated && !markerAdded) {
+    next.push({ type: 'text', text: suffix.trimStart() })
+  }
+
+  return next
+}
+
+function hasInlineDataImage(content: PromptContent): boolean {
+  return Array.isArray(content) && content.some(
+    (part) => part.type === 'image_url' && part.image_url.url.startsWith('data:')
+  )
+}
+
+function estimateImageTokens(url: string): number {
+  if (url.startsWith('data:')) {
+    return Math.ceil(url.length / 4)
+  }
+  return estimateTokens(`[image:${url.slice(0, 48)}]`)
+}
+
+export function estimatePromptContentTokens(content: PromptContent): number {
+  if (typeof content === 'string') return estimateTokens(content)
+  return content.reduce((sum, part) => (
+    sum + (part.type === 'text' ? estimateTokens(part.text) : estimateImageTokens(part.image_url.url))
+  ), 0)
+}
+
+function estimateHistoryTokens(history: ChatMessage[]): number {
+  return history.reduce((sum, m) => sum + estimatePromptContentTokens(m.content), 0)
 }
 
 // ── Model Context Windows ───────────────────────────────────────
@@ -114,6 +185,16 @@ export class TokenBudgetManager {
     this.cumulativeOutput += outputTokens
   }
 
+  /** Clear the last authoritative prompt-size reading after history compaction */
+  clearCurrentUsage(): void {
+    this.lastInputTokens = 0
+  }
+
+  /** Update model when the active session model changes */
+  setModel(model: string): void {
+    this.model = model
+  }
+
   /** Get current budget status */
   getBudget(history: ChatMessage[]): TokenBudget {
     const contextWindow = getContextWindow(this.model)
@@ -125,7 +206,7 @@ export class TokenBudgetManager {
     const historyTokensEst = this.lastInputTokens > 0
       ? this.lastInputTokens
       : Math.min(
-          history.reduce((sum, m) => sum + estimateTokens(m.content), 0),
+          estimateHistoryTokens(history),
           contextWindow,
         )
 
@@ -180,8 +261,8 @@ export class TokenBudgetManager {
    */
   smartCompact(history: ChatMessage[], keepTurns = 2): CompactionResult {
     const contextWindow = getContextWindow(this.model)
-    const totalChars = history.reduce((sum, m) => sum + m.content.length, 0)
-    const estimatedPct = Math.round((estimateTokens(history.map(m => m.content).join('')) / contextWindow) * 100)
+    const totalTokens = estimateHistoryTokens(history)
+    const estimatedPct = Math.round((totalTokens / contextWindow) * 100)
 
     // ── NUCLEAR MODE: >100% utilization — emergency purge ──────────
     // Keep ONLY the system prompt (truncated) + last user message.
@@ -190,23 +271,22 @@ export class TokenBudgetManager {
       const sysMsg = history.find(m => m.role === 'system')
       const lastUser = [...history].reverse().find(m => m.role === 'user')
       const droppedCount = history.length - (sysMsg ? 1 : 0) - (lastUser ? 1 : 0)
-      const freedChars = totalChars
 
       // Truncate system prompt aggressively (keep first 1500 chars)
-      if (sysMsg && sysMsg.content.length > 1500) {
-        sysMsg.content = sysMsg.content.slice(0, 1500) + '\n[system truncated for recovery]'
+      if (sysMsg && messageContentToText(sysMsg.content).length > 1500) {
+        sysMsg.content = truncateContent(sysMsg.content, 1500, '\n[system truncated for recovery]')
       }
 
       // Truncate last user message if huge
-      if (lastUser && lastUser.content.length > 1000) {
-        lastUser.content = lastUser.content.slice(0, 1000) + '\n[truncated]'
+      if (lastUser && (messageContentToText(lastUser.content).length > 1000 || hasInlineDataImage(lastUser.content))) {
+        lastUser.content = truncateContent(lastUser.content, 1000, '\n[truncated]')
       }
 
       history.length = 0
       if (sysMsg) history.push(sysMsg)
       if (lastUser) history.push(lastUser)
 
-      const tokensFreed = estimateTokens(String(freedChars))
+      const tokensFreed = Math.max(0, totalTokens - estimateHistoryTokens(history))
       return {
         dropped: droppedCount,
         kept: history.length,
@@ -224,13 +304,19 @@ export class TokenBudgetManager {
       let truncated = 0
       let freedTokens = 0
       for (const msg of history) {
-        if (msg.role === 'system' && msg.content.length > 3000) {
-          freedTokens += estimateTokens(msg.content.slice(2000))
-          msg.content = msg.content.slice(0, 2000) + '\n[system truncated]'
+        const text = messageContentToText(msg.content)
+        if (msg.role === 'system' && text.length > 3000) {
+          freedTokens += Math.max(
+            0,
+            estimatePromptContentTokens(msg.content) - estimatePromptContentTokens(truncateContent(msg.content, 2000, '\n[system truncated]'))
+          )
+          msg.content = truncateContent(msg.content, 2000, '\n[system truncated]')
           truncated++
-        } else if (msg.content.length > 1000 && msg.role !== 'system') {
-          freedTokens += estimateTokens(msg.content.slice(200))
-          msg.content = msg.content.slice(0, 200) + '\n[truncated: ' + estimateTokens(msg.content) + ' tokens]'
+        } else if ((text.length > 1000 || hasInlineDataImage(msg.content)) && msg.role !== 'system') {
+          const originalTokens = estimatePromptContentTokens(msg.content)
+          const truncatedContent = truncateContent(msg.content, 200, '\n[truncated: ' + originalTokens + ' tokens]')
+          freedTokens += Math.max(0, originalTokens - estimatePromptContentTokens(truncatedContent))
+          msg.content = truncatedContent
           truncated++
         }
       }
@@ -250,14 +336,14 @@ export class TokenBudgetManager {
     // Among older messages, only keep genuinely tiny summaries (<100 chars, max 3)
     for (let i = olderMsgs.length - 1; i >= 0; i--) {
       const msg = olderMsgs[i]!
-      if (msg.content.length < 100 && keptDecisions.length < 3) {
+      if (!hasInlineDataImage(msg.content) && estimatePromptContentTokens(msg.content) < 100 && keptDecisions.length < 3) {
         keptDecisions.push(msg)
         const idx = droppedMsgs.indexOf(msg)
         if (idx >= 0) droppedMsgs.splice(idx, 1)
       }
     }
 
-    const tokensFreed = estimateTokens(droppedMsgs.map(m => m.content).join(''))
+    const tokensFreed = droppedMsgs.reduce((sum, m) => sum + estimatePromptContentTokens(m.content), 0)
 
     const droppedRoles = droppedMsgs.reduce((acc, m) => {
       acc[m.role] = (acc[m.role] || 0) + 1
@@ -267,20 +353,21 @@ export class TokenBudgetManager {
 
     // Truncate large recent messages
     for (const msg of recentMsgs) {
-      if (msg.content.length > 2000) {
-        msg.content = msg.content.slice(0, 500) + '\n[truncated: original ' + msg.content.length + ' chars]'
+      const text = messageContentToText(msg.content)
+      if (text.length > 2000 || hasInlineDataImage(msg.content)) {
+        msg.content = truncateContent(msg.content, 500, '\n[truncated: original ' + text.length + ' chars]')
       }
     }
 
     // Truncate system prompt if huge
-    if (sysMsg && sysMsg.content.length > 4000) {
-      sysMsg.content = sysMsg.content.slice(0, 2000) + '\n[system prompt truncated]'
+    if (sysMsg && messageContentToText(sysMsg.content).length > 4000) {
+      sysMsg.content = truncateContent(sysMsg.content, 2000, '\n[system prompt truncated]')
     }
 
     history.length = 0
     if (sysMsg) history.push(sysMsg)
     if (keptDecisions.length > 0) {
-      history.push({ role: 'assistant', content: `[compacted: ${keptDecisions.length} decisions]\n${keptDecisions.map(m => m.content.slice(0, 100)).join('\n')}` })
+      history.push({ role: 'assistant', content: `[compacted: ${keptDecisions.length} decisions]\n${keptDecisions.map(m => messageContentToText(m.content).slice(0, 100)).join('\n')}` })
     }
     history.push(...recentMsgs)
 

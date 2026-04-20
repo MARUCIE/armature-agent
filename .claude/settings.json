@@ -43,7 +43,8 @@
             "command": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-diagram-router.py 2>/dev/null || true",
             "timeout": 3000
           }
-        ]
+        ],
+        "matcher": ""
       }
     ],
     "PostToolUse": [

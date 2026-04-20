@@ -1,0 +1,47 @@
+{
+  "name": "orca-vscode",
+  "displayName": "Orca CLI",
+  "description": "VS Code terminal integration for Orca CLI.",
+  "version": "0.1.0",
+  "publisher": "marucie",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "type": "commonjs",
+  "main": "./extension.js",
+  "activationEvents": [
+    "onCommand:orca.chat",
+    "onCommand:orca.chatCurrentFile",
+    "onCommand:orca.chatSelection",
+    "onCommand:orca.startMcpServer",
+    "onCommand:orca.doctor"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "orca.chat",
+        "title": "Orca: Open Chat"
+      },
+      {
+        "command": "orca.chatCurrentFile",
+        "title": "Orca: Analyze Current File"
+      },
+      {
+        "command": "orca.chatSelection",
+        "title": "Orca: Review Selection"
+      },
+      {
+        "command": "orca.startMcpServer",
+        "title": "Orca: Start MCP Server"
+      },
+      {
+        "command": "orca.doctor",
+        "title": "Orca: Run Doctor"
+      }
+    ]
+  }
+}

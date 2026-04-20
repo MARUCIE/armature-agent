@@ -2,11 +2,11 @@
 
 # Orca CLI
 
-**Provider-neutral coding agent — 9 providers · 41 tools · MCP server · 5 modes · multi-model collaboration.**
+**Provider-neutral coding agent — 10 providers · 41 tools · MCP server · 6 modes · multi-model collaboration.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/Node-%3E%3D18-green.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/Tests-732%20passing-brightgreen.svg)](#sota-agent-capabilities)
+[![Tests](https://img.shields.io/badge/Tests-1280%20passing-brightgreen.svg)](#sota-agent-capabilities)
 [![TypeScript](https://img.shields.io/badge/TypeScript-ESM-3178C6.svg)](https://www.typescriptlang.org/)
 
 The one CLI that can do what no single-vendor CLI can: ask Claude, GPT, and Gemini the same question simultaneously, race them, or chain them as specialists. Works with any OpenAI-compatible provider.
@@ -15,7 +15,7 @@ The one CLI that can do what no single-vendor CLI can: ask Claude, GPT, and Gemi
 
 ```
        ..:::....
-    .::------::::..          Orca  v0.7.1
+    .::------::::..          Orca  v0.8.0
   .::--========----::::..    provider-neutral agent runtime
 .:--==+++*****+++===---::::..
 .:-=++**#########**++==---::..
@@ -48,6 +48,7 @@ export OPENROUTER_API_KEY=...    # OpenRouter (aggregator)
 ```bash
 orca chat                                    # interactive REPL
 orca chat "explain this codebase"            # one-shot
+orca reflect "why is this test still flaky?" # Socratic debugging / root-cause pass
 orca chat --image screenshot.png "what is broken in this UI?"   # proxy multimodal one-shot
 orca run "fix the failing tests"             # task execution
 orca run "add tests" --done-when "tests pass"  # goal-loop: repeat until criteria met
@@ -91,7 +92,26 @@ Current scope:
 
 - one-shot proxy path only
 - local image files are encoded as data URLs and sent as multimodal content parts
+- GitHub Copilot requests auto-trim tool definitions to the provider's 128-tool limit so `--image` still works even when MCP expands the toolset
+- `gpt-5.x` chat-completions requests with function tools automatically drop `reasoning_effort` because Copilot/OpenAI reject that combination on `/v1/chat/completions`
+- `--image` one-shot requests skip MCP auto-connect so screenshot analysis is not delayed by unrelated MCP startup
 - interactive REPL image paste is not yet implemented
+
+## Reflect Mode — `/reflect` or `orca reflect`
+
+`reflect` is Orca's renamed and upgraded take on the Rubber-duck workflow: a focused Socratic debugging and root-cause investigation pass.
+
+```bash
+orca reflect "why does this parser drop the last line?"
+orca reflect "walk me through this failing test"
+```
+
+What `reflect` changes:
+
+- restructures the prompt around symptom → hypotheses → evidence → root cause → next step
+- prefers diagnosis and smallest-next-step verification over broad rewrites
+- is explicit-first (`orca reflect`, `/reflect`, `/mode reflect`)
+- can auto-trigger inside normal chat for clear debugging or explanation asks, with an inline notice when it does
 
 ## Multi-Model Collaboration (Unique Feature)
 
@@ -142,7 +162,7 @@ orca pipeline "build auth middleware" --plan claude-opus-4.6 --code gpt-5.4 --re
 | Fix | gpt-5.4 | Address review findings |
 | Verify | claude-opus-4.6 | Confirm fix matches plan |
 
-## 9 Providers
+## 10 Providers
 
 Works with any OpenAI-compatible endpoint. Configure in `~/.orca/config.json`:
 
@@ -156,6 +176,7 @@ Works with any OpenAI-compatible endpoint. Configure in `~/.orca/config.json`:
 | deepseek | Direct | `DEEPSEEK_API_KEY` |
 | groq | Direct | `GROQ_API_KEY` |
 | xai | Direct | `XAI_API_KEY` |
+| copilot | Direct | `GH_TOKEN` |
 | local | Direct | (Ollama at localhost:11434) |
 
 **Aggregators** (Poe, OpenRouter) route to all vendors via one API key — ideal for council/race/pipeline.
@@ -216,13 +237,14 @@ Configure in `.orca/hooks.json`. Shell commands receive JSON stdin, return JSON 
 | UserPromptSubmit | Before prompt to model | Yes |
 | SubagentStart | Sub-agent spawn | No |
 
-## 27 Top-Level / Slash Surfaces
+## 28 Top-Level / Slash Surfaces
 
 | Command | Description |
 |---------|-------------|
 | `/help` | Show all commands + tips |
 | `/models` | Interactive model picker with provider/context/pricing |
 | `/model set <name>` | Switch model mid-session |
+| `/reflect <prompt>` | Socratic debugging / root-cause investigation |
 | `/council <prompt>` | Multi-model council |
 | `/race <prompt>` | Multi-model race |
 | `/pipeline <prompt>` | Multi-model pipeline |
@@ -286,6 +308,20 @@ orca doctor --cwd ~/Projects/my-app
 - runtime health snapshot from `doctor`
 - recent error log tail
 
+## Release Quality Gates
+
+Orca now ships a manifest-driven SOTA gate system for maintainers:
+
+```bash
+npm run eval:fast
+npm run eval:nightly
+npm run eval:release
+```
+
+- `eval:fast` runs the local black-box operator pack
+- `eval:nightly` adds deterministic repo verification (`lint` / `test` / `build`)
+- `eval:release` adds `bench` plus a recorded CLI journey artifact under `agent-eval/runs/<run_id>/`
+
 ## Permission Modes
 
 | Mode | Flag | Default |
@@ -311,46 +347,39 @@ Features that close the gap between "tool" and "agent":
 | Error Self-Correction | Failed tools return recovery hints ("use read_file first") | Model self-corrects without human intervention |
 | Tool Argument Coercion | Normalizes stringified numbers, booleans, and arrays to tool schema types | Improves GPT/Codex tool-call reliability |
 | Provider-Aware Model Catalog | `/model` and `/models` surface provider, context window, approximate pricing, and cautions | Makes live model switching safer and more informed |
+| Tiered SOTA Gate System | Manifest-driven `fast` / `nightly` / `release` bundles with auditable run artifacts | Turns release verification into a repeatable system instead of ad hoc shell history |
 | Shell Injection Protection | All user inputs shellEscaped before exec | Security baseline for production agent |
 | Unlimited Agent Loop | Auto-continue on truncation, incomplete text detection | Tasks complete without artificial limits |
 | Multi-edit Atomicity | Failed batch edits leave file unchanged | No partial corruption on error |
 | Background Completion Notifications | `run_background` jobs notify the REPL when they finish, and `/jobs` shows tracked state | Agent can keep working without manual PID polling |
 
-Tested: 732 tests across 47 files, 10/10 SOTA benchmark.
+Tested: 1280 automated tests, fast gate `61/61`, nightly gate `64/64`, release gate `67/67`, benchmark `10/10`.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Orca CLI  v0.7.1                                   │
-│  21K LOC · 70 source files · 732 tests              │
+│  Orca CLI  v0.8.0                                   │
+│  TypeScript ESM CLI · 70 test files · 1280 tests    │
 ├─────────────────────────────────────────────────────┤
-│  New in v0.7.x — Knowledge + Context Guard + Goals  │
-│  /mode command · thread memory · guidance injection  │
+│  Command Layer                                      │
+│  chat · run · council · race · pipeline · serve     │
 ├─────────────────────────────────────────────────────┤
-│  v0.5.0 — MCP Server + Modes + Discovery            │
-│  MCP server hosting · 5 behavioral modes             │
-│  AGENTS.md auto-discovery · hierarchical guidance    │
-├─────────────────────────────────────────────────────┤
-│  v0.4.0 — SOTA Gap Closure                          │
-│  harness layer · sub-agent isolation · sandbox       │
-│  skills engine · webhook gateway · DNA capsules      │
+│  Runtime / Config / Provider Bridge                 │
+│  OpenAI-compat · doctor · stats · session · logs    │
 ├─────────────────────────────────────────────────────┤
 │  Multi-Model Engine                                 │
-│  council · race · pipeline                          │
-│  9 providers · aggregator or direct per-model        │
+│  council · race · pipeline · provider-aware routing │
 ├─────────────────────────────────────────────────────┤
-│  Agent Runtime + Harness Layer                      │
-│  41 tools · 10 hooks · YOLO/safe · sub-agents       │
-│  verification gate · loop detector · context monitor │
+│  Agent Runtime                                      │
+│  41 tools · 8 hooks · safe/YOLO · background jobs   │
 ├─────────────────────────────────────────────────────┤
-│  Skills · Sandbox · Gateway · Memory                │
-│  swarm/pipeline/loop · Seatbelt/bwrap · webhook     │
-│  DNA capsules · knowledge compounding · Telegram     │
+│  ink Terminal UI                                    │
+│  ScrollBox · InputArea · StatusBar · DiffPreview    │
 ├─────────────────────────────────────────────────────┤
-│  OpenAI-compat Provider + SQLite Usage Tracking     │
-│  429 auto-retry · model-aware max_tokens · SSE      │
-│  headless serve · PR review · session resume         │
+│  Verification System                                │
+│  Vitest + bench + manifest-driven fast/nightly/     │
+│  release gates with auditable agent-eval artifacts  │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -370,6 +399,7 @@ cd orca-cli
 npm install
 npm run build
 npm test
+npm run eval:fast
 ```
 
 ## License

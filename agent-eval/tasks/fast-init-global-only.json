@@ -1,0 +1,14 @@
+{
+  "id": "fast-init-global-only",
+  "title": "Init --global-only skips project config creation",
+  "description": "Black-box smoke for `orca init --global-only` in a clean temporary project and home.",
+  "input": "Run `orca init --global-only` in an empty temporary project with an isolated HOME, verify the global config is created, the project config is not created, and the next steps are still printed.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); TMP_PROJECT=$(mktemp -d); trap \"rm -rf $TMP_HOME $TMP_PROJECT\" EXIT; OUTPUT=$(cd \"$TMP_PROJECT\" && env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ORCA_HOME=\"$TMP_HOME/.orca\" node \"$REPO_ROOT/dist/bin/orca.js\" init --global-only); printf \"%s\\n\" \"$OUTPUT\"; test -f \"$TMP_HOME/.orca/config.json\"; test ! -f \"$TMP_PROJECT/.orca.json\"; printf \"init-global-only-ok\\n\"'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "init_default_has_global_config_line",
+    "init_default_has_next_steps",
+    "init_global_only_has_marker"
+  ]
+}

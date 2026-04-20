@@ -33,6 +33,10 @@ const ProviderConfigSchema = z.object({
   disabled: z.boolean().default(false),
   /** True for aggregators (Poe, OpenRouter, Zenmux) that route to multiple vendors via one endpoint */
   aggregator: z.boolean().default(false),
+  /** Extra HTTP headers sent with every request (e.g. Copilot-Integration-Id for GitHub Copilot API) */
+  headers: z.record(z.string()).optional(),
+  /** Default reasoning effort for models that support it (e.g. 'xhigh' for GPT-5.x) */
+  defaultEffort: z.string().optional(),
 })
 
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>
@@ -159,6 +163,11 @@ const WELL_KNOWN_PROVIDERS: Record<string, ProviderDefaults> = {
     baseURL: 'http://localhost:11434/v1',
     envKey: 'LOCAL_API_KEY',
     defaultModel: 'qwen3:32b',
+  },
+  copilot: {
+    baseURL: 'https://api.githubcopilot.com',
+    envKey: 'GH_TOKEN',
+    defaultModel: 'claude-sonnet-4.6',
   },
 }
 
@@ -354,6 +363,8 @@ export function resolveProvider(config: OrcaConfig): {
   model: string
   baseURL?: string
   sdkProvider: 'anthropic' | 'openai'
+  headers?: Record<string, string>
+  reasoningEffort?: string
 } {
   const providerId = config.defaultProvider === 'auto'
     ? detectProvider(config)
@@ -393,7 +404,22 @@ export function resolveProvider(config: OrcaConfig): {
   // Orca always uses OpenAI-compatible protocol
   const sdkProvider = 'openai' as const
 
-  return { provider: providerId, apiKey, model, baseURL, sdkProvider }
+  // Resolve extra headers (with env template expansion)
+  const rawHeaders = providerConfig.headers
+  let headers: Record<string, string> | undefined
+  if (rawHeaders) {
+    headers = {}
+    for (const [k, v] of Object.entries(rawHeaders)) {
+      headers[k] = resolveEnvTemplate(v) || v
+    }
+  }
+
+  // Auto-inject required headers for well-known providers
+  if (providerId === 'copilot') {
+    headers = { 'Copilot-Integration-Id': 'vscode-chat', ...headers }
+  }
+
+  return { provider: providerId, apiKey, model, baseURL, sdkProvider, headers, reasoningEffort: providerConfig.defaultEffort }
 }
 
 /**
@@ -491,33 +517,51 @@ export interface ModelEndpoint {
   apiKey: string
   baseURL: string
   provider: string
+  headers?: Record<string, string>
+  reasoningEffort?: string
 }
 
 /**
  * Model name prefix → provider mapping for auto-detection.
  */
-const MODEL_PREFIX_TO_PROVIDER: Array<[string, string]> = [
-  ['claude', 'anthropic'],
-  ['anthropic', 'anthropic'],
-  ['gpt', 'openai'],
-  ['o1', 'openai'],
-  ['o3', 'openai'],
-  ['o4', 'openai'],
-  ['gemini', 'google'],
-  ['gemma', 'google'],
-  ['deepseek', 'deepseek'],
-  ['grok', 'xai'],
-  ['qwen', 'local'],
-  ['llama', 'local'],
-  ['kimi', 'local'],
-  ['glm', 'local'],
-  ['minimax', 'local'],
+/**
+ * Model prefix → candidate providers (ordered by preference).
+ * First candidate with a valid API key wins.
+ * This enables e.g. 'claude' to route to 'copilot' when 'anthropic' has no key.
+ */
+const MODEL_PREFIX_TO_PROVIDERS: Array<[string, string[]]> = [
+  ['claude', ['poe', 'copilot', 'anthropic']],
+  ['anthropic', ['poe', 'copilot', 'anthropic']],
+  ['gpt', ['copilot', 'poe', 'openai']],
+  ['o1', ['openai']],
+  ['o3', ['openai']],
+  ['o4', ['openai']],
+  ['gemini', ['google']],
+  ['gemma', ['google']],
+  ['deepseek', ['deepseek']],
+  ['grok', ['copilot', 'xai']],
+  ['qwen', ['poe', 'local']],
+  ['llama', ['local']],
+  ['kimi', ['local']],
+  ['glm', ['local']],
+  ['minimax', ['local']],
 ]
 
-function detectProviderForModel(model: string): string | undefined {
+function detectProviderForModel(model: string, providers?: Record<string, { apiKey?: string; disabled?: boolean }>): string | undefined {
   const lower = model.toLowerCase()
-  for (const [prefix, provider] of MODEL_PREFIX_TO_PROVIDER) {
-    if (lower.startsWith(prefix)) return provider
+  for (const [prefix, candidates] of MODEL_PREFIX_TO_PROVIDERS) {
+    if (!lower.startsWith(prefix)) continue
+    // Return first candidate that has a usable API key
+    if (providers) {
+      for (const cand of candidates) {
+        const pc = providers[cand]
+        if (pc?.disabled) continue
+        const wk = WELL_KNOWN_PROVIDERS[cand]
+        const key = resolveEnvTemplate(pc?.apiKey) || (wk ? process.env[wk.envKey] : undefined)
+        if (key) return cand
+      }
+    }
+    return candidates[0] // fallback to first candidate
   }
   return undefined
 }
@@ -545,20 +589,41 @@ export function resolveModelEndpoint(
       const apiKey = resolveEnvTemplate(agg.apiKey) || (wk ? process.env[wk.envKey] : undefined)
       const baseURL = resolveEnvTemplate(agg.baseURL) || wk?.baseURL
       if (apiKey && baseURL) {
-        return { model, apiKey, baseURL, provider: aggregatorId }
+        // Resolve headers for aggregator (e.g. copilot needs Copilot-Integration-Id)
+        let headers: Record<string, string> | undefined
+        if (agg.headers) {
+          headers = {}
+          for (const [k, v] of Object.entries(agg.headers)) {
+            headers[k] = resolveEnvTemplate(v) || v
+          }
+        }
+        if (aggregatorId === 'copilot') {
+          headers = { 'Copilot-Integration-Id': 'vscode-chat', ...headers }
+        }
+        return { model, apiKey, baseURL, provider: aggregatorId, headers, reasoningEffort: agg.defaultEffort }
       }
     }
   }
 
-  // Path 2: Direct provider routing — find who owns this model
-  const detectedProvider = detectProviderForModel(model)
+  // Path 2: Direct provider routing — find who owns this model (with key availability check)
+  const detectedProvider = detectProviderForModel(model, config.providers as Record<string, { apiKey?: string; disabled?: boolean }>)
   if (detectedProvider) {
     const pc = config.providers[detectedProvider]
     const wk = WELL_KNOWN_PROVIDERS[detectedProvider]
     const apiKey = resolveEnvTemplate(pc?.apiKey) || (wk ? process.env[wk.envKey] : undefined)
     const baseURL = resolveEnvTemplate(pc?.baseURL) || wk?.baseURL
     if (apiKey && baseURL) {
-      return { model, apiKey, baseURL, provider: detectedProvider }
+      let headers: Record<string, string> | undefined
+      if (pc?.headers) {
+        headers = {}
+        for (const [k, v] of Object.entries(pc.headers)) {
+          headers[k] = resolveEnvTemplate(v) || v
+        }
+      }
+      if (detectedProvider === 'copilot') {
+        headers = { 'Copilot-Integration-Id': 'vscode-chat', ...headers }
+      }
+      return { model, apiKey, baseURL, provider: detectedProvider, headers, reasoningEffort: pc?.defaultEffort }
     }
   }
 
@@ -576,7 +641,7 @@ export function resolveModelEndpoint(
 }
 
 /** Known aggregator provider IDs (route any model via a single endpoint) */
-const KNOWN_AGGREGATORS = new Set(['poe', 'openrouter', 'zenmux'])
+const KNOWN_AGGREGATORS = new Set(['poe', 'openrouter', 'zenmux', 'copilot'])
 
 /**
  * Find the best aggregator provider from config, or undefined if none available.

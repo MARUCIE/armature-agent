@@ -1,0 +1,13 @@
+{
+  "id": "fast-pr-gh-missing",
+  "title": "PR command reports missing gh CLI clearly",
+  "description": "Black-box smoke for `orca pr` when GitHub CLI is unavailable on PATH.",
+  "input": "Run `orca pr 123` with a PATH that still contains `node` but no `gh`, and verify the command reports the missing GitHub CLI requirement.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/bin\" \"$TMP_ROOT/home\"; ln -s \"$(command -v node)\" \"$TMP_ROOT/bin/node\"; OUTPUT=$(env -i PATH=\"$TMP_ROOT/bin\" HOME=\"$TMP_ROOT/home\" node dist/bin/orca.js pr 123 2>&1; STATUS=$?; printf \"status=%s\\n%s\\n\" \"$STATUS\" \"$OUTPUT\"); printf \"%s\\n\" \"$OUTPUT\"; printf \"%s\" \"$OUTPUT\" | grep -q \"status=1\"'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "pr_missing_gh_has_error_heading",
+    "pr_missing_gh_has_install_hint"
+  ]
+}

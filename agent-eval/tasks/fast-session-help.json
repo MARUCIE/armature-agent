@@ -1,0 +1,14 @@
+{
+  "id": "fast-session-help",
+  "title": "Session help exposes lifecycle subcommands",
+  "description": "Command-surface smoke for `orca session --help`.",
+  "input": "Run `orca session --help` and verify list/show/delete are still present.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; node dist/bin/orca.js session --help'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "session_help_has_list",
+    "session_help_has_show",
+    "session_help_has_delete"
+  ]
+}

@@ -92,4 +92,61 @@ describe('serve command http server', () => {
       await new Promise<void>((resolve, reject) => server.close((err) => err ? reject(err) : resolve()))
     }
   })
+
+  it('returns explicit errors for malformed and incomplete chat requests', async () => {
+    const config: OrcaConfig = {
+      providers: {
+        openai: {
+          apiKey: 'test-openai-key',
+          baseURL: 'https://api.openai.com/v1/',
+          models: ['gpt-5.4'],
+          defaultModel: 'gpt-5.4',
+          disabled: false,
+          aggregator: false,
+        },
+      },
+      defaultProvider: 'openai',
+      defaultModel: 'gpt-5.4',
+      multiModel: {},
+      maxTurns: 25,
+      permissionMode: 'default',
+    }
+
+    const state: ServerState = {
+      config,
+      resolved: {
+        provider: 'openai',
+        apiKey: 'test-openai-key',
+        model: 'gpt-5.4',
+        baseURL: 'https://api.openai.com/v1/',
+        sdkProvider: 'openai',
+      },
+      cwd: projectDir,
+    }
+
+    const server = createOrcaHttpServer(state)
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
+    const address = server.address()
+    const port = typeof address === 'object' && address ? address.port : 0
+
+    try {
+      const missingPrompt = await fetch(`http://127.0.0.1:${port}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      expect(missingPrompt.status).toBe(400)
+      await expect(missingPrompt.json()).resolves.toMatchObject({ error: 'Missing "prompt" field' })
+
+      const malformedBody = await fetch(`http://127.0.0.1:${port}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{ invalid json',
+      })
+      expect(malformedBody.status).toBe(500)
+      await expect(malformedBody.json()).resolves.toMatchObject({ error: 'Invalid JSON body' })
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((err) => err ? reject(err) : resolve()))
+    }
+  })
 })

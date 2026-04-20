@@ -164,7 +164,13 @@ export class MCPClient {
 
     try {
       const args = config.args || []
-      const env = { ...process.env, ...(config.env || {}) }
+      // Expand ${VAR} references in env values (Claude Code config convention)
+      const rawEnv = config.env || {}
+      const expandedEnv: Record<string, string> = {}
+      for (const [k, v] of Object.entries(rawEnv)) {
+        expandedEnv[k] = v.replace(/\$\{([^}]+)\}/g, (_, name) => process.env[name] || '')
+      }
+      const env = { ...process.env, ...expandedEnv }
       const proc = spawn(config.command, args, {
         cwd: config.cwd,
         env,

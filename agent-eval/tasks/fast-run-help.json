@@ -1,0 +1,14 @@
+{
+  "id": "fast-run-help",
+  "title": "Run help exposes autonomous execution controls",
+  "description": "Command-surface smoke for `orca run --help`.",
+  "input": "Run `orca run --help` and verify the key autonomous execution flags remain visible.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; node dist/bin/orca.js run --help'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "run_help_has_max_turns",
+    "run_help_has_done_when",
+    "run_help_has_mission"
+  ]
+}

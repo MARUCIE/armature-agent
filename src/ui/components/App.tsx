@@ -13,9 +13,10 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { Box, Text } from 'ink'
 import type { ChatSessionEmitter } from '../session.js'
-import { useTheme } from '../theme.js'
+import { hasConfiguredThemePreference, useTheme, useThemeController } from '../theme.js'
 import type { UIEvent, StatusInfo, TurnSummaryInfo, ToolStartInfo, ToolEndInfo, ModelProgress } from '../types.js'
 import { StatusBar } from './StatusBar.js'
 import { InputArea } from './InputArea.js'
@@ -33,7 +34,7 @@ import { ThemePicker } from './ThemePicker.js'
 import { ScrollBox } from './ScrollBox.js'
 import type { ScrollBoxHandle } from './ScrollBox.js'
 import { useMouseWheel } from '../useMouseWheel.js'
-import { truncateLabel } from '../utils.js'
+import { getCommandPickerFilter, shouldShowCommandPicker, truncateLabel } from '../utils.js'
 import type { CommandDef } from './CommandPicker.js'
 
 const SLASH_COMMANDS: CommandDef[] = [
@@ -44,6 +45,7 @@ const SLASH_COMMANDS: CommandDef[] = [
   { name: '/cost', description: 'Token breakdown' },
   { name: '/model', description: 'Show/switch model' },
   { name: '/models', description: 'List all models' },
+  { name: '/reflect', description: 'Socratic debugging' },
   { name: '/effort', description: 'Thinking effort' },
   { name: '/mode', description: 'Behavioral profiles' },
   { name: '/diff', description: 'Show git diff' },
@@ -138,6 +140,7 @@ function summarizeToolArgs(args: Record<string, unknown>): string {
 
 export function App({ session, initialStatus, banner }: Props): React.ReactElement {
   const theme = useTheme()
+  const { setThemeId } = useThemeController()
 
   // State
   const [status, setStatus] = useState<StatusInfo>(initialStatus)
@@ -156,12 +159,12 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
   const [activeTool, setActiveTool] = useState<{ id: string; start: ToolStartInfo; startTime: number } | null>(null)
   const [inputValue, setInputValue] = useState('')
   // Theme picker: show on first launch if ORCA_THEME not set
-  const [showThemePicker, setShowThemePicker] = useState(!process.env.ORCA_THEME)
+  const [showThemePicker, setShowThemePicker] = useState(() => !hasConfiguredThemePreference())
 
   // Command picker state
-  // Show picker whenever input starts with / — don't wait for prompt_ready
-  const showPicker = inputValue.startsWith('/') && inputValue.length > 0
-  const pickerFilter = inputValue.slice(1) // strip leading /
+  // Only show the picker for actual slash-command prefixes, not absolute paths.
+  const showPicker = shouldShowCommandPicker(inputValue, SLASH_COMMANDS)
+  const pickerFilter = getCommandPickerFilter(inputValue)
 
   // ScrollBox ref for imperative scroll control
   const scrollRef = useRef<ScrollBoxHandle>(null)
@@ -377,16 +380,16 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
   }, [session])
 
   const handleThemeSelect = useCallback((themeId: string) => {
+    setThemeId(themeId)
     setShowThemePicker(false)
-    // Save preference hint — the actual theme is set at module load via ORCA_THEME
-    // Write a hint file so next launch uses the selected theme
-    import('fs').then(fs => {
-      const home = process.env.HOME || process.env.USERPROFILE || ''
-      const dir = `${home}/.orca`
-      try { fs.mkdirSync(dir, { recursive: true }) } catch {}
-      fs.writeFileSync(`${dir}/theme`, themeId, 'utf-8')
-    }).catch(() => {})
-  }, [])
+    const home = process.env.HOME || process.env.USERPROFILE || ''
+    if (!home) return
+    const dir = `${home}/.orca`
+    try {
+      mkdirSync(dir, { recursive: true })
+      writeFileSync(`${dir}/theme`, themeId, 'utf-8')
+    } catch {}
+  }, [setThemeId])
 
   const hasContent = blocks.length > 0 || streamingText || thinking || activeTool || multiModelState
 

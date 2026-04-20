@@ -1,0 +1,11 @@
+{
+  "id": "gate-lint",
+  "title": "TypeScript lint/typecheck gate",
+  "description": "Run the repository lint/typecheck command before the broader eval bundles.",
+  "input": "Run `npm run lint` from the repo root and require a zero exit code.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; npm run lint'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok"
+  ]
+}

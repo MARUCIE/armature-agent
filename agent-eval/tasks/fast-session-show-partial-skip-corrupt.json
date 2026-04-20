@@ -1,0 +1,14 @@
+{
+  "id": "fast-session-show-partial-skip-corrupt",
+  "title": "Session show resolves a valid partial ID while skipping corrupted matches",
+  "description": "Black-box smoke for `orca session show <partial>` when one matching file is corrupted and another is valid.",
+  "input": "Create one valid `alpha` session plus one corrupted `alpha` session file, run `orca session show alpha`, and verify the CLI renders the valid session instead of failing on the corrupted match.",
+  "command": "bash agent-eval/scripts/run-session-skip-corrupt.sh show",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "session_show_has_model",
+    "session_show_has_user_message",
+    "session_show_has_assistant_message"
+  ]
+}

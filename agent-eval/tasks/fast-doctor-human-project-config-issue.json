@@ -1,0 +1,14 @@
+{
+  "id": "fast-doctor-human-project-config-issue",
+  "title": "Doctor human-readable output shows malformed project config issues",
+  "description": "Black-box smoke for `orca doctor --cwd <dir>` when the target project contains an invalid `.orca.json`.",
+  "input": "Create a temporary target project with an invalid `.orca.json`, run `orca doctor --cwd <dir>`, and verify the human-readable output surfaces the `project-config` issue block.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); TMP_PROJECT=$(mktemp -d); trap \"rm -rf $TMP_HOME $TMP_PROJECT\" EXIT; mkdir -p \"$TMP_HOME/.orca\"; printf \"{bad json\\n\" > \"$TMP_PROJECT/.orca.json\"; env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ORCA_HOME=\"$TMP_HOME/.orca\" ORCA_PROVIDER=openai OPENAI_API_KEY=test-openai-key node dist/bin/orca.js doctor --cwd \"$TMP_PROJECT\"'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "doctor_human_has_header",
+    "doctor_human_has_config_issues",
+    "doctor_human_has_project_config_kind"
+  ]
+}

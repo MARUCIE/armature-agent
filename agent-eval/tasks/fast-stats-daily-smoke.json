@@ -1,0 +1,15 @@
+{
+  "id": "fast-stats-daily-smoke",
+  "title": "Stats daily renders seeded usage data",
+  "description": "Black-box smoke for `orca stats daily` with a seeded usage database.",
+  "input": "Seed one usage row, run `orca stats daily`, and verify the chart output includes the date, token count, and cost line instead of the empty-state message.",
+  "command": "bash agent-eval/scripts/run-stats-daily-smoke.sh",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "stats_daily_has_header",
+    "stats_daily_has_cost",
+    "stats_daily_has_tokens",
+    "stats_daily_has_marker"
+  ]
+}

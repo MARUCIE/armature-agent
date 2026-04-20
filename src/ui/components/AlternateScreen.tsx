@@ -10,7 +10,7 @@
  * background that fills the entire terminal viewport.
  */
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useLayoutEffect, useInsertionEffect } from 'react'
 import { Box } from 'ink'
 import { useTerminalSize } from '../useTerminalSize.js'
 
@@ -25,10 +25,15 @@ interface Props {
   children: React.ReactNode
 }
 
+// Enter the alternate screen before Ink paints the first frame.
+const usePrePaintEffect = typeof useInsertionEffect === 'function'
+  ? useInsertionEffect
+  : useLayoutEffect
+
 export function AlternateScreen({ children }: Props): React.ReactElement {
   const { rows } = useTerminalSize()
 
-  useEffect(() => {
+  usePrePaintEffect(() => {
     // Enter alternate screen buffer on mount
     process.stdout.write(ENTER_ALT_SCREEN + ERASE_SCREEN + CURSOR_HOME + HIDE_CURSOR)
 
@@ -48,7 +53,7 @@ export function AlternateScreen({ children }: Props): React.ReactElement {
   }, [])
 
   return (
-    <Box flexDirection="column" height={rows} width="100%">
+    <Box flexDirection="column" height={rows} width="100%" flexShrink={0}>
       {children}
     </Box>
   )

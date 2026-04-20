@@ -1,0 +1,14 @@
+{
+  "id": "fast-doctor-cwd-human",
+  "title": "Doctor uses the explicit --cwd target in human-readable mode",
+  "description": "Black-box smoke for `orca doctor --cwd <dir>` with an isolated runtime home and a temporary target project.",
+  "input": "Create a temporary target project with a package.json, run `orca doctor --cwd <dir>`, and verify the human-readable output reports that target project's name and path.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); TMP_PROJECT=$(mktemp -d); trap \"rm -rf $TMP_HOME $TMP_PROJECT\" EXIT; mkdir -p \"$TMP_HOME/.orca\"; cat > \"$TMP_PROJECT/package.json\" <<EOF\n{\"name\":\"doctor-cwd-box\",\"devDependencies\":{\"vitest\":\"^1.0.0\"}}\nEOF\nenv -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ORCA_HOME=\"$TMP_HOME/.orca\" ORCA_PROVIDER=openai OPENAI_API_KEY=test-openai-key node dist/bin/orca.js doctor --cwd \"$TMP_PROJECT\"'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "doctor_human_has_header",
+    "doctor_cwd_has_project_name",
+    "doctor_cwd_has_target_path"
+  ]
+}

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "gate_build_writes_dist_artifacts",
+    "type": "file_exists",
+    "paths": [
+      "dist/bin/orca.js",
+      "dist/index.js"
+    ]
+  },
+  {
+    "id": "gate_bench_writes_report",
+    "type": "file_exists",
+    "paths": [
+      "${ORCA_EVAL_RUN_DIR}/artifacts/gate-bench.json"
+    ]
+  },
+  {
+    "id": "gate_bench_has_score_100",
+    "type": "regex",
+    "pattern": "\"score\"\\s*:\\s*100",
+    "source": "stdout"
+  },
+  {
+    "id": "release_cli_journey_written",
+    "type": "file_exists",
+    "paths": [
+      "${ORCA_EVAL_RUN_DIR}/manual/release-cli-journey.md"
+    ]
+  },
+  {
+    "id": "install_tarball_has_runtime_tagline",
+    "type": "regex",
+    "pattern": "provider-neutral agent runtime",
+    "source": "stdout"
+  },
+  {
+    "id": "install_tarball_has_session_command",
+    "type": "regex",
+    "pattern": "session\\s+Manage saved sessions",
+    "source": "stdout"
+  },
+  {
+    "id": "install_tarball_has_continue_flag",
+    "type": "regex",
+    "pattern": "--continue",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_stream_request_artifact_exists",
+    "type": "file_exists",
+    "paths": [
+      "${ORCA_EVAL_RUN_DIR}/artifacts/fast-serve-chat-stream-request.json"
+    ]
+  },
+  {
+    "id": "serve_json_request_artifact_exists",
+    "type": "file_exists",
+    "paths": [
+      "${ORCA_EVAL_RUN_DIR}/artifacts/fast-serve-chat-json-request.json"
+    ]
+  }
+]

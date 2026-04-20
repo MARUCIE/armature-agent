@@ -12,7 +12,7 @@
  * sending to SOTA models.
  */
 
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import { readFileSync, statSync, existsSync, writeFileSync, unlinkSync, mkdirSync } from 'node:fs'
 import { join, basename } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -153,7 +153,7 @@ function runMarkitdown(filePath: string, format: FileFormat): string {
     return readFileSync(filePath, 'utf-8')
   }
 
-  const output = execSync(`markitdown "${filePath}"`, {
+  const output = execFileSync('markitdown', [filePath], {
     encoding: 'utf-8',
     timeout: 60_000,
     maxBuffer: 10 * 1024 * 1024,
@@ -169,7 +169,7 @@ function runPandoc(filePath: string, format: FileFormat): string {
     return readFileSync(filePath, 'utf-8')
   }
 
-  const output = execSync(`pandoc -t markdown --wrap=none "${filePath}"`, {
+  const output = execFileSync('pandoc', ['-t', 'markdown', '--wrap=none', filePath], {
     encoding: 'utf-8',
     timeout: 60_000,
     maxBuffer: 10 * 1024 * 1024,
@@ -183,8 +183,9 @@ function runVideoConvert(filePath: string): string {
 
   // Extract metadata
   try {
-    const probe = execSync(
-      `ffprobe -v quiet -print_format json -show_format -show_streams "${filePath}"`,
+    const probe = execFileSync(
+      'ffprobe',
+      ['-v', 'quiet', '-print_format', 'json', '-show_format', '-show_streams', filePath],
       { encoding: 'utf-8', timeout: 10_000 },
     )
     const meta = JSON.parse(probe) as { format?: { duration?: string; size?: string; format_name?: string } }
@@ -198,11 +199,11 @@ function runVideoConvert(filePath: string): string {
   if (hasFfmpeg() && hasMarkitdown()) {
     const tmpAudio = join(tmpdir(), `orca-audio-${Date.now()}.wav`)
     try {
-      execSync(`ffmpeg -i "${filePath}" -vn -acodec pcm_s16le -ar 16000 -ac 1 -t 300 "${tmpAudio}" -y`, {
+      execFileSync('ffmpeg', ['-i', filePath, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', '-t', '300', tmpAudio, '-y'], {
         stdio: 'pipe', timeout: 120_000,
       })
       if (existsSync(tmpAudio) && statSync(tmpAudio).size > 1000) {
-        const transcript = execSync(`markitdown "${tmpAudio}"`, {
+        const transcript = execFileSync('markitdown', [tmpAudio], {
           encoding: 'utf-8', timeout: 120_000, maxBuffer: 5 * 1024 * 1024,
         }).trim()
         if (transcript) {
@@ -219,7 +220,7 @@ function runVideoConvert(filePath: string): string {
     try {
       mkdirSync(tmpDir, { recursive: true })
       // Extract 1 frame per 30 seconds, max 10 frames
-      execSync(`ffmpeg -i "${filePath}" -vf "fps=1/30" -frames:v 10 "${tmpDir}/frame_%03d.jpg" -y`, {
+      execFileSync('ffmpeg', ['-i', filePath, '-vf', 'fps=1/30', '-frames:v', '10', join(tmpDir, 'frame_%03d.jpg'), '-y'], {
         stdio: 'pipe', timeout: 60_000,
       })
       const frames = readFileSync(join(tmpDir, 'frame_001.jpg'), null) // check if any frames were extracted

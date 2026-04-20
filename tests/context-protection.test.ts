@@ -9,8 +9,8 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { TokenBudgetManager, estimateTokens, type CompactionResult } from '../src/token-budget.js'
-import type { ChatMessage } from '../src/providers/openai-compat.js'
+import { TokenBudgetManager, estimatePromptContentTokens, estimateTokens, type CompactionResult } from '../src/token-budget.js'
+import { messageContentToText, type ChatMessage } from '../src/providers/openai-compat.js'
 
 // ── Token Estimation Tests ──────────────────────────────────────────
 
@@ -60,6 +60,23 @@ describe('estimateTokens - CJK-aware estimation', () => {
 // ── TokenBudgetManager: Budget Calculation ──────────────────────────
 
 describe('TokenBudgetManager.getBudget - Risk Level Assessment', () => {
+  it('handles multimodal content in history estimation', () => {
+    const mgr = new TokenBudgetManager('claude-opus-4')
+    const history: ChatMessage[] = [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'What is shown here?' },
+          { type: 'image_url', image_url: { url: 'data:image/png;base64,AAAA' } },
+        ],
+      },
+    ]
+
+    const budget = mgr.getBudget(history)
+    expect(budget.historyTokensEst).toBeGreaterThan(0)
+    expect(messageContentToText(history[0]!.content)).toContain('[image:')
+  })
+
   it('returns green risk for <40% utilization', () => {
     const mgr = new TokenBudgetManager('claude-opus-4')
     const history: ChatMessage[] = [
@@ -224,6 +241,71 @@ describe('TokenBudgetManager.reset', () => {
 
     expect(mgr.totalTokens).toBe(150)
   })
+
+  it('recomputes from compacted history without dropping cumulative totals', () => {
+    const mgr = new TokenBudgetManager('claude-opus-4')
+    mgr.recordUsage(195000, 10000)
+
+    const history: ChatMessage[] = [
+      { role: 'system', content: 'System prompt'.repeat(200) },
+      { role: 'user', content: 'User message '.repeat(500) },
+      { role: 'assistant', content: 'Assistant response '.repeat(500) },
+    ]
+
+    mgr.smartCompact(history)
+    mgr.clearCurrentUsage()
+
+    const compactedBudget = mgr.getBudget(history)
+    expect(compactedBudget.risk).toBe('green')
+    expect(compactedBudget.utilizationPct).toBeLessThan(40)
+    expect(mgr.totalTokens).toBe(205000)
+  })
+
+  it('falls back to compacted history after reset', () => {
+    const mgr = new TokenBudgetManager('claude-opus-4')
+    mgr.recordUsage(195000, 10000)
+
+    const history: ChatMessage[] = [
+      { role: 'system', content: 'System prompt'.repeat(200) },
+      { role: 'user', content: 'User message '.repeat(500) },
+      { role: 'assistant', content: 'Assistant response '.repeat(500) },
+    ]
+
+    mgr.smartCompact(history)
+    expect(mgr.getBudget(history).risk).toBe('red')
+
+    mgr.reset()
+
+    const compactedBudget = mgr.getBudget(history)
+    expect(compactedBudget.risk).toBe('green')
+    expect(compactedBudget.utilizationPct).toBeLessThan(40)
+  })
+})
+
+describe('TokenBudgetManager.setModel', () => {
+  it('recomputes utilization against the active model window', () => {
+    const mgr = new TokenBudgetManager('gemini-3')
+    mgr.recordUsage(180000, 0)
+
+    expect(mgr.getBudget([{ role: 'system', content: '' }]).risk).toBe('green')
+
+    mgr.setModel('claude-sonnet-4.6')
+
+    expect(mgr.getBudget([{ role: 'system', content: '' }]).risk).toBe('red')
+  })
+})
+
+describe('estimatePromptContentTokens', () => {
+  it('treats inline data images more conservatively than remote URLs', () => {
+    const remote = estimatePromptContentTokens([
+      { type: 'image_url', image_url: { url: 'https://example.com/cat.png' } },
+    ])
+    const inline = estimatePromptContentTokens([
+      { type: 'image_url', image_url: { url: `data:image/png;base64,${'A'.repeat(12000)}` } },
+    ])
+
+    expect(inline).toBeGreaterThan(remote * 10)
+  })
 })
 
 // ── NUCLEAR COMPACT: >100% Utilization ──────────────────────────────
@@ -291,6 +373,64 @@ describe('TokenBudgetManager.smartCompact - NUCLEAR MODE (>100%)', () => {
     expect(userMsg).toBeDefined()
     expect(userMsg!.content.length).toBeLessThanOrEqual(1015) // 1000 + "\n[truncated]"
     expect(userMsg!.content).toContain('[truncated]')
+  })
+
+  it('preserves image parts when truncating multimodal messages', () => {
+    const mgr = new TokenBudgetManager('claude-opus-4')
+    mgr.recordUsage(195000, 10000)
+
+    const history: ChatMessage[] = [
+      { role: 'system', content: 'System' },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'Describe this image. '.repeat(120) },
+          { type: 'image_url', image_url: { url: 'https://example.com/cat.png' } },
+        ],
+      },
+      { role: 'assistant', content: 'Response' },
+    ]
+
+    mgr.smartCompact(history)
+
+    const userMsg = history.find(m => m.role === 'user')
+    expect(userMsg).toBeDefined()
+    expect(Array.isArray(userMsg!.content)).toBe(true)
+    if (Array.isArray(userMsg!.content)) {
+      expect(userMsg!.content.some(part => part.type === 'image_url')).toBe(true)
+      expect(userMsg!.content.some(part => part.type === 'text')).toBe(true)
+    }
+  })
+
+  it('replaces inline data images with explicit markers during compaction', () => {
+    const mgr = new TokenBudgetManager('claude-opus-4')
+    mgr.recordUsage(195000, 10000)
+
+    const history: ChatMessage[] = [
+      { role: 'system', content: 'System' },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'Analyze this upload.' },
+          { type: 'image_url', image_url: { url: `data:image/png;base64,${'A'.repeat(12000)}` } },
+        ],
+      },
+      { role: 'assistant', content: 'Response' },
+    ]
+
+    mgr.smartCompact(history)
+
+    const userMsg = history.find(m => m.role === 'user')
+    expect(userMsg).toBeDefined()
+    expect(Array.isArray(userMsg!.content)).toBe(true)
+    if (Array.isArray(userMsg!.content)) {
+      expect(userMsg!.content.some(part => part.type === 'image_url')).toBe(false)
+      expect(
+        userMsg!.content.some(
+          part => part.type === 'text' && part.text.includes('inline image omitted during compaction')
+        )
+      ).toBe(true)
+    }
   })
 
   it('returns correct drop count and tokens freed in nuclear mode', () => {

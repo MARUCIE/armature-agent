@@ -1,0 +1,14 @@
+{
+  "id": "fast-pr-fetch-failure",
+  "title": "PR command reports fetch failures from gh clearly",
+  "description": "Black-box smoke for `orca pr` when `gh pr view` fails, using a stubbed local gh binary.",
+  "input": "Stub `gh` so `gh --version` succeeds but `gh pr view` fails, run `orca pr 123`, and verify the command reports a fetch failure for that PR number.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/bin\" \"$TMP_ROOT/home\"; cat > \"$TMP_ROOT/bin/gh\" <<'\"'\"'EOF'\"'\"'\n#!/usr/bin/env bash\nif [[ \"$1\" == \"--version\" ]]; then echo \"gh version 9.9.9\"; exit 0; fi\nif [[ \"$1\" == \"pr\" ]]; then echo \"authentication failed\" >&2; exit 1; fi\nexit 1\nEOF\nchmod +x \"$TMP_ROOT/bin/gh\"; OUTPUT=$(env -i PATH=\"$TMP_ROOT/bin:$PATH\" HOME=\"$TMP_ROOT/home\" node dist/bin/orca.js pr 123 2>&1; STATUS=$?; printf \"status=%s\\n%s\\n\" \"$STATUS\" \"$OUTPUT\"); printf \"%s\\n\" \"$OUTPUT\"; printf \"%s\" \"$OUTPUT\" | grep -q \"status=1\"'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "pr_failure_has_fetching_banner",
+    "pr_failure_has_error_heading",
+    "pr_failure_has_auth_text"
+  ]
+}

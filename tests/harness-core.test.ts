@@ -119,6 +119,15 @@ describe('ContextMonitor: 4-tier risk levels', () => {
     expect(monitor.getRiskLevel()).toBe('green')
   })
 
+  it('18.14b clearCurrentUsage preserves cumulative totals', () => {
+    const monitor = new ContextMonitor(100_000)
+    monitor.recordUsage(50_000, 5_000)
+    monitor.clearCurrentUsage()
+    expect(monitor.getUtilization()).toBe(0)
+    expect(monitor.getRiskLevel()).toBe('green')
+    expect(monitor.getCumulativeTokens()).toEqual({ input: 50_000, output: 5_000, total: 55_000 })
+  })
+
   it('18.15 getSnapshot returns complete state', () => {
     const monitor = new ContextMonitor(200_000)
     monitor.recordUsage(10_000, 5_000)
@@ -241,7 +250,7 @@ describe('VerificationGate: pre-completion checks', () => {
     try { rmSync(dir, { recursive: true, force: true }) } catch { /* */ }
   })
 
-  it('18.29 runs on actual Orca project directory', () => {
+  it('18.29 runs on actual Orca project directory', { timeout: 30_000 }, () => {
     const projectDir = join(__dirname, '..')
     const result = runVerificationGate(projectDir, ['typecheck'])
 

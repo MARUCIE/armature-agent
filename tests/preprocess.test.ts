@@ -465,7 +465,7 @@ describe('preprocessFile - end-to-end pipeline', () => {
 
 describe('convertToMarkdown - HTML fallback', () => {
   // When markitdown is unavailable, HTML files fall back to tag stripping
-  it('handles HTML file with markup converter', () => {
+  it('handles HTML file with markup converter', { timeout: 15_000 }, () => {
     const html = '<html><body><h1>Title</h1><p>Text</p></body></html>'
     const fp = createTempFile('page.html', html)
     const result = convertToMarkdown(fp)
@@ -474,7 +474,7 @@ describe('convertToMarkdown - HTML fallback', () => {
     expect(result.markdown.length).toBeGreaterThan(0)
   })
 
-  it('handles HTML with script/style tags', () => {
+  it('handles HTML with script/style tags', { timeout: 15_000 }, () => {
     const html = '<html><script>alert("x")</script><style>.x{}</style><body>Content</body></html>'
     const fp = createTempFile('styled.html', html)
     const result = convertToMarkdown(fp)

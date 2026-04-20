@@ -1,60 +1,284 @@
-# HANDOFF — Orca CLI Provider Decoupling + Feature Parity (2026-04-06)
+# HANDOFF — Orca CLI SOTA Review Continuation
 
-Historical handoff snapshot from April 6, 2026. Commit IDs and verification numbers are preserved as recorded for that handoff point, even if newer work has changed the repository since then.
+Updated: 2026-04-16
+Project root: `/Users/mauricewen/Projects/orca-cli`
 
-## Commits (10 Orca CLI + 2 SDK)
+## Current State
 
-### Orca CLI (MARUCIE/orca-cli)
+This repo is in a good, test-green state after a long review/remediation tranche plus a new SOTA gate-system tranche focused on:
+
+1. ink UI CC-parity behavior fixes
+2. file/path/project-context expansion hardening
+3. shell-injection hardening across tool/runtime/git/worktree surfaces
+4. VS Code extension skeleton
+5. multimodal one-shot image support on the proxy path
+6. `chat.ts` helper decomposition, now including readonly slash extraction, proxy tool orchestration extraction, mutating slash extraction, async REPL slash extraction, and normal REPL turn lifecycle extraction
+
+Current verification baseline:
+
+- `npm run lint` passed
+- `npm test` passed `1280/1280`
+- `npm run build` passed
+- `npm run bench` passed (`10/10`, `100%`)
+- `npm run eval:fast` passed (`61/61`) — run `20260417-012401-427935`
+- `npm run eval:nightly` passed (`64/64`) — run `20260417-012506-286459`
+- `npm run eval:release` passed (`67/67`) — run `20260417-012607-841549`
+
+## What Changed In This Tranche
+
+### 1. ink UI / CC-parity
+
+- `src/ui/components/ScrollBox.tsx`
+  - viewport now measured from rendered flex container, not terminal rows
+- `src/ui/components/AlternateScreen.tsx`
+  - alt-screen enter moved to pre-paint hook path
+- `src/ui/cursor.ts`
+  - Unicode-aware word boundaries
+- `src/ui/useTerminalSize.tsx`
+  - shared `SIGWINCH` subscription
+
+### 2. Input Expansion / Project Bootstrap
+
+- `src/commands/chat-input.ts`
+  - owns:
+    - safe `/git` slash parsing
+    - image prompt construction
+    - file/path expansion
+    - project bootstrap / project tree injection
+    - multi-model prompt preparation
+- Drag-pasted paths with spaces now work for:
+  - quoted file paths
+  - shell-escaped file paths
+  - `%20` `file:///...` URLs
+  - quoted / escaped directory paths with spaces
+
+### 3. Security Hardening
+
+Shell-built path/git execution was replaced with argument-array execution in:
+
+- `src/preprocess/convert.ts`
+- `src/agent/worktree.ts`
+- `src/tools.ts`
+- `src/commands/chat.ts`
+- `src/commands/pr.ts`
+
+Search/fetch/discovery tools were also hardened away from shell pipelines where practical:
+
+- `search_files`
+- `find_definition`
+- `find_references`
+- `glob_files`
+- `fetch_url`
+- `web_search`
+
+### 4. IDE Integration
+
+Added a zero-dependency VS Code extension skeleton:
+
+- `integrations/vscode-orca/package.json`
+- `integrations/vscode-orca/extension.js`
+- `integrations/vscode-orca/terminal-options.cjs`
+- `integrations/vscode-orca/README.md`
+
+Commands included:
+
+- `Orca: Open Chat`
+- `Orca: Analyze Current File`
+- `Orca: Review Selection`
+- `Orca: Start MCP Server`
+- `Orca: Run Doctor`
+
+### 5. Multimodal One-Shot
+
+- `src/providers/openai-compat.ts`
+  - accepts prompt content parts (`text` + `image_url`) on proxy path
+- `src/commands/chat.ts`
+  - `orca chat --image <path...> "prompt"` supported
+- `src/token-budget.ts`
+- `src/commands/session.ts`
+- `src/commands/chat.ts`
+  - now tolerate multimodal message content through text flattening (`messageContentToText`)
+
+### 6. chat.ts Decomposition
+
+Seven helper modules now exist:
+
+- `src/commands/chat-input.ts`
+- `src/commands/chat-support.ts`
+- `src/commands/chat-slash-readonly.ts`
+- `src/commands/chat-proxy-tool-call.ts`
+- `src/commands/chat-slash-mutations.ts`
+- `src/commands/chat-repl-async-slash.ts`
+- `src/commands/chat-repl-turn.ts`
+
+Moved out of `src/commands/chat.ts`:
+
+- safe `/git` parsing
+- image prompt builder
+- file expansion
+- project bootstrap / project tree prompt prep
+- multi-model prompt prep
+- config-file detection
+- CLI flag shaping
+- input history persistence
+- session autosave persistence
+- read-only slash display/status/help flows:
+  - `/help`
+  - read-only `/model` and `/models`
+  - `/history`, `/tokens`, `/stats`, `/cwd`
+  - `/diff`, `/git`
+  - `/sessions`, `/jobs`
+  - `/cost`, `/status`, `/doctor`, `/config`, `/providers`
+- `handleSlashCommand()` now uses an explicit typed result union instead of `as string` branching for async slash flows
+- the remaining mutating/session slash flows now also live in `chat-slash-mutations.ts`, including:
+  - `/model set|use`, `/clear`, `/compact`, `/system`, `/hooks`
+  - async slash dispatch sentinels for `/council`, `/race`, `/pipeline`, `/mission`, `/plan`
+  - session persistence / undo / continue
+  - `/commit`, `/review`, `/pr` fallthrough behavior
+  - `/mcp`, `/thread`, `/init`, `/notes`, `/postmortem`, `/prompts`, `/learn`
+- `runProxyTurn()` now delegates its tool callback to `chat-proxy-tool-call.ts`, which owns:
+  - dangerous-tool permission gating and diff previews
+  - `PreToolUse` handling
+  - sub-agent / `ask_user` / MCP / `sleep` async tool routing
+  - post-tool retry intelligence, error classification, loop detection, postmortem matching, auto-verify, and context guarding
+- `runREPL()` now delegates async slash follow-up execution to `chat-repl-async-slash.ts`, which owns:
+  - `/council`, `/race`, `/pipeline` multi-model execution
+  - `/mission` autonomous execution wrapper
+  - `/plan` decomposition + execution wrapper
+  - ink/legacy progress rendering for those async slash paths
+- `runREPL()` now also delegates the normal prompt turn execution path to `chat-repl-turn.ts`, which owns:
+  - multi-task hinting
+  - `UserPromptSubmit` hook gating
+  - file expansion + cognitive skeleton injection
+  - pre-send compaction
+  - abort/progress lifecycle
+  - proxy/SDK turn dispatch
+  - 413 auto-recovery retry
+  - post-turn compaction + session autosave
+
+`chat.ts` is still large, but the decomposition has started with real, test-backed boundaries.
+
+## Important Files
+
+### Main Runtime / CLI
+
+- `src/commands/chat.ts`
+- `src/commands/chat-input.ts`
+- `src/commands/chat-support.ts`
+- `src/commands/chat-slash-readonly.ts`
+- `src/commands/chat-proxy-tool-call.ts`
+- `src/commands/chat-slash-mutations.ts`
+- `src/commands/chat-repl-async-slash.ts`
+- `src/commands/chat-repl-turn.ts`
+- `src/providers/openai-compat.ts`
+- `src/tools.ts`
+- `src/token-budget.ts`
+- `src/commands/session.ts`
+- `src/commands/pr.ts`
+- `src/agent/worktree.ts`
+- `src/preprocess/convert.ts`
+
+### IDE Integration
+
+- `integrations/vscode-orca/`
+
+### Canonical Project Docs
+
+- `doc/00_project/initiative_orca/task_plan.md`
+- `doc/00_project/initiative_orca/notes.md`
+- `doc/00_project/initiative_orca/deliverable.md`
+- `doc/00_project/initiative_orca/ROLLING_REQUIREMENTS_AND_PROMPTS.md`
+- `doc/00_project/initiative_orca/SYSTEM_ARCHITECTURE.md`
+- `doc/00_project/initiative_orca/USER_EXPERIENCE_MAP.md`
+
+### SOTA Gate System
+
+- `agent-eval/manifests/fast.json`
+- `agent-eval/manifests/nightly.json`
+- `agent-eval/manifests/release.json`
+- `agent-eval/scripts/run-gate.py`
+- `agent-eval/scripts/run-fast-gate.py`
+- `agent-eval/scripts/release-cli-journey.sh`
+- `tests/agent-eval-manifests.test.ts`
+
+## Tests Added / Updated
+
+New or materially updated tests in this tranche:
+
+- `tests/chat-file-expansion.test.ts`
+- `tests/chat-git-command.test.ts`
+- `tests/chat-image-option.test.ts`
+- `tests/chat-proxy-tool-call.test.ts`
+- `tests/chat-repl-turn.test.ts`
+- `tests/chat-repl-async-slash.test.ts`
+- `tests/chat-slash-mutations.test.ts`
+- `tests/chat-slash-readonly.test.ts`
+- `tests/openai-compat-multimodal.test.ts`
+- `tests/vscode-extension.test.ts`
+- `tests/adversarial.test.ts`
+- `tests/context-protection.test.ts`
+- `tests/config.test.ts`
+- `tests/cursor.test.ts`
+- `tests/ink-ui.test.tsx`
+- `tests/agent-eval-manifests.test.ts`
+
+## Working Tree Status
+
+There are many modified files in the current worktree. They are intentional and mostly belong to the review/remediation tranche above.
+
+Notable non-source/runtime noise:
+
+- `.claude/state.md`
+- `.claude/subagent-logs/activity.log`
+- `outputs/reports/code-quality-swarm/2026-04-14-ink-cc-parity-review.html`
+- `state/` (untracked)
+
+These should be treated carefully and not blindly reverted.
+
+## Recommended Next Step
+
+The highest-value next step is again maintainability work in `src/commands/chat.ts`.
+
+Recommended order:
+
+1. Split the remaining `runREPL()` front-half input/discovery/dispatch flow into smaller helpers
+2. Keep the new gate system stable by extending manifests/tasks rather than reintroducing one-off eval scripts
+3. Only after that, reconsider interactive image paste / richer multimodal persistence
+
+## Known Remaining Gaps
+
+- Interactive image paste in the ink REPL is still not implemented
+- Session replay is only multimodal-compatible via text flattening, not rich multimodal replay
+- `chat.ts` orchestration bodies remain large, especially the remaining REPL input/discovery/dispatch front-half
+- IDE integration is now real, but still only terminal-backed; no richer editor-native UX yet
+- `ScrollBox.scrollToElement()` / virtualization parity with CC is still not implemented
+
+## Verification Commands To Re-Run First
+
+If another model continues work, start with:
+
+```bash
+npm run lint
+npm test
+npm run build
 ```
-98d45b0 fix: aggregator detection requires aggregator:true flag
-be1cd81 feat: per-model provider routing — aggregator + direct fallback
-be55362 feat: add orca serve — headless HTTP server with SSE streaming
-7f07f49 feat: add orca pr — one-click GitHub PR checkout and review
-6c1cf78 feat: add orca session — list, show, delete saved sessions
-fa3e68b feat: add orca stats — persistent usage tracking with SQLite
-7435ebd feat: auto-retry on 429 rate limit with exponential backoff
-a8dcdfb feat: config-driven multi-model selection
-3705eb3 feat: multi-provider config + decouple from Anthropic
+
+If touching chat decomposition / multimodal / slash parsing specifically:
+
+```bash
+  node --experimental-vm-modules node_modules/.bin/vitest run \
+  tests/chat-repl-turn.test.ts \
+  tests/chat-repl-async-slash.test.ts \
+  tests/chat-proxy-tool-call.test.ts \
+  tests/chat-slash-mutations.test.ts \
+  tests/chat-slash-readonly.test.ts \
+  tests/chat-git-command.test.ts \
+  tests/chat-image-option.test.ts \
+  tests/chat-file-expansion.test.ts \
+  tests/openai-compat-multimodal.test.ts \
+  tests/vscode-extension.test.ts
 ```
 
-### Orca Agent SDK (MARUCIE/orca-agent-sdk)
-```
-134855e feat: add 429 retry with backoff to OpenAI-compat shim
-a4c5921 feat: OpenAI-compat shim — decouple SDK from Anthropic
-```
+## Appendix — Historical Snapshot
 
-## Architecture
-
-### Multi-Provider Routing
-- Config: `~/.orca/config.json` — 7 providers (anthropic/google/openai/poe/openrouter/deepseek/local)
-- Per-provider: apiKey, baseURL, models, defaultModel, aggregator flag
-- `${ENV_VAR}` template syntax for secrets
-- resolveModelEndpoint(): 3-tier fallback (aggregator → model prefix detection → default)
-
-### Multi-Model Collaboration
-- Aggregator mode (Poe/OpenRouter): single endpoint, cross-vendor diversity groups
-- Direct mode: each model routes to its own provider's API
-- `-p poe` → aggregator; `-p google` → single-provider with Google's models
-- Auto-detect: findAggregator() → cross-vendor if available, else direct
-
-### SDK Shim
-- openaiCompatShim.ts: Anthropic SDK interface → OpenAI Chat Completions protocol
-- Streaming (SSE) + tool calling fully translated
-- claude.ts (1800 lines) works unchanged
-
-## Verification
-- Orca: 326/326 tests, 10/10 bench (SOTA READY)
-- SDK: 21/22 tests (1 pre-existing sandbox-runtime issue)
-- E2E: council with 3 Gemini models via direct routing verified
-
-## Environment
-- Google Cloud: gen-lang-client project → $300 Free Trial billing → paid tier 1000 RPM
-- Tools: orca + opencode v1.3.10 + kilo v7.1.21, all configured with Google Gemini
-- Keys: GOOGLE_API_KEY + GOOGLE_GENERATIVE_AI_API_KEY + GEMINI_API_KEY in ~/.zshenv
-
-## Next Steps
-- Set ANTHROPIC_API_KEY → enables direct Claude access + true cross-vendor council
-- Set OPENROUTER_API_KEY → enables OpenRouter as aggregator (alternative to Poe)
-- SDK Phase 2: generic TransportClient interface (replace Anthropic SDK types)
-- orca serve: add WebSocket for live attach/reconnect
-- Version bump to 0.2.0
+The previous April 6 handoff was replaced by this current handoff because it no longer described the active repository state. If needed, recover it from git history.

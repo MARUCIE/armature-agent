@@ -1,0 +1,15 @@
+{
+  "id": "fast-serve-chat-errors",
+  "title": "Serve `/chat` exposes explicit local error contracts",
+  "description": "Black-box smoke for the missing-prompt and malformed-JSON error paths on `POST /chat`.",
+  "input": "Start `orca serve`, POST an empty JSON body and a malformed JSON body to `/chat`, and verify the status/error payloads remain explicit.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); trap \"rm -rf $TMP_HOME; kill $SERVER_PID 2>/dev/null || true\" EXIT; PORT=$(node -e '\"'\"'const net=require(\"node:net\"); const s=net.createServer(); s.listen(0,\"127.0.0.1\",()=>{console.log(s.address().port); s.close();});'\"'\"'); env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ORCA_HOME=\"$TMP_HOME/.orca\" ORCA_PROVIDER=openai OPENAI_API_KEY=test-openai-key node dist/bin/orca.js serve --port \"$PORT\" > \"$TMP_HOME/serve.out\" 2>&1 & SERVER_PID=$!; bash agent-eval/scripts/wait-for-http.sh \"http://127.0.0.1:$PORT/health\" \"^(200)$\" 50 0.1 >/dev/null; MISSING_BODY=\"$TMP_HOME/missing.json\"; MISSING_STATUS=$(curl -s -o \"$MISSING_BODY\" -w \"%{http_code}\" -H \"Content-Type: application/json\" -d \"{}\" \"http://127.0.0.1:$PORT/chat\"); MALFORMED_BODY=\"$TMP_HOME/malformed.json\"; MALFORMED_STATUS=$(curl -s -o \"$MALFORMED_BODY\" -w \"%{http_code}\" -H \"Content-Type: application/json\" --data-binary \"{ invalid json\" \"http://127.0.0.1:$PORT/chat\"); printf \"missing-status=%s\\n\" \"$MISSING_STATUS\"; printf \"missing-body=%s\\n\" \"$(cat \"$MISSING_BODY\")\"; printf \"malformed-status=%s\\n\" \"$MALFORMED_STATUS\"; printf \"malformed-body=%s\\n\" \"$(cat \"$MALFORMED_BODY\")\"'",
+  "artifacts": [],
+  "graders": [
+    "exit_code_ok",
+    "serve_chat_errors_has_missing_prompt_status",
+    "serve_chat_errors_has_missing_prompt_error",
+    "serve_chat_errors_has_invalid_json_status",
+    "serve_chat_errors_has_invalid_json_error"
+  ]
+}
