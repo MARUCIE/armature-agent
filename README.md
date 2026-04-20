@@ -79,23 +79,27 @@ It provides terminal-backed commands for:
 
 The extension launches the installed `orca` executable directly instead of shelling out through a quoted command string, so file paths and prompts stay argv-safe.
 
-## Multimodal One-Shot
+## Multimodal Images
 
-For OpenAI-compatible proxy providers, `orca chat` now accepts local image attachments:
+For OpenAI-compatible proxy providers, `orca chat` accepts local image attachments in both one-shot and REPL flows:
 
 ```bash
 orca chat --image ./bug.png "describe the issue"
 orca chat --image ./screen1.png ./screen2.png "compare these UIs"
+orca chat
+> compare /tmp/screen-a.png /tmp/screen-b.png
+> explain this UI "/tmp/My Screenshot.png"
 ```
 
 Current scope:
 
-- one-shot proxy path only
+- proxy-provider path only
 - local image files are encoded as data URLs and sent as multimodal content parts
+- REPL can auto-detect embedded local image paths, including quoted paths and shell-escaped spaces
 - GitHub Copilot requests auto-trim tool definitions to the provider's 128-tool limit so `--image` still works even when MCP expands the toolset
 - `gpt-5.x` chat-completions requests with function tools automatically drop `reasoning_effort` because Copilot/OpenAI reject that combination on `/v1/chat/completions`
 - `--image` one-shot requests skip MCP auto-connect so screenshot analysis is not delayed by unrelated MCP startup
-- interactive REPL image paste is not yet implemented
+- direct clipboard-image paste into the ink REPL is not yet implemented; use local image file paths for now
 
 ## Reflect Mode — `/reflect` or `orca reflect`
 

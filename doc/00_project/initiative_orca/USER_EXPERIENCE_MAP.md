@@ -197,3 +197,13 @@ Hooks and modules:
 | Secondary navigation | slash commands and options inside REPL / command modules, including `/jobs` for detached work |
 | API surface | headless serve mode from `src/commands/serve.ts` |
 | Maintainer quality gates | `npm run eval:fast`, `npm run eval:nightly`, `npm run eval:release` |
+
+## REPL Screenshot Journey (2026-04-20)
+
+| Step | User Action | System Response | Evidence |
+|---|---|---|---|
+| SS-1 | User starts `orca chat` in REPL mode | Orca opens the normal interactive session | CLI REPL |
+| SS-2 | User enters one or more local image paths in the prompt text | Orca detects the image files, including quoted paths and shell-escaped spaces | prompt assembly in `chat-input.ts` |
+| SS-3 | User includes text plus two or more screenshots | Orca sends a single multimodal turn with all images attached | proxy-path multimodal request |
+| SS-4 | User asks a follow-up question about the same screenshots | Orca retains the multimodal user turn in history on the proxy path | preserved proxy history |
+| SS-5 | User tries direct clipboard bitmap paste | Not supported yet; user must reference local image files | documented limitation |

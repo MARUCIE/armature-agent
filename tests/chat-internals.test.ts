@@ -112,4 +112,42 @@ describe('chat internal regressions', () => {
     session.submitInput('fresh input')
     await expect(freshPrompt).resolves.toBe('fresh input')
   })
+
+  it('preserves multimodal user content in history after a proxy turn', async () => {
+    const history = [{ role: 'system', content: 'system prompt' }] as Array<{ role: 'system' | 'user' | 'assistant'; content: unknown }>
+
+    chatMocks.streamChat.mockImplementation(async function* () {
+      yield { type: 'text', text: 'vision answer' }
+      yield { type: 'usage', inputTokens: 10, outputTokens: 20 }
+      yield { type: 'done' }
+    })
+
+    const prompt = [
+      { type: 'text', text: 'compare these screenshots' },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,AAAA' } },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,BBBB' } },
+    ] as const
+
+    const result = await runProxyTurn({
+      prompt,
+      resolved: {
+        provider: 'openai',
+        model: 'gpt-5.4',
+        apiKey: 'key',
+        baseURL: 'https://example.invalid/v1',
+      } as never,
+      config: { systemPrompt: 'system prompt' } as never,
+      outputMode: 'streaming',
+      history: history as never,
+      cwd: process.cwd(),
+      retryTracker: new RetryTracker(),
+      loopDetector: new LoopDetector(),
+      tokenBudget: new TokenBudgetManager('gpt-5.4'),
+      contextMonitor: new ContextMonitor(200_000),
+    })
+
+    expect(result).toEqual({ inputTokens: 10, outputTokens: 20 })
+    expect(history[1]).toEqual({ role: 'user', content: prompt })
+    expect(history[2]).toEqual({ role: 'assistant', content: 'vision answer' })
+  })
 })

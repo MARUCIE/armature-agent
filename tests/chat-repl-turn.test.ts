@@ -17,6 +17,8 @@ const supportMocks = vi.hoisted(() => ({
 
 const inputMocks = vi.hoisted(() => ({
   expandFileReferences: vi.fn(),
+  extractImagePromptInput: vi.fn(),
+  buildImagePromptContent: vi.fn(),
 }))
 
 const catalogMocks = vi.hoisted(() => ({
@@ -60,6 +62,8 @@ vi.mock('../src/commands/chat-input.js', async (importOriginal) => {
   return {
     ...actual,
     expandFileReferences: inputMocks.expandFileReferences,
+    extractImagePromptInput: inputMocks.extractImagePromptInput,
+    buildImagePromptContent: inputMocks.buildImagePromptContent,
   }
 })
 
@@ -127,6 +131,11 @@ describe('executeReplTurn', () => {
     hooksMocks.hasHooks.mockReturnValue(false)
     hooksMocks.run.mockResolvedValue({ continue: true })
     inputMocks.expandFileReferences.mockImplementation((prompt: string) => ({ text: prompt, injectedPaths: new Set<string>() }))
+    inputMocks.extractImagePromptInput.mockImplementation((prompt: string) => ({ prompt, imagePaths: [] }))
+    inputMocks.buildImagePromptContent.mockImplementation((prompt: string, imagePaths: string[]) => [
+      { type: 'text', text: prompt },
+      ...imagePaths.map((path) => ({ type: 'image_url' as const, image_url: { url: `data:image/png;base64,${path}` } })),
+    ])
     catalogMocks.getPricingForModel.mockReturnValue([1, 2])
     cognitiveMocks.matchCognitive.mockReturnValue(null)
     cognitiveMocks.formatCognitiveContext.mockReturnValue('cognitive context')
@@ -243,6 +252,32 @@ describe('executeReplTurn', () => {
     const call = options.runProxyTurn.mock.calls[0]?.[0]
     expect(call?.prompt).toContain('Reflect workflow')
     expect(options.emitInlineNotice).toHaveBeenCalledWith('reflect mode engaged.', 'info')
+  })
+
+  it('builds multimodal prompt content for REPL turns with image paths', async () => {
+    inputMocks.extractImagePromptInput.mockReturnValue({
+      prompt: 'compare these screenshots',
+      imagePaths: ['/tmp/shot-a.png', '/tmp/shot-b.png'],
+    })
+    inputMocks.buildImagePromptContent.mockReturnValue([
+      { type: 'text', text: 'compare these screenshots' },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,a' } },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,b' } },
+    ])
+    const options = createOptions()
+
+    await executeReplTurn(options)
+
+    expect(inputMocks.expandFileReferences).toHaveBeenCalledWith('compare these screenshots', '/tmp/project', {
+      skipPaths: ['/tmp/shot-a.png', '/tmp/shot-b.png'],
+    })
+    expect(options.runProxyTurn).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: [
+        { type: 'text', text: 'compare these screenshots' },
+        { type: 'image_url', image_url: { url: 'data:image/png;base64,a' } },
+        { type: 'image_url', image_url: { url: 'data:image/png;base64,b' } },
+      ],
+    }))
   })
 
   it('passes the active session system prompt through the SDK path', async () => {

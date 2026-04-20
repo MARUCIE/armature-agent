@@ -46,6 +46,7 @@ import { preprocessFile } from '../preprocess/index.js'
 import { detectFormat } from '../preprocess/index.js'
 import {
   buildImagePromptContent,
+  extractImagePromptInput,
   splitImageArgsAndPrompt,
 } from './chat-input.js'
 import {
@@ -187,7 +188,12 @@ export function createChatCommand(preset: ChatCommandPreset = {}): Command {
           }
         }
 
-        const imagePrompt = opts.image?.length ? buildImagePromptContent(prompt, opts.image, cwd) : undefined
+        const autoImageInput = !opts.image?.length && resolved.baseURL
+          ? extractImagePromptInput(prompt, cwd)
+          : { prompt, imagePaths: [] }
+        prompt = autoImageInput.prompt
+        const imagePaths = opts.image?.length ? opts.image : autoImageInput.imagePaths
+        const imagePrompt = imagePaths.length ? buildImagePromptContent(prompt, imagePaths, cwd) : undefined
         const oneShotPrompt = imagePrompt ?? prompt
         if (oneShotPrompt) {
           if (imagePrompt && !resolved.baseURL) {
@@ -1437,14 +1443,14 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
   md.flush()
 
   // Append to conversation history
-  history.push({ role: 'user', content: messageContentToText(prompt) })
+  history.push({ role: 'user', content: prompt })
   if (responseText) {
     history.push({ role: 'assistant', content: responseText })
   }
 
   if (outputMode === 'streaming') {
     ensureNewline()
-    const contextChars = history.reduce((sum, m) => sum + m.content.length, 0)
+    const contextChars = history.reduce((sum, m) => sum + messageContentToText(m.content).length, 0)
     printUsageSummary({
       inputTokens,
       outputTokens,

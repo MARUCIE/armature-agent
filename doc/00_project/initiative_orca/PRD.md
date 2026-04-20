@@ -124,3 +124,24 @@ Single-vendor coding CLIs force users into one model family per session. Orca CL
 4. Internalize high-value Hermes runtime behavior where the boundary is clearly CLI/runtime focused.
 5. Turn the current `1280`-test baseline into a tiered breadth/depth expansion program instead of continuing ad hoc suite growth.
 6. Keep the manifest-based eval system canonical so release verification is reproducible instead of ad hoc shell history.
+
+## REPL Multimodal Image Paths (2026-04-20)
+
+### User Problem
+
+- `orca chat --image ...` worked for one-shot prompts, but the interactive REPL could not actually attach local screenshots or multiple images.
+- Dragging or pasting image file paths into the REPL caused them to be treated as plain text or file-expanded blobs, so the model said it could not see the screenshot content.
+
+### Requirements
+
+- Support arbitrary local image paths in normal REPL prompts.
+- Support multiple images in a single turn.
+- Keep quoted paths and shell-escaped spaces working.
+- Preserve the image parts in proxy-path conversation history.
+
+### Acceptance
+
+- REPL image-path turns produce multimodal `PromptContent` on the proxy path.
+- Multiple image paths in one turn are attached together.
+- Text file expansion skips image paths that were promoted to attachments.
+- Full verification passes (`lint`, `test`, `build`, `bench`).

@@ -10,6 +10,11 @@ export interface FileExpansionResult {
   injectedPaths: Set<string>
 }
 
+export interface ExtractedImagePromptInput {
+  prompt: string
+  imagePaths: string[]
+}
+
 const READ_ONLY_GIT_SUBCOMMANDS = new Set([
   'status',
   'log',
@@ -347,10 +352,15 @@ function tryExpandDirectory(prompt: string, home: string, cwd: string): string |
   return `${header}\n\n${parts.join('\n\n')}`
 }
 
-export function expandFileReferences(prompt: string, cwd: string): FileExpansionResult {
+export function expandFileReferences(
+  prompt: string,
+  cwd: string,
+  options?: { skipPaths?: Iterable<string> },
+): FileExpansionResult {
   const home = process.env.HOME || ''
   const trimmed = prompt.trim()
   const injectedPaths = new Set<string>()
+  const skipPaths = new Set(options?.skipPaths ?? [])
 
   const dirExpansion = tryExpandDirectory(trimmed, home, cwd)
   if (dirExpansion) {
@@ -376,6 +386,7 @@ export function expandFileReferences(prompt: string, cwd: string): FileExpansion
   while ((match = FILE_URL_REGEX.exec(prompt)) !== null) {
     const rawFileUrl = `file:///${match[1]!}`
     const filePath = resolveFilePath(rawFileUrl, home, cwd) || rawFileUrl
+    if (skipPaths.has(filePath)) continue
     if (injected.has(filePath)) continue
     const content = tryReadFile(filePath)
     if (content !== null) {
@@ -388,6 +399,7 @@ export function expandFileReferences(prompt: string, cwd: string): FileExpansion
   while ((match = QUOTED_PATH_REGEX.exec(prompt)) !== null) {
     let filePath = match[2]!.trim()
     filePath = resolveFilePath(filePath, home, cwd) || filePath
+    if (skipPaths.has(filePath)) continue
     if (injected.has(filePath)) continue
     const content = tryReadFile(filePath)
     if (content !== null) {
@@ -400,6 +412,7 @@ export function expandFileReferences(prompt: string, cwd: string): FileExpansion
   while ((match = ABSOLUTE_OR_HOME_PATH_REGEX.exec(prompt)) !== null) {
     let filePath = match[1]!.trim()
     filePath = resolveFilePath(filePath, home, cwd) || filePath
+    if (skipPaths.has(filePath)) continue
     if (injected.has(filePath)) continue
     const content = tryReadFile(filePath)
     if (content !== null) {
@@ -411,6 +424,7 @@ export function expandFileReferences(prompt: string, cwd: string): FileExpansion
 
   while ((match = RELATIVE_PATH_REGEX.exec(prompt)) !== null) {
     const filePath = resolveFilePath(match[1]!.trim(), home, cwd) || join(cwd, match[1]!.trim())
+    if (skipPaths.has(filePath)) continue
     if (injected.has(filePath)) continue
     const content = tryReadFile(filePath)
     if (content !== null) {
@@ -488,6 +502,70 @@ export function buildImagePromptContent(prompt: string, imagePaths: string[], cw
   }
 
   return contentParts
+}
+
+function collectImagePromptMatches(prompt: string, cwd: string): Array<{ token: string; resolvedPath: string }> {
+  const home = process.env.HOME || ''
+  const matches: Array<{ token: string; resolvedPath: string }> = []
+  const seen = new Set<string>()
+
+  const addMatch = (token: string, rawPath: string): void => {
+    const resolvedPath = resolveFilePath(rawPath, home, cwd)
+    if (!resolvedPath) return
+    if (!isResolvableImagePath(resolvedPath, cwd)) return
+    if (seen.has(resolvedPath)) return
+    seen.add(resolvedPath)
+    matches.push({ token, resolvedPath })
+  }
+
+  const trimmed = prompt.trim()
+  const standalonePath = resolveFilePath(trimmed, home, cwd)
+  if (standalonePath && isStandalonePathPrompt(trimmed) && isResolvableImagePath(standalonePath, cwd)) {
+    addMatch(trimmed, trimmed)
+    return matches
+  }
+
+  let match: RegExpExecArray | null
+
+  FILE_URL_REGEX.lastIndex = 0
+  while ((match = FILE_URL_REGEX.exec(prompt)) !== null) {
+    addMatch(match[0], match[0])
+  }
+
+  QUOTED_PATH_REGEX.lastIndex = 0
+  while ((match = QUOTED_PATH_REGEX.exec(prompt)) !== null) {
+    addMatch(match[0]!.trim(), match[2]!)
+  }
+
+  ABSOLUTE_OR_HOME_PATH_REGEX.lastIndex = 0
+  while ((match = ABSOLUTE_OR_HOME_PATH_REGEX.exec(prompt)) !== null) {
+    addMatch(match[1]!, match[1]!)
+  }
+
+  RELATIVE_PATH_REGEX.lastIndex = 0
+  while ((match = RELATIVE_PATH_REGEX.exec(prompt)) !== null) {
+    addMatch(match[1]!, match[1]!)
+  }
+
+  return matches
+}
+
+export function extractImagePromptInput(prompt: string, cwd: string): ExtractedImagePromptInput {
+  const matches = collectImagePromptMatches(prompt, cwd)
+  if (matches.length === 0) {
+    return { prompt, imagePaths: [] }
+  }
+
+  let cleanedPrompt = prompt
+  for (const token of matches.map((entry) => entry.token).sort((a, b) => b.length - a.length)) {
+    cleanedPrompt = cleanedPrompt.split(token).join(' ')
+  }
+  const normalizedPrompt = cleanedPrompt.replace(/\s+/g, ' ').trim()
+
+  return {
+    prompt: normalizedPrompt || 'Analyze these images.',
+    imagePaths: matches.map((entry) => entry.resolvedPath),
+  }
 }
 
 function isResolvableImagePath(rawPath: string, cwd: string): boolean {

@@ -507,3 +507,35 @@ Internalize the first Hermes-inspired runtime capability bundle into Orca CLI an
 - Legacy flat docs in `doc/` still exist and may need deliberate migration or cross-link maintenance
 - Runtime code changed only in the `git_commit` stderr-handling path, and that path is now covered by both targeted and full-suite verification
 - No known blocking issues remain from this Hermes-internalization branch
+
+## 2026-04-20 · REPL Multimodal Image Paths（Completed）
+
+### Delivered
+
+- `src/commands/chat-input.ts`
+- `src/commands/chat-repl-turn.ts`
+- `src/commands/chat.ts`
+- `tests/chat-image-option.test.ts`
+- `tests/chat-repl-turn.test.ts`
+- `tests/chat-internals.test.ts`
+- `README.md`
+
+### Outcome
+
+- `orca chat` REPL now accepts arbitrary local image paths directly in the prompt text on the proxy path.
+- Multiple images in one turn are converted into multimodal `PromptContent` instead of being file-expanded as text.
+- Quoted paths and shell-escaped spaces are supported.
+- Proxy-turn history now preserves multimodal user content, so follow-up turns can still refer to the attached images.
+
+### Not Built
+
+- Clipboard bitmap paste / direct image paste into the ink REPL is still out of scope.
+- Native SDK path still does not support multimodal content; images require the existing proxy-provider path.
+
+### Verification
+
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-image-option.test.ts tests/chat-repl-turn.test.ts tests/chat-internals.test.ts tests/openai-compat-multimodal.test.ts tests/context-protection.test.ts`
+- `npm run lint`
+- `npm test` => `1371/1371`
+- `npm run build`
+- `npm run bench` => `10/10`, `100%`

@@ -39,6 +39,20 @@ Keep Orca CLI maintainable as a fast-moving CLI runtime while preventing drift a
 7. Keep release evidence under `agent-eval/runs/<run_id>/` so build / bench / black-box / CLI journey data stay reviewable after the terminal session ends.
 8. Keep reflect heuristics conservative, deduped, and documented so prompt-intent routing stays helpful rather than noisy.
 
+## REPL Multimodal Completion (2026-04-20)
+
+### Completed
+| ID | Change | Impact | Status |
+|----|--------|--------|--------|
+| MM-R1 | Detect embedded image paths in REPL prompts | screenshots can be attached without `--image` | DONE |
+| MM-R2 | Support multiple image attachments in a single turn | compare/reference multi-image workflows now work in REPL | DONE |
+| MM-R3 | Preserve multimodal user turns in proxy history | follow-up questions can still reference the attached images | DONE |
+
+### Remaining
+| Risk | Current State | Mitigation |
+|------|---------------|------------|
+| Clipboard image paste | still unsupported in ink REPL | user must reference local image files for now |
+
 ## Guardrails
 
 - No backward-compatibility shims for obsolete surfaces

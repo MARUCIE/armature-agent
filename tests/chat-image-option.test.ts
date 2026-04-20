@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { buildImagePromptContent, splitImageArgsAndPrompt } from '../src/commands/chat-input.js'
+import { buildImagePromptContent, extractImagePromptInput, splitImageArgsAndPrompt } from '../src/commands/chat-input.js'
 
 const TMP_DIR = join(tmpdir(), `orca-chat-image-${Date.now()}`)
 
@@ -50,5 +50,27 @@ describe('chat --image helper', () => {
     const parsed = splitImageArgsAndPrompt(['describe', 'the', 'issue'], [imageA], TMP_DIR)
     expect(parsed.imagePaths).toEqual([imageA])
     expect(parsed.prompt).toBe('describe the issue')
+  })
+
+  it('extracts embedded image references with mixed quoting styles', () => {
+    const imageA = join(TMP_DIR, 'screen-d.png')
+    const imageB = join(TMP_DIR, 'screen e.png')
+    writeFileSync(imageA, Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+    writeFileSync(imageB, Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+
+    const parsed = extractImagePromptInput(`compare "${imageA}" ${imageB.replace(/ /g, '\\ ')}`, TMP_DIR)
+    expect(parsed.imagePaths).toEqual([imageA, imageB])
+    expect(parsed.prompt).toContain('compare')
+  })
+
+  it('defaults the prompt when only image paths are provided in text', () => {
+    const imageA = join(TMP_DIR, 'screen-f.png')
+    const imageB = join(TMP_DIR, 'screen-g.png')
+    writeFileSync(imageA, Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+    writeFileSync(imageB, Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+
+    const parsed = extractImagePromptInput(`"${imageA}" "${imageB}"`, TMP_DIR)
+    expect(parsed.imagePaths).toEqual([imageA, imageB])
+    expect(parsed.prompt).toBe('Analyze these images.')
   })
 })

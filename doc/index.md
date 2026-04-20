@@ -46,3 +46,4 @@ This file is the canonical path index for the `Orca CLI` repository.
 
 - This repository is a CLI product. It has command surfaces rather than web routes.
 - Use `USER_EXPERIENCE_MAP.md` for command-entry and user-flow mapping.
+- 2026-04-20: REPL now supports multimodal local image-path turns on the proxy path; direct clipboard bitmap paste remains unsupported.

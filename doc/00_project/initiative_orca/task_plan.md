@@ -323,3 +323,24 @@
 - `vitest run tests/doctor-command.test.ts tests/logger.test.ts tests/logs-command.test.ts tests/program.test.ts` ✅ (`14/14`)
 - `vitest run tests/serve-command.test.ts` ✅ (`1/1`)
 - `vitest run tests/stats-command.test.ts` ✅ (`1/1`)
+
+## Current Task
+
+- Task: Support arbitrary local images and multi-image input in the REPL
+- Status: completed
+- Completed: 2026-04-20
+
+## Plan
+
+1. Reuse the existing proxy multimodal path instead of inventing a second image transport.
+2. Detect embedded local image paths in REPL input, including quoted paths and shell-escaped spaces.
+3. Keep text file expansion and image attachment logic separate so images stop being injected as `<file>` text blobs.
+4. Preserve multimodal user turns in proxy-path history for follow-up questions.
+5. Update README and canonical project docs, then run `lint`, `test`, `build`, and `bench`.
+
+## Exit Criteria
+
+- REPL accepts one or more local image paths in normal prompts.
+- Multiple images in a single turn produce multimodal `PromptContent`.
+- Proxy-path history keeps the image parts for follow-up turns.
+- Verification evidence logged in `deliverable.md`.

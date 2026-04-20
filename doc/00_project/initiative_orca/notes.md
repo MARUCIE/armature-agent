@@ -920,3 +920,22 @@
     - reachable local endpoint
     - refused connection
     - timeout
+
+## 2026-04-20 10:56 CST
+
+- REPL multimodal follow-up landed:
+  - embedded local image paths now resolve into multimodal prompt parts on the proxy path
+  - supports multiple images in one prompt
+  - supports quoted paths and shell-escaped spaces
+  - text file expansion now skips the image paths that were promoted to attachments
+  - proxy history now keeps the original multimodal user content instead of flattening it to `[image:...]`
+- explicit non-goal for this round:
+  - clipboard / direct pasted bitmap support in the ink REPL is still not implemented
+- verification:
+  - targeted:
+    - `vitest run tests/chat-image-option.test.ts tests/chat-repl-turn.test.ts tests/chat-internals.test.ts tests/openai-compat-multimodal.test.ts tests/context-protection.test.ts`
+  - full:
+    - `npm run lint`
+    - `npm test`
+    - `npm run build`
+    - `npm run bench`

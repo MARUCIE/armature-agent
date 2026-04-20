@@ -9,11 +9,11 @@ import type { ChatMessage, PromptContent } from '../providers/openai-compat.js'
 import { RetryTracker } from '../retry-intelligence.js'
 import { TokenBudgetManager } from '../token-budget.js'
 import { autoSaveSession } from './chat-support.js'
-import { expandFileReferences } from './chat-input.js'
+import { buildImagePromptContent, expandFileReferences, extractImagePromptInput } from './chat-input.js'
 import { matchCognitive, formatCognitiveContext } from '../cognitive-skeleton.js'
 import { isMultiTaskPrompt } from '../planner/index.js'
 import type { ChatSessionEmitter } from '../ui/session.js'
-import { detectReflectIntent, prepareReflectPromptTextForReason } from './reflect-mode.js'
+import { detectReflectIntent, prepareReflectPromptContent } from './reflect-mode.js'
 import { ResetSensitiveWaitCanceledError } from './chat-proxy-tool-call.js'
 
 type PermMode = 'yolo' | 'auto' | 'plan'
@@ -120,6 +120,7 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
     runSDKQuery,
   } = options
   let messageToSend = options.messageToSend
+  let turnPrompt: PromptContent = messageToSend
 
   if (isMultiTaskPrompt(messageToSend) && !messageToSend.startsWith('/')) {
     const taskCount = messageToSend.split(/\n\s*\d+\.\s+|\n\s*[-*]\s+|[；;]/).filter((segment) => segment.trim().length > 5).length
@@ -135,17 +136,33 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
   }
 
   const reflectReason = forceReflect ? 'manual' : autoTriggerReflect ? detectReflectIntent(messageToSend) : null
+  const extractedImages = resolved.baseURL
+    ? extractImagePromptInput(messageToSend, cwd)
+    : { prompt: messageToSend, imagePaths: [] }
 
-  const expansion = expandFileReferences(messageToSend, cwd)
+  const expansion = expandFileReferences(extractedImages.prompt, cwd, {
+    skipPaths: extractedImages.imagePaths,
+  })
   if (expansion.text !== messageToSend) {
     messageToSend = expansion.text
     for (const injectedPath of expansion.injectedPaths) sessionInjectedPaths.add(injectedPath)
     process.stderr.write(`\x1b[90m  [file-expand] injected ${expansion.injectedPaths.size} file(s) into prompt\x1b[0m\n`)
   }
+  turnPrompt = extractedImages.imagePaths.length > 0
+    ? buildImagePromptContent(messageToSend, extractedImages.imagePaths, cwd)
+    : messageToSend
 
-  const reflectPreparation = prepareReflectPromptTextForReason(messageToSend, reflectReason)
-  if (reflectPreparation.applied && typeof reflectPreparation.prompt === 'string') {
-    messageToSend = reflectPreparation.prompt
+  const reflectPreparation = reflectReason
+    ? prepareReflectPromptContent(turnPrompt, {
+        force: reflectReason === 'manual',
+        allowAuto: reflectReason !== 'manual',
+      })
+    : { prompt: turnPrompt, applied: false, reason: null, notice: null }
+  if (reflectPreparation.applied) {
+    turnPrompt = reflectPreparation.prompt
+    messageToSend = typeof reflectPreparation.prompt === 'string'
+      ? reflectPreparation.prompt
+      : messageContentToText(reflectPreparation.prompt)
     if (reflectPreparation.notice) {
       emitInlineNotice(reflectPreparation.notice, 'info')
     }
@@ -198,7 +215,7 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
   try {
     if (resolved.baseURL && !abortController.signal.aborted) {
       const result = await runProxyTurn({
-        prompt: messageToSend,
+        prompt: turnPrompt,
         resolved,
         config,
         outputMode,
@@ -279,7 +296,7 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
       if (progress) progress.stop()
       const activeSystemPrompt = buildSessionSystemPrompt(history)
       const result = await runSDKQuery({
-        prompt: messageToSend,
+        prompt: turnPrompt,
         resolved,
         config: activeSystemPrompt ? { ...config, systemPrompt: activeSystemPrompt } : config,
         outputMode,
@@ -292,7 +309,7 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
       stats.turnTokens.push(result.outputTokens)
       tokenBudget.recordUsage(result.inputTokens, result.outputTokens)
       contextMonitor.recordUsage(result.inputTokens, result.outputTokens)
-      history.push({ role: 'user', content: messageToSend })
+      history.push({ role: 'user', content: turnPrompt })
       if (result.text) {
         history.push({ role: 'assistant', content: result.text })
       }
@@ -339,7 +356,7 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
     if (!abortController.signal.aborted) {
       await handleTurnFailure({
         error,
-        messageToSend,
+        promptToSend: turnPrompt,
         resolved,
         currentModel,
         history,
@@ -412,7 +429,7 @@ function applyPreSendCompaction(
 
 async function handleTurnFailure(options: {
   error: unknown
-  messageToSend: string
+  promptToSend: PromptContent
   resolved: ReplTurnResolvedProviderBase
   currentModel: string
   history: ChatMessage[]
@@ -420,7 +437,7 @@ async function handleTurnFailure(options: {
   tokenBudget: TokenBudgetManager
   contextMonitor: ContextMonitor
 }): Promise<void> {
-  const { error, messageToSend, resolved, currentModel, history, stats, tokenBudget, contextMonitor } = options
+  const { error, promptToSend, resolved, currentModel, history, stats, tokenBudget, contextMonitor } = options
   const errorMessage = error instanceof Error ? error.message : String(error)
   const errorStatus = (error as { status?: number; statusCode?: number })?.status
     ?? (error as { status?: number; statusCode?: number })?.statusCode
@@ -440,7 +457,7 @@ async function handleTurnFailure(options: {
         const sysPrompt = buildSessionSystemPrompt(history)
         const retryResult = await chatOnce(
           { apiKey: resolved.apiKey, baseURL: resolved.baseURL, model: currentModel, systemPrompt: sysPrompt, headers: resolved.headers },
-          messageToSend,
+          promptToSend,
         )
         process.stdout.write(retryResult.text)
         process.stdout.write('\n')
@@ -450,7 +467,7 @@ async function handleTurnFailure(options: {
         stats.turnTokens.push(retryResult.outputTokens)
         tokenBudget.recordUsage(retryResult.inputTokens, retryResult.outputTokens)
         contextMonitor.recordUsage(retryResult.inputTokens, retryResult.outputTokens)
-        history.push({ role: 'user', content: messageToSend })
+        history.push({ role: 'user', content: promptToSend })
         history.push({ role: 'assistant', content: retryResult.text })
       } catch (retryError) {
         printError(`Retry failed: ${retryError instanceof Error ? retryError.message : String(retryError)}`)

@@ -138,3 +138,18 @@ flowchart TD
 - `doc/THREE_TIER_ARCHITECTURE.md`: historical broader ecosystem architecture
 - `doc/MULTI_MODEL_COLLABORATION.md`: early collaboration-mode design
 - `doc/SOTA_TEST_PLAN.md`: historical hardening plan
+
+## REPL Multimodal Prompt Assembly (2026-04-20)
+
+- `src/commands/chat-input.ts`
+  - now extracts embedded local image references from prompt text
+  - keeps image-path detection separate from generic file expansion
+- `src/commands/chat-repl-turn.ts`
+  - assembles REPL turns into multimodal `PromptContent` before proxy dispatch
+  - keeps auto-reflect intent bound to the original user text, not expanded file content
+- `src/commands/chat.ts`
+  - proxy history now stores the original multimodal user turn instead of flattening it immediately
+
+Architectural invariant:
+
+- image attachments are only promoted on the proxy-provider path; SDK/native path remains text-only
