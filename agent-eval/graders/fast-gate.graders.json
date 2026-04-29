@@ -677,6 +677,30 @@
     "source": "stdout"
   },
   {
+    "id": "serve_work_sessions_has_demo_id",
+    "type": "regex",
+    "pattern": "\"id\":\"ws-demo\"",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_work_sessions_has_task_run",
+    "type": "regex",
+    "pattern": "\"latestTaskRunId\":\"tr-demo\"",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_task_runs_has_demo_id",
+    "type": "regex",
+    "pattern": "\"id\":\"tr-demo\"",
+    "source": "stdout"
+  },
+  {
+    "id": "serve_task_run_detail_has_work_session",
+    "type": "regex",
+    "pattern": "\"workSessionId\":\"ws-demo\"",
+    "source": "stdout"
+  },
+  {
     "id": "serve_chat_errors_has_missing_prompt_status",
     "type": "regex",
     "pattern": "missing-status=400",

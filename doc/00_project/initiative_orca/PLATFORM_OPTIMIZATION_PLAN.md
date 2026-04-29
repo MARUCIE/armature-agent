@@ -23,7 +23,8 @@ The next platform wave is now explicitly ordered:
 6. Release evidence:
    - `verification_snapshot.json` plus `tests/release-evidence.test.ts` now guards README and active PDCA verification counts
 7. Gate integrity:
-   - align CI with declared matrix/security/performance/eval gates
+   - CI now runs matrix sync, static, security, performance, and fast agent-eval gates
+   - `agent-eval/manifests/test-matrix.json` is the manifest source for package entrypoints
 
 ## Objective
 

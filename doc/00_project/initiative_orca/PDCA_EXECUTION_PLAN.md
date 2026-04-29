@@ -13,6 +13,7 @@
   - `serve /chat` canonical `WorkSession` / `TaskRun` records
   - shared slash-command registry for REPL completion, Ink picker, and `/help`, with HomePanel hint metadata prepared for a later UI-baseline split
   - release evidence snapshot guard for README and active PDCA docs
+  - CI gate integrity job for matrix sync, static, security, performance, and fast agent-eval gates
 - Check evidence:
   - `npm run lint`
   - `npm run build`
@@ -20,10 +21,16 @@
   - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests
   - `npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx` -> `98` tests
   - `npm test -- tests/release-evidence.test.ts` -> `3` tests
+  - `npm run test:matrix:sync`
+  - `npm run test:static`
+  - `npm run test:security`
+  - `npm run test:performance`
+  - `npm run test:ai-eval-fast`
+  - gate evidence: `outputs/test-matrix/run-20260429-060205`, `run-20260429-060222`, `run-20260429-060232`, `run-20260429-060243`
 - Act queue:
   - complete unified execution contract for remaining chat/mission/planner paths
   - Ink evidence side panel and approvals timeline
-  - CI gate integrity
+  - remaining unified execution contract for chat/mission/planner
 
 ## Plan
 

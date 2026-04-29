@@ -61,6 +61,7 @@
     "fast-doctor-human-config-issue",
     "fast-serve-health",
     "fast-serve-metadata",
+    "fast-serve-continuity",
     "fast-serve-chat-errors",
     "fast-serve-chat-stream-local-success",
     "fast-serve-chat-json-local-success",

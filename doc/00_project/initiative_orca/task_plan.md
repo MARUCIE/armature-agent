@@ -16,7 +16,7 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 | M3 Evidence console | Make review-before-apply inspectable | Partial | `orca queue evidence` opens TaskRun logs/diffs/artifacts with metadata and previews; deeper Ink side-panel integration remains |
 | M3b Slash command surface | Keep command discovery surfaces aligned | Core Done | `src/slash-commands.ts` feeds REPL completion, Ink picker, and `/help`; HomePanel metadata is prepared but the consumer is blocked by the unstaged UI baseline |
 | M3c Release evidence snapshot | Keep README and active PDCA docs aligned to real verification counts | Done | `verification_snapshot.json` plus `tests/release-evidence.test.ts` guard version, README, test files, and active docs |
-| M4 Gate integrity | Make CI enforce documented gates | Pending | Matrix/security/performance/eval checks run in CI |
+| M4 Gate integrity | Make CI enforce documented gates | Done | CI runs matrix sync, static, security, performance, and fast agent-eval gates |
 | M5 Model catalog SSoT | Eliminate model metadata drift | Pending | Runtime, picker, docs, and tests use one catalog |
 
 ### Atomic Task Queue
@@ -34,7 +34,7 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 | ORCA-SWARM-009 | P1 | Add TaskRun evidence drawer in TUI | Done |
 | ORCA-SWARM-010 | P1 | Centralize slash-command registry | Core Done |
 | ORCA-SWARM-011 | P2 | Align README/doc test counts to current suite evidence | Done |
-| ORCA-SWARM-012 | P2 | Add CI matrix/security/performance/eval gate enforcement | Pending |
+| ORCA-SWARM-012 | P2 | Add CI matrix/security/performance/eval gate enforcement | Done |
 
 ### First Tranche Verification
 
@@ -48,12 +48,21 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 - `queue evidence` drawer regression -> `11` tests passed across `2` files.
 - `slash command registry` regression -> `98` tests passed across `3` files.
 - `release evidence` regression -> `3` tests passed across `1` file.
+- `gate integrity` regression -> `69` tests passed across manifest, matrix runner, sync, release-evidence, and hook system-message guards.
+- `test:matrix:sync` -> pass.
+- `test:static` -> `outputs/test-matrix/run-20260429-060205/matrix.md`.
+- `test:security` -> `outputs/test-matrix/run-20260429-060222/matrix.md`.
+- `test:performance` -> `outputs/test-matrix/run-20260429-060232/matrix.md`.
+- `test:ai-eval-fast` -> `outputs/test-matrix/run-20260429-060243/matrix.md`.
+- Final `npm run lint && npm run build && npm test` -> `1609` tests passed across `88` files.
 - Final `npm test` -> `1609` tests passed across `88` files.
-- `node dist/bin/orca.js --version` -> `0.8.7`.
+- `node dist/bin/orca.js --version` -> `0.8.8`.
+- CI gate job now runs `test:matrix:sync`, `test:static`, `test:security`, `test:performance`, and `test:ai-eval-fast` after the Node matrix passes.
 - `node dist/bin/orca.js queue takeover <fixture-task-run> --holder smoke --ttl 30s` -> acquired a TaskRun lease.
 - `orca queue evidence <task-run-id>` shows typed evidence entries, absolute paths, size, update time, missing-file state, and capped tail previews.
 - Slash-command registry now feeds REPL completion, Ink command picker, and `/help`; it also exposes HomePanel command descriptions for the pending UI-baseline split.
 - `verification_snapshot.json` is now the active source of truth for package version, test file count, and full-suite test count in README and active PDCA docs.
+- `agent-eval/manifests/test-matrix.json` is now the active source of truth for layered test entrypoints; `sync-test-matrix.py --check` guards `package.json` and the generated entrypoint snippet.
 
 ### Report
 

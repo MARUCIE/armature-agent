@@ -1,4 +1,4 @@
-name: CI — Tests + Benchmark
+name: CI - Tests + Gate Integrity
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: Test Suite (321 tests)
+    name: Build + Vitest (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -26,14 +26,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Typecheck
+        run: npm run lint
+
       - name: TypeScript build
         run: npm run build
 
       - name: Run test suite
         run: npm test
 
-  bench:
-    name: Benchmark (SOTA Gate)
+  gate-integrity:
+    name: Matrix / Security / Performance / Eval Gates
     runs-on: ubuntu-latest
     needs: test
 
@@ -49,21 +52,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        run: npm run build
+      - name: Verify matrix entrypoints
+        run: npm run test:matrix:sync
 
-      - name: Run forge bench
-        run: node dist/bin/forge.js bench --json
+      - name: Static gate
+        run: npm run test:static
 
-      - name: Verify SOTA score
-        run: |
-          SCORE=$(node dist/bin/forge.js bench --json 2>/dev/null | node -e "
-            let data = '';
-            process.stdin.on('data', d => data += d);
-            process.stdin.on('end', () => {
-              const result = JSON.parse(data);
-              console.log(result.score);
-              process.exit(result.score === 100 ? 0 : 1);
-            });
-          ")
-          echo "Benchmark score: ${SCORE}%"
+      - name: Security gate
+        run: npm run test:security
+
+      - name: Performance gate
+        run: npm run test:performance
+
+      - name: Fast agent-eval gate
+        run: npm run test:ai-eval-fast

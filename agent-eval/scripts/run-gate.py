@@ -7,7 +7,7 @@ import os
 import re
 import subprocess
 import time
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
@@ -16,7 +16,7 @@ VAR_PATTERN = re.compile(r"\$(?:\{(?P<braced>[A-Za-z_][A-Za-z0-9_]*)\}|(?P<plain
 
 
 def now_utc_compact() -> str:
-    return datetime.now(UTC).strftime("%Y%m%d-%H%M%S-%f")
+    return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-%f")
 
 
 def rel_to_project(project_dir: Path, path: Path) -> str:
@@ -56,7 +56,7 @@ def acquire_gate_lock(lock_path: Path, run_id: str, manifest_id: str) -> None:
             "pid": os.getpid(),
             "run_id": run_id,
             "manifest": manifest_id,
-            "started_at": datetime.now(UTC).isoformat(),
+            "started_at": datetime.now(timezone.utc).isoformat(),
         },
         ensure_ascii=False,
         indent=2,

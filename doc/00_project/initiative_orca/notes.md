@@ -1,5 +1,30 @@
 # Notes
 
+## 2026-04-29 - CI gate integrity PDCA continuation
+
+Context:
+
+- User said `继续` after the release evidence snapshot commit, so execution continued with ORCA-SWARM-012.
+- The docs and package scripts advertised matrix, security, performance, and eval gates, while CI still ran only the narrower build/test path plus a stale benchmark command.
+- The current boundary is gate enforcement and manifest synchronization, not broad feature work in the dirty UI/permissions/evolution baseline.
+
+PDCA executed:
+
+- Plan: use `agent-eval/manifests/test-matrix.json` as the single source for matrix layers, wire package scripts through a sync checker, and make CI run the documented high-signal rows.
+- Do: add the `gate-integrity` CI job, matrix runner, sync checker, generated entrypoint snippet, lightweight secret/license helpers, and fast serve-continuity eval task. Also remove the full-suite flaky global stderr spy from the hook system-message regression by injecting a local writer.
+- Check:
+  - `npm run test:matrix:sync` -> pass.
+  - Clean staged-index `npm run test:matrix:sync` -> pass.
+  - Clean staged-index `npm test -- tests/agent-eval-manifests.test.ts tests/test-matrix-runner.test.ts tests/test-matrix-sync.test.ts tests/release-evidence.test.ts` -> `22` tests passed.
+  - `npm run test:unit` -> `outputs/test-matrix/run-20260429-061427/matrix.md`.
+  - `npm test -- tests/v050-modules.test.ts tests/agent-eval-manifests.test.ts tests/test-matrix-runner.test.ts tests/test-matrix-sync.test.ts tests/release-evidence.test.ts` -> `69` tests passed.
+  - `npm run test:static` -> `outputs/test-matrix/run-20260429-060205/matrix.md`.
+  - `npm run test:security` -> `outputs/test-matrix/run-20260429-060222/matrix.md`.
+  - `npm run test:performance` -> `outputs/test-matrix/run-20260429-060232/matrix.md`.
+  - `npm run test:ai-eval-fast` -> `outputs/test-matrix/run-20260429-060243/matrix.md`.
+  - `npm run lint && npm run build && npm test` -> `88` files / `1609` tests passed.
+- Act: next queue returns to unified execution contract and Ink evidence UX after CI enforcement is committed.
+
 ## 2026-04-29 - Release evidence snapshot PDCA continuation
 
 Context:

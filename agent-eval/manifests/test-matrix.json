@@ -1,0 +1,137 @@
+{
+  "id": "test-matrix",
+  "title": "Orca CLI layered test matrix",
+  "layers": [
+    {
+      "id": "static",
+      "script": "test:static",
+      "label": "Static",
+      "steps": [
+        { "argv": ["npm", "run", "lint"] },
+        { "argv": ["npm", "run", "build"] },
+        { "argv": ["npm", "ls", "--depth=0"] },
+        { "argv": ["python3", "agent-eval/scripts/run-secret-scan.py"] },
+        { "argv": ["python3", "agent-eval/scripts/collect-license-inventory.py"] }
+      ],
+      "threshold": "All configured static checks exit 0",
+      "status_if_ok": "partial-pass",
+      "owner": "Maintainer / release gate"
+    },
+    {
+      "id": "unit",
+      "script": "test:unit",
+      "label": "Unit",
+      "steps": [
+        {
+          "argv": ["node", "--experimental-vm-modules", "node_modules/.bin/vitest", "run", "tests/config.test.ts", "tests/model-catalog.test.ts", "tests/output.test.ts", "tests/command-picker.test.ts"],
+          "env": {
+            "ANTHROPIC_API_KEY": "",
+            "CLOUDFLARE_ACCOUNT_ID": "",
+            "CLOUDFLARE_AI_GATEWAY_API_KEY": "",
+            "CLOUDFLARE_AI_GATEWAY_BASE_URL": "",
+            "CLOUDFLARE_AI_GATEWAY_ID": "",
+            "COPILOT_API_KEY": "",
+            "GEMINI_API_KEY": "",
+            "GH_TOKEN": "",
+            "GOOGLE_AI_STUDIO_KEY": "",
+            "GOOGLE_API_KEY": "",
+            "OPENAI_API_KEY": "",
+            "OPENROUTER_API_KEY": "",
+            "POE_API_KEY": "",
+            "XAI_API_KEY": "",
+            "ZENMUX_API_KEY": ""
+          }
+        }
+      ],
+      "threshold": "0 failed tests",
+      "status_if_ok": "pass",
+      "owner": "Core runtime"
+    },
+    {
+      "id": "contract",
+      "script": "test:contract",
+      "label": "Contract",
+      "steps": [
+        { "argv": ["node", "--experimental-vm-modules", "node_modules/.bin/vitest", "run", "tests/protocol.test.ts", "tests/command-contracts.test.ts", "tests/agent-eval-manifests.test.ts", "tests/serve-command.test.ts"] }
+      ],
+      "threshold": "0 failed tests",
+      "status_if_ok": "pass",
+      "owner": "CLI / public surface"
+    },
+    {
+      "id": "integration",
+      "script": "test:integration",
+      "label": "Integration",
+      "steps": [
+        { "argv": ["node", "--experimental-vm-modules", "node_modules/.bin/vitest", "run", "tests/integration.test.ts", "tests/session-command.test.ts", "tests/providers-command.test.ts", "tests/mcp-client.test.ts"] }
+      ],
+      "threshold": "0 failed tests",
+      "status_if_ok": "pass",
+      "owner": "Runtime + storage"
+    },
+    {
+      "id": "e2e",
+      "script": "test:e2e",
+      "label": "E2E",
+      "steps": [
+        { "argv": ["node", "--experimental-vm-modules", "node_modules/.bin/vitest", "run", "tests/e2e-workflow.test.ts", "tests/complex-scenarios.test.ts", "tests/mission.test.ts"] }
+      ],
+      "threshold": "0 failed tests",
+      "status_if_ok": "pass",
+      "owner": "Operator workflow"
+    },
+    {
+      "id": "security",
+      "script": "test:security",
+      "label": "Security",
+      "steps": [
+        { "argv": ["node", "--experimental-vm-modules", "node_modules/.bin/vitest", "run", "tests/adversarial.test.ts", "tests/context-protection.test.ts", "tests/chat-proxy-tool-call.test.ts", "tests/permissions-command.test.ts"] },
+        { "argv": ["npm", "audit", "--omit=dev", "--json"] }
+      ],
+      "threshold": "0 failed tests and 0 prod audit vulnerabilities",
+      "status_if_ok": "partial-pass",
+      "owner": "Security gate"
+    },
+    {
+      "id": "performance",
+      "script": "test:performance",
+      "label": "Performance",
+      "steps": [
+        { "argv": ["npm", "run", "build"] },
+        { "argv": ["node", "dist/bin/orca.js", "bench", "--json"] },
+        { "argv": ["node", "--experimental-vm-modules", "node_modules/.bin/vitest", "run", "tests/bench.test.ts"] }
+      ],
+      "threshold": "bench score=100 and 0 failed tests",
+      "status_if_ok": "partial-pass",
+      "owner": "Bench / release gate"
+    },
+    {
+      "id": "resilience",
+      "script": "test:resilience",
+      "label": "Resilience",
+      "steps": [
+        { "argv": ["node", "--experimental-vm-modules", "node_modules/.bin/vitest", "run", "tests/provider-stream-resilience.test.ts", "tests/agent-loop.test.ts", "tests/hermes-runtime.test.ts", "tests/chat-repl-turn.test.ts"] }
+      ],
+      "threshold": "0 failed tests",
+      "status_if_ok": "pass",
+      "owner": "Runtime recovery"
+    },
+    {
+      "id": "ai-eval",
+      "script": "test:ai-eval-fast",
+      "label": "AI Eval",
+      "steps": [
+        { "argv": ["npm", "run", "eval:fast"] }
+      ],
+      "threshold": "fast gate summary ok=true",
+      "status_if_ok": "pass",
+      "owner": "agent-eval gate"
+    }
+  ],
+  "gaps": [
+    "Static: formatter / dead-code / license-policy gates are still separate gaps.",
+    "Security: no dedicated SAST / DAST / IaC / ASVS smoke harness yet.",
+    "Performance: no p95 / throughput / memory budget harness yet.",
+    "AI Eval: this runner only executes the fast gate; nightly/release stay separate release lanes."
+  ]
+}

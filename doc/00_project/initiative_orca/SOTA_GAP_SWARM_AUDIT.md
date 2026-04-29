@@ -138,7 +138,7 @@ PDCA action executed:
 
 ### High - CI gate claims are broader than enforced gates
 
-`package.json` exposes `test:static`, `test:security`, `test:performance`, `test:matrix`, and eval gates, but CI currently runs a narrower subset.
+Earlier, `package.json` exposed `test:static`, `test:security`, `test:performance`, `test:matrix`, and eval gates while CI ran a narrower subset.
 
 Evidence:
 
@@ -149,8 +149,11 @@ Evidence:
 
 Atomic follow-up:
 
-- Add a gate-integrity CI job that runs matrix sync, static/security/performance rows, and at least the fast eval gate.
-- Convert existence/keyword checks into behavior assertions where possible.
+PDCA action executed:
+
+- Replaced the stale benchmark-only CI job with a `gate-integrity` job that runs matrix sync, static, security, performance, and fast agent-eval gates.
+- Added `agent-eval/manifests/test-matrix.json` plus a repo-owned runner and sync checker so package scripts and generated entrypoints stay aligned with the manifest.
+- Added matrix runner and sync tests that cover package script wiring, safe manifest execution, path traversal rejection, generated entrypoints, and helper script presence.
 
 ### Medium - Slash-command discovery could drift across UI surfaces
 
@@ -182,7 +185,7 @@ PDCA action executed:
 | M3 Evidence Console | Review-before-apply becomes inspectable | Partial: CLI evidence drawer shows TaskRun logs/diffs/artifacts; Ink side panel and approvals timeline remain |
 | M3b Slash Command Surface | Command discovery cannot drift across REPL and Ink | Shared registry feeds completion, picker, and `/help`; HomePanel metadata is prepared but not staged into the dirty UI baseline |
 | M3c Release Evidence Snapshot | README/doc verification evidence cannot silently drift | Snapshot and release-evidence test guard README plus active PDCA docs |
-| M4 Gate Integrity | CI enforces documented gates | CI runs declared matrix/security/performance/eval gates or explicitly marks deferred rows |
+| M4 Gate Integrity | CI enforces documented gates | CI runs matrix sync, static, security, performance, and fast agent-eval gates |
 | M5 Model Catalog SSoT | Provider routing metadata stops drifting | One model catalog powers runtime, docs, picker, and tests |
 
 ## Atomic Task Queue
@@ -200,7 +203,7 @@ PDCA action executed:
 | ORCA-SWARM-009 | P1 | Add evidence drawer for TaskRun logs/diffs/artifacts | UX | done |
 | ORCA-SWARM-010 | P1 | Centralize slash-command registry so HomePanel/completer/TUI cannot drift | UX | core done |
 | ORCA-SWARM-011 | P2 | Align README/doc test counts to current suite evidence | docs | done |
-| ORCA-SWARM-012 | P2 | Add CI matrix/security/performance/eval enforcement | verification | pending |
+| ORCA-SWARM-012 | P2 | Add CI matrix/security/performance/eval enforcement | verification | done |
 
 ## PDCA Execution Log
 
@@ -239,7 +242,9 @@ Verification executed:
 - `npm run lint` -> pass
 - `npm run build` -> pass
 - Final `npm test` -> `88` files / `1609` tests passed
-- `node dist/bin/orca.js --version` -> `0.8.7`
+- Gate integrity targeted tests cover manifest/script/sync behavior.
+- CI now executes `test:matrix:sync`, `test:static`, `test:security`, `test:performance`, and `test:ai-eval-fast`.
+- `node dist/bin/orca.js --version` -> `0.8.8`
 - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed
 - Clean staged-index `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed
 - `npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx` -> `98` tests passed
@@ -265,7 +270,7 @@ Next queue items should proceed in this order:
 
 1. Complete execution contract unification for `chat`, mission, and planner.
 2. Ink evidence side panel and review-before-apply approvals timeline.
-3. CI gate integrity.
+3. Continue the unified execution contract for chat/mission/planner.
 
 ## Remaining Risks
 

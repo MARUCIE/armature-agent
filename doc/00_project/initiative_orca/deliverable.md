@@ -1,5 +1,64 @@
 # Deliverable
 
+## 2026-04-29 - CI Gate Integrity PDCA Tranche
+
+### Scope
+
+Complete ORCA-SWARM-012 by making CI enforce the matrix, security, performance, and fast agent-eval gates that the docs and package scripts advertise.
+
+### Delivered
+
+- Replaced the stale CI benchmark job with a `gate-integrity` job.
+- Added matrix entrypoints for static, unit, contract, integration, e2e, security, performance, resilience, and fast agent-eval layers.
+- Added `agent-eval/manifests/test-matrix.json` plus runner/sync scripts and a generated entrypoint snippet.
+- Added fast-gate serve continuity coverage to fast/nightly/release manifests.
+- Stabilized the hook system-message regression by injecting a local writer in the test instead of spying on global stderr during parallel full-suite runs.
+- Version bumped to `0.8.8`.
+
+### Changed Files
+
+- `.github/workflows/ci.yml`
+- `package.json`
+- `package-lock.json`
+- `agent-eval/manifests/*`
+- `agent-eval/scripts/run-test-matrix.py`
+- `agent-eval/scripts/sync-test-matrix.py`
+- `agent-eval/scripts/run-secret-scan.py`
+- `agent-eval/scripts/collect-license-inventory.py`
+- `agent-eval/generated/test-matrix-entrypoints.md`
+- `tests/test-matrix-runner.test.ts`
+- `tests/test-matrix-sync.test.ts`
+- `tests/agent-eval-manifests.test.ts`
+- `src/policy-executor.ts`
+- `tests/v050-modules.test.ts`
+- `doc/00_project/initiative_orca/*`
+
+### Simplifications Made
+
+- Reused the existing `agent-eval` manifest model instead of adding a second CI policy format.
+- Kept full nightly/release eval runs out of PR CI; the CI job enforces fast eval plus static/security/performance rows.
+- Removed a parallel-test global stderr spy from the hook system-message regression.
+
+### Verification
+
+- `npm run test:matrix:sync` -> pass
+- Clean staged-index `npm run test:matrix:sync` -> pass
+- Clean staged-index `npm test -- tests/agent-eval-manifests.test.ts tests/test-matrix-runner.test.ts tests/test-matrix-sync.test.ts tests/release-evidence.test.ts` -> `22/22`
+- `npm run test:unit` -> `outputs/test-matrix/run-20260429-061427/matrix.md`
+- `npm test -- tests/v050-modules.test.ts tests/agent-eval-manifests.test.ts tests/test-matrix-runner.test.ts tests/test-matrix-sync.test.ts tests/release-evidence.test.ts` -> `69/69`
+- `npm run test:static` -> `outputs/test-matrix/run-20260429-060205/matrix.md`
+- `npm run test:security` -> `outputs/test-matrix/run-20260429-060222/matrix.md`
+- `npm run test:performance` -> `outputs/test-matrix/run-20260429-060232/matrix.md`
+- `npm run test:ai-eval-fast` -> `outputs/test-matrix/run-20260429-060243/matrix.md`
+- `npm run lint && npm run build && npm test` -> `88` files / `1609` tests
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Static/security/performance rows are still lightweight gates rather than full SAST/DAST/perf-budget programs | Verification | Expand the manifest layers after CI enforcement is stable |
+| CI runtime may be longer because the gate job runs after the Node matrix | Maintainer | Split into scheduled/release-only rows if GitHub timing becomes noisy |
+
 ## 2026-04-29 - Release Evidence Snapshot PDCA Tranche
 
 ### Scope
@@ -42,7 +101,7 @@ Complete ORCA-SWARM-011 by making README and active PDCA verification counts der
 | --- | --- | --- |
 | Historical archive docs still contain older release counts by design | Docs | Treat dated sections as immutable evidence unless an active-current section cites them as current |
 | Clean staged-index full-suite still exposes pre-existing uncommitted baseline dependencies outside this tranche | Baseline owners | Split/commit the existing permissions/evolution/test-matrix baseline before claiming clean-index full-suite parity |
-| CI still does not enforce the full matrix/security/performance/eval gate set | Verification | Complete ORCA-SWARM-012 |
+| CI gate runtime may need tuning as matrix scope grows | Verification | Keep ORCA-SWARM-012 gate job focused on high-signal rows |
 
 ## 2026-04-29 - Slash Command Registry PDCA Tranche
 

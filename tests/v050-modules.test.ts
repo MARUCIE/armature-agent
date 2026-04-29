@@ -293,7 +293,7 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     const previousHome = process.env.HOME
     const previousTrust = process.env.ORCA_TRUST_PROJECT_HOOKS
     const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
-    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+    const stderrMessages: string[] = []
 
     try {
       process.env.HOME = homeDir
@@ -303,15 +303,16 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
       const { runPreToolHook } = await import('../src/policy-executor.js')
 
       hooks.load(projectDir)
-      await runPreToolHook('read_file', { path: 'package.json' }, projectDir)
+      await runPreToolHook('read_file', { path: 'package.json' }, projectDir, message => {
+        stderrMessages.push(message)
+      })
 
       expect(stdoutSpy).not.toHaveBeenCalled()
-      expect(stderrSpy).toHaveBeenCalled()
-      const stderrText = stderrSpy.mock.calls.map(call => String(call[0])).join('')
+      expect(stderrMessages.length).toBeGreaterThan(0)
+      const stderrText = stderrMessages.join('')
       expect(stderrText).toContain('watch stderr')
     } finally {
       stdoutSpy.mockRestore()
-      stderrSpy.mockRestore()
       if (previousHome === undefined) delete process.env.HOME
       else process.env.HOME = previousHome
       if (previousTrust === undefined) delete process.env.ORCA_TRUST_PROJECT_HOOKS

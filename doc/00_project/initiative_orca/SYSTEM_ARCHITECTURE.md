@@ -25,6 +25,13 @@ The SOTA swarm audit adds two immediate architectural constraints:
    - `doc/00_project/initiative_orca/verification_snapshot.json`
    - `tests/release-evidence.test.ts`
    - README release badge, package version, filesystem test-file count, and active PDCA evidence rows must stay aligned
+5. CI gate integrity is now manifest-driven:
+   - `.github/workflows/ci.yml`
+   - `agent-eval/manifests/test-matrix.json`
+   - `agent-eval/scripts/run-test-matrix.py`
+   - `agent-eval/scripts/sync-test-matrix.py`
+   - `agent-eval/generated/test-matrix-entrypoints.md`
+   - CI runs matrix sync, static, security, performance, and fast agent-eval gates after the Node matrix
 
 Open architecture work:
 
@@ -33,7 +40,7 @@ Open architecture work:
 - Extend the evidence drawer from CLI-terminal output into the Ink side panel once the current uncommitted UI baseline is closed.
 - Keep execution handlers separate until the unified execution contract is ready; the registry currently owns discovery metadata, not command behavior.
 - Split the existing HomePanel UI baseline before wiring its command hints to the registry.
-- Extend the release-evidence guard into CI when ORCA-SWARM-012 closes the gate-integrity job.
+- Keep matrix layer definitions in the manifest; do not add package scripts or CI rows by hand without updating `sync-test-matrix.py` expectations.
 
 <!-- AI-FLEET:PROJECT_DIR:START -->
 - `PROJECT_DIR`: `/Users/mauricewen/Projects/orca-cli`
