@@ -1,5 +1,47 @@
 # Deliverable
 
+## 2026-04-29 - Chat REPL TaskRun Records PDCA Tranche
+
+### Scope
+
+Close ORCA-SWARM-016 by making interactive `orca chat` REPL turns write canonical `WorkSession` / `TaskRun` records that the queue spine can inspect.
+
+### Delivered
+
+- Added `chat` as a first-class `TaskRunKind`.
+- Created a durable chat `WorkSession` at REPL startup and kept provider/model/mode metadata current across model changes and exit cleanup.
+- Wrapped each normal REPL prompt in a `TaskRun` with prompt-derived title, status, token usage, cost, duration, and runtime observation evidence.
+- Made `executeReplTurn()` return structured completion metadata for completed, failed, and aborted turns without changing its existing prompt/tool behavior.
+- Added focused coverage for successful proxy/SDK turns, hook-blocked prompts, 413 retry recovery, reset-sensitive aborts, unrecovered failures, and persisted chat TaskRun summaries.
+- Version bumped to `0.8.12`.
+
+### Changed Files
+
+- `src/commands/chat.ts`
+- `src/commands/chat-repl-turn.ts`
+- `src/work-session-store.ts`
+- `tests/chat-repl-turn.test.ts`
+- `tests/work-session-store.test.ts`
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `doc/00_project/initiative_orca/*`
+
+### Verification
+
+- `npm run build` -> pass
+- `npm run lint` -> pass
+- `npm test -- tests/chat-repl-turn.test.ts tests/work-session-store.test.ts` -> `19/19`
+- `npm run lint && npm run build && npm test` -> `88` files / `1613` tests
+- `node dist/bin/orca.js --version` -> `0.8.12`
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Ink detail panels still do not show the full TaskRun evidence timeline | UX | Continue with evidence side panel / approval timeline |
+| Queue leases are inspectable but not yet a real scheduler / resume mechanism | Runtime | Extend TaskRun lease semantics into scheduler and resume workflows |
+
 ## 2026-04-29 - Chat Operator Control Plane PDCA Tranche
 
 ### Scope

@@ -12,7 +12,7 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 | --- | --- | --- | --- |
 | M0 Trust hardening | Close repo-local hook and network-tool trust gaps | Done | Explicit project hook trust, network tools approval-gated, targeted tests green |
 | M1 Queue visibility | Expose current TaskRun state to operators | Done | `orca queue list/show/follow/takeover` shipped with tests |
-| M2 Unified execution contract | Align `chat`, `run`, `serve`, mission, and planner on one run object | Partial | `run` default, goal-loop, mission, plan, and `serve /chat` now write canonical run records; chat REPL remains |
+| M2 Unified execution contract | Align `chat`, `run`, `serve`, mission, and planner on one run object | Done | `chat` REPL turns, `run` default, goal-loop, mission, plan, and `serve /chat` now write canonical WorkSession / TaskRun records |
 | M3 Evidence console | Make review-before-apply inspectable | Partial | `orca queue evidence` opens TaskRun logs/diffs/artifacts with metadata and previews; deeper Ink side-panel integration remains |
 | M3b Slash command surface | Keep command discovery surfaces aligned | Core Done | `src/slash-commands.ts` feeds REPL completion, Ink picker, and `/help`; HomePanel metadata is prepared but the consumer is blocked by the unstaged UI baseline |
 | M3c Release evidence snapshot | Keep README and active PDCA docs aligned to real verification counts | Done | `verification_snapshot.json` plus `tests/release-evidence.test.ts` guard version, README, test files, and active docs |
@@ -40,6 +40,7 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 | ORCA-SWARM-013 | P1 | Record `orca run` default/goal-loop/mission/plan executions as canonical TaskRuns | Done |
 | ORCA-SWARM-014 | P1 | Restore clean-index build for declared workflow, permissions, evolve, and git-root command surface | Done |
 | ORCA-SWARM-015 | P1 | Promote chat operator controls for sessions, permissions, models, command output, and Ink home/detail surfaces | Done |
+| ORCA-SWARM-016 | P1 | Record chat REPL turns as canonical WorkSession / TaskRun records | Done |
 
 ### First Tranche Verification
 
@@ -60,12 +61,13 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 - `test:security` -> `outputs/test-matrix/run-20260429-060222/matrix.md`.
 - `test:performance` -> `outputs/test-matrix/run-20260429-060232/matrix.md`.
 - `test:ai-eval-fast` -> `outputs/test-matrix/run-20260429-060243/matrix.md`.
-- Final `npm run lint && npm run build && npm test` -> `1611` tests passed across `88` files.
-- Final `npm test` -> `1611` tests passed across `88` files.
-- `node dist/bin/orca.js --version` -> `0.8.10`.
+- Final `npm run lint && npm run build && npm test` -> `1613` tests passed across `88` files.
+- Final `npm test` -> `1613` tests passed across `88` files.
+- `node dist/bin/orca.js --version` -> `0.8.12`.
 - Clean staged-index `npm run build` -> pass for workflow commands, permissions/evolve commands, config permission helpers, and git-root helper.
 - Clean staged-index `npm test -- tests/config.test.ts tests/permissions-command.test.ts tests/program.test.ts tests/command-contracts.test.ts tests/release-evidence.test.ts tests/v030-harness.test.ts` -> `100/100`.
 - Clean staged-index `npm test -- tests/chat-internals.test.ts tests/chat-slash-mutations.test.ts tests/chat-slash-readonly.test.ts tests/chat-repl-turn.test.ts tests/chat-one-shot-mcp-cleanup.test.ts tests/ink-ui.test.tsx tests/command-output.test.ts tests/session-command.test.ts tests/serve-command.test.ts tests/model-catalog.test.ts tests/mcp-client.test.ts tests/mode-system-prompt.test.ts` -> `248/248`.
+- `npm test -- tests/chat-repl-turn.test.ts tests/work-session-store.test.ts` -> `19/19`.
 - CI gate job now runs `test:matrix:sync`, `test:static`, `test:security`, `test:performance`, and `test:ai-eval-fast` after the Node matrix passes.
 - `node dist/bin/orca.js queue takeover <fixture-task-run> --holder smoke --ttl 30s` -> acquired a TaskRun lease.
 - `orca queue evidence <task-run-id>` shows typed evidence entries, absolute paths, size, update time, missing-file state, and capped tail previews.
@@ -73,6 +75,7 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 - `verification_snapshot.json` is now the active source of truth for package version, test file count, and full-suite test count in README and active PDCA docs.
 - `agent-eval/manifests/test-matrix.json` is now the active source of truth for layered test entrypoints; `sync-test-matrix.py --check` guards `package.json` and the generated entrypoint snippet.
 - `orca run` now creates one WorkSession/TaskRun spine for default, goal-loop, mission, and plan paths, including usage summaries and mission-state evidence where available.
+- `orca chat` REPL turns now create and finish queue-visible `TaskRun` records with per-turn status, token usage, duration, and runtime observation evidence.
 
 ### Report
 

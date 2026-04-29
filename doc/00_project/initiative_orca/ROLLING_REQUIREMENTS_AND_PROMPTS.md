@@ -24,6 +24,7 @@
 | REQ-20260429-016 | Build | A clean staged checkout must build the declared workflow, permissions, evolve, and git-root command surface | Done | `src/program.ts`, `src/commands/workflows.ts`, `src/commands/permissions.ts`, `src/commands/evolve.ts`, `src/config.ts`, `src/git-repository.ts` |
 | REQ-20260429-017 | Routing | Workflow preset metadata and Cloudflare / Claudeflare provider-gateway config helpers must be covered by command/config regressions before M5 model catalog work continues | Done | `src/modes/registry.ts`, `src/modes/policies.ts`, `src/config.ts`, `tests/program.test.ts`, `tests/config.test.ts` |
 | REQ-20260429-018 | UX | Chat REPL and Ink operator controls for sessions, permissions, models, command output, and detail panels must be clean-index testable before queue-backed chat execution work continues | Done | `src/commands/chat*.ts`, `src/ui/*`, `tests/chat-*.test.ts`, `tests/ink-ui.test.tsx`, `tests/command-output.test.ts` |
+| REQ-20260429-019 | Runtime | Interactive `orca chat` REPL turns must create and close canonical WorkSession / TaskRun records with status, usage, duration, and runtime evidence | Done | `src/commands/chat.ts`, `src/commands/chat-repl-turn.ts`, `src/work-session-store.ts`, `tests/chat-repl-turn.test.ts`, `tests/work-session-store.test.ts` |
 
 ### Prompt Ledger
 
@@ -40,6 +41,7 @@
 | PROMPT-20260429-009 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-013: `orca run` execution contract records |
 | PROMPT-20260429-010 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-014: clean-index command baseline |
 | PROMPT-20260429-011 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-015: chat operator control plane |
+| PROMPT-20260429-012 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-016: chat REPL canonical TaskRun records |
 
 ### Anti-Regression Q&A
 
@@ -62,6 +64,7 @@
 | Does `orca run` create queue-visible records across its branch modes? | Yes. Default, goal-loop, mission, and plan branches create WorkSession / TaskRun records and finish them with status, summary, usage, and mission evidence when available. | `tests/run-work-session.test.ts` |
 | Can the declared top-level command surface fail from a clean staged checkout? | It should not. Workflow preset commands are backed by `src/commands/workflows.ts`, while `permissions`, `evolve`, and git-root helpers are committed with config coverage. | `npm run build`, `tests/config.test.ts`, `tests/permissions-command.test.ts` |
 | Can terminal control sequences leak into Ink command output or markdown evidence helpers? | No. Command output is sanitized before routing to console, Ink system messages, markdown spans, tables, and code blocks. | `tests/command-output.test.ts` |
+| Does interactive `orca chat` create queue-visible records for normal prompt turns? | Yes. Each normal REPL prompt is wrapped in a chat `TaskRun` under the REPL `WorkSession`, then finished with status, usage, cost, duration, and runtime observation evidence. | `tests/chat-repl-turn.test.ts`, `tests/work-session-store.test.ts` |
 
 ### References
 

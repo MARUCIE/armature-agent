@@ -51,6 +51,7 @@ import { TokenBudgetManager } from '../token-budget.js'
 import { RetryTracker } from '../retry-intelligence.js'
 import { recordUsage } from '../usage-db.js'
 import { consumeCompletedBackgroundJobs, readBackgroundJobLog } from '../background-jobs.js'
+import { createTaskRun, createWorkSession, finishTaskRun, updateWorkSession } from '../work-session-store.js'
 import {
   findModelChoice,
   formatContextWindow,
@@ -487,6 +488,12 @@ const GOODBYE_MESSAGES = [
   'Goodbye!', 'See you!', 'Catch you later!', 'Happy building!', 'bye.',
 ]
 
+function summarizeChatTaskPrompt(prompt: string): string {
+  const normalized = prompt.replace(/\s+/g, ' ').trim()
+  if (normalized.length <= 120) return normalized || 'chat turn'
+  return `${normalized.slice(0, 117)}...`
+}
+
 async function runREPL(
   resolved: ResolvedProvider,
   config: OrcaConfig,
@@ -791,6 +798,15 @@ async function runREPL(
 
   syncRuntimeIdentityPrompt()
 
+  const chatWorkSession = createWorkSession({
+    sourceSurface: 'chat',
+    cwd,
+    provider: resolved.provider,
+    model: currentModel,
+    modeId: modeRegistry.getActive().id,
+    savedSessionId: currentSessionId,
+  })
+
   const threadManager = new ThreadManager()
 
   const shortModel = (m: string) => m.length > 24 ? m.slice(0, 22) + '..' : m
@@ -963,6 +979,12 @@ async function runREPL(
     }
 
     syncRuntimeIdentityPrompt()
+    updateWorkSession(chatWorkSession.id, (session) => ({
+      ...session,
+      provider: resolved.provider,
+      model: currentModel,
+      modeId: modeRegistry.getActive().id,
+    }))
 
     return true
   }
@@ -1507,9 +1529,18 @@ async function runREPL(
             cwd,
             evidence: {
               sessionId: currentSessionId,
+              workSessionId: chatWorkSession.id,
               usageRef: usageRef || undefined,
             },
           })
+          updateWorkSession(chatWorkSession.id, (session) => ({
+            ...session,
+            provider: resolved.provider,
+            model: currentModel,
+            modeId: modeRegistry.getActive().id,
+            status: 'completed',
+            activeTaskRunId: undefined,
+          }))
           logInfo('chat session ended', {
             cwd,
             model: currentModel,
@@ -1615,54 +1646,105 @@ async function runREPL(
     lastPrompt = messageToSend
     inputHistory.push(messageToSend)
 
-    await executeReplTurn({
-      messageToSend,
-      currentModel,
-      currentPermMode,
-      resolved,
-      config,
-      outputMode,
+    const taskRun = createTaskRun({
+      workSessionId: chatWorkSession.id,
+      kind: 'chat',
+      title: summarizeChatTaskPrompt(messageToSend),
+      surface: 'cli',
       cwd,
-      useInk,
-      history,
-      stats,
-      sessionInjectedPaths,
-      toolDefs: filterToolDefinitionsForMode(
-        [...(TOOL_DEFINITIONS as Array<Record<string, unknown>>), ...mcpToolDefs],
-        modeRegistry.getActive(),
-      ),
-      tokenBudget,
-      contextMonitor,
-      retryTracker,
-      loopDetector,
-      session: useInk ? session : undefined,
-      emitStatus,
-      emitInlineNotice,
-      sessionId: currentSessionId,
-      reasoningEffort: mapThinkingEffortToReasoningEffort(currentEffort),
-      forceReflect: Boolean(opts.forceReflect || inlineReflect || modeRegistry.getActive().id === 'reflect'),
-      autoTriggerReflect: !opts.forceReflect && !inlineReflect && modeRegistry.getActive().id !== 'reflect',
-      activeModeId: modeRegistry.getActive().id,
-      setLastTokPerSec: (value) => {
-        lastTokPerSec = value
-      },
-      onFileWrite: (path, oldContent) => {
-        undoState.lastWrite = { path, oldContent }
-      },
-      isPermissionGranted: (ruleKey) => sessionPermissionAllowlist.has(ruleKey) || persistedPermissionAllowlist.has(ruleKey),
-      recordPermissionGrant: (ruleKey, scope) => {
-        if (scope === 'session') {
-          sessionPermissionAllowlist.add(ruleKey)
-          return
-        }
-        const path = addStoredPermissionRule('project', cwd, ruleKey)
-        persistedPermissionAllowlist.add(ruleKey)
-        config.permissionAllowlist = [...persistedPermissionAllowlist]
-        emitInlineNotice(`permission rule saved: ${path}`, 'info')
-      },
-      runProxyTurn,
-      runSDKQuery,
+      provider: resolved.provider,
+      model: currentModel,
+      summary: `mode=${modeRegistry.getActive().id} permissions=${currentPermMode} effort=${currentEffort}`,
     })
+
+    try {
+      const turnResult = await executeReplTurn({
+        messageToSend,
+        currentModel,
+        currentPermMode,
+        resolved,
+        config,
+        outputMode,
+        cwd,
+        useInk,
+        history,
+        stats,
+        sessionInjectedPaths,
+        toolDefs: filterToolDefinitionsForMode(
+          [...(TOOL_DEFINITIONS as Array<Record<string, unknown>>), ...mcpToolDefs],
+          modeRegistry.getActive(),
+        ),
+        tokenBudget,
+        contextMonitor,
+        retryTracker,
+        loopDetector,
+        session: useInk ? session : undefined,
+        emitStatus,
+        emitInlineNotice,
+        sessionId: currentSessionId,
+        reasoningEffort: mapThinkingEffortToReasoningEffort(currentEffort),
+        forceReflect: Boolean(opts.forceReflect || inlineReflect || modeRegistry.getActive().id === 'reflect'),
+        autoTriggerReflect: !opts.forceReflect && !inlineReflect && modeRegistry.getActive().id !== 'reflect',
+        activeModeId: modeRegistry.getActive().id,
+        setLastTokPerSec: (value) => {
+          lastTokPerSec = value
+        },
+        onFileWrite: (path, oldContent) => {
+          undoState.lastWrite = { path, oldContent }
+        },
+        isPermissionGranted: (ruleKey) => sessionPermissionAllowlist.has(ruleKey) || persistedPermissionAllowlist.has(ruleKey),
+        recordPermissionGrant: (ruleKey, scope) => {
+          if (scope === 'session') {
+            sessionPermissionAllowlist.add(ruleKey)
+            return
+          }
+          const path = addStoredPermissionRule('project', cwd, ruleKey)
+          persistedPermissionAllowlist.add(ruleKey)
+          config.permissionAllowlist = [...persistedPermissionAllowlist]
+          emitInlineNotice(`permission rule saved: ${path}`, 'info')
+        },
+        runProxyTurn,
+        runSDKQuery,
+      })
+      finishTaskRun(taskRun.id, {
+        status: turnResult.status,
+        summary: turnResult.summary,
+        usage: {
+          inputTokens: turnResult.inputTokens,
+          outputTokens: turnResult.outputTokens,
+          costUsd: computeCost(currentModel, turnResult.inputTokens, turnResult.outputTokens),
+          durationMs: turnResult.durationMs,
+          turns: turnResult.status === 'completed' ? 1 : 0,
+        },
+      })
+      observeRuntimeEvent({
+        category: 'chat',
+        severity: turnResult.status === 'completed' ? 'info' : turnResult.status === 'aborted' ? 'warn' : 'error',
+        summary: turnResult.summary,
+        command: 'chat',
+        provider: resolved.provider,
+        model: currentModel,
+        cwd,
+        evidence: {
+          sessionId: currentSessionId,
+          workSessionId: chatWorkSession.id,
+          taskRunId: taskRun.id,
+        },
+      })
+    } catch (turnErr) {
+      finishTaskRun(taskRun.id, {
+        status: 'failed',
+        summary: `chat turn crashed: ${turnErr instanceof Error ? turnErr.message : String(turnErr)}`,
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          costUsd: 0,
+          durationMs: 0,
+          turns: 0,
+        },
+      })
+      throw turnErr
+    }
 
     } catch (turnErr) {
       // ── Crash-safe: catch ANY uncaught error in this turn, log it, continue REPL ──
@@ -1677,6 +1759,7 @@ async function runREPL(
         cwd,
         evidence: {
           sessionId: currentSessionId,
+          workSessionId: chatWorkSession.id,
         },
       })
       console.error(`\x1b[31m  turn error: ${msg}\x1b[0m`)
@@ -1690,6 +1773,13 @@ async function runREPL(
 
   // Cleanup
   if (inkInstance) inkInstance.unmount()
+  updateWorkSession(chatWorkSession.id, (session) => ({
+    ...session,
+    provider: resolved.provider,
+    model: currentModel,
+    modeId: modeRegistry.getActive().id,
+    status: session.activeTaskRunId ? session.status : (session.taskRunCount > 0 ? session.status : 'idle'),
+  }))
   saveInputHistory(historyFile, inputHistory)
   rl.close()
 }

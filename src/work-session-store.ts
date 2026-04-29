@@ -8,7 +8,7 @@ const SAFE_OBJECT_ID = /^[A-Za-z0-9._-]+$/
 export type WorkSessionStatus = 'active' | 'idle' | 'completed' | 'failed'
 export type TaskRunStatus = 'queued' | 'running' | 'completed' | 'failed' | 'aborted'
 export type WorkSessionSurface = 'chat' | 'run' | 'serve'
-export type TaskRunKind = 'run' | 'goal-loop' | 'mission' | 'plan' | 'background'
+export type TaskRunKind = 'chat' | 'run' | 'goal-loop' | 'mission' | 'plan' | 'background'
 export type TaskRunSurface = 'cli' | 'serve'
 
 export interface TaskRunUsageSummary {

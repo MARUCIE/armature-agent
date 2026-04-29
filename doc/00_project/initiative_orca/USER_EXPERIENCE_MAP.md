@@ -345,3 +345,12 @@ Hooks and modules:
 | SS-3 | User includes text plus two or more screenshots | Orca sends a single multimodal turn with all images attached | proxy-path multimodal request |
 | SS-4 | User asks a follow-up question about the same screenshots | Orca retains the multimodal user turn in history on the proxy path | preserved proxy history |
 | SS-5 | User tries direct clipboard bitmap paste | Not supported yet; user must reference local image files | documented limitation |
+
+## Chat TaskRun Journey (2026-04-29)
+
+| Step | User Action | System Response | Evidence |
+| --- | --- | --- | --- |
+| CT-1 | User starts `orca chat` in REPL mode | Orca creates a durable chat `WorkSession` with current provider/model/mode metadata | `src/commands/chat.ts` |
+| CT-2 | User submits a normal prompt | Orca creates a `kind: "chat"` `TaskRun` titled from the prompt | `src/work-session-store.ts` |
+| CT-3 | Provider turn completes, fails, or aborts | Orca finishes the `TaskRun` with status, token usage, cost, duration, and runtime observation evidence | `src/commands/chat-repl-turn.ts` |
+| CT-4 | Operator inspects queue state later | The chat turn is visible through the same queue/work-session store used by `run` and `serve /chat` | `tests/work-session-store.test.ts` |

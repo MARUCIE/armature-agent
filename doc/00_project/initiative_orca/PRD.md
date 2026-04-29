@@ -12,8 +12,8 @@ New product requirements from the SOTA swarm audit:
 - Slash-command discovery must use a shared registry so REPL completion, Ink picker, and `/help` cannot drift; HomePanel hint metadata must be ready for the pending UI-baseline split.
 - README and active PDCA documents must use `verification_snapshot.json` plus release-evidence tests so version, test file count, and full-suite count cannot silently drift.
 - CI must run the documented matrix/security/performance/eval entrypoints instead of relying on a narrower build/test job.
-- `orca run` default, goal-loop, mission, and plan branches must create and close canonical `WorkSession` / `TaskRun` records.
-- Next tranche must continue the unified execution contract for chat REPL and model-routing evidence.
+- `orca run` default, goal-loop, mission, plan branches, and interactive `orca chat` turns must create and close canonical `WorkSession` / `TaskRun` records.
+- Next tranche must continue the TaskRun evidence UX and model-routing evidence work.
 - `serve /chat` must create and close canonical `WorkSession` / `TaskRun` records, returning the ids in non-streaming responses and emitting them as streaming metadata.
 
 ## Product Snapshot
@@ -110,6 +110,7 @@ Single-vendor coding CLIs force users into one model family per session. Orca CL
   - `serve` can inspect both through read-only continuity endpoints
   - `orca queue takeover` can claim a TTL operator lease on non-terminal `TaskRun` records
   - `serve /chat` creates a durable `WorkSession` and `TaskRun` for both non-streaming and SSE requests
+  - interactive `orca chat` REPL turns create per-prompt `TaskRun` records under the active chat `WorkSession`
 - CLI output rendering and markdown streaming
 - Slash-command autocomplete that yields to full command submission once the user starts typing arguments
 - Theme preference persistence that suppresses first-launch onboarding once `ORCA_THEME` or `~/.orca/theme` is already set

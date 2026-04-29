@@ -17,10 +17,12 @@
   - `orca run` default / goal-loop / mission / plan WorkSession and TaskRun records
   - clean-index command baseline for workflow presets, `permissions`, `evolve`, and git-root helper support
   - chat operator control plane for sessions, permissions, model picking, command output, and Ink home/detail panels
+  - chat REPL turn lifecycle now writes canonical WorkSession / TaskRun records with per-turn status and usage
 - Check evidence:
   - `npm run lint`
   - `npm run build`
-  - `npm test` -> `88` files / `1611` tests
+  - `npm test` -> `88` files / `1613` tests
+  - `npm test -- tests/chat-repl-turn.test.ts tests/work-session-store.test.ts` -> `19` tests
   - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests
   - `npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx` -> `98` tests
   - `npm test -- tests/release-evidence.test.ts` -> `3` tests
@@ -34,9 +36,8 @@
   - `npm run test:ai-eval-fast`
   - gate evidence: `outputs/test-matrix/run-20260429-060205`, `run-20260429-060222`, `run-20260429-060232`, `run-20260429-060243`
 - Act queue:
-  - complete unified execution contract for remaining chat REPL paths
   - Ink evidence side panel and approvals timeline
-  - remaining unified execution contract for chat REPL
+  - extend queue leases into true scheduler / resume semantics
 
 ## Plan
 

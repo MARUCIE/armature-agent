@@ -1,5 +1,25 @@
 # Notes
 
+## 2026-04-29 - Chat REPL TaskRun records PDCA continuation
+
+Context:
+
+- User said `继续` after the chat operator control plane commit.
+- The remaining M2 gap was the interactive `orca chat` turn lifecycle: `run` and `serve /chat` were queue-visible, but REPL turns still completed outside the canonical `WorkSession` / `TaskRun` spine.
+- The boundary is per-turn queue records and focused tests, not the later Ink evidence timeline or scheduler/resume work.
+
+PDCA executed:
+
+- Plan: preserve the existing REPL turn behavior, add a structured return value from `executeReplTurn()`, and let `runREPL()` persist that result through the shared work-session store.
+- Do: added `chat` as a `TaskRunKind`, created one chat `WorkSession` per REPL session, wrapped normal prompts in `TaskRun` records, and recorded status/usage/duration/runtime evidence for completed, failed, and aborted turns.
+- Check:
+  - `npm run build` -> pass.
+  - `npm run lint` -> pass.
+  - `npm test -- tests/chat-repl-turn.test.ts tests/work-session-store.test.ts` -> `19` tests passed.
+  - `npm run lint && npm run build && npm test` -> `88` files / `1613` tests passed.
+  - `node dist/bin/orca.js --version` -> `0.8.12`.
+- Act: M2 unified execution contract is now closed for chat/run/serve records; next queue item is Ink TaskRun evidence UX and scheduler/resume semantics.
+
 ## 2026-04-29 - Chat operator control plane PDCA continuation
 
 Context:

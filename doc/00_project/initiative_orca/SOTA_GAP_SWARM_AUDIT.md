@@ -6,7 +6,7 @@
 - Baseline: dirty working tree audit; existing user changes were preserved
 - Report route: `html-style-router` -> `html-economist-style`
 - Verification baseline before fixes: `npm run lint`, `npm test` (`85` files / `1583` tests), `npm run build`
-- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`88` files / `1611` tests)
+- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`88` files / `1613` tests)
 
 ## Scope
 
@@ -181,7 +181,7 @@ PDCA action executed:
 | --- | --- | --- |
 | M0 Trust Hardening | Close immediate repo-trust and network-tool risks | Repo-local hooks require explicit trust; network tools approval-gated; targeted security tests pass |
 | M1 Queue Visibility | Make current TaskRun state inspectable | `orca queue list/show/follow/takeover/evidence` shipped; status filtering, evidence streaming, leases, and evidence drawer covered |
-| M2 Unified Execution Contract | One run object across CLI, serve, mission, planner | Partial: `run` and `serve /chat` create/update canonical records; chat/mission/planner remain |
+| M2 Unified Execution Contract | One run object across CLI, serve, mission, planner | Done: chat REPL, `run` default/goal-loop/mission/plan, and `serve /chat` create/update canonical records |
 | M3 Evidence Console | Review-before-apply becomes inspectable | Partial: CLI evidence drawer shows TaskRun logs/diffs/artifacts; Ink side panel and approvals timeline remain |
 | M3b Slash Command Surface | Command discovery cannot drift across REPL and Ink | Shared registry feeds completion, picker, and `/help`; HomePanel metadata is prepared but not staged into the dirty UI baseline |
 | M3c Release Evidence Snapshot | README/doc verification evidence cannot silently drift | Snapshot and release-evidence test guard README plus active PDCA docs |
@@ -207,6 +207,7 @@ PDCA action executed:
 | ORCA-SWARM-013 | P1 | Record `orca run` default/goal-loop/mission/plan executions as canonical TaskRuns | runtime | done |
 | ORCA-SWARM-014 | P1 | Restore clean-index build for workflow, permissions, evolve, and git-root command surfaces | build | done |
 | ORCA-SWARM-015 | P1 | Promote chat operator controls for sessions, permissions, models, command output, and Ink home/detail surfaces | UX | done |
+| ORCA-SWARM-016 | P1 | Record chat REPL turns as canonical WorkSession / TaskRun records | runtime | done |
 
 ## PDCA Execution Log
 
@@ -244,10 +245,11 @@ Verification executed:
 - Combined targeted regression pack -> `190` tests passed
 - `npm run lint` -> pass
 - `npm run build` -> pass
-- Final `npm test` -> `88` files / `1611` tests passed
+- Final `npm test` -> `88` files / `1613` tests passed
 - Gate integrity targeted tests cover manifest/script/sync behavior.
 - CI now executes `test:matrix:sync`, `test:static`, `test:security`, `test:performance`, and `test:ai-eval-fast`.
-- `node dist/bin/orca.js --version` -> `0.8.11`
+- `node dist/bin/orca.js --version` -> `0.8.12`
+- `npm test -- tests/chat-repl-turn.test.ts tests/work-session-store.test.ts` -> `19` tests passed
 - `npm test -- tests/run-work-session.test.ts tests/work-session-store.test.ts tests/queue-command.test.ts` -> `14` tests passed
 - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed
 - Clean staged-index `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed
@@ -272,15 +274,15 @@ Pre-fix baseline evidence:
 
 Next queue items should proceed in this order:
 
-1. Complete execution contract unification for the chat REPL turn lifecycle.
-2. Ink evidence side panel and review-before-apply approvals timeline.
-3. Continue the unified execution contract for chat REPL and model routing.
+1. Ink evidence side panel and review-before-apply approvals timeline.
+2. Extend TaskRun leases into true scheduler / resume semantics.
+3. Continue M5 model catalog single-source routing metadata.
 
 ## Remaining Risks
 
 - DNS names that resolve to private IPs are not yet resolved and blocked before `curl`; only literal private hosts and localhost-style names are blocked in this tranche.
 - Repo-local hooks now have an env trust switch, but a first-class `orca hooks trust` UX does not exist yet.
-- `orca queue` now supports list/show/follow/takeover/evidence, but is not yet a durable scheduler or process-resume manager.
+- `orca queue` now supports list/show/follow/takeover/evidence and sees chat/run/serve TaskRuns, but is not yet a durable scheduler or process-resume manager.
 - Evidence drawer is CLI-terminal first; full Ink side-panel integration remains blocked by the existing uncommitted UI baseline.
 - Slash command discovery now has one registry, but command execution handlers still live in the read-only and mutating slash switches.
 - HomePanel registry consumption remains blocked by the existing uncommitted UI baseline and should be split before claiming full ORCA-SWARM-010 closure.

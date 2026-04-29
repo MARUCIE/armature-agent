@@ -121,6 +121,72 @@ describe('work-session store', () => {
     })
   })
 
+  it('persists chat task runs as canonical queue-visible records', async () => {
+    const {
+      createTaskRun,
+      createWorkSession,
+      finishTaskRun,
+      getTaskRunById,
+      listTaskRunSummaries,
+    } = await import('../src/work-session-store.js')
+
+    const session = createWorkSession({
+      sourceSurface: 'chat',
+      cwd: '/tmp/project-chat',
+      provider: 'openai',
+      model: 'gpt-5.4',
+      modeId: 'standard',
+      savedSessionId: 'session-chat-1',
+    })
+    const taskRun = createTaskRun({
+      workSessionId: session.id,
+      kind: 'chat',
+      title: 'Explain the queue contract',
+      surface: 'cli',
+      cwd: '/tmp/project-chat',
+      provider: 'openai',
+      model: 'gpt-5.4',
+      summary: 'mode=standard permissions=auto effort=medium',
+    })
+
+    finishTaskRun(taskRun.id, {
+      status: 'completed',
+      summary: 'chat turn completed',
+      usage: {
+        inputTokens: 45,
+        outputTokens: 67,
+        costUsd: 0.000179,
+        durationMs: 980,
+        turns: 1,
+      },
+    })
+
+    const persistedTaskRun = getTaskRunById(taskRun.id)
+    expect(persistedTaskRun?.taskRun).toMatchObject({
+      workSessionId: session.id,
+      kind: 'chat',
+      surface: 'cli',
+      status: 'completed',
+      title: 'Explain the queue contract',
+      summary: 'chat turn completed',
+      usage: {
+        inputTokens: 45,
+        outputTokens: 67,
+        turns: 1,
+      },
+    })
+
+    const summaries = listTaskRunSummaries(session.id)
+    expect(summaries).toHaveLength(1)
+    expect(summaries[0]).toMatchObject({
+      id: taskRun.id,
+      kind: 'chat',
+      status: 'completed',
+      surface: 'cli',
+      workSessionId: session.id,
+    })
+  })
+
   it('claims and replaces task-run leases by TTL and force', async () => {
     const {
       claimTaskRunLease,

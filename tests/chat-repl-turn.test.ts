@@ -195,11 +195,17 @@ describe('executeReplTurn', () => {
     hooksMocks.run.mockResolvedValue({ continue: false, stopReason: 'policy gate' })
     const options = createOptions()
 
-    await executeReplTurn(options)
+    const result = await executeReplTurn(options)
 
     expect(options.runProxyTurn).not.toHaveBeenCalled()
     expect(inputMocks.expandFileReferences).not.toHaveBeenCalled()
     expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('hook blocked prompt')
+    expect(result).toMatchObject({
+      status: 'aborted',
+      inputTokens: 0,
+      outputTokens: 0,
+      summary: 'prompt blocked by UserPromptSubmit hook',
+    })
   })
 
   it('updates stats and prints a turn summary for successful proxy turns', async () => {
@@ -211,12 +217,18 @@ describe('executeReplTurn', () => {
       }),
     })
 
-    await executeReplTurn(options)
+    const result = await executeReplTurn(options)
 
     expect(options.stats.turns).toBe(1)
     expect(options.stats.totalInputTokens).toBe(4000)
     expect(options.stats.totalOutputTokens).toBe(2000)
     expect(options.stats.turnTokens).toEqual([2000])
+    expect(result).toMatchObject({
+      status: 'completed',
+      inputTokens: 4000,
+      outputTokens: 2000,
+      summary: 'chat turn completed',
+    })
     expect(options.setLastTokPerSec).toHaveBeenCalled()
     expect(outputMocks.printTurnSummary).toHaveBeenCalledWith(expect.objectContaining({
       inputTokens: 4000,
@@ -362,12 +374,18 @@ describe('executeReplTurn', () => {
       }),
     })
 
-    await executeReplTurn(options)
+    const result = await executeReplTurn(options)
 
     expect(options.stats.turns).toBe(1)
     expect(options.stats.totalInputTokens).toBe(120)
     expect(options.stats.totalOutputTokens).toBe(80)
     expect(options.stats.turnTokens).toEqual([80])
+    expect(result).toMatchObject({
+      status: 'completed',
+      inputTokens: 120,
+      outputTokens: 80,
+      summary: 'chat turn completed',
+    })
     expect(history.slice(-2)).toEqual([
       { role: 'user', content: 'hello world' },
       { role: 'assistant', content: 'sdk reply' },
@@ -388,7 +406,7 @@ describe('executeReplTurn', () => {
       runProxyTurn: vi.fn().mockRejectedValue(Object.assign(new Error('context_length exceeded'), { status: 413 })),
     })
 
-    await executeReplTurn(options)
+    const result = await executeReplTurn(options)
 
     expect(providerMocks.chatOnce).toHaveBeenCalledOnce()
     expect(providerMocks.chatOnce.mock.calls[0]?.[1]).toBe('hello world')
@@ -396,6 +414,12 @@ describe('executeReplTurn', () => {
     expect(options.stats.totalInputTokens).toBe(111)
     expect(options.stats.totalOutputTokens).toBe(222)
     expect(options.stats.turnTokens).toEqual([222])
+    expect(result).toMatchObject({
+      status: 'completed',
+      inputTokens: 111,
+      outputTokens: 222,
+      summary: 'chat turn recovered after compaction retry',
+    })
     expect(history.slice(-2)).toEqual([
       { role: 'user', content: 'hello world' },
       { role: 'assistant', content: 'retry answer' },
@@ -410,13 +434,35 @@ describe('executeReplTurn', () => {
       runProxyTurn: vi.fn().mockRejectedValue(new ResetSensitiveWaitCanceledError()),
     })
 
-    await executeReplTurn(options)
+    const result = await executeReplTurn(options)
 
     expect(options.stats.turns).toBe(0)
     expect(options.stats.totalInputTokens).toBe(0)
     expect(options.stats.totalOutputTokens).toBe(0)
+    expect(result).toMatchObject({
+      status: 'aborted',
+      inputTokens: 0,
+      outputTokens: 0,
+      summary: 'reset-sensitive wait canceled',
+    })
     expect(history).toEqual([{ role: 'system', content: 'system prompt' }])
     expect(outputMocks.printError).not.toHaveBeenCalled()
+  })
+
+  it('returns failed metadata for unrecovered turn errors', async () => {
+    const options = createOptions({
+      runProxyTurn: vi.fn().mockRejectedValue(new Error('provider unavailable')),
+    })
+
+    const result = await executeReplTurn(options)
+
+    expect(result).toMatchObject({
+      status: 'failed',
+      inputTokens: 0,
+      outputTokens: 0,
+      summary: 'chat turn failed: provider unavailable',
+    })
+    expect(outputMocks.printError).toHaveBeenCalledWith('provider unavailable')
   })
 
   it.each([

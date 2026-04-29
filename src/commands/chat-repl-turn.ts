@@ -98,9 +98,17 @@ interface ExecuteReplTurnOptions<TResolved extends ReplTurnResolvedProviderBase>
   }) => Promise<{ inputTokens: number; outputTokens: number; turns: number; text: string }>
 }
 
+export interface ReplTurnExecutionResult {
+  status: 'completed' | 'failed' | 'aborted'
+  inputTokens: number
+  outputTokens: number
+  durationMs: number
+  summary: string
+}
+
 export async function executeReplTurn<TResolved extends ReplTurnResolvedProviderBase>(
   options: ExecuteReplTurnOptions<TResolved>,
-): Promise<void> {
+): Promise<ReplTurnExecutionResult> {
   const {
     currentModel,
     currentPermMode,
@@ -131,6 +139,9 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
     runProxyTurn,
     runSDKQuery,
   } = options
+  const initialInputTokens = stats.totalInputTokens
+  const initialOutputTokens = stats.totalOutputTokens
+  const turnStartTime = Date.now()
   let messageToSend = options.messageToSend
   let turnPrompt: PromptContent = messageToSend
 
@@ -143,7 +154,14 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
     const hookResult = await hooks.run('UserPromptSubmit', { event: 'UserPromptSubmit', prompt: messageToSend, cwd })
     if (!hookResult.continue) {
       console.log(`\x1b[33m  hook blocked prompt: ${hookResult.stopReason || ''}\x1b[0m`)
-      return
+      return buildReplTurnExecutionResult(
+        'aborted',
+        'prompt blocked by UserPromptSubmit hook',
+        turnStartTime,
+        stats,
+        initialInputTokens,
+        initialOutputTokens,
+      )
     }
   }
 
@@ -219,7 +237,8 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
     }
   }
 
-  const turnStartTime = Date.now()
+  let executionStatus: ReplTurnExecutionResult['status'] = 'aborted'
+  let executionSummary = 'chat turn aborted'
   const progress = useInk ? null : new ProgressIndicator()
   if (progress) progress.start()
   if (useInk) session?.emitThinkingStart()
@@ -307,6 +326,8 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
       }
 
       warnOnContextRisk(contextMonitor)
+      executionStatus = 'completed'
+      executionSummary = 'chat turn completed'
     } else if (!abortController.signal.aborted) {
       if (progress) progress.stop()
       const activeSystemPrompt = buildSessionSystemPrompt(history)
@@ -366,14 +387,19 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
         })
       }
       warnOnContextRisk(contextMonitor)
+      executionStatus = 'completed'
+      executionSummary = 'chat turn completed'
     }
   } catch (error) {
     if (progress) progress.stop()
     if (error instanceof ResetSensitiveWaitCanceledError) {
-      return
-    }
-    if (!abortController.signal.aborted) {
-      await handleTurnFailure({
+      executionStatus = 'aborted'
+      executionSummary = 'reset-sensitive wait canceled'
+    } else if (abortController.signal.aborted) {
+      executionStatus = 'aborted'
+      executionSummary = 'chat turn aborted'
+    } else {
+      const recovered = await handleTurnFailure({
         error,
         promptToSend: turnPrompt,
         resolved,
@@ -383,6 +409,8 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
         tokenBudget,
         contextMonitor,
       })
+      executionStatus = recovered ? 'completed' : 'failed'
+      executionSummary = recovered ? 'chat turn recovered after compaction retry' : `chat turn failed: ${error instanceof Error ? error.message : String(error)}`
     }
   } finally {
     if (progress) progress.stop()
@@ -396,20 +424,48 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
   }
   console.log()
 
-  applyPostTurnCompaction({
-    resolved,
-    currentModel,
-    cwd,
-    history,
-    stats,
-    tokenBudget,
-    contextMonitor,
+  if (executionStatus !== 'aborted') {
+    applyPostTurnCompaction({
+      resolved,
+      currentModel,
+      cwd,
+      history,
+      stats,
+      tokenBudget,
+      contextMonitor,
       retryTracker,
       activeModeId,
       sessionId: options.sessionId,
       emitStatus,
       emitInlineNotice,
-  })
+    })
+  }
+
+  return buildReplTurnExecutionResult(
+    executionStatus,
+    executionSummary,
+    turnStartTime,
+    stats,
+    initialInputTokens,
+    initialOutputTokens,
+  )
+}
+
+function buildReplTurnExecutionResult(
+  status: ReplTurnExecutionResult['status'],
+  summary: string,
+  startTime: number,
+  stats: SessionStatsLike,
+  initialInputTokens: number,
+  initialOutputTokens: number,
+): ReplTurnExecutionResult {
+  return {
+    status,
+    inputTokens: Math.max(0, stats.totalInputTokens - initialInputTokens),
+    outputTokens: Math.max(0, stats.totalOutputTokens - initialOutputTokens),
+    durationMs: Math.max(0, Date.now() - startTime),
+    summary,
+  }
 }
 
 function buildSessionSystemPrompt(history: ChatMessage[]): string {
@@ -456,7 +512,7 @@ async function handleTurnFailure(options: {
   stats: SessionStatsLike
   tokenBudget: TokenBudgetManager
   contextMonitor: ContextMonitor
-}): Promise<void> {
+}): Promise<boolean> {
   const { error, promptToSend, resolved, currentModel, history, stats, tokenBudget, contextMonitor } = options
   const errorMessage = error instanceof Error ? error.message : String(error)
   const errorStatus = (error as { status?: number; statusCode?: number })?.status
@@ -489,14 +545,17 @@ async function handleTurnFailure(options: {
         contextMonitor.recordUsage(retryResult.inputTokens, retryResult.outputTokens)
         history.push({ role: 'user', content: promptToSend })
         history.push({ role: 'assistant', content: retryResult.text })
+        return true
       } catch (retryError) {
         printError(`Retry failed: ${retryError instanceof Error ? retryError.message : String(retryError)}`)
+        return false
       }
     }
-    return
+    return false
   }
 
   printError(errorMessage)
+  return false
 }
 
 function warnOnContextRisk(contextMonitor: ContextMonitor): void {
