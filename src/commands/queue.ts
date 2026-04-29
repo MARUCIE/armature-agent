@@ -6,6 +6,7 @@
  *   orca queue list --status running
  *   orca queue show <task-run-id>
  *   orca queue follow <task-run-id>
+ *   orca queue evidence <task-run-id>
  */
 
 import { Command } from 'commander'
@@ -39,6 +40,11 @@ interface QueueFollowOptions {
   once?: boolean
 }
 
+interface QueueEvidenceOptions {
+  lines?: string
+  maxBytes?: string
+}
+
 interface QueueTakeoverOptions {
   force?: boolean
   holder?: string
@@ -61,6 +67,12 @@ function parseLineCount(value: string | undefined): number {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return 40
   return Math.min(500, Math.max(1, Math.floor(parsed)))
+}
+
+function parseMaxBytes(value: string | undefined): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return 16_000
+  return Math.min(1_000_000, Math.max(256, Math.floor(parsed)))
 }
 
 function parseDurationMs(value: string | undefined): number {
@@ -104,6 +116,21 @@ function formatLeaseDetail(lease: TaskRunLease): string {
   const forced = lease.forced ? ' forced' : ''
   const previous = lease.previousHolder ? ` previous=${lease.previousHolder}` : ''
   return `${lease.id} holder=${lease.holder} expires=${lease.expiresAt}${forced}${previous}`
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+function classifyEvidence(label: string, path: string): string {
+  const lower = `${label} ${path}`.toLowerCase()
+  if (/\.(diff|patch)$/.test(lower) || lower.includes('diff')) return 'diff'
+  if (/\.(log|txt|out|err)$/.test(lower) || lower.includes('log')) return 'log'
+  if (/\.(json|jsonl)$/.test(lower)) return 'data'
+  if (/\.(md|html)$/.test(lower)) return 'report'
+  return 'artifact'
 }
 
 function formatTaskRunRow(summary: TaskRunSummary): string {
@@ -251,6 +278,30 @@ function readTail(path: string, lines: number): string {
   }
 }
 
+function trimPreviewBytes(content: string, maxBytes: number): { content: string; truncated: boolean } {
+  const buffer = Buffer.from(content, 'utf-8')
+  if (buffer.length <= maxBytes) return { content, truncated: false }
+  return {
+    content: buffer.subarray(buffer.length - maxBytes).toString('utf-8').replace(/^\uFFFD/, ''),
+    truncated: true,
+  }
+}
+
+function readEvidencePreview(path: string, lines: number, maxBytes: number): { content: string; truncated: boolean } {
+  if (!existsSync(path)) return { content: '', truncated: false }
+  try {
+    const content = readFileSync(path, 'utf-8')
+      .split('\n')
+      .filter((line) => line.length > 0)
+      .slice(-lines)
+      .join('\n')
+      .trimEnd()
+    return trimPreviewBytes(content, maxBytes)
+  } catch {
+    return { content: '', truncated: false }
+  }
+}
+
 function readNewContent(path: string, offset: number): { content: string; nextOffset: number } {
   if (!existsSync(path)) return { content: '', nextOffset: offset }
   try {
@@ -304,6 +355,71 @@ function printEvidenceSnapshot(
     }
     console.log()
   }
+}
+
+function renderTaskRunEvidenceDrawer(id: string, options: QueueEvidenceOptions): void {
+  const detail = getTaskRunDetailById(id)
+  if (!detail) {
+    console.error(`\x1b[31m  error: task run "${id}" not found\x1b[0m`)
+    process.exit(1)
+  }
+
+  const taskRun = detail.taskRun
+  const evidence = collectEvidence(taskRun)
+  const lines = parseLineCount(options.lines)
+  const maxBytes = parseMaxBytes(options.maxBytes)
+
+  console.log()
+  console.log(`  \x1b[1mTaskRun Evidence Drawer ${taskRun.id}\x1b[0m`)
+  console.log(`  status: ${taskRun.status}`)
+  console.log(`  title: ${taskRun.title}`)
+  console.log(`  work session: ${taskRun.workSessionId}`)
+  if (taskRun.summary) console.log(`  summary: ${taskRun.summary}`)
+  console.log()
+
+  if (evidence.length === 0) {
+    console.log('  \x1b[90m(no evidence files yet)\x1b[0m')
+    console.log()
+    return
+  }
+
+  evidence.forEach((item, index) => {
+    const path = resolveEvidencePath(taskRun, item)
+    const kind = classifyEvidence(item.label, path)
+    console.log(`  \x1b[1m[${index + 1}/${evidence.length}] ${item.label}\x1b[0m`)
+    console.log(`  type: ${kind}`)
+    console.log(`  path: ${path}`)
+
+    if (!existsSync(path)) {
+      console.log('  status: missing')
+      console.log()
+      return
+    }
+
+    try {
+      const stat = statSync(path)
+      console.log(`  size: ${formatBytes(stat.size)}`)
+      console.log(`  updated: ${stat.mtime.toISOString()}`)
+    } catch {
+      console.log('  status: unreadable')
+      console.log()
+      return
+    }
+
+    const preview = readEvidencePreview(path, lines, maxBytes)
+    if (!preview.content) {
+      console.log('  preview: (no readable content)')
+      console.log()
+      return
+    }
+
+    console.log(`  preview: last ${lines} line(s)${preview.truncated ? `, capped at ${formatBytes(maxBytes)}` : ''}`)
+    console.log('  ' + '-'.repeat(54))
+    for (const line of preview.content.split('\n')) {
+      console.log(`  ${line}`)
+    }
+    console.log()
+  })
 }
 
 function printEvidenceUpdates(
@@ -400,6 +516,13 @@ export function createQueueCommand(): Command {
     .option('--lines <n>', 'Initial evidence tail lines', '40')
     .option('--once', 'Print the current evidence snapshot and exit')
     .action(followTaskRun)
+
+  cmd.command('evidence')
+    .argument('<id>', 'TaskRun ID')
+    .description('Open a TaskRun evidence drawer with artifact previews')
+    .option('--lines <n>', 'Preview tail lines for each evidence file', '80')
+    .option('--max-bytes <n>', 'Maximum preview bytes per evidence file', '16000')
+    .action(renderTaskRunEvidenceDrawer)
 
   return cmd
 }

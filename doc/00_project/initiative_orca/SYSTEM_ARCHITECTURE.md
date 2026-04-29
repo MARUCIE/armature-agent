@@ -14,12 +14,13 @@ The SOTA swarm audit adds two immediate architectural constraints:
    - `orca queue show <task-run-id>`
    - `orca queue follow <task-run-id>`
    - `orca queue takeover <task-run-id> --holder <name> --ttl <duration>`
+   - `orca queue evidence <task-run-id>`
 
 Open architecture work:
 
 - Promote `WorkSession` / `TaskRun` into the canonical execution contract for `chat`, mission, and planner surfaces. The default `run` path and `serve /chat` now write canonical records.
 - Promote queue lease semantics from CLI metadata into future scheduler / resume control after the execution contract is unified.
-- Attach evidence bundles to TaskRun so TUI and CLI review surfaces read from one source.
+- Extend the evidence drawer from CLI-terminal output into the Ink side panel once the current uncommitted UI baseline is closed.
 
 <!-- AI-FLEET:PROJECT_DIR:START -->
 - `PROJECT_DIR`: `/Users/mauricewen/Projects/orca-cli`

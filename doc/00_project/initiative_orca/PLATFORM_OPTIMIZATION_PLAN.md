@@ -10,13 +10,14 @@ The next platform wave is now explicitly ordered:
    - approval-gated network tools
    - private/loopback `fetch_url` guard
 2. Queue visibility:
-   - ship `orca queue list/show/follow/takeover`
+   - ship `orca queue list/show/follow/takeover/evidence`
    - keep lease state as the handoff point for future scheduler / resume semantics
 3. Unified execution contract:
    - `run` and `serve /chat` now write canonical `WorkSession` / `TaskRun` records
    - finish `chat`, mission, planner, and future background agents against the same record model
 4. Evidence console:
-   - attach logs, approvals, diffs, tool calls, and artifacts to TaskRun
+   - `orca queue evidence` now opens TaskRun logs, diffs, data, reports, missing artifacts, and capped previews
+   - extend approvals, tool-call timelines, and Ink side-panel rendering after the UI baseline lands
 5. Gate integrity:
    - align CI with declared matrix/security/performance/eval gates
 

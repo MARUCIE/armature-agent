@@ -1,5 +1,26 @@
 # Notes
 
+## 2026-04-29 - Queue evidence drawer PDCA continuation
+
+Context:
+
+- User said `继续` after the `serve /chat` canonical run commit, so execution continued with ORCA-SWARM-009.
+- The working tree contains a broad uncommitted Ink UI baseline (`DetailPanel`, `HomePanel`, `OptionPicker`, and related tests). This tranche avoids mixing that baseline into the evidence-drawer commit.
+
+PDCA executed:
+
+- Plan: make TaskRun evidence inspectable from the queue surface first, then leave full Ink side-panel integration as a later UX tranche.
+- Do: add `orca queue evidence <task-run-id>` with typed evidence entries, resolved paths, file size, update time, missing-file state, and bounded tail previews.
+- Check:
+  - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed.
+  - Clean staged-index targeted check: `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed.
+  - `npm run lint` -> pass.
+  - `npm run build` -> pass.
+  - Full `npm test` -> `86` files / `1602` tests passed.
+  - `node dist/bin/orca.js --version` -> `0.8.5`.
+  - `ai check` -> failed on existing harness/doc gates: docs frontmatter/changelog baseline, historical no-emoji hits, and missing `tests/test_all.py` in the generic test runner. Evidence: `outputs/check/20260429-044244-b917cb00`.
+- Act: next queue item is ORCA-SWARM-010, centralizing slash-command registry, unless the dirty UI baseline or repo-local `ai check` adapter must be closed first.
+
 ## 2026-04-29 - Serve canonical run PDCA continuation
 
 Context:

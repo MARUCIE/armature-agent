@@ -1,5 +1,52 @@
 # Deliverable
 
+## 2026-04-29 - Queue Evidence Drawer PDCA Tranche
+
+### Scope
+
+Complete ORCA-SWARM-009 as a queue-first evidence drawer so operators can inspect TaskRun logs, diffs, data, reports, missing artifacts, and capped previews without opening raw files.
+
+### Delivered
+
+- `orca queue evidence <task-run-id>`
+- `--lines <n>` for preview tail size
+- `--max-bytes <n>` for bounded per-file preview output
+- Evidence classification for `log`, `diff`, `data`, `report`, and generic `artifact`
+- Resolved absolute paths, size, update time, missing-file state, and readable tail preview per evidence item
+- Version bumped to `0.8.5`
+
+### Changed Files
+
+- `src/commands/queue.ts`
+- `tests/queue-command.test.ts`
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `doc/00_project/initiative_orca/*`
+
+### Simplifications Made
+
+- Reused the existing TaskRun evidence array and background-log attachment path.
+- Kept the drawer terminal-native instead of mixing in the current uncommitted Ink side-panel baseline.
+
+### Verification
+
+- `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11/11`
+- Clean staged-index targeted check: `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11/11`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test` -> `86` files / `1602` tests passed
+- `node dist/bin/orca.js --version` -> `0.8.5`
+- `ai check` -> failed on existing harness/doc gates: docs require frontmatter/changelog across legacy docs, no-emoji flags existing historical entries, and the test harness looks for missing `tests/test_all.py`; evidence at `outputs/check/20260429-044244-b917cb00`
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Evidence drawer is CLI-terminal first, not a full Ink side panel | UX/runtime | Extend the drawer into Ink after the existing uncommitted UI baseline is committed or split |
+| Approvals and tool-call timelines are still not attached as first-class TaskRun evidence | Runtime/architecture | Continue M3 evidence-console work after execution contract unification |
+| `ai check` harness is not aligned with this TypeScript repo baseline | Verification | Add a repo-local check adapter or update the harness before treating `ai check` as a release gate |
+
 ## 2026-04-29 - Serve Canonical Run PDCA Tranche
 
 ### Scope

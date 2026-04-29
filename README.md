@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/Node-%3E%3D18-green.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/Tests-1600%20passing-brightgreen.svg)](#sota-agent-capabilities)
+[![Tests](https://img.shields.io/badge/Tests-1602%20passing-brightgreen.svg)](#sota-agent-capabilities)
 [![TypeScript](https://img.shields.io/badge/TypeScript-ESM-3178C6.svg)](https://www.typescriptlang.org/)
 
 The one CLI that can do what no single-vendor CLI can: ask Claude, GPT, and Gemini the same question simultaneously, race them, or chain them as specialists. Works with any OpenAI-compatible provider.
@@ -15,7 +15,7 @@ The one CLI that can do what no single-vendor CLI can: ask Claude, GPT, and Gemi
 
 ```
        ..:::....
-    .::------::::..          Orca  v0.8.4
+    .::------::::..          Orca  v0.8.5
   .::--========----::::..    provider-neutral agent runtime
 .:--==+++*****+++===---::::..
 .:-=++**#########**++==---::..
@@ -467,14 +467,14 @@ Features that close the gap between "tool" and "agent":
 | Multi-edit Atomicity | Failed batch edits leave file unchanged | No partial corruption on error |
 | Background Completion Notifications | `run_background` jobs notify the REPL when they finish, and `/jobs` shows tracked state | Agent can keep working without manual PID polling |
 
-Tested: 1600 automated tests, fast gate `63/63`, nightly gate `66/66`, release gate `69/69`.
+Tested: 1602 automated tests, fast gate `63/63`, nightly gate `66/66`, release gate `69/69`.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Orca CLI  v0.8.4                                   │
-│  TypeScript ESM CLI · 86 test files · 1600 tests    │
+│  Orca CLI  v0.8.5                                   │
+│  TypeScript ESM CLI · 86 test files · 1602 tests    │
 ├─────────────────────────────────────────────────────┤
 │  Command Layer                                      │
 │  chat · run · council · race · pipeline · serve     │

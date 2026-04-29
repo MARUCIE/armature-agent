@@ -251,6 +251,108 @@ describe('queue command', () => {
     expect(output).toContain('third')
   })
 
+  it('opens a task-run evidence drawer with artifact previews', async () => {
+    vi.resetModules()
+    const {
+      createTaskRun,
+      createWorkSession,
+      finishTaskRun,
+    } = await import('../src/work-session-store.js')
+    const { createQueueCommand } = await import('../src/commands/queue.js')
+
+    const projectDir = join(homeDir, 'project')
+    mkdirSync(join(projectDir, 'outputs', 'test'), { recursive: true })
+    writeFileSync(join(projectDir, 'outputs', 'test', 'queue.log'), 'first\nsecond\nthird\n', 'utf-8')
+    writeFileSync(join(projectDir, 'outputs', 'test', 'change.diff'), '--- a/file\n+++ b/file\n+added\n', 'utf-8')
+
+    const session = createWorkSession({
+      sourceSurface: 'run',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    const taskRun = createTaskRun({
+      workSessionId: session.id,
+      kind: 'run',
+      title: 'Evidence drawer task',
+      surface: 'cli',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    finishTaskRun(taskRun.id, {
+      status: 'completed',
+      summary: 'drawer ready',
+      evidence: [
+        { label: 'test-log', path: 'outputs/test/queue.log' },
+        { label: 'review-diff', path: 'outputs/test/change.diff' },
+      ],
+    })
+
+    const logs: string[] = []
+    vi.spyOn(console, 'log').mockImplementation((...args) => { logs.push(args.join(' ')) })
+
+    const command = createQueueCommand()
+    await command.parseAsync(['node', 'queue', 'evidence', taskRun.id, '--lines', '2'])
+
+    const output = logs.join('\n')
+    expect(output).toContain(`TaskRun Evidence Drawer ${taskRun.id}`)
+    expect(output).toContain('summary: drawer ready')
+    expect(output).toContain('[1/2] test-log')
+    expect(output).toContain('type: log')
+    expect(output).toContain('size:')
+    expect(output).not.toContain('first')
+    expect(output).toContain('second')
+    expect(output).toContain('third')
+    expect(output).toContain('[2/2] review-diff')
+    expect(output).toContain('type: diff')
+    expect(output).toContain('+added')
+  })
+
+  it('shows missing evidence entries in the evidence drawer', async () => {
+    vi.resetModules()
+    const {
+      createTaskRun,
+      createWorkSession,
+      finishTaskRun,
+    } = await import('../src/work-session-store.js')
+    const { createQueueCommand } = await import('../src/commands/queue.js')
+
+    const projectDir = join(homeDir, 'project')
+    mkdirSync(projectDir, { recursive: true })
+
+    const session = createWorkSession({
+      sourceSurface: 'run',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    const taskRun = createTaskRun({
+      workSessionId: session.id,
+      kind: 'run',
+      title: 'Missing evidence task',
+      surface: 'cli',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    finishTaskRun(taskRun.id, {
+      status: 'failed',
+      evidence: [{ label: 'missing-log', path: 'outputs/test/missing.log' }],
+    })
+
+    const logs: string[] = []
+    vi.spyOn(console, 'log').mockImplementation((...args) => { logs.push(args.join(' ')) })
+
+    const command = createQueueCommand()
+    await command.parseAsync(['node', 'queue', 'evidence', taskRun.id])
+
+    const output = logs.join('\n')
+    expect(output).toContain('missing-log')
+    expect(output).toContain('status: missing')
+    expect(output).toContain('outputs/test/missing.log')
+  })
+
   it('streams appended evidence until a task run completes', async () => {
     vi.resetModules()
     const {

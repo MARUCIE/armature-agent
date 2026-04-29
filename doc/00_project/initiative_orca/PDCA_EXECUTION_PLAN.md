@@ -9,15 +9,16 @@
   - hook env allowlist
   - `fetch_url` / `web_search` approval gating
   - private/loopback `fetch_url` guard
-  - `orca queue list/show/follow/takeover`
+  - `orca queue list/show/follow/takeover/evidence`
   - `serve /chat` canonical `WorkSession` / `TaskRun` records
 - Check evidence:
   - `npm run lint`
   - `npm run build`
-  - `npm test` -> `86` files / `1600` tests
+  - `npm test` -> `86` files / `1602` tests
+  - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests
 - Act queue:
   - complete unified execution contract for remaining chat/mission/planner paths
-  - evidence console
+  - Ink evidence side panel and approvals timeline
   - CI gate integrity
 
 ## Plan
