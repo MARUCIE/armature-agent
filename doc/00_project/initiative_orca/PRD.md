@@ -9,6 +9,7 @@ New product requirements from the SOTA swarm audit:
 - `fetch_url` must reject non-HTTP(S), loopback, private, and link-local literal targets by default.
 - Operators need a top-level queue inspection surface for current `TaskRun` records: `orca queue list/show/follow/takeover/evidence`.
 - Queue inspection must expose richer evidence bundles before the full Ink evidence side panel lands.
+- Slash-command discovery must use a shared registry so REPL completion, Ink picker, and `/help` cannot drift; HomePanel hint metadata must be ready for the pending UI-baseline split.
 - Next tranche must continue the unified execution contract across `run`, `serve`, mission, and planner surfaces.
 - `serve /chat` must create and close canonical `WorkSession` / `TaskRun` records, returning the ids in non-streaming responses and emitting them as streaming metadata.
 

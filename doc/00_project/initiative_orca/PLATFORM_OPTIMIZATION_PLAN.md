@@ -18,7 +18,9 @@ The next platform wave is now explicitly ordered:
 4. Evidence console:
    - `orca queue evidence` now opens TaskRun logs, diffs, data, reports, missing artifacts, and capped previews
    - extend approvals, tool-call timelines, and Ink side-panel rendering after the UI baseline lands
-5. Gate integrity:
+5. Slash command surface:
+   - `src/slash-commands.ts` is now the shared registry for REPL completion, Ink picker, and `/help`; HomePanel hint metadata is prepared for the pending UI-baseline split
+6. Gate integrity:
    - align CI with declared matrix/security/performance/eval gates
 
 ## Objective

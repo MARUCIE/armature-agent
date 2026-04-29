@@ -11,14 +11,17 @@
   - private/loopback `fetch_url` guard
   - `orca queue list/show/follow/takeover/evidence`
   - `serve /chat` canonical `WorkSession` / `TaskRun` records
+  - shared slash-command registry for REPL completion, Ink picker, and `/help`, with HomePanel hint metadata prepared for a later UI-baseline split
 - Check evidence:
   - `npm run lint`
   - `npm run build`
-  - `npm test` -> `86` files / `1602` tests
+  - `npm test` -> `87` files / `1606` tests
   - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests
+  - `npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx` -> `98` tests
 - Act queue:
   - complete unified execution contract for remaining chat/mission/planner paths
   - Ink evidence side panel and approvals timeline
+  - README/doc count drift cleanup
   - CI gate integrity
 
 ## Plan

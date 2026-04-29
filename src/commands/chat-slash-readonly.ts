@@ -11,6 +11,11 @@ import { listSessionFiles, loadSessionFile } from '../session-store.js'
 import { TOOL_DEFINITIONS } from '../tools.js'
 import type { ChatSessionEmitter } from '../ui/session.js'
 import { buildSafeGitSlashArgs } from './chat-input.js'
+import {
+  listSlashHelpCommands,
+  SLASH_HELP_SECTION_PAIRS,
+  type SlashCommandDefinition,
+} from '../slash-commands.js'
 
 export type ReadonlySlashCommandResult = 'handled' | 'pick_model' | 'not_handled'
 
@@ -56,32 +61,31 @@ export interface ReadonlySlashCommandOptions {
   modeLabel?: string
 }
 
+function formatSlashHelpEntry(command: SlashCommandDefinition): string {
+  return `${command.name.padEnd(12)} ${command.description}`
+}
+
+function formatMarkdownSlashHelpEntry(command: SlashCommandDefinition): string {
+  return '`' + command.name + '` ' + command.description
+}
+
 function renderHelp(session?: ChatSessionEmitter): void {
   if (session) {
-    session.emitText([
-      '**Session**                  | **Model**',
-       '`/clear`   Clear history     | `/model`    Show/switch model',
-       '`/compact` Smart compaction  | `/models`   List all models',
-       '`/reflect` Socratic debug    | `/mode`     Behavioral profiles',
-       '`/status`  Session overview  | `/effort`   Thinking effort',
-       '`/cost`    Token breakdown   | `/providers` List providers',
-       '`/save`    Save session      |             ',
-      '',
-      '**Git**                      | **Multi-Model**',
-      '`/diff`    Show git diff     | `/council`  N models + judge',
-      '`/commit`  Create commit     | `/race`     First answer wins',
-      '`/undo`    Revert last write | `/pipeline` Plan-Code-Review',
-      '`/git`     Run git command   | `/mission`  Autonomous mission',
-      '                             | `/plan`     Task decomposition',
-      '',
-      '**Knowledge**                | **System**',
-      '`/notes`   Observations      | `/mcp`      MCP servers',
-      '`/postmortem` Error patterns | `/hooks`    Registered hooks',
-      '`/prompts` Template library  | `/doctor`   Health check',
-      '`/learn`   Evolution rules   | `/thread`   Conversation memory',
-      '',
-      '**Tips**: `!cmd` shell escape · `Tab` auto-complete · `/` command picker · `Ctrl+J` newline',
-    ].join('\n'))
+    const lines: string[] = []
+    for (const [leftSection, rightSection] of SLASH_HELP_SECTION_PAIRS) {
+      const leftCommands = listSlashHelpCommands(leftSection)
+      const rightCommands = listSlashHelpCommands(rightSection)
+      lines.push(`**${leftSection}**`.padEnd(28) + `| **${rightSection}**`)
+      const rows = Math.max(leftCommands.length, rightCommands.length)
+      for (let i = 0; i < rows; i += 1) {
+        const left = leftCommands[i] ? formatMarkdownSlashHelpEntry(leftCommands[i]!) : ''
+        const right = rightCommands[i] ? formatMarkdownSlashHelpEntry(rightCommands[i]!) : ''
+        lines.push(left.padEnd(28) + `| ${right}`)
+      }
+      lines.push('')
+    }
+    lines.push('**Tips**: `!cmd` shell escape · `Tab` auto-complete · `/` command picker · `Ctrl+J` newline')
+    session.emitText(lines.join('\n'))
     return
   }
 
@@ -89,27 +93,18 @@ function renderHelp(session?: ChatSessionEmitter): void {
   const bold = '\x1b[1m'
   const reset = '\x1b[0m'
   const row = (left: string, right: string) => `${dim}  ${left.padEnd(28)}${dim}│${reset} ${dim}${right}${reset}`
-  console.log()
-  console.log(`${dim}  ${bold}Session${reset}${dim}                       ${dim}│ ${bold}Model${reset}`)
-  console.log(row('/clear    Clear history', '/model    Show/switch model'))
-  console.log(row('/compact  Smart compaction', '/models   List all models'))
-  console.log(row('/reflect  Socratic debug', '/mode     Behavioral profiles'))
-  console.log(row('/status   Session overview', '/effort   Thinking effort'))
-  console.log(row('/cost     Token breakdown', '/providers List providers'))
-  console.log(row('/save     Save session', ''))
-  console.log()
-  console.log(`${dim}  ${bold}Git${reset}${dim}                            ${dim}│ ${bold}Multi-Model${reset}`)
-  console.log(row('/diff     Show git diff', '/council  N models + judge'))
-  console.log(row('/commit   Create commit', '/race     First answer wins'))
-  console.log(row('/undo     Revert last write', '/pipeline Plan-Code-Review'))
-  console.log(row('/git      Run git command', '/mission  Autonomous mission'))
-  console.log(row('', '/plan     Task decomposition'))
-  console.log()
-  console.log(`${dim}  ${bold}Knowledge${reset}${dim}                      ${dim}│ ${bold}System${reset}`)
-  console.log(row('/notes    Observations', '/mcp      MCP servers'))
-  console.log(row('/postmortem Error patterns', '/hooks    Registered hooks'))
-  console.log(row('/prompts  Template library', '/doctor   Health check'))
-  console.log(row('/learn    Evolution rules', '/thread   Conversation memory'))
+  for (const [leftSection, rightSection] of SLASH_HELP_SECTION_PAIRS) {
+    const leftCommands = listSlashHelpCommands(leftSection)
+    const rightCommands = listSlashHelpCommands(rightSection)
+    console.log()
+    console.log(`${dim}  ${bold}${leftSection}${reset}${dim}${' '.repeat(Math.max(1, 31 - leftSection.length))}${dim}│ ${bold}${rightSection}${reset}`)
+    const rows = Math.max(leftCommands.length, rightCommands.length)
+    for (let i = 0; i < rows; i += 1) {
+      const left = leftCommands[i] ? formatSlashHelpEntry(leftCommands[i]!) : ''
+      const right = rightCommands[i] ? formatSlashHelpEntry(rightCommands[i]!) : ''
+      console.log(row(left, right))
+    }
+  }
   console.log()
   console.log(`${dim}  ${bold}Tips${reset}`)
   console.log(row('!cmd      Shell escape', 'Ctrl+L   Reset chat'))
@@ -117,6 +112,7 @@ function renderHelp(session?: ChatSessionEmitter): void {
   console.log(row('/         Command picker', 'Shift+Tab Mode cycle'))
   console.log(reset)
 }
+
 
 function renderModelInfo(arg: string, mc: ReadonlySlashModelControl): ReadonlySlashCommandResult {
   if (arg.startsWith('set ') || arg.startsWith('use ')) {

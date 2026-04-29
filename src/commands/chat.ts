@@ -65,6 +65,7 @@ import { handleReadonlySlashCommand } from './chat-slash-readonly.js'
 import { resetConversationState } from './chat-session-state.js'
 import { applyModeSystemPrompt } from './mode-system-prompt.js'
 import { buildReflectSystemPrompt, prepareReflectPromptContent } from './reflect-mode.js'
+import { listSlashCommandCompletions } from '../slash-commands.js'
 
 // ── Chat Options ─────────────────────────────────────────────────
 
@@ -354,27 +355,8 @@ async function runREPL(
     }
   } catch { /* ignore */ }
 
-  // Tab completion for slash commands
-  const SLASH_COMMANDS = [
-    // Session
-    '/help', '/clear', '/compact', '/status', '/cost', '/doctor',
-    // Model
-    '/model', '/models', '/providers', '/effort', '/reflect',
-    // Context
-    '/history', '/tokens', '/stats', '/system',
-    // Session management
-    '/save', '/load', '/sessions', '/continue',
-    // Git workflow
-    '/diff', '/git', '/commit', '/review', '/pr', '/undo',
-    // Multi-model
-    '/council', '/race', '/pipeline', '/mission', '/plan',
-    // System
-    '/config', '/init', '/hooks', '/mcp', '/jobs', '/cwd', '/mode', '/thread', '/threads',
-    // Knowledge
-    '/notes', '/postmortem', '/prompts', '/learn',
-    // Exit
-    '/exit', '/quit', '/retry',
-  ]
+  // Tab completion for slash commands.
+  const SLASH_COMMANDS = listSlashCommandCompletions()
   const completer = (line: string): [string[], string] => {
     if (line.startsWith('/')) {
       const hits = SLASH_COMMANDS.filter(c => c.startsWith(line))

@@ -17,6 +17,7 @@
 | REQ-20260429-009 | Runtime | Operators need a bounded lease takeover surface for non-terminal TaskRuns | Done | `orca queue takeover`, `src/work-session-store.ts`, `tests/queue-command.test.ts`, `tests/work-session-store.test.ts` |
 | REQ-20260429-010 | Runtime | Headless `serve /chat` requests must create and close canonical WorkSession / TaskRun records | Done | `src/commands/serve.ts`, `tests/serve-command.test.ts` |
 | REQ-20260429-011 | UX | Operators need a TaskRun evidence drawer for logs, diffs, data, reports, missing artifacts, and bounded previews | Done | `orca queue evidence`, `src/commands/queue.ts`, `tests/queue-command.test.ts` |
+| REQ-20260429-012 | UX | Slash-command discovery must not drift across REPL completion, Ink picker, and `/help`; HomePanel hint metadata must be ready for the pending UI-baseline split | Core Done | `src/slash-commands.ts`, `tests/slash-commands.test.ts` |
 
 ### Prompt Ledger
 
@@ -27,6 +28,7 @@
 | PROMPT-20260429-003 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-007: `queue takeover` lease model |
 | PROMPT-20260429-004 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-008: `serve /chat` canonical run records |
 | PROMPT-20260429-005 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-009: `queue evidence` drawer |
+| PROMPT-20260429-006 | `继续` | Continue queued PDCA execution | Core completed ORCA-SWARM-010: shared slash-command registry |
 
 ### Anti-Regression Q&A
 
@@ -42,6 +44,7 @@
 | Can a second operator silently take over an active TaskRun lease? | No. `queue takeover` refuses an active unexpired lease unless `--force` is explicit. | `tests/queue-command.test.ts`, `tests/work-session-store.test.ts` |
 | Does `serve /chat` create queue-visible execution records? | Yes. Valid non-streaming and streaming requests create `WorkSession` / `TaskRun` records and expose the ids in response metadata. | `tests/serve-command.test.ts` |
 | Can operators inspect TaskRun evidence without opening raw files? | Yes. `orca queue evidence <id>` renders typed evidence entries with paths, metadata, missing-file state, and capped previews. | `tests/queue-command.test.ts` |
+| Can slash-command discovery drift between completion, picker, and `/help`? | It should not. Those committed surfaces now read command metadata from `src/slash-commands.ts`; HomePanel metadata is ready but the consumer is deferred until the UI baseline is split. | `tests/slash-commands.test.ts` |
 
 ### References
 

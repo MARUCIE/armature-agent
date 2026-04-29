@@ -6,7 +6,7 @@
 - Baseline: dirty working tree audit; existing user changes were preserved
 - Report route: `html-style-router` -> `html-economist-style`
 - Verification baseline before fixes: `npm run lint`, `npm test` (`85` files / `1583` tests), `npm run build`
-- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`86` files / `1602` tests)
+- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`87` files / `1606` tests)
 
 ## Scope
 
@@ -152,14 +152,25 @@ Atomic follow-up:
 - Add a gate-integrity CI job that runs matrix sync, static/security/performance rows, and at least the fast eval gate.
 - Convert existence/keyword checks into behavior assertions where possible.
 
+### Medium - Slash-command discovery could drift across UI surfaces
+
+Before the fix, slash-command metadata was repeated across REPL tab completion, Ink command picker, future HomePanel hints, and `/help` output.
+
+PDCA action executed:
+
+- Added `src/slash-commands.ts` as the shared slash-command registry.
+- REPL completion, Ink command picker, and `/help` sections now read from that registry; HomePanel descriptions are present in the registry for the pending UI-baseline split.
+- Regression coverage verifies registry uniqueness, picker/completer alignment, help sections, and alias description lookup.
+
 ## Milestone Plan
 
 | Milestone | Goal | Exit Criteria |
 | --- | --- | --- |
 | M0 Trust Hardening | Close immediate repo-trust and network-tool risks | Repo-local hooks require explicit trust; network tools approval-gated; targeted security tests pass |
-| M1 Queue Visibility | Make current TaskRun state inspectable | `orca queue list/show/follow/takeover` shipped; status filtering, evidence streaming, and lease claims covered |
+| M1 Queue Visibility | Make current TaskRun state inspectable | `orca queue list/show/follow/takeover/evidence` shipped; status filtering, evidence streaming, leases, and evidence drawer covered |
 | M2 Unified Execution Contract | One run object across CLI, serve, mission, planner | Partial: `run` and `serve /chat` create/update canonical records; chat/mission/planner remain |
 | M3 Evidence Console | Review-before-apply becomes inspectable | Partial: CLI evidence drawer shows TaskRun logs/diffs/artifacts; Ink side panel and approvals timeline remain |
+| M3b Slash Command Surface | Command discovery cannot drift across REPL and Ink | Shared registry feeds completion, picker, and `/help`; HomePanel metadata is prepared but not staged into the dirty UI baseline |
 | M4 Gate Integrity | CI enforces documented gates | CI runs declared matrix/security/performance/eval gates or explicitly marks deferred rows |
 | M5 Model Catalog SSoT | Provider routing metadata stops drifting | One model catalog powers runtime, docs, picker, and tests |
 
@@ -176,7 +187,7 @@ Atomic follow-up:
 | ORCA-SWARM-007 | P1 | Add `queue takeover` lease model | architecture | done |
 | ORCA-SWARM-008 | P1 | Convert `serve /chat` into a canonical run endpoint | architecture | done |
 | ORCA-SWARM-009 | P1 | Add evidence drawer for TaskRun logs/diffs/artifacts | UX | done |
-| ORCA-SWARM-010 | P1 | Centralize slash-command registry so HomePanel/completer/TUI cannot drift | UX | pending |
+| ORCA-SWARM-010 | P1 | Centralize slash-command registry so HomePanel/completer/TUI cannot drift | UX | core done |
 | ORCA-SWARM-011 | P2 | Align README/doc test counts to current suite evidence | docs | pending |
 | ORCA-SWARM-012 | P2 | Add CI matrix/security/performance/eval enforcement | verification | pending |
 
@@ -216,10 +227,13 @@ Verification executed:
 - Combined targeted regression pack -> `190` tests passed
 - `npm run lint` -> pass
 - `npm run build` -> pass
-- Final `npm test` -> `86` files / `1602` tests passed
-- `node dist/bin/orca.js --version` -> `0.8.5`
+- Final `npm test` -> `87` files / `1606` tests passed
+- `node dist/bin/orca.js --version` -> `0.8.6`
 - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed
 - Clean staged-index `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed
+- `npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx` -> `98` tests passed
+- Clean staged-index `npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx` -> `98` tests passed
+- `git diff --cached --check` -> pass
 - `orca queue evidence <task-run-id>` -> evidence drawer renders typed entries, metadata, missing files, and tail previews
 - `ai check` attempted -> failed on existing generic harness/doc gates: missing `tests/test_all.py`, legacy docs without required frontmatter/changelog, and historical no-emoji hits; evidence at `outputs/check/20260429-044244-b917cb00`
 - `node dist/bin/orca.js queue takeover <fixture-task-run> --holder smoke --ttl 30s` -> acquired a TaskRun lease
@@ -239,8 +253,8 @@ Next queue items should proceed in this order:
 
 1. Complete execution contract unification for `chat`, mission, and planner.
 2. Ink evidence side panel and review-before-apply approvals timeline.
-3. CI gate integrity.
-4. Documentation count drift cleanup.
+3. Documentation count drift cleanup.
+4. CI gate integrity.
 
 ## Remaining Risks
 
@@ -248,4 +262,5 @@ Next queue items should proceed in this order:
 - Repo-local hooks now have an env trust switch, but a first-class `orca hooks trust` UX does not exist yet.
 - `orca queue` now supports list/show/follow/takeover/evidence, but is not yet a durable scheduler or process-resume manager.
 - Evidence drawer is CLI-terminal first; full Ink side-panel integration remains blocked by the existing uncommitted UI baseline.
-- Full `npm test` and `npm run build` should be rerun after documentation closeout to refresh the final all-suite evidence.
+- Slash command discovery now has one registry, but command execution handlers still live in the read-only and mutating slash switches.
+- HomePanel registry consumption remains blocked by the existing uncommitted UI baseline and should be split before claiming full ORCA-SWARM-010 closure.

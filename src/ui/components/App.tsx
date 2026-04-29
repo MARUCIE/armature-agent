@@ -35,35 +35,9 @@ import { ScrollBox } from './ScrollBox.js'
 import type { ScrollBoxHandle } from './ScrollBox.js'
 import { useMouseWheel } from '../useMouseWheel.js'
 import { getCommandPickerFilter, shouldShowCommandPicker, truncateLabel } from '../utils.js'
-import type { CommandDef } from './CommandPicker.js'
+import { listSlashCommandPickerItems } from '../../slash-commands.js'
 
-const SLASH_COMMANDS: CommandDef[] = [
-  { name: '/help', description: 'Show all commands' },
-  { name: '/clear', description: 'Clear conversation' },
-  { name: '/compact', description: 'Smart compaction' },
-  { name: '/status', description: 'Session overview' },
-  { name: '/cost', description: 'Token breakdown' },
-  { name: '/model', description: 'Show/switch model' },
-  { name: '/models', description: 'List all models' },
-  { name: '/reflect', description: 'Socratic debugging' },
-  { name: '/effort', description: 'Thinking effort' },
-  { name: '/mode', description: 'Behavioral profiles' },
-  { name: '/diff', description: 'Show git diff' },
-  { name: '/commit', description: 'Create commit' },
-  { name: '/undo', description: 'Revert last write' },
-  { name: '/council', description: 'Multi-model council' },
-  { name: '/race', description: 'First answer wins' },
-  { name: '/pipeline', description: 'Plan-Code-Review' },
-  { name: '/mission', description: 'Autonomous mission' },
-  { name: '/plan', description: 'Task decomposition' },
-  { name: '/notes', description: 'Observations' },
-  { name: '/mcp', description: 'MCP servers' },
-  { name: '/hooks', description: 'Registered hooks' },
-  { name: '/doctor', description: 'Health check' },
-  { name: '/save', description: 'Save session' },
-  { name: '/thread', description: 'Conversation memory' },
-  { name: '/providers', description: 'List providers' },
-]
+const SLASH_COMMANDS = listSlashCommandPickerItems()
 
 export interface BannerInfo {
   version: string

@@ -1,5 +1,54 @@
 # Deliverable
 
+## 2026-04-29 - Slash Command Registry PDCA Tranche
+
+### Scope
+
+Advance ORCA-SWARM-010 by making slash-command discovery use one registry across REPL completion, Ink command picker, and `/help`, while leaving HomePanel wiring to the existing unstaged UI baseline.
+
+### Delivered
+
+- Added `src/slash-commands.ts` as the shared slash-command registry.
+- REPL tab completion now reads command names from the registry.
+- Ink command picker now reads picker-visible commands from the registry.
+- `/help` now renders from the same registry sections instead of a separate hard-coded list.
+- Registry entries expose `homeDescription` for the pending HomePanel consumer.
+- Version bumped to `0.8.6`.
+
+### Changed Files
+
+- `src/slash-commands.ts`
+- `src/commands/chat.ts`
+- `src/commands/chat-slash-readonly.ts`
+- `src/ui/components/App.tsx`
+- `tests/slash-commands.test.ts`
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `doc/00_project/initiative_orca/*`
+
+### Simplifications Made
+
+- Kept slash-command execution switches unchanged; this tranche centralizes discovery metadata only.
+- Reused the existing picker and help renderers instead of adding a second command-surface abstraction.
+
+### Verification
+
+- `npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx` -> `98/98`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test` -> `87` files / `1606` tests passed
+- `node dist/bin/orca.js --version` -> `0.8.6`
+- Clean staged-index `npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx` -> `98/98`
+- `git diff --cached --check` -> pass
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Slash-command execution still lives in read-only/mutating switches | Runtime/UX | Move handlers behind registry metadata only after the execution contract is unified |
+| HomePanel is currently part of an unstaged UI baseline | UX/runtime | Split or commit the UI baseline before staging HomePanel registry consumption |
+
 ## 2026-04-29 - Queue Evidence Drawer PDCA Tranche
 
 ### Scope

@@ -1,5 +1,27 @@
 # Notes
 
+## 2026-04-29 - Slash command registry PDCA continuation
+
+Context:
+
+- User said `继续` after the `queue evidence` commit, so execution continued with ORCA-SWARM-010.
+- Slash-command discovery was split across REPL completion, Ink command picker, future HomePanel hints, and `/help` rendering.
+- The working tree still contains a broad unrelated UI and agent-eval baseline; this tranche keeps execution handlers unchanged and centralizes metadata only.
+
+PDCA executed:
+
+- Plan: create a small shared registry for slash command metadata and wire only discovery/display consumers to it.
+- Do: add `src/slash-commands.ts`; route REPL completion, Ink picker, and `/help` sections through the registry. The registry also exposes HomePanel descriptions, but the HomePanel consumer remains part of the unstaged UI baseline.
+- Check:
+  - `npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx` -> `98` tests passed.
+  - `npm run lint` -> pass.
+  - `npm run build` -> pass.
+  - Full `npm test` -> `87` files / `1606` tests passed.
+  - `node dist/bin/orca.js --version` -> `0.8.6`.
+  - Clean staged-index targeted regression for the committed hunks -> `98` tests passed.
+  - `git diff --cached --check` -> pass.
+- Act: next queue items are ORCA-SWARM-011 documentation count drift cleanup and ORCA-SWARM-012 CI gate integrity, unless the dirty UI baseline must be split first.
+
 ## 2026-04-29 - Queue evidence drawer PDCA continuation
 
 Context:

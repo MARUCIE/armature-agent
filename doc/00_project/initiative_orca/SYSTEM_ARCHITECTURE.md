@@ -15,12 +15,20 @@ The SOTA swarm audit adds two immediate architectural constraints:
    - `orca queue follow <task-run-id>`
    - `orca queue takeover <task-run-id> --holder <name> --ttl <duration>`
    - `orca queue evidence <task-run-id>`
+3. Slash-command discovery now has a shared metadata registry:
+   - `src/slash-commands.ts`
+   - REPL completion
+   - Ink command picker
+   - `/help` rendering
+   - HomePanel command metadata prepared for the pending UI-baseline split
 
 Open architecture work:
 
 - Promote `WorkSession` / `TaskRun` into the canonical execution contract for `chat`, mission, and planner surfaces. The default `run` path and `serve /chat` now write canonical records.
 - Promote queue lease semantics from CLI metadata into future scheduler / resume control after the execution contract is unified.
 - Extend the evidence drawer from CLI-terminal output into the Ink side panel once the current uncommitted UI baseline is closed.
+- Keep execution handlers separate until the unified execution contract is ready; the registry currently owns discovery metadata, not command behavior.
+- Split the existing HomePanel UI baseline before wiring its command hints to the registry.
 
 <!-- AI-FLEET:PROJECT_DIR:START -->
 - `PROJECT_DIR`: `/Users/mauricewen/Projects/orca-cli`
