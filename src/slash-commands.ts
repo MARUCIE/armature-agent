@@ -66,6 +66,7 @@ export const SLASH_COMMAND_DEFINITIONS: readonly SlashCommandDefinition[] = [
   { name: '/hooks', description: 'Registered hooks', category: 'System' },
   { name: '/mcp', description: 'MCP servers', category: 'System' },
   { name: '/jobs', description: 'Background jobs', category: 'System', picker: false, help: false },
+  { name: '/evidence', description: 'Open TaskRun evidence', category: 'System' },
   { name: '/doctor', description: 'Health check', category: 'System', homeDescription: 'diagnose runtime and config problems' },
   { name: '/system', description: 'System prompt', category: 'System', picker: false, help: false },
 

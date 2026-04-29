@@ -8,12 +8,12 @@ New product requirements from the SOTA swarm audit:
 - Network-capable tools (`fetch_url`, `web_search`) must pass through approval policy in `auto` mode.
 - `fetch_url` must reject non-HTTP(S), loopback, private, and link-local literal targets by default.
 - Operators need a top-level queue inspection surface for current `TaskRun` records: `orca queue list/show/follow/takeover/evidence`.
-- Queue inspection must expose richer evidence bundles before the full Ink evidence side panel lands.
+- Queue inspection must expose richer evidence bundles in both CLI output and the Ink detail panel before approval timeline work begins.
 - Slash-command discovery must use a shared registry so REPL completion, Ink picker, and `/help` cannot drift; HomePanel hint metadata must be ready for the pending UI-baseline split.
 - README and active PDCA documents must use `verification_snapshot.json` plus release-evidence tests so version, test file count, and full-suite count cannot silently drift.
 - CI must run the documented matrix/security/performance/eval entrypoints instead of relying on a narrower build/test job.
 - `orca run` default, goal-loop, mission, plan branches, and interactive `orca chat` turns must create and close canonical `WorkSession` / `TaskRun` records.
-- Next tranche must continue the TaskRun evidence UX and model-routing evidence work.
+- Next tranche must continue the review-before-apply approval timeline and model-routing evidence work.
 - `serve /chat` must create and close canonical `WorkSession` / `TaskRun` records, returning the ids in non-streaming responses and emitting them as streaming metadata.
 
 ## Product Snapshot

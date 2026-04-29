@@ -1,5 +1,24 @@
 # Notes
 
+## 2026-04-29 - Ink TaskRun evidence panel PDCA continuation
+
+Context:
+
+- User continued the SOTA swarm PDCA queue after chat REPL TaskRun records were committed.
+- The remaining M3 gap was evidence access inside the Ink REPL: CLI `orca queue evidence` could inspect TaskRun artifacts, but the chat operator still had to leave the session or open raw files.
+- The boundary is evidence inspection, not the later approval timeline or scheduler/resume work.
+
+PDCA executed:
+
+- Plan: reuse the queue evidence drawer model and markdown formatter so CLI and Ink cannot drift.
+- Do: exported the TaskRun evidence drawer model from `src/commands/queue.ts`, added `/evidence` to the shared slash registry, and routed it through `chat-slash-readonly` into an Ink `DetailPanel`.
+- Check:
+  - `npm run build && npm test -- tests/queue-command.test.ts tests/chat-slash-readonly.test.ts tests/slash-commands.test.ts tests/ink-ui.test.tsx` -> `108` tests passed.
+  - `npm test -- tests/release-evidence.test.ts tests/queue-command.test.ts tests/chat-slash-readonly.test.ts tests/slash-commands.test.ts tests/ink-ui.test.tsx` -> `111` tests passed.
+  - `npm run lint && npm run build && npm test` -> `88` files / `1615` tests passed.
+  - `node dist/bin/orca.js --version` -> `0.8.13`.
+- Act: ORCA-SWARM-017 closes the Ink evidence inspection gap; next queue item is ORCA-SWARM-018 approval timeline, then scheduler/resume semantics.
+
 ## 2026-04-29 - Chat REPL TaskRun records PDCA continuation
 
 Context:

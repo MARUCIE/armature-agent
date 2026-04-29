@@ -9,6 +9,7 @@ New operator journeys:
 | Inspect running/completed agent work | See current TaskRun queue without opening raw files | `orca queue list`, `orca queue show <id>` | `src/commands/queue.ts`, `tests/queue-command.test.ts` |
 | Follow live TaskRun evidence | Stream appended evidence logs until a TaskRun reaches a terminal state | `orca queue follow <id>` | `src/commands/queue.ts`, `tests/queue-command.test.ts` |
 | Open a TaskRun evidence drawer | Inspect logs, diffs, data, reports, missing artifacts, and capped previews by TaskRun | `orca queue evidence <id>` | `src/commands/queue.ts`, `tests/queue-command.test.ts` |
+| Open TaskRun evidence in chat | Inspect the same TaskRun evidence drawer without leaving the Ink REPL | `/evidence <id>` | `src/commands/chat-slash-readonly.ts`, `src/commands/queue.ts`, `tests/chat-slash-readonly.test.ts` |
 | Claim operator control of a TaskRun | Mark a non-terminal TaskRun as owned by an operator for a bounded TTL | `orca queue takeover <id> --holder <name> --ttl <duration>` | `src/commands/queue.ts`, `src/work-session-store.ts`, `tests/queue-command.test.ts`, `tests/work-session-store.test.ts` |
 | Discover slash commands consistently | See the same command surface in completion, picker, and help, with HomePanel metadata prepared for the pending UI-baseline split | `/`, `Tab`, `/help` | `src/slash-commands.ts`, `tests/slash-commands.test.ts` |
 | Trust release evidence in docs | See README and active PDCA counts aligned with the package version and current full-suite snapshot | README, PDCA docs, `verification_snapshot.json` | `tests/release-evidence.test.ts` |
@@ -19,7 +20,7 @@ New operator journeys:
 Open UX work:
 
 - Convert queue leases into real scheduler / resume semantics after the unified execution contract lands.
-- Extend the CLI evidence drawer into the Ink TUI so review-before-apply is not limited to compact previews.
+- Add the approval timeline on top of the shared CLI / Ink TaskRun evidence drawer so review-before-apply has inspectable decision history.
 - Move command handlers behind registry metadata only after the command execution contract is stable.
 - Split the existing HomePanel UI baseline before wiring quick-path command hints to the registry.
 - Keep CI gate labels aligned with `agent-eval/manifests/test-matrix.json` and the generated entrypoint snippet.

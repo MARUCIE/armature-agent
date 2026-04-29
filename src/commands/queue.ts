@@ -14,6 +14,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import { isAbsolute, resolve } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { getBackgroundJobById } from '../background-jobs.js'
+import { formatMarkdownCodeBlock } from '../ui/command-output.js'
 import {
   claimTaskRunLease,
   getTaskRunDetailById,
@@ -43,6 +44,26 @@ interface QueueFollowOptions {
 interface QueueEvidenceOptions {
   lines?: string
   maxBytes?: string
+}
+
+export interface TaskRunEvidencePreview {
+  label: string
+  type: string
+  path: string
+  status: 'present' | 'missing' | 'unreadable'
+  size?: string
+  updatedAt?: string
+  preview?: string
+  truncated?: boolean
+}
+
+export interface TaskRunEvidenceDrawer {
+  taskRunId: string
+  status: TaskRunStatus
+  title: string
+  workSessionId: string
+  summary?: string
+  evidence: TaskRunEvidencePreview[]
 }
 
 interface QueueTakeoverOptions {
@@ -302,6 +323,100 @@ function readEvidencePreview(path: string, lines: number, maxBytes: number): { c
   }
 }
 
+function codeLanguageForEvidenceType(type: string): string {
+  if (type === 'diff') return 'diff'
+  if (type === 'data') return 'json'
+  if (type === 'report') return 'markdown'
+  return 'text'
+}
+
+export function buildTaskRunEvidenceDrawer(id: string, options: QueueEvidenceOptions = {}): TaskRunEvidenceDrawer | null {
+  const detail = getTaskRunDetailById(id)
+  if (!detail) return null
+
+  const taskRun = detail.taskRun
+  const lines = parseLineCount(options.lines)
+  const maxBytes = parseMaxBytes(options.maxBytes)
+  const evidence = collectEvidence(taskRun).map((item) => {
+    const path = resolveEvidencePath(taskRun, item)
+    const type = classifyEvidence(item.label, path)
+
+    if (!existsSync(path)) {
+      return {
+        label: item.label,
+        type,
+        path,
+        status: 'missing' as const,
+      }
+    }
+
+    try {
+      const stat = statSync(path)
+      const preview = readEvidencePreview(path, lines, maxBytes)
+      return {
+        label: item.label,
+        type,
+        path,
+        status: 'present' as const,
+        size: formatBytes(stat.size),
+        updatedAt: stat.mtime.toISOString(),
+        preview: preview.content || undefined,
+        truncated: preview.truncated,
+      }
+    } catch {
+      return {
+        label: item.label,
+        type,
+        path,
+        status: 'unreadable' as const,
+      }
+    }
+  })
+
+  return {
+    taskRunId: taskRun.id,
+    status: taskRun.status,
+    title: taskRun.title,
+    workSessionId: taskRun.workSessionId,
+    summary: taskRun.summary,
+    evidence,
+  }
+}
+
+export function formatTaskRunEvidenceDrawerMarkdown(drawer: TaskRunEvidenceDrawer): string {
+  const lines = [
+    `# TaskRun Evidence ${drawer.taskRunId}`,
+    '',
+    `- Status: \`${drawer.status}\``,
+    `- Title: ${drawer.title}`,
+    `- Work session: \`${drawer.workSessionId}\``,
+  ]
+  if (drawer.summary) lines.push(`- Summary: ${drawer.summary}`)
+  lines.push('')
+
+  if (drawer.evidence.length === 0) {
+    lines.push('_No evidence files yet._')
+    return lines.join('\n')
+  }
+
+  drawer.evidence.forEach((item, index) => {
+    lines.push(`## [${index + 1}/${drawer.evidence.length}] ${item.label}`)
+    lines.push(`- Type: \`${item.type}\``)
+    lines.push(`- Path: \`${item.path}\``)
+    lines.push(`- Status: \`${item.status}\``)
+    if (item.size) lines.push(`- Size: ${item.size}`)
+    if (item.updatedAt) lines.push(`- Updated: ${item.updatedAt}`)
+    if (item.truncated) lines.push('- Preview: capped')
+    if (item.preview) {
+      lines.push('')
+      lines.push(formatMarkdownCodeBlock(item.preview, codeLanguageForEvidenceType(item.type)).trimEnd())
+    }
+    lines.push('')
+  })
+
+  return lines.join('\n').trimEnd()
+}
+
 function readNewContent(path: string, offset: number): { content: string; nextOffset: number } {
   if (!existsSync(path)) return { content: '', nextOffset: offset }
   try {
@@ -358,64 +473,47 @@ function printEvidenceSnapshot(
 }
 
 function renderTaskRunEvidenceDrawer(id: string, options: QueueEvidenceOptions): void {
-  const detail = getTaskRunDetailById(id)
-  if (!detail) {
+  const drawer = buildTaskRunEvidenceDrawer(id, options)
+  if (!drawer) {
     console.error(`\x1b[31m  error: task run "${id}" not found\x1b[0m`)
     process.exit(1)
   }
 
-  const taskRun = detail.taskRun
-  const evidence = collectEvidence(taskRun)
-  const lines = parseLineCount(options.lines)
-  const maxBytes = parseMaxBytes(options.maxBytes)
-
   console.log()
-  console.log(`  \x1b[1mTaskRun Evidence Drawer ${taskRun.id}\x1b[0m`)
-  console.log(`  status: ${taskRun.status}`)
-  console.log(`  title: ${taskRun.title}`)
-  console.log(`  work session: ${taskRun.workSessionId}`)
-  if (taskRun.summary) console.log(`  summary: ${taskRun.summary}`)
+  console.log(`  \x1b[1mTaskRun Evidence Drawer ${drawer.taskRunId}\x1b[0m`)
+  console.log(`  status: ${drawer.status}`)
+  console.log(`  title: ${drawer.title}`)
+  console.log(`  work session: ${drawer.workSessionId}`)
+  if (drawer.summary) console.log(`  summary: ${drawer.summary}`)
   console.log()
 
-  if (evidence.length === 0) {
+  if (drawer.evidence.length === 0) {
     console.log('  \x1b[90m(no evidence files yet)\x1b[0m')
     console.log()
     return
   }
 
-  evidence.forEach((item, index) => {
-    const path = resolveEvidencePath(taskRun, item)
-    const kind = classifyEvidence(item.label, path)
-    console.log(`  \x1b[1m[${index + 1}/${evidence.length}] ${item.label}\x1b[0m`)
-    console.log(`  type: ${kind}`)
-    console.log(`  path: ${path}`)
-
-    if (!existsSync(path)) {
-      console.log('  status: missing')
+  drawer.evidence.forEach((item, index) => {
+    console.log(`  \x1b[1m[${index + 1}/${drawer.evidence.length}] ${item.label}\x1b[0m`)
+    console.log(`  type: ${item.type}`)
+    console.log(`  path: ${item.path}`)
+    if (item.status !== 'present') {
+      console.log(`  status: ${item.status}`)
       console.log()
       return
     }
 
-    try {
-      const stat = statSync(path)
-      console.log(`  size: ${formatBytes(stat.size)}`)
-      console.log(`  updated: ${stat.mtime.toISOString()}`)
-    } catch {
-      console.log('  status: unreadable')
-      console.log()
-      return
-    }
-
-    const preview = readEvidencePreview(path, lines, maxBytes)
-    if (!preview.content) {
+    if (item.size) console.log(`  size: ${item.size}`)
+    if (item.updatedAt) console.log(`  updated: ${item.updatedAt}`)
+    if (!item.preview) {
       console.log('  preview: (no readable content)')
       console.log()
       return
     }
 
-    console.log(`  preview: last ${lines} line(s)${preview.truncated ? `, capped at ${formatBytes(maxBytes)}` : ''}`)
+    console.log(`  preview:${item.truncated ? ' capped' : ''}`)
     console.log('  ' + '-'.repeat(54))
-    for (const line of preview.content.split('\n')) {
+    for (const line of item.preview.split('\n')) {
       console.log(`  ${line}`)
     }
     console.log()

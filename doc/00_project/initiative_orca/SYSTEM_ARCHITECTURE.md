@@ -37,7 +37,7 @@ Open architecture work:
 
 - Promote `WorkSession` / `TaskRun` into the canonical execution contract for `chat`, mission, and planner surfaces. The default `run` path and `serve /chat` now write canonical records.
 - Promote queue lease semantics from CLI metadata into future scheduler / resume control after the execution contract is unified.
-- Extend the evidence drawer from CLI-terminal output into the Ink side panel once the current uncommitted UI baseline is closed.
+- Keep `formatTaskRunEvidenceDrawerMarkdown` as the shared rendering contract for CLI `queue evidence` and Ink `/evidence` detail panels.
 - Keep execution handlers separate until the unified execution contract is ready; the registry currently owns discovery metadata, not command behavior.
 - Split the existing HomePanel UI baseline before wiring its command hints to the registry.
 - Keep matrix layer definitions in the manifest; do not add package scripts or CI rows by hand without updating `sync-test-matrix.py` expectations.

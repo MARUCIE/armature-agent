@@ -1,5 +1,46 @@
 # Deliverable
 
+## 2026-04-29 - Ink TaskRun Evidence Panel PDCA Tranche
+
+### Scope
+
+Close ORCA-SWARM-017 by making TaskRun evidence inspectable inside the Ink REPL through `/evidence <task-run-id>`, while reusing the existing queue evidence drawer contract.
+
+### Delivered
+
+- Exported a shared TaskRun evidence drawer model from `src/commands/queue.ts`.
+- Kept `orca queue evidence <task-run-id>` and Ink `/evidence <task-run-id>` on the same markdown rendering path.
+- Added the `/evidence` slash command to the shared slash-command registry.
+- Routed `/evidence` into an Ink `DetailPanel` with status-aware tone and bounded evidence previews.
+- Added focused coverage for queue drawer markdown and chat detail-panel emission.
+- Version bumped to `0.8.13`.
+
+### Changed Files
+
+- `src/commands/queue.ts`
+- `src/commands/chat-slash-readonly.ts`
+- `src/slash-commands.ts`
+- `tests/queue-command.test.ts`
+- `tests/chat-slash-readonly.test.ts`
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `doc/00_project/initiative_orca/*`
+
+### Verification
+
+- `npm run build && npm test -- tests/queue-command.test.ts tests/chat-slash-readonly.test.ts tests/slash-commands.test.ts tests/ink-ui.test.tsx` -> `108/108`
+- `npm test -- tests/release-evidence.test.ts tests/queue-command.test.ts tests/chat-slash-readonly.test.ts tests/slash-commands.test.ts tests/ink-ui.test.tsx` -> `111/111`
+- `npm run lint && npm run build && npm test` -> `88` files / `1615` tests
+- `node dist/bin/orca.js --version` -> `0.8.13`
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Review-before-apply still lacks an approval timeline over TaskRun evidence | UX | ORCA-SWARM-018 |
+| Queue leases are inspectable but not yet a real scheduler / resume mechanism | Runtime | Extend TaskRun lease semantics into scheduler and resume workflows |
+
 ## 2026-04-29 - Chat REPL TaskRun Records PDCA Tranche
 
 ### Scope

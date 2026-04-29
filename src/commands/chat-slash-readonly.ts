@@ -14,6 +14,7 @@ import {
   type ModelChoice,
 } from '../model-catalog.js'
 import { messageContentToText, type ChatMessage } from '../providers/openai-compat.js'
+import { buildTaskRunEvidenceDrawer, formatTaskRunEvidenceDrawerMarkdown } from './queue.js'
 import { listSessionFiles, loadSessionFile } from '../session-store.js'
 import { TOOL_DEFINITIONS } from '../tools.js'
 import {
@@ -291,6 +292,41 @@ function renderJobs(output: CommandOutput): void {
   }
 }
 
+function renderEvidencePanel(arg: string, output: CommandOutput, session?: ChatSessionEmitter): void {
+  const id = arg.trim().split(/\s+/)[0]
+  if (!id) {
+    const message = 'usage: /evidence <task-run-id>'
+    if (session) session.emitSystemMessage(message, 'warn')
+    else output.warn(message)
+    return
+  }
+
+  const drawer = buildTaskRunEvidenceDrawer(id, { lines: '60', maxBytes: '12000' })
+  if (!drawer) {
+    const message = `task run not found: ${id}`
+    if (session) session.emitSystemMessage(message, 'error')
+    else output.error(message)
+    return
+  }
+
+  const body = formatTaskRunEvidenceDrawerMarkdown(drawer)
+  if (session) {
+    session.emitDetailPanel({
+      title: 'TaskRun Evidence',
+      subtitle: `${drawer.taskRunId} · ${drawer.status}`,
+      body,
+      tone: drawer.status === 'failed' || drawer.status === 'aborted'
+        ? 'error'
+        : drawer.status === 'running' || drawer.status === 'queued'
+          ? 'warn'
+          : 'info',
+    })
+    return
+  }
+
+  output.info(body)
+}
+
 function renderCost(
   stats: ReadonlySlashSessionStats,
   mc: ReadonlySlashModelControl,
@@ -516,6 +552,10 @@ export function handleReadonlySlashCommand(options: ReadonlySlashCommandOptions)
 
     case '/jobs':
       renderJobs(output)
+      return 'handled'
+
+    case '/evidence':
+      renderEvidencePanel(arg, output, session)
       return 'handled'
 
     case '/cost':

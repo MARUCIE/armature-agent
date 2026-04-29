@@ -17,7 +17,8 @@ The next platform wave is now explicitly ordered:
    - finish model routing and future background agents against the same record model now that `chat` REPL, `run`, and `serve /chat` write canonical records
 4. Evidence console:
    - `orca queue evidence` now opens TaskRun logs, diffs, data, reports, missing artifacts, and capped previews
-   - extend approvals, tool-call timelines, and Ink side-panel rendering after the UI baseline lands
+   - `/evidence <task-run-id>` opens the same drawer model in the Ink `DetailPanel`
+   - extend approvals and tool-call timelines on top of the shared evidence model
 5. Slash command surface:
    - `src/slash-commands.ts` is now the shared registry for REPL completion, Ink picker, and `/help`; HomePanel hint metadata is prepared for the pending UI-baseline split
 6. Release evidence:

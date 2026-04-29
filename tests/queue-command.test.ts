@@ -309,6 +309,59 @@ describe('queue command', () => {
     expect(output).toContain('+added')
   })
 
+  it('formats task-run evidence as markdown for the ink detail panel', async () => {
+    vi.resetModules()
+    const {
+      createTaskRun,
+      createWorkSession,
+      finishTaskRun,
+    } = await import('../src/work-session-store.js')
+    const {
+      buildTaskRunEvidenceDrawer,
+      formatTaskRunEvidenceDrawerMarkdown,
+    } = await import('../src/commands/queue.js')
+
+    const projectDir = join(homeDir, 'project')
+    mkdirSync(join(projectDir, 'outputs', 'test'), { recursive: true })
+    writeFileSync(join(projectDir, 'outputs', 'test', 'queue.log'), 'alpha\nbeta\ngamma\n', 'utf-8')
+
+    const session = createWorkSession({
+      sourceSurface: 'chat',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    const taskRun = createTaskRun({
+      workSessionId: session.id,
+      kind: 'chat',
+      title: 'Evidence side panel task',
+      surface: 'cli',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    finishTaskRun(taskRun.id, {
+      status: 'completed',
+      summary: 'side panel ready',
+      evidence: [{ label: 'chat-log', path: 'outputs/test/queue.log' }],
+    })
+
+    const drawer = buildTaskRunEvidenceDrawer(taskRun.id, { lines: '2' })
+    expect(drawer?.evidence[0]).toMatchObject({
+      label: 'chat-log',
+      type: 'log',
+      status: 'present',
+    })
+
+    const markdown = formatTaskRunEvidenceDrawerMarkdown(drawer!)
+    expect(markdown).toContain(`# TaskRun Evidence ${taskRun.id}`)
+    expect(markdown).toContain('- Summary: side panel ready')
+    expect(markdown).not.toContain('alpha')
+    expect(markdown).toContain('beta')
+    expect(markdown).toContain('gamma')
+    expect(markdown).toContain('```text')
+  })
+
   it('shows missing evidence entries in the evidence drawer', async () => {
     vi.resetModules()
     const {

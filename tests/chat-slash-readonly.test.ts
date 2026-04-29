@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process'
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -142,6 +142,68 @@ describe('chat readonly slash helpers', () => {
     expect(blocks[0]).toContain('**Session**')
     expect(blocks[0]).toContain('/status')
     expect(blocks[0]).toContain('/doctor')
+  })
+
+  it('opens TaskRun evidence in an ink detail panel', async () => {
+    const previousOrcaHome = process.env.ORCA_HOME
+    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-evidence-store-'))
+    const projectDir = mkdtempSync(join(tmpdir(), 'orca-slash-evidence-project-'))
+    mkdirSync(join(projectDir, 'outputs', 'test'), { recursive: true })
+    writeFileSync(join(projectDir, 'outputs', 'test', 'chat.log'), 'first\nsecond\nthird\n', 'utf-8')
+    process.env.ORCA_HOME = orcaHome
+
+    try {
+      const {
+        createTaskRun,
+        createWorkSession,
+        finishTaskRun,
+      } = await import('../src/work-session-store.js')
+      const workSession = createWorkSession({
+        sourceSurface: 'chat',
+        cwd: projectDir,
+        provider: 'openai',
+        model: 'gpt-5.4',
+      })
+      const taskRun = createTaskRun({
+        workSessionId: workSession.id,
+        kind: 'chat',
+        title: 'Ink evidence task',
+        surface: 'cli',
+        cwd: projectDir,
+        provider: 'openai',
+        model: 'gpt-5.4',
+      })
+      finishTaskRun(taskRun.id, {
+        status: 'completed',
+        summary: 'verified in queue',
+        evidence: [{ label: 'chat-log', path: 'outputs/test/chat.log' }],
+      })
+
+      const session = new ChatSessionEmitter()
+      const panels: Array<{ title: string; subtitle?: string; body: string }> = []
+      session.on('detail_panel', (event) => { panels.push(event.info) })
+
+      const result = handleReadonlySlashCommand({
+        ...baseOptions,
+        cwd: projectDir,
+        cmd: '/evidence',
+        arg: taskRun.id,
+        session,
+      })
+
+      expect(result).toBe('handled')
+      expect(panels).toHaveLength(1)
+      expect(panels[0]?.title).toBe('TaskRun Evidence')
+      expect(panels[0]?.subtitle).toContain(taskRun.id)
+      expect(panels[0]?.body).toContain('verified in queue')
+      expect(panels[0]?.body).toContain('chat-log')
+      expect(panels[0]?.body).toContain('third')
+    } finally {
+      if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
+      else process.env.ORCA_HOME = previousOrcaHome
+      rmSync(orcaHome, { recursive: true, force: true })
+      rmSync(projectDir, { recursive: true, force: true })
+    }
   })
 
   it('renders session status through the ink emitter', () => {
