@@ -1,5 +1,24 @@
 # Notes
 
+## 2026-04-29 - Clean-index command baseline PDCA continuation
+
+Context:
+
+- User said `继续` after the `orca run` execution-contract commit.
+- Clean checkout build still failed because `program.ts` referenced declared workflow, permissions, evolve, and git-root surfaces that were present in the active worktree but not in the committed baseline.
+- The current boundary is command assembly and permission/evolution command support, not the larger dirty chat/Ink baseline.
+
+PDCA executed:
+
+- Plan: keep the tranche reviewable, add a lightweight workflow command module, and commit the real permissions/evolve/config/git-root support needed for clean-index command assembly.
+- Do: wired `program.ts` to `src/commands/workflows.ts`, added `permissions` and `evolve` command files, committed config-backed permission mode and allowlist helpers, added `src/git-repository.ts`, and promoted workflow/provider config metadata covered by the existing config and command-contract tests.
+- Check:
+  - Clean staged-index `npm run build` -> pass.
+  - Clean staged-index `npm test -- tests/config.test.ts tests/permissions-command.test.ts tests/program.test.ts tests/command-contracts.test.ts tests/release-evidence.test.ts tests/v030-harness.test.ts` -> `100` tests passed.
+  - `npm run lint && npm run build && npm test` -> `88` files / `1611` tests passed.
+  - `node dist/bin/orca.js --version` -> `0.8.10`.
+- Act: after verification, return to remaining chat REPL TaskRun lifecycle and Ink evidence UX queue items.
+
 ## 2026-04-29 - Run execution contract PDCA continuation
 
 Context:

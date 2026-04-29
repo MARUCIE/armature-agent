@@ -6,7 +6,8 @@
 
 import { Command } from 'commander'
 import { createInitCommand } from './commands/init.js'
-import { createArchitectCommand, createChatCommand, createDebugCommand, createReflectCommand, createReviewCommand } from './commands/chat.js'
+import { createChatCommand, createReflectCommand } from './commands/chat.js'
+import { createArchitectCommand, createDebugCommand, createReviewCommand, listWorkflowPresets } from './commands/workflows.js'
 import { createDoctorCommand } from './commands/doctor.js'
 import { createRunCommand } from './commands/run.js'
 import { createCouncilCommand, createRaceCommand, createPipelineCommand } from './commands/multi.js'
@@ -20,7 +21,6 @@ import { createPermissionsCommand } from './commands/permissions.js'
 import { createPRCommand } from './commands/pr.js'
 import { createServeCommand } from './commands/serve.js'
 import { createEvolveCommand } from './commands/evolve.js'
-import { listWorkflowPresets } from './modes/index.js'
 import { ORCA_VERSION } from './version.js'
 
 export function createProgram(): Command {

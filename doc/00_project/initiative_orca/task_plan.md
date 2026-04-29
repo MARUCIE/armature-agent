@@ -17,6 +17,7 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 | M3b Slash command surface | Keep command discovery surfaces aligned | Core Done | `src/slash-commands.ts` feeds REPL completion, Ink picker, and `/help`; HomePanel metadata is prepared but the consumer is blocked by the unstaged UI baseline |
 | M3c Release evidence snapshot | Keep README and active PDCA docs aligned to real verification counts | Done | `verification_snapshot.json` plus `tests/release-evidence.test.ts` guard version, README, test files, and active docs |
 | M4 Gate integrity | Make CI enforce documented gates | Done | CI runs matrix sync, static, security, performance, and fast agent-eval gates |
+| M4b Clean-index command baseline | Restore clean checkout build for declared CLI command surface | Done | `program.ts` command imports, permissions/evolve commands, config permission storage, and git-root helper compile in staged-index checkout |
 | M5 Model catalog SSoT | Eliminate model metadata drift | Pending | Runtime, picker, docs, and tests use one catalog |
 
 ### Atomic Task Queue
@@ -36,6 +37,7 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 | ORCA-SWARM-011 | P2 | Align README/doc test counts to current suite evidence | Done |
 | ORCA-SWARM-012 | P2 | Add CI matrix/security/performance/eval gate enforcement | Done |
 | ORCA-SWARM-013 | P1 | Record `orca run` default/goal-loop/mission/plan executions as canonical TaskRuns | Done |
+| ORCA-SWARM-014 | P1 | Restore clean-index build for declared workflow, permissions, evolve, and git-root command surface | Done |
 
 ### First Tranche Verification
 
@@ -58,7 +60,9 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 - `test:ai-eval-fast` -> `outputs/test-matrix/run-20260429-060243/matrix.md`.
 - Final `npm run lint && npm run build && npm test` -> `1611` tests passed across `88` files.
 - Final `npm test` -> `1611` tests passed across `88` files.
-- `node dist/bin/orca.js --version` -> `0.8.9`.
+- `node dist/bin/orca.js --version` -> `0.8.10`.
+- Clean staged-index `npm run build` -> pass for workflow commands, permissions/evolve commands, config permission helpers, and git-root helper.
+- Clean staged-index `npm test -- tests/config.test.ts tests/permissions-command.test.ts tests/program.test.ts tests/command-contracts.test.ts tests/release-evidence.test.ts tests/v030-harness.test.ts` -> `100/100`.
 - CI gate job now runs `test:matrix:sync`, `test:static`, `test:security`, `test:performance`, and `test:ai-eval-fast` after the Node matrix passes.
 - `node dist/bin/orca.js queue takeover <fixture-task-run> --holder smoke --ttl 30s` -> acquired a TaskRun lease.
 - `orca queue evidence <task-run-id>` shows typed evidence entries, absolute paths, size, update time, missing-file state, and capped tail previews.

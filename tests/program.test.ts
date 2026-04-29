@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { createProgram } from '../src/program.js'
 import { listWorkflowPresets } from '../src/modes/index.js'
 import { getWorkflowPreset } from '../src/modes/index.js'
-import { resolveChatPresetRuntimeOptions } from '../src/commands/chat.js'
+import { resolveWorkflowPresetRuntimeOptions } from '../src/commands/workflows.js'
 
 describe('program', () => {
   it('creates a program with orca name', () => {
@@ -138,13 +138,13 @@ describe('program', () => {
     const reviewPreset = getWorkflowPreset('review')!
     const debugPreset = getWorkflowPreset('debug')!
 
-    expect(resolveChatPresetRuntimeOptions(reviewPreset, {})).toEqual({
+    expect(resolveWorkflowPresetRuntimeOptions(reviewPreset, {})).toEqual({
       effort: 'high',
       forceReflect: undefined,
       initialModeId: 'code-review',
       initialPermissionMode: 'plan',
     })
-    expect(resolveChatPresetRuntimeOptions(debugPreset, { effort: 'low' })).toEqual({
+    expect(resolveWorkflowPresetRuntimeOptions(debugPreset, { effort: 'low' })).toEqual({
       effort: 'low',
       forceReflect: undefined,
       initialModeId: 'debug',

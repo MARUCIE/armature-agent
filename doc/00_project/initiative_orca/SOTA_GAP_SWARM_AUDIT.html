@@ -227,6 +227,7 @@
           <tr><td>ORCA-SWARM-011</td><td>P2</td><td>README/doc 测试计数漂移清理</td><td>Done</td></tr>
           <tr><td>ORCA-SWARM-012</td><td>P2</td><td>CI gate integrity job</td><td>Done</td></tr>
           <tr><td>ORCA-SWARM-013</td><td>P1</td><td><code>orca run</code> default / goal-loop / mission / plan TaskRun records</td><td>Done</td></tr>
+          <tr><td>ORCA-SWARM-014</td><td>P1</td><td>Clean-index command baseline</td><td>Done</td></tr>
         </tbody>
       </table>
     </section>
@@ -236,7 +237,7 @@
       <ul>
         <li><strong>Plan:</strong> 以安全边界和队列可观测性作为第一轮切片，避免在 dirty worktree 中做大范围重构。</li>
         <li><strong>Do:</strong> 修改 <code>src/hooks.ts</code>、<code>src/tools.ts</code>、<code>src/commands/queue.ts</code>、<code>src/program.ts</code> 及对应测试。</li>
-        <li><strong>Check:</strong> 相关安全回归 <code>153</code> tests passed；队列/命令契约 <code>39</code> tests passed；<code>queue evidence</code> 回归 <code>11</code> tests passed；slash registry / Ink targeted 回归 <code>98</code> tests passed；release evidence 回归 <code>3</code> tests passed；run work-session 回归 <code>14</code> tests passed；gate integrity 增加 matrix sync、static、security、performance、fast agent-eval gates；最终 <code>npm test</code> 为 <code>88</code> files / <code>1611</code> tests passed；<code>npm run lint</code> 与 <code>npm run build</code> passed。</li>
+        <li><strong>Check:</strong> 相关安全回归 <code>153</code> tests passed；队列/命令契约 <code>39</code> tests passed；<code>queue evidence</code> 回归 <code>11</code> tests passed；slash registry / Ink targeted 回归 <code>98</code> tests passed；release evidence 回归 <code>3</code> tests passed；run work-session 回归 <code>14</code> tests passed；gate integrity 增加 matrix sync、static、security、performance、fast agent-eval gates；clean-index command baseline 通过 staged checkout build；最终 <code>npm test</code> 为 <code>88</code> files / <code>1611</code> tests passed；<code>npm run lint</code> 与 <code>npm run build</code> passed。</li>
         <li><strong>Act:</strong> 下一步补齐剩余执行契约、Ink 证据侧栏 / 批准时间线。</li>
       </ul>
     </section>
@@ -255,7 +256,7 @@
   </main>
 
   <footer>
-    Orca CLI v0.8.9 - SOTA 蜂群审计报告 - Maurice | maurice_wen@proton.me - 2026-04-29
+    Orca CLI v0.8.10 - SOTA 蜂群审计报告 - Maurice | maurice_wen@proton.me - 2026-04-29
   </footer>
 </body>
 </html>

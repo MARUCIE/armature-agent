@@ -205,6 +205,7 @@ PDCA action executed:
 | ORCA-SWARM-011 | P2 | Align README/doc test counts to current suite evidence | docs | done |
 | ORCA-SWARM-012 | P2 | Add CI matrix/security/performance/eval enforcement | verification | done |
 | ORCA-SWARM-013 | P1 | Record `orca run` default/goal-loop/mission/plan executions as canonical TaskRuns | runtime | done |
+| ORCA-SWARM-014 | P1 | Restore clean-index build for workflow, permissions, evolve, and git-root command surfaces | build | done |
 
 ## PDCA Execution Log
 
@@ -245,7 +246,7 @@ Verification executed:
 - Final `npm test` -> `88` files / `1611` tests passed
 - Gate integrity targeted tests cover manifest/script/sync behavior.
 - CI now executes `test:matrix:sync`, `test:static`, `test:security`, `test:performance`, and `test:ai-eval-fast`.
-- `node dist/bin/orca.js --version` -> `0.8.9`
+- `node dist/bin/orca.js --version` -> `0.8.10`
 - `npm test -- tests/run-work-session.test.ts tests/work-session-store.test.ts tests/queue-command.test.ts` -> `14` tests passed
 - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed
 - Clean staged-index `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed

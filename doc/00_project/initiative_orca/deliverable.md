@@ -1,5 +1,50 @@
 # Deliverable
 
+## 2026-04-29 - Clean-Index Command Baseline PDCA Tranche
+
+### Scope
+
+Close ORCA-SWARM-014 by making the command surface already declared in `program.ts` build from a clean staged checkout, while preserving the staged config/provider helpers required by the expanded config regression suite.
+
+### Delivered
+
+- Added a small workflow-command module for `review`, `debug`, and `architect` without dragging the larger dirty chat/UI baseline into this tranche.
+- Added the real `permissions` command surface and config-backed permission mode / allowlist storage helpers.
+- Added the real `evolve` command surface backed by the committed evolution store.
+- Added the git repository root helper required by policy execution and config rule normalization.
+- Promoted workflow preset metadata into the mode registry so root help, command contracts, and mode policies share one source.
+- Preserved the config provider-gateway baseline for Cloudflare / Claudeflare routing that is now covered in `tests/config.test.ts`.
+- Version bumped to `0.8.10`.
+
+### Changed Files
+
+- `src/program.ts`
+- `src/commands/workflows.ts`
+- `src/commands/permissions.ts`
+- `src/commands/evolve.ts`
+- `src/config.ts`
+- `src/git-repository.ts`
+- `tests/config.test.ts`
+- `tests/permissions-command.test.ts`
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `doc/00_project/initiative_orca/*`
+
+### Verification
+
+- Clean staged-index `npm run build` -> pass
+- Clean staged-index `npm test -- tests/config.test.ts tests/permissions-command.test.ts tests/program.test.ts tests/command-contracts.test.ts tests/release-evidence.test.ts tests/v030-harness.test.ts` -> `100/100`
+- Full active-worktree `npm run lint && npm run build && npm test` -> `88` files / `1611` tests
+- `node dist/bin/orca.js --version` -> `0.8.10`
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Chat REPL TaskRun production is still outside this clean-index tranche | Runtime | Continue with a dedicated chat lifecycle tranche |
+| The broader dirty Ink/UI baseline remains unstaged | UX | Split HomePanel/evidence timeline work after command baseline is committed |
+
 ## 2026-04-29 - Run Execution Contract PDCA Tranche
 
 ### Scope

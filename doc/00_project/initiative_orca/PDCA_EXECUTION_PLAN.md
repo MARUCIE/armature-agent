@@ -15,6 +15,7 @@
   - release evidence snapshot guard for README and active PDCA docs
   - CI gate integrity job for matrix sync, static, security, performance, and fast agent-eval gates
   - `orca run` default / goal-loop / mission / plan WorkSession and TaskRun records
+  - clean-index command baseline for workflow presets, `permissions`, `evolve`, and git-root helper support
 - Check evidence:
   - `npm run lint`
   - `npm run build`
@@ -23,6 +24,7 @@
   - `npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx` -> `98` tests
   - `npm test -- tests/release-evidence.test.ts` -> `3` tests
   - `npm test -- tests/run-work-session.test.ts tests/work-session-store.test.ts tests/queue-command.test.ts` -> `14` tests
+  - clean staged-index `npm run build`
   - `npm run test:matrix:sync`
   - `npm run test:static`
   - `npm run test:security`
