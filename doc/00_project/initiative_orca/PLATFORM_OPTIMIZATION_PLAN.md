@@ -20,7 +20,9 @@ The next platform wave is now explicitly ordered:
    - extend approvals, tool-call timelines, and Ink side-panel rendering after the UI baseline lands
 5. Slash command surface:
    - `src/slash-commands.ts` is now the shared registry for REPL completion, Ink picker, and `/help`; HomePanel hint metadata is prepared for the pending UI-baseline split
-6. Gate integrity:
+6. Release evidence:
+   - `verification_snapshot.json` plus `tests/release-evidence.test.ts` now guards README and active PDCA verification counts
+7. Gate integrity:
    - align CI with declared matrix/security/performance/eval gates
 
 ## Objective

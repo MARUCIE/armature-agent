@@ -5,9 +5,9 @@
 | Gate | Result | Evidence |
 | --- | --- | --- |
 | Plan | Pass | `SOTA_GAP_SWARM_AUDIT.md` milestones and atomic task queue |
-| Do | Pass | Hook trust hardening, network-tool approval/guard, `orca queue list/show/follow/takeover/evidence`, `serve /chat` canonical TaskRun records, shared slash-command registry |
-| Check | Pass | `npm run lint`, `npm run build`, `npm test` -> `87` files / `1606` tests |
-| Act | Pass | ORCA-SWARM-010 core registry completed; HomePanel consumer deferred to UI-baseline split; follow-up queue items ORCA-SWARM-011 through ORCA-SWARM-012 remain recorded in `task_plan.md` |
+| Do | Pass | Hook trust hardening, network-tool approval/guard, `orca queue list/show/follow/takeover/evidence`, `serve /chat` canonical TaskRun records, shared slash-command registry, release evidence snapshot guard |
+| Check | Pass | `npm run lint`, `npm run build`, `npm test` -> `88` files / `1609` tests |
+| Act | Pass | ORCA-SWARM-011 completed; HomePanel consumer deferred to UI-baseline split; follow-up queue item ORCA-SWARM-012 remains recorded in `task_plan.md` |
 
 ## Baseline Checklist
 

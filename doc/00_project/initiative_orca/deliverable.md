@@ -1,5 +1,49 @@
 # Deliverable
 
+## 2026-04-29 - Release Evidence Snapshot PDCA Tranche
+
+### Scope
+
+Complete ORCA-SWARM-011 by making README and active PDCA verification counts derive from a checked release evidence snapshot instead of loose manual copies.
+
+### Delivered
+
+- Added `doc/00_project/initiative_orca/verification_snapshot.json` as the active release evidence source.
+- Added `tests/release-evidence.test.ts` to guard package version, README release strings, active worktree test-file evidence, and active PDCA docs.
+- Updated README and active PDCA docs to `0.8.7`, `88` test files, and `1609` tests.
+- Version bumped to `0.8.7`.
+
+### Changed Files
+
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `tests/release-evidence.test.ts`
+- `doc/00_project/initiative_orca/verification_snapshot.json`
+- `doc/00_project/initiative_orca/*`
+
+### Simplifications Made
+
+- Kept historical notes as historical evidence; guarded only the current README and active PDCA reporting surfaces.
+- Used a small JSON snapshot and Vitest guard instead of introducing a new docs generation pipeline.
+
+### Verification
+
+- `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test` -> `88` files / `1609` tests passed
+- Clean staged-index `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `node dist/bin/orca.js --version` -> `0.8.7`
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Historical archive docs still contain older release counts by design | Docs | Treat dated sections as immutable evidence unless an active-current section cites them as current |
+| Clean staged-index full-suite still exposes pre-existing uncommitted baseline dependencies outside this tranche | Baseline owners | Split/commit the existing permissions/evolution/test-matrix baseline before claiming clean-index full-suite parity |
+| CI still does not enforce the full matrix/security/performance/eval gate set | Verification | Complete ORCA-SWARM-012 |
+
 ## 2026-04-29 - Slash Command Registry PDCA Tranche
 
 ### Scope

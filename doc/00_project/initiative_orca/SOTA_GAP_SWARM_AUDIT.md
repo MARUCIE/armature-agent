@@ -6,7 +6,7 @@
 - Baseline: dirty working tree audit; existing user changes were preserved
 - Report route: `html-style-router` -> `html-economist-style`
 - Verification baseline before fixes: `npm run lint`, `npm test` (`85` files / `1583` tests), `npm run build`
-- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`87` files / `1606` tests)
+- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`88` files / `1609` tests)
 
 ## Scope
 
@@ -162,6 +162,16 @@ PDCA action executed:
 - REPL completion, Ink command picker, and `/help` sections now read from that registry; HomePanel descriptions are present in the registry for the pending UI-baseline split.
 - Regression coverage verifies registry uniqueness, picker/completer alignment, help sections, and alias description lookup.
 
+### Medium - README and active PDCA docs could drift from current verification evidence
+
+Before the fix, README and active PDCA documents relied on manually copied test counts.
+
+PDCA action executed:
+
+- Added `doc/00_project/initiative_orca/verification_snapshot.json` as the active release evidence snapshot.
+- Added `tests/release-evidence.test.ts` to guard package version, README evidence strings, test file count, and active PDCA docs against the snapshot.
+- Updated README and active PDCA docs to `v0.8.7`, `88` test files, and `1609` tests.
+
 ## Milestone Plan
 
 | Milestone | Goal | Exit Criteria |
@@ -171,6 +181,7 @@ PDCA action executed:
 | M2 Unified Execution Contract | One run object across CLI, serve, mission, planner | Partial: `run` and `serve /chat` create/update canonical records; chat/mission/planner remain |
 | M3 Evidence Console | Review-before-apply becomes inspectable | Partial: CLI evidence drawer shows TaskRun logs/diffs/artifacts; Ink side panel and approvals timeline remain |
 | M3b Slash Command Surface | Command discovery cannot drift across REPL and Ink | Shared registry feeds completion, picker, and `/help`; HomePanel metadata is prepared but not staged into the dirty UI baseline |
+| M3c Release Evidence Snapshot | README/doc verification evidence cannot silently drift | Snapshot and release-evidence test guard README plus active PDCA docs |
 | M4 Gate Integrity | CI enforces documented gates | CI runs declared matrix/security/performance/eval gates or explicitly marks deferred rows |
 | M5 Model Catalog SSoT | Provider routing metadata stops drifting | One model catalog powers runtime, docs, picker, and tests |
 
@@ -188,7 +199,7 @@ PDCA action executed:
 | ORCA-SWARM-008 | P1 | Convert `serve /chat` into a canonical run endpoint | architecture | done |
 | ORCA-SWARM-009 | P1 | Add evidence drawer for TaskRun logs/diffs/artifacts | UX | done |
 | ORCA-SWARM-010 | P1 | Centralize slash-command registry so HomePanel/completer/TUI cannot drift | UX | core done |
-| ORCA-SWARM-011 | P2 | Align README/doc test counts to current suite evidence | docs | pending |
+| ORCA-SWARM-011 | P2 | Align README/doc test counts to current suite evidence | docs | done |
 | ORCA-SWARM-012 | P2 | Add CI matrix/security/performance/eval enforcement | verification | pending |
 
 ## PDCA Execution Log
@@ -227,12 +238,13 @@ Verification executed:
 - Combined targeted regression pack -> `190` tests passed
 - `npm run lint` -> pass
 - `npm run build` -> pass
-- Final `npm test` -> `87` files / `1606` tests passed
-- `node dist/bin/orca.js --version` -> `0.8.6`
+- Final `npm test` -> `88` files / `1609` tests passed
+- `node dist/bin/orca.js --version` -> `0.8.7`
 - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed
 - Clean staged-index `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed
 - `npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx` -> `98` tests passed
 - Clean staged-index `npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx` -> `98` tests passed
+- `npm test -- tests/release-evidence.test.ts` -> `3` tests passed
 - `git diff --cached --check` -> pass
 - `orca queue evidence <task-run-id>` -> evidence drawer renders typed entries, metadata, missing files, and tail previews
 - `ai check` attempted -> failed on existing generic harness/doc gates: missing `tests/test_all.py`, legacy docs without required frontmatter/changelog, and historical no-emoji hits; evidence at `outputs/check/20260429-044244-b917cb00`
@@ -253,8 +265,7 @@ Next queue items should proceed in this order:
 
 1. Complete execution contract unification for `chat`, mission, and planner.
 2. Ink evidence side panel and review-before-apply approvals timeline.
-3. Documentation count drift cleanup.
-4. CI gate integrity.
+3. CI gate integrity.
 
 ## Remaining Risks
 

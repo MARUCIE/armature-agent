@@ -11,6 +11,7 @@ New operator journeys:
 | Open a TaskRun evidence drawer | Inspect logs, diffs, data, reports, missing artifacts, and capped previews by TaskRun | `orca queue evidence <id>` | `src/commands/queue.ts`, `tests/queue-command.test.ts` |
 | Claim operator control of a TaskRun | Mark a non-terminal TaskRun as owned by an operator for a bounded TTL | `orca queue takeover <id> --holder <name> --ttl <duration>` | `src/commands/queue.ts`, `src/work-session-store.ts`, `tests/queue-command.test.ts`, `tests/work-session-store.test.ts` |
 | Discover slash commands consistently | See the same command surface in completion, picker, and help, with HomePanel metadata prepared for the pending UI-baseline split | `/`, `Tab`, `/help` | `src/slash-commands.ts`, `tests/slash-commands.test.ts` |
+| Trust release evidence in docs | See README and active PDCA counts aligned with the package version and current full-suite snapshot | README, PDCA docs, `verification_snapshot.json` | `tests/release-evidence.test.ts` |
 | Trust project hooks explicitly | Prevent arbitrary checked-out repos from running startup hook shell commands | `ORCA_TRUST_PROJECT_HOOKS=1` or trusted `HookManager` | `src/hooks.ts`, `tests/hooks.test.ts` |
 | Approve network-capable tools | Treat outbound fetch/search as a trust boundary | permission prompt for `fetch_url` / `web_search` | `src/tools.ts`, `tests/chat-proxy-tool-call.test.ts` |
 
@@ -20,6 +21,7 @@ Open UX work:
 - Extend the CLI evidence drawer into the Ink TUI so review-before-apply is not limited to compact previews.
 - Move command handlers behind registry metadata only after the command execution contract is stable.
 - Split the existing HomePanel UI baseline before wiring quick-path command hints to the registry.
+- Add CI enforcement for the release-evidence snapshot in ORCA-SWARM-012.
 
 <!-- AI-FLEET:PROJECT_DIR:START -->
 - `PROJECT_DIR`: `/Users/mauricewen/Projects/orca-cli`

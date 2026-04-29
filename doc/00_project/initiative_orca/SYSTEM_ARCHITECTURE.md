@@ -21,6 +21,10 @@ The SOTA swarm audit adds two immediate architectural constraints:
    - Ink command picker
    - `/help` rendering
    - HomePanel command metadata prepared for the pending UI-baseline split
+4. Release evidence now has a checked snapshot:
+   - `doc/00_project/initiative_orca/verification_snapshot.json`
+   - `tests/release-evidence.test.ts`
+   - README release badge, package version, filesystem test-file count, and active PDCA evidence rows must stay aligned
 
 Open architecture work:
 
@@ -29,6 +33,7 @@ Open architecture work:
 - Extend the evidence drawer from CLI-terminal output into the Ink side panel once the current uncommitted UI baseline is closed.
 - Keep execution handlers separate until the unified execution contract is ready; the registry currently owns discovery metadata, not command behavior.
 - Split the existing HomePanel UI baseline before wiring its command hints to the registry.
+- Extend the release-evidence guard into CI when ORCA-SWARM-012 closes the gate-integrity job.
 
 <!-- AI-FLEET:PROJECT_DIR:START -->
 - `PROJECT_DIR`: `/Users/mauricewen/Projects/orca-cli`

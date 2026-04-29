@@ -1,5 +1,28 @@
 # Notes
 
+## 2026-04-29 - Release evidence snapshot PDCA continuation
+
+Context:
+
+- User said `继续` after the slash-command registry commit, so execution continued with ORCA-SWARM-011.
+- README and active PDCA docs had current counts copied manually, while historical notes still contain older counts from earlier tranches.
+- The right fix is a guard for the active release evidence surface, not rewriting historical logs.
+- The release snapshot is scoped to the active worktree because this repository currently has a queued uncommitted baseline; clean staged-index has fewer tracked test files but must not pull those unrelated files into this commit.
+
+PDCA executed:
+
+- Plan: create one release evidence snapshot and make tests enforce that README plus active PDCA docs match it.
+- Do: add `verification_snapshot.json`; add `tests/release-evidence.test.ts`; update README and active PDCA docs to `0.8.7`, `88` test files, and `1609` tests.
+- Check:
+  - `npm test -- tests/release-evidence.test.ts` -> `3` tests passed.
+  - `npm run lint` -> pass.
+  - `npm run build` -> pass.
+  - Full `npm test` -> `88` files / `1609` tests passed.
+  - Clean staged-index `npm test -- tests/release-evidence.test.ts` -> `3` tests passed.
+  - Clean staged-index full `npm test` remains blocked by pre-existing baseline dependencies outside ORCA-SWARM-011 (`src/program.ts` imports unstaged command surfaces; MCP policy tests require unstaged policy executor work).
+  - `node dist/bin/orca.js --version` -> `0.8.7`.
+- Act: next queue item is ORCA-SWARM-012 CI matrix/security/performance/eval gate enforcement.
+
 ## 2026-04-29 - Slash command registry PDCA continuation
 
 Context:
