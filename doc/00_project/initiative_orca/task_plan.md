@@ -12,7 +12,7 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 | --- | --- | --- | --- |
 | M0 Trust hardening | Close repo-local hook and network-tool trust gaps | Done | Explicit project hook trust, network tools approval-gated, targeted tests green |
 | M1 Queue visibility | Expose current TaskRun state to operators | Done | `orca queue list/show/follow/takeover` shipped with tests |
-| M2 Unified execution contract | Align `chat`, `run`, `serve`, mission, and planner on one run object | Partial | `run` and `serve /chat` now write canonical run records; chat/mission/planner remain |
+| M2 Unified execution contract | Align `chat`, `run`, `serve`, mission, and planner on one run object | Partial | `run` default, goal-loop, mission, plan, and `serve /chat` now write canonical run records; chat REPL remains |
 | M3 Evidence console | Make review-before-apply inspectable | Partial | `orca queue evidence` opens TaskRun logs/diffs/artifacts with metadata and previews; deeper Ink side-panel integration remains |
 | M3b Slash command surface | Keep command discovery surfaces aligned | Core Done | `src/slash-commands.ts` feeds REPL completion, Ink picker, and `/help`; HomePanel metadata is prepared but the consumer is blocked by the unstaged UI baseline |
 | M3c Release evidence snapshot | Keep README and active PDCA docs aligned to real verification counts | Done | `verification_snapshot.json` plus `tests/release-evidence.test.ts` guard version, README, test files, and active docs |
@@ -35,6 +35,7 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 | ORCA-SWARM-010 | P1 | Centralize slash-command registry | Core Done |
 | ORCA-SWARM-011 | P2 | Align README/doc test counts to current suite evidence | Done |
 | ORCA-SWARM-012 | P2 | Add CI matrix/security/performance/eval gate enforcement | Done |
+| ORCA-SWARM-013 | P1 | Record `orca run` default/goal-loop/mission/plan executions as canonical TaskRuns | Done |
 
 ### First Tranche Verification
 
@@ -49,20 +50,22 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 - `slash command registry` regression -> `98` tests passed across `3` files.
 - `release evidence` regression -> `3` tests passed across `1` file.
 - `gate integrity` regression -> `69` tests passed across manifest, matrix runner, sync, release-evidence, and hook system-message guards.
+- `run work-session` regression -> `14` tests passed across `3` files.
 - `test:matrix:sync` -> pass.
 - `test:static` -> `outputs/test-matrix/run-20260429-060205/matrix.md`.
 - `test:security` -> `outputs/test-matrix/run-20260429-060222/matrix.md`.
 - `test:performance` -> `outputs/test-matrix/run-20260429-060232/matrix.md`.
 - `test:ai-eval-fast` -> `outputs/test-matrix/run-20260429-060243/matrix.md`.
-- Final `npm run lint && npm run build && npm test` -> `1609` tests passed across `88` files.
-- Final `npm test` -> `1609` tests passed across `88` files.
-- `node dist/bin/orca.js --version` -> `0.8.8`.
+- Final `npm run lint && npm run build && npm test` -> `1611` tests passed across `88` files.
+- Final `npm test` -> `1611` tests passed across `88` files.
+- `node dist/bin/orca.js --version` -> `0.8.9`.
 - CI gate job now runs `test:matrix:sync`, `test:static`, `test:security`, `test:performance`, and `test:ai-eval-fast` after the Node matrix passes.
 - `node dist/bin/orca.js queue takeover <fixture-task-run> --holder smoke --ttl 30s` -> acquired a TaskRun lease.
 - `orca queue evidence <task-run-id>` shows typed evidence entries, absolute paths, size, update time, missing-file state, and capped tail previews.
 - Slash-command registry now feeds REPL completion, Ink command picker, and `/help`; it also exposes HomePanel command descriptions for the pending UI-baseline split.
 - `verification_snapshot.json` is now the active source of truth for package version, test file count, and full-suite test count in README and active PDCA docs.
 - `agent-eval/manifests/test-matrix.json` is now the active source of truth for layered test entrypoints; `sync-test-matrix.py --check` guards `package.json` and the generated entrypoint snippet.
+- `orca run` now creates one WorkSession/TaskRun spine for default, goal-loop, mission, and plan paths, including usage summaries and mission-state evidence where available.
 
 ### Report
 

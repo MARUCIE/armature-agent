@@ -21,17 +21,16 @@ describe('usage-db: SQLite persistent tracking', () => {
 
   it('17.1 recordUsage does not crash and inserts successfully', async () => {
     const { recordUsage } = await import('../src/usage-db.js')
-    expect(() => {
-      recordUsage({
-        provider: 'openai',
-        model: 'gpt-5.4',
-        inputTokens: 100,
-        outputTokens: 50,
-        costUsd: 0.001,
-        durationMs: 500,
-        sessionId: 'test-session-1',
-      })
-    }).not.toThrow()
+    const usageRef = recordUsage({
+      provider: 'openai',
+      model: 'gpt-5.4',
+      inputTokens: 100,
+      outputTokens: 50,
+      costUsd: 0.001,
+      durationMs: 500,
+      sessionId: 'test-session-1',
+    })
+    expect(usageRef).toMatch(/^usage-[a-z0-9]{8}$/)
   })
 
   it('17.2 getStatsOverview returns aggregated statistics', async () => {

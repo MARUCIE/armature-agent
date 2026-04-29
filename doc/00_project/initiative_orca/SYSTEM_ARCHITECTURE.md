@@ -150,7 +150,7 @@ flowchart TD
 | Provider bridge | `src/providers/openai-compat.ts` | Provider-neutral transport and model interaction |
   Note: proxy path now supports multimodal one-shot prompt content (`text` + `image_url` parts) for local image attachments.
 | Agent runtime | `src/tools.ts`, `src/background-jobs.ts`, `src/logger.ts`, `src/hooks.ts`, `src/mcp-client.ts`, `src/retry-intelligence.ts`, `src/auto-verify.ts` | Tool execution, detached job tracking, local runtime logging, hooks, provenance-aware MCP loading, retry behavior, verification helpers |
-| Continuity objects | `src/work-session-store.ts` | File-backed `WorkSession` / `TaskRun` persistence for `run`, `serve /chat`, queue inspection, and takeover leases |
+| Continuity objects | `src/work-session-store.ts` | File-backed `WorkSession` / `TaskRun` persistence for `run` default/goal-loop/mission/plan, `serve /chat`, queue inspection, and takeover leases |
 | ink UI | `src/ui/` (18 files) | React terminal UI: App, ScrollBox, InputArea, StatusBar, Banner, Footer, ThinkingSpinner, ToolCallBlock, DiffPreview, MarkdownText, FileLink, PermissionPrompt, MultiModelProgress, CommandPicker, TurnSummary, AlternateScreen + hooks (useTerminalSize, useMouseWheel, usePasteHandler) + modules (cursor, theme, session, types, utils) |
 | IDE integration | `integrations/vscode-orca/` | VS Code extension skeleton that launches `orca` terminal workflows and MCP server directly |
 | Presentation (legacy) | `src/output.ts`, `src/markdown.ts`, `src/command-picker.ts` | Legacy terminal rendering (pre-ink fallback) |
@@ -163,7 +163,7 @@ flowchart TD
 | --- | --- | --- |
 | `orca` / `orca chat` | `src/commands/chat.ts` | Interactive REPL and one-shot prompting |
 | `orca reflect` | `src/commands/chat.ts`, `src/commands/reflect-mode.ts` | Socratic debugging and root-cause investigation surface |
-| `orca run` | `src/commands/run.ts` | Agent task execution |
+| `orca run` | `src/commands/run.ts` | Agent task execution with canonical WorkSession / TaskRun records for default, goal-loop, mission, and plan paths |
 | `orca council` / `orca race` / `orca pipeline` | `src/commands/multi.ts` | Multi-model collaboration flows |
 | `orca bench` | `src/commands/bench.ts` | Benchmark and self-evaluation |
 | `orca doctor` | `src/commands/doctor.ts` | Local runtime/config diagnostics |
@@ -188,6 +188,7 @@ flowchart TD
 - Serve diagnostics: `/health`, `/providers`, `/doctor`
 - Serve continuity discovery: `/sessions`, `/sessions/latest`, `/sessions/:id`, `/work-sessions`, `/work-sessions/latest`, `/work-sessions/:id`, `/work-sessions/:id/task-runs`, `/task-runs`, `/task-runs/:id`
 - Serve canonical run entry: `POST /chat` returns `workSessionId` / `taskRunId` for non-streaming requests and emits the same ids in an SSE `metadata` event for streaming requests.
+- Run canonical task entry: `orca run` writes `TaskRun` records for default, goal-loop, mission, and plan branches and stores usage plus mission-state evidence when available.
 
 ## Legacy Documentation Cross-References
 

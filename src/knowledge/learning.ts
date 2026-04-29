@@ -16,7 +16,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { homedir } from 'node:os'
+import { getOrcaHome } from '../logger.js'
 
 export type LearningStatus = 'observation' | 'hypothesis' | 'promoted' | 'rejected'
 
@@ -38,8 +38,7 @@ export class LearningJournal {
   private dir: string
 
   constructor() {
-    const home = process.env.ORCA_HOME || process.env.HOME || homedir()
-    this.dir = join(home, '.orca', 'knowledge', 'learning')
+    this.dir = join(getOrcaHome(), 'knowledge', 'learning')
     mkdirSync(this.dir, { recursive: true })
   }
 
@@ -139,6 +138,24 @@ export class LearningJournal {
 
     writeFileSync(join(this.dir, `${id}.json`), JSON.stringify(entry, null, 2))
     return entry
+  }
+
+  /** Persist an externally verified hypothesis, then let the journal own promotion state */
+  promoteVerifiedHypothesis(content: string, evidence: string[] = [], failureMode?: string, project?: string): LearningEntry | null {
+    const id = `learn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const entry: LearningEntry = {
+      id,
+      status: 'hypothesis',
+      content,
+      evidence: ['gate: external-verified', ...evidence],
+      failureMode,
+      connections: [],
+      project,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    writeFileSync(join(this.dir, `${id}.json`), JSON.stringify(entry, null, 2))
+    return this.promote(id, failureMode)
   }
 
   /** Reject a hypothesis with reason */

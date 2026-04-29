@@ -14,13 +14,15 @@
   - shared slash-command registry for REPL completion, Ink picker, and `/help`, with HomePanel hint metadata prepared for a later UI-baseline split
   - release evidence snapshot guard for README and active PDCA docs
   - CI gate integrity job for matrix sync, static, security, performance, and fast agent-eval gates
+  - `orca run` default / goal-loop / mission / plan WorkSession and TaskRun records
 - Check evidence:
   - `npm run lint`
   - `npm run build`
-  - `npm test` -> `88` files / `1609` tests
+  - `npm test` -> `88` files / `1611` tests
   - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests
   - `npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx` -> `98` tests
   - `npm test -- tests/release-evidence.test.ts` -> `3` tests
+  - `npm test -- tests/run-work-session.test.ts tests/work-session-store.test.ts tests/queue-command.test.ts` -> `14` tests
   - `npm run test:matrix:sync`
   - `npm run test:static`
   - `npm run test:security`
@@ -28,9 +30,9 @@
   - `npm run test:ai-eval-fast`
   - gate evidence: `outputs/test-matrix/run-20260429-060205`, `run-20260429-060222`, `run-20260429-060232`, `run-20260429-060243`
 - Act queue:
-  - complete unified execution contract for remaining chat/mission/planner paths
+  - complete unified execution contract for remaining chat REPL paths
   - Ink evidence side panel and approvals timeline
-  - remaining unified execution contract for chat/mission/planner
+  - remaining unified execution contract for chat REPL
 
 ## Plan
 

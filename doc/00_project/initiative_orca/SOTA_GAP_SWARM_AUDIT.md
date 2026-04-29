@@ -6,7 +6,7 @@
 - Baseline: dirty working tree audit; existing user changes were preserved
 - Report route: `html-style-router` -> `html-economist-style`
 - Verification baseline before fixes: `npm run lint`, `npm test` (`85` files / `1583` tests), `npm run build`
-- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`88` files / `1609` tests)
+- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`88` files / `1611` tests)
 
 ## Scope
 
@@ -44,7 +44,7 @@ Orca has moved beyond basic CLI parity. The strongest areas are provider-neutral
 
 The remaining SOTA gap is now sharper:
 
-1. A single canonical execution contract is missing across `chat`, `run`, `serve`, mission, planner, and model routing.
+1. A single canonical execution contract is still incomplete for `chat` and model routing; `run`, `serve /chat`, mission, and planner now share the TaskRun spine.
 2. Async work is visible, but not yet a durable operator queue with leases, follow, takeover, and evidence bundles.
 3. Review-before-apply is still too lossy for high-confidence agent delegation.
 4. Trust boundaries were inconsistent around repo-local hooks and network-capable tools.
@@ -204,6 +204,7 @@ PDCA action executed:
 | ORCA-SWARM-010 | P1 | Centralize slash-command registry so HomePanel/completer/TUI cannot drift | UX | core done |
 | ORCA-SWARM-011 | P2 | Align README/doc test counts to current suite evidence | docs | done |
 | ORCA-SWARM-012 | P2 | Add CI matrix/security/performance/eval enforcement | verification | done |
+| ORCA-SWARM-013 | P1 | Record `orca run` default/goal-loop/mission/plan executions as canonical TaskRuns | runtime | done |
 
 ## PDCA Execution Log
 
@@ -241,10 +242,11 @@ Verification executed:
 - Combined targeted regression pack -> `190` tests passed
 - `npm run lint` -> pass
 - `npm run build` -> pass
-- Final `npm test` -> `88` files / `1609` tests passed
+- Final `npm test` -> `88` files / `1611` tests passed
 - Gate integrity targeted tests cover manifest/script/sync behavior.
 - CI now executes `test:matrix:sync`, `test:static`, `test:security`, `test:performance`, and `test:ai-eval-fast`.
-- `node dist/bin/orca.js --version` -> `0.8.8`
+- `node dist/bin/orca.js --version` -> `0.8.9`
+- `npm test -- tests/run-work-session.test.ts tests/work-session-store.test.ts tests/queue-command.test.ts` -> `14` tests passed
 - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed
 - Clean staged-index `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed
 - `npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx` -> `98` tests passed
@@ -268,9 +270,9 @@ Pre-fix baseline evidence:
 
 Next queue items should proceed in this order:
 
-1. Complete execution contract unification for `chat`, mission, and planner.
+1. Complete execution contract unification for the chat REPL turn lifecycle.
 2. Ink evidence side panel and review-before-apply approvals timeline.
-3. Continue the unified execution contract for chat/mission/planner.
+3. Continue the unified execution contract for chat REPL and model routing.
 
 ## Remaining Risks
 

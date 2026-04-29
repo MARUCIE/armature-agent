@@ -12,7 +12,8 @@ New product requirements from the SOTA swarm audit:
 - Slash-command discovery must use a shared registry so REPL completion, Ink picker, and `/help` cannot drift; HomePanel hint metadata must be ready for the pending UI-baseline split.
 - README and active PDCA documents must use `verification_snapshot.json` plus release-evidence tests so version, test file count, and full-suite count cannot silently drift.
 - CI must run the documented matrix/security/performance/eval entrypoints instead of relying on a narrower build/test job.
-- Next tranche must continue the unified execution contract across `run`, `serve`, mission, and planner surfaces.
+- `orca run` default, goal-loop, mission, and plan branches must create and close canonical `WorkSession` / `TaskRun` records.
+- Next tranche must continue the unified execution contract for chat REPL and model-routing evidence.
 - `serve /chat` must create and close canonical `WorkSession` / `TaskRun` records, returning the ids in non-streaming responses and emitting them as streaming metadata.
 
 ## Product Snapshot
@@ -103,8 +104,9 @@ Single-vendor coding CLIs force users into one model family per session. Orca CL
 - Rule audit surfaces now support state-based filtering
 - Startup MCP auto-connect now trusts only home/global configs by default; repo-local MCP requires explicit `/mcp connect` instead of silent repo-driven process spawn
 - Run continuity now has a first-class foothold:
-  - default `orca run` creates a durable `WorkSession`
-  - the same execution creates a persisted `TaskRun`
+  - default `orca run`, goal-loop, mission, and plan branches create a durable `WorkSession`
+  - the same executions create persisted `TaskRun` records with status, summary, and usage
+  - mission TaskRuns attach mission-state evidence when available
   - `serve` can inspect both through read-only continuity endpoints
   - `orca queue takeover` can claim a TTL operator lease on non-terminal `TaskRun` records
   - `serve /chat` creates a durable `WorkSession` and `TaskRun` for both non-streaming and SSE requests

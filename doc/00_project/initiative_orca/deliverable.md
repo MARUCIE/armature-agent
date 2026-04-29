@@ -1,5 +1,52 @@
 # Deliverable
 
+## 2026-04-29 - Run Execution Contract PDCA Tranche
+
+### Scope
+
+Advance ORCA-SWARM-013 by making `orca run` default, goal-loop, mission, and plan paths write the same WorkSession / TaskRun record family already used by queue and `serve /chat`.
+
+### Delivered
+
+- `orca run` creates a `WorkSession` and active `TaskRun` before execution starts.
+- Default run, goal-loop, mission, and plan paths finish the TaskRun with status, summary, usage, and relevant evidence.
+- Run usage records now carry the WorkSession id as the usage session reference.
+- Runtime observations record WorkSession / TaskRun ids for the run surface.
+- Regression tests cover default run, mission mode, and plan mode TaskRun records.
+- Version bumped to `0.8.9`.
+
+### Changed Files
+
+- `src/commands/run.ts`
+- `src/evolution/observer.ts`
+- `src/evolution/store.ts`
+- `src/knowledge/learning.ts`
+- `src/usage-db.ts`
+- `tests/run-work-session.test.ts`
+- `tests/evolution-store.test.ts`
+- `tests/v030-coverage.test.ts`
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `doc/00_project/initiative_orca/*`
+
+### Verification
+
+- `npm test -- tests/run-work-session.test.ts tests/work-session-store.test.ts tests/queue-command.test.ts` -> `14/14`
+- Clean staged-index `npm test -- tests/run-work-session.test.ts tests/evolution-store.test.ts tests/work-session-store.test.ts tests/queue-command.test.ts tests/release-evidence.test.ts tests/v030-coverage.test.ts` -> `40/40`
+- `npm run build` -> pass
+- `npm run lint && npm run build && npm test` -> `88` files / `1611` tests
+- `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `node dist/bin/orca.js --version` -> `0.8.9`
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Chat REPL still has its own long-running turn lifecycle before it becomes a first-class TaskRun producer | Runtime | Split a dedicated chat TaskRun tranche after the current dirty chat baseline is isolated |
+| Mission/plan tests use mocks for controller/planner internals | Verification | Add integration coverage after mission/planner runtime dependencies are made deterministic |
+| Clean staged-index full build still exposes pre-existing dirty baseline imports for preset commands, permissions/evolve, and git repository helpers | Baseline owners | Split the existing chat/modes/permissions/evolve baseline before claiming clean-index full-suite parity |
+
 ## 2026-04-29 - CI Gate Integrity PDCA Tranche
 
 ### Scope

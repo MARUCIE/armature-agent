@@ -20,6 +20,7 @@
 | REQ-20260429-012 | UX | Slash-command discovery must not drift across REPL completion, Ink picker, and `/help`; HomePanel hint metadata must be ready for the pending UI-baseline split | Core Done | `src/slash-commands.ts`, `tests/slash-commands.test.ts` |
 | REQ-20260429-013 | Docs | README and active PDCA docs must not drift from current package version, test file count, and full-suite evidence | Done | `verification_snapshot.json`, `tests/release-evidence.test.ts` |
 | REQ-20260429-014 | Verification | CI must enforce the documented matrix/security/performance/eval gates | Done | `.github/workflows/ci.yml`, `agent-eval/manifests/test-matrix.json`, `npm run test:matrix:sync` |
+| REQ-20260429-015 | Runtime | `orca run` default, goal-loop, mission, and plan branches must write canonical WorkSession / TaskRun records | Done | `src/commands/run.ts`, `tests/run-work-session.test.ts` |
 
 ### Prompt Ledger
 
@@ -33,6 +34,7 @@
 | PROMPT-20260429-006 | `继续` | Continue queued PDCA execution | Core completed ORCA-SWARM-010: shared slash-command registry |
 | PROMPT-20260429-007 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-011: release evidence snapshot guard |
 | PROMPT-20260429-008 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-012: CI gate integrity enforcement |
+| PROMPT-20260429-009 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-013: `orca run` execution contract records |
 
 ### Anti-Regression Q&A
 
@@ -52,6 +54,7 @@
 | Can README or active PDCA docs silently advertise stale version/test evidence? | No. `tests/release-evidence.test.ts` compares package version, README strings, active PDCA docs, and the active-worktree test evidence snapshot; clean-index runs must have no more tracked test files than the snapshot. | `tests/release-evidence.test.ts` |
 | Can CI drift back to build/test-only while docs advertise matrix/security/performance/eval gates? | No. The `gate-integrity` job runs matrix sync plus static, security, performance, and fast agent-eval gates. Package scripts and generated snippets are checked against `test-matrix.json`. | `.github/workflows/ci.yml`, `tests/test-matrix-sync.test.ts`, `tests/agent-eval-manifests.test.ts` |
 | Can hook system-message tests spy on global stderr during parallel full-suite runs? | No. The regression injects a local writer into `runPreToolHook` so parallel tests cannot steal or restore the global stream spy. | `tests/v050-modules.test.ts` |
+| Does `orca run` create queue-visible records across its branch modes? | Yes. Default, goal-loop, mission, and plan branches create WorkSession / TaskRun records and finish them with status, summary, usage, and mission evidence when available. | `tests/run-work-session.test.ts` |
 
 ### References
 

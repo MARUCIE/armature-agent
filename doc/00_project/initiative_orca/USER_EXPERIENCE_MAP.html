@@ -364,6 +364,7 @@ The 2026-04-21 swarm audit adds one sharper constraint to these journeys: they d
 <li><code>orca serve</code> exposes <code>GET /sessions</code>, <code>GET /sessions/latest</code>, and <code>GET /sessions/:id</code> so a future web/IDE client can discover and inspect the durable session object set.</li>
 <li>This is the first continuity surface, not the final hosted continuity workflow.</li>
 <li>The next continuity step is not another metadata endpoint; it is a real <code>WorkSession</code> / <code>TaskRun</code> model with queue/take-over semantics and evidence links.</li>
+<li>The shipped <code>WorkSession</code> / <code>TaskRun</code> slice now covers the default <code>orca run</code>, goal-loop, mission, plan, and <code>serve /chat</code> paths and is inspectable through <code>serve</code>.</li>
 <li>If <code>serve</code> binds to a non-loopback host, <code>ORCA_SERVE_TOKEN</code> is now required and HTTP requests must present a bearer token.</li>
 </ol>
 <h3 id="1i-stats-dashboard-flow">1i. Stats Dashboard Flow</h3>
@@ -382,8 +383,9 @@ The 2026-04-21 swarm audit adds one sharper constraint to these journeys: they d
 <h3 id="2-task-execution-flow">2. Task Execution Flow</h3>
 <ol>
 <li>User invokes <code>orca run &quot;task&quot;</code>.</li>
-<li><code>src/commands/run.ts</code> packages the task for the runtime.</li>
+<li><code>src/commands/run.ts</code> creates a WorkSession plus TaskRun before choosing the default, goal-loop, mission, or plan branch.</li>
 <li>Runtime resolves provider/model config and tool permissions.</li>
+<li>Completion writes TaskRun status, summary, usage, and mission-state evidence when applicable.</li>
 <li>Output streams back through <code>src/output.ts</code> and <code>src/markdown.ts</code>.</li>
 </ol>
 <h3 id="3-multi-model-collaboration-flow">3. Multi-Model Collaboration Flow</h3>

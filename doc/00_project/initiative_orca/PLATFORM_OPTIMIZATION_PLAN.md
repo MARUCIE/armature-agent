@@ -13,8 +13,8 @@ The next platform wave is now explicitly ordered:
    - ship `orca queue list/show/follow/takeover/evidence`
    - keep lease state as the handoff point for future scheduler / resume semantics
 3. Unified execution contract:
-   - `run` and `serve /chat` now write canonical `WorkSession` / `TaskRun` records
-   - finish `chat`, mission, planner, and future background agents against the same record model
+   - `run` default, goal-loop, mission, plan, and `serve /chat` now write canonical `WorkSession` / `TaskRun` records
+   - finish `chat` REPL, model routing, and future background agents against the same record model
 4. Evidence console:
    - `orca queue evidence` now opens TaskRun logs, diffs, data, reports, missing artifacts, and capped previews
    - extend approvals, tool-call timelines, and Ink side-panel rendering after the UI baseline lands
@@ -236,6 +236,7 @@ Wave 4a progress now started:
   - `GET /sessions/latest`
   - `GET /sessions/:id`
 - this establishes a headless continuity discovery layer before richer hosted/web take-over flows
+- `orca run` now writes TaskRun records for default, goal-loop, mission, and plan branches, so queue inspection can see status, summary, usage, and mission-state evidence
 - continuity metadata is intentionally treated as trusted-local surface:
   - no wildcard CORS
   - session-discovery endpoints are loopback-only

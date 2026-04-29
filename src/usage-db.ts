@@ -8,6 +8,7 @@
  */
 
 import { DatabaseSync } from 'node:sqlite'
+import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { getGlobalDir } from './config.js'
 
@@ -39,11 +40,20 @@ CREATE INDEX IF NOT EXISTS idx_usage_model ON usage(model);
 
 let _db: DatabaseSync | null = null
 
+function ensureUsageSchema(db: DatabaseSync): void {
+  db.exec(SCHEMA)
+  const columns = db.prepare('PRAGMA table_info(usage)').all() as Array<{ name: string }>
+  if (!columns.some((column) => column.name === 'usage_ref')) {
+    db.exec('ALTER TABLE usage ADD COLUMN usage_ref TEXT')
+  }
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_usage_ref ON usage(usage_ref)')
+}
+
 function getDb(): DatabaseSync {
   if (!_db) {
     const dbPath = join(getGlobalDir(), 'usage.db')
     _db = new DatabaseSync(dbPath)
-    _db.exec(SCHEMA)
+    ensureUsageSchema(_db)
   }
   return _db
 }
@@ -64,14 +74,22 @@ export interface UsageRecord {
   cwd?: string
 }
 
-export function recordUsage(record: UsageRecord): void {
+export type UsageRef = string
+
+function buildUsageRef(): UsageRef {
+  return `usage-${randomUUID().slice(0, 8)}`
+}
+
+export function recordUsage(record: UsageRecord): UsageRef | null {
   try {
     const db = getDb()
+    const usageRef = buildUsageRef()
     const stmt = db.prepare(`
-      INSERT INTO usage (session_id, provider, model, input_tokens, output_tokens, cost_usd, duration_ms, turns, tool_calls, command, cwd)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO usage (usage_ref, session_id, provider, model, input_tokens, output_tokens, cost_usd, duration_ms, turns, tool_calls, command, cwd)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     stmt.run(
+      usageRef,
       record.sessionId || null,
       record.provider,
       record.model,
@@ -84,8 +102,10 @@ export function recordUsage(record: UsageRecord): void {
       record.command || null,
       record.cwd || null,
     )
+    return usageRef
   } catch {
     // Non-fatal — don't break the CLI if usage tracking fails
+    return null
   }
 }
 

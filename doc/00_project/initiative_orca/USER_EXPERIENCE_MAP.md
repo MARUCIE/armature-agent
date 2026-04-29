@@ -52,7 +52,7 @@ Orca CLI is a command-first product. User journeys are structured around termina
 | Inspect runtime logs | Read recent info/warn/error entries without opening files manually | `orca logs`, `orca logs errors` | `src/commands/logs.ts`, `src/logger.ts` |
 | Review runtime dashboard | See usage, runtime health, and recent error signals in one place | `orca stats` | `src/commands/stats.ts`, `src/doctor.ts`, `src/logger.ts` |
 | Inspect continuity state headlessly | Query the saved-session object set before attaching a richer client | `orca serve` + `GET /sessions|/sessions/latest` | `src/commands/serve.ts`, `src/session-store.ts` |
-| Inspect run continuity state headlessly | Query durable run objects created by the default `orca run` path | `orca serve` + `GET /work-sessions*`, `GET /task-runs*` | `src/commands/serve.ts`, `src/work-session-store.ts` |
+| Inspect run continuity state headlessly | Query durable run objects created by `orca run` default, goal-loop, mission, and plan paths | `orca serve` + `GET /work-sessions*`, `GET /task-runs*` | `src/commands/run.ts`, `src/commands/serve.ts`, `src/work-session-store.ts`, `tests/run-work-session.test.ts` |
 | Execute headless chat as a tracked run | Send a prompt over HTTP and receive durable run ids for later queue inspection | `POST /chat` with JSON or SSE response | `src/commands/serve.ts`, `tests/serve-command.test.ts` |
 | Resume a specific saved session | Continue an exact durable session object instead of only “latest” | `orca -c <id>` | `src/commands/chat.ts`, `src/commands/session.ts` |
 | Inspect one saved session headlessly | Read a single durable session object before designing take-over/resume | `orca serve` + `GET /sessions/:id` | `src/commands/serve.ts`, `src/session-store.ts` |
@@ -195,7 +195,7 @@ The 2026-04-21 swarm audit adds one sharper constraint to these journeys: they d
 4. `orca serve` exposes `GET /sessions`, `GET /sessions/latest`, and `GET /sessions/:id` so a future web/IDE client can discover and inspect the durable session object set.
 5. This is the first continuity surface, not the final hosted continuity workflow.
 6. The next continuity step is not another metadata endpoint; it is a real `WorkSession` / `TaskRun` model with queue/take-over semantics and evidence links.
-7. The first shipped `WorkSession` / `TaskRun` slice now covers the default `orca run` path and is inspectable through `serve`.
+7. The shipped `WorkSession` / `TaskRun` slice now covers the default `orca run`, goal-loop, mission, plan, and `serve /chat` paths and is inspectable through `serve`.
 8. If `serve` binds to a non-loopback host, `ORCA_SERVE_TOKEN` is now required and HTTP requests must present a bearer token.
 
 ### 1i. Stats Dashboard Flow
@@ -214,8 +214,9 @@ The 2026-04-21 swarm audit adds one sharper constraint to these journeys: they d
 ### 2. Task Execution Flow
 
 1. User invokes `orca run "task"`.
-2. `src/commands/run.ts` packages the task for the runtime.
+2. `src/commands/run.ts` creates a WorkSession plus TaskRun before choosing the default, goal-loop, mission, or plan branch.
 3. Runtime resolves provider/model config and tool permissions.
+4. Completion writes TaskRun status, summary, usage, and mission-state evidence when applicable.
 4. Output streams back through `src/output.ts` and `src/markdown.ts`.
 
 ### 3. Multi-Model Collaboration Flow

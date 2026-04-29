@@ -1,5 +1,26 @@
 # Notes
 
+## 2026-04-29 - Run execution contract PDCA continuation
+
+Context:
+
+- User said `继续` after the CI gate integrity commit, so execution continued with the unified execution contract queue.
+- `serve /chat` already writes canonical run records; `orca run` still needed the same WorkSession / TaskRun spine for default, goal-loop, mission, and plan execution.
+- The current boundary is the run surface only; the broader dirty chat/UI/permissions baseline remains outside this tranche.
+
+PDCA executed:
+
+- Plan: create the run WorkSession / TaskRun before branch dispatch, finish it consistently from default run, goal-loop, mission, and plan branches, and keep queue evidence inspectable.
+- Do: wire `src/commands/run.ts` to WorkSession / TaskRun storage, add runtime observations, pass WorkSession ids into usage records, and add run-work-session coverage for default, mission, and plan modes.
+- Check:
+  - `npm test -- tests/run-work-session.test.ts tests/work-session-store.test.ts tests/queue-command.test.ts` -> `14` tests passed.
+  - Clean staged-index `npm test -- tests/run-work-session.test.ts tests/evolution-store.test.ts tests/work-session-store.test.ts tests/queue-command.test.ts tests/release-evidence.test.ts tests/v030-coverage.test.ts` -> `40` tests passed.
+  - `npm run build` -> pass.
+  - `npm run lint && npm run build && npm test` -> `88` files / `1611` tests passed.
+  - `npm test -- tests/release-evidence.test.ts` -> `3` tests passed.
+  - `node dist/bin/orca.js --version` -> `0.8.9`.
+- Act: next queue item remains chat REPL TaskRun production and Ink evidence timeline, after the dirty chat/UI baseline is split into a reviewable boundary.
+
 ## 2026-04-29 - CI gate integrity PDCA continuation
 
 Context:

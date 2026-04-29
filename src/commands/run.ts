@@ -30,7 +30,15 @@ import {
 import type { OutputMode } from '../output.js'
 import { StreamMarkdown } from '../markdown.js'
 import { buildSystemPrompt } from '../system-prompt.js'
+import { observeRuntimeEvent } from '../evolution/observer.js'
 import { recordUsage } from '../usage-db.js'
+import {
+  createTaskRun,
+  createWorkSession,
+  finishTaskRun,
+  type TaskRunKind,
+  type TaskRunUsageSummary,
+} from '../work-session-store.js'
 
 interface RunOptions {
   model?: string
@@ -64,6 +72,9 @@ export function createRunCommand(): Command {
     .action(async (taskParts: string[], opts: RunOptions) => {
       const task = taskParts.join(' ').trim()
       const outputMode: OutputMode = opts.json ? 'json' : 'streaming'
+      const runStartedAt = Date.now()
+      let activeTaskRunId: string | undefined
+      let activeWorkSessionId: string | undefined
 
       try {
         const config = resolveConfig({
@@ -72,13 +83,53 @@ export function createRunCommand(): Command {
         })
 
         const resolved = resolveProvider(config)
+        const runCwd = opts.cwd || process.cwd()
+        const workSession = createWorkSession({
+          sourceSurface: 'run',
+          cwd: runCwd,
+          provider: resolved.provider,
+          model: resolved.model,
+        })
+        activeWorkSessionId = workSession.id
+        const taskRun = createTaskRun({
+          workSessionId: workSession.id,
+          kind: resolveTaskRunKind(opts),
+          title: task,
+          surface: 'cli',
+          cwd: runCwd,
+          provider: resolved.provider,
+          model: resolved.model,
+          summary: task,
+        })
+        activeTaskRunId = taskRun.id
+        const emitRunObservation = (
+          severity: 'info' | 'warn' | 'error',
+          summary: string,
+          details?: string,
+          usageRef?: string | null,
+        ) => {
+          observeRuntimeEvent({
+            category: 'run',
+            severity,
+            summary,
+            details,
+            command: 'run',
+            provider: resolved.provider,
+            model: resolved.model,
+            cwd: runCwd,
+            evidence: {
+              workSessionId: activeWorkSessionId,
+              taskRunId: activeTaskRunId,
+              usageRef: usageRef || undefined,
+            },
+          })
+        }
 
         if (outputMode === 'streaming') {
           printBanner()
           printProviderInfo(resolved.provider, resolved.model)
+          console.log(`\x1b[90m  work session: ${workSession.id} · task run: ${taskRun.id}\x1b[0m`)
         }
-
-        const runCwd = opts.cwd || process.cwd()
 
         // Goal-loop mode: repeat task until criteria met
         if (opts.doneWhen) {
@@ -130,6 +181,24 @@ export function createRunCommand(): Command {
             console.log(`\x1b[31m  goal-loop: ${result.reason} after ${result.iterations} iteration(s)\x1b[0m`)
             console.log(`\x1b[90m  ${result.lastOutput}\x1b[0m`)
           }
+          finishTaskRun(taskRun.id, {
+            status: result.success ? 'completed' : 'failed',
+            summary: result.success
+              ? `Goal loop met criteria in ${result.iterations} iteration(s).`
+              : `Goal loop ${result.reason} after ${result.iterations} iteration(s).`,
+            usage: {
+              inputTokens: 0,
+              outputTokens: 0,
+              costUsd: 0,
+              durationMs: result.totalDurationMs,
+              turns: result.iterations,
+            },
+          })
+          emitRunObservation(
+            result.success ? 'info' : 'warn',
+            result.success ? 'run goal-loop completed' : 'run goal-loop failed',
+            result.reason,
+          )
           return
         }
 
@@ -186,6 +255,28 @@ export function createRunCommand(): Command {
             ? new Date(state.completedAt).getTime() - new Date(state.startedAt).getTime()
             : Date.now() - new Date(state.startedAt).getTime()
           console.log(`\x1b[90m  tokens: ${state.totalTokens.toLocaleString()} · ${(elapsed / 1000).toFixed(1)}s\x1b[0m`)
+          finishTaskRun(taskRun.id, {
+            status: state.phase === 'completed' ? 'completed' : 'failed',
+            summary: state.phase === 'completed'
+              ? `Mission completed: ${state.featuresValidated} features validated across ${state.totalRuns} runs.`
+              : `Mission ${state.phase}: ${state.error || 'unknown error'}`,
+            usage: {
+              inputTokens: 0,
+              outputTokens: state.totalTokens,
+              costUsd: 0,
+              durationMs: elapsed,
+              turns: state.totalRuns,
+            },
+            evidence: [{
+              label: 'mission-state',
+              path: `${runCwd}/.orca/missions/${controller.getState().id}/state.json`,
+              }],
+          })
+          emitRunObservation(
+            state.phase === 'completed' ? 'info' : 'warn',
+            state.phase === 'completed' ? 'run mission completed' : 'run mission failed',
+            state.error,
+          )
           return
         }
 
@@ -220,10 +311,28 @@ export function createRunCommand(): Command {
             console.log(`\x1b[31m  plan finished: ${result.completed} done, ${result.failed} failed, ${result.skipped} skipped\x1b[0m`)
           }
           console.log(`\x1b[90m  tokens: ${result.totalTokens.toLocaleString()} · ${(result.totalDurationMs / 1000).toFixed(1)}s\x1b[0m`)
+          finishTaskRun(taskRun.id, {
+            status: result.success ? 'completed' : 'failed',
+            summary: result.success
+              ? `Plan completed: ${result.completed}/${result.totalTasks} tasks.`
+              : `Plan finished with ${result.failed} failed and ${result.skipped} skipped tasks.`,
+            usage: {
+              inputTokens: 0,
+              outputTokens: result.totalTokens,
+              costUsd: 0,
+              durationMs: result.totalDurationMs,
+              turns: result.totalTasks,
+            },
+          })
+          emitRunObservation(
+            result.success ? 'info' : 'warn',
+            result.success ? 'run plan completed' : 'run plan failed',
+            `completed=${result.completed} failed=${result.failed} skipped=${result.skipped}`,
+          )
           return
         }
 
-        await executeTask({
+        const execution = await executeTask({
           task,
           provider: resolved.provider,
           apiKey: resolved.apiKey,
@@ -233,9 +342,44 @@ export function createRunCommand(): Command {
           outputMode,
           cwd: runCwd,
           dangerously: opts.dangerously || false,
+          workSessionId: workSession.id,
         })
+        finishTaskRun(taskRun.id, {
+          status: 'completed',
+          summary: `Run completed for: ${task}`,
+          usage: execution.usage,
+        })
+        emitRunObservation(
+          'info',
+          'run completed',
+          `turns=${execution.usage.turns || 0} toolCalls=${execution.usage.toolCalls || 0}`,
+          execution.usageRef,
+        )
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
+        observeRuntimeEvent({
+          category: 'run',
+          severity: 'error',
+          summary: `run failed: ${message}`,
+          command: 'run',
+          cwd: opts.cwd || process.cwd(),
+          evidence: {
+            workSessionId: activeWorkSessionId,
+            taskRunId: activeTaskRunId,
+          },
+        })
+        if (activeTaskRunId) {
+          finishTaskRun(activeTaskRunId, {
+            status: 'failed',
+            summary: message,
+            usage: {
+              inputTokens: 0,
+              outputTokens: 0,
+              costUsd: 0,
+              durationMs: Date.now() - runStartedAt,
+            },
+          })
+        }
         if (outputMode === 'json') {
           emitJson({ type: 'error', error: message })
         } else {
@@ -256,10 +400,16 @@ interface ExecuteTaskOptions {
   outputMode: OutputMode
   cwd: string
   dangerously: boolean
+  workSessionId?: string
 }
 
-async function executeTask(options: ExecuteTaskOptions): Promise<void> {
-  const { task, provider, apiKey, model, baseURL, config, outputMode, cwd, dangerously } = options
+interface ExecuteTaskResult {
+  usage: TaskRunUsageSummary
+  usageRef: string | null
+}
+
+async function executeTask(options: ExecuteTaskOptions): Promise<ExecuteTaskResult> {
+  const { task, provider, apiKey, model, baseURL, config, outputMode, cwd, dangerously, workSessionId } = options
 
   let sdk: { createAgent: (opts: Record<string, unknown>) => { query: (p: string) => AsyncIterable<unknown> } }
   try {
@@ -300,25 +450,25 @@ async function executeTask(options: ExecuteTaskOptions): Promise<void> {
   const md = new StreamMarkdown()
 
   for await (const event of agent.query(task)) {
-    if (outputMode === 'json') {
-      emitJson(event as unknown as Record<string, unknown>)
-      continue
-    }
-
     const ev = event as Record<string, unknown>
     const type = ev.type as string | undefined
+    if (outputMode === 'json') {
+      emitJson(ev)
+    }
 
-    if (type === 'text' || type === 'content_block_delta') {
+    if ((type === 'text' || type === 'content_block_delta') && outputMode !== 'json') {
       const text = (ev.text as string) || (ev.delta as Record<string, unknown>)?.text as string || ''
       if (text) md.push(text)
-    } else if (type === 'tool_use' || type === 'tool_call') {
+    } else if ((type === 'tool_use' || type === 'tool_call') && outputMode !== 'json') {
       md.flush(); setLastNewline(md.endsWithNewline)
       toolCalls++
       const toolName = (ev.name as string) || (ev.tool as string) || 'tool'
       let input: string | undefined
       try { input = ev.input ? JSON.stringify(ev.input) : undefined } catch { input = '[complex input]' }
       printToolUse(toolName, input)
-    } else if (type === 'tool_result') {
+    } else if (type === 'tool_use' || type === 'tool_call') {
+      toolCalls++
+    } else if (type === 'tool_result' && outputMode !== 'json') {
       const toolName = (ev.name as string) || 'tool'
       const success = (ev.is_error as boolean) !== true
       printToolResult(toolName, success)
@@ -343,7 +493,8 @@ async function executeTask(options: ExecuteTaskOptions): Promise<void> {
     })
   }
 
-  recordUsage({
+  const usageRef = recordUsage({
+    sessionId: workSessionId,
     provider,
     model,
     inputTokens,
@@ -354,6 +505,18 @@ async function executeTask(options: ExecuteTaskOptions): Promise<void> {
     command: 'run',
     cwd,
   })
+
+  return {
+    usage: {
+      inputTokens,
+      outputTokens,
+      costUsd: (() => { const p = getPricingForModel(model); return p ? (inputTokens * p[0] + outputTokens * p[1]) / 1_000_000 : 0 })(),
+      durationMs: Date.now() - startTime,
+      turns,
+      toolCalls,
+    },
+    usageRef,
+  }
 }
 
 function buildFlags(opts: RunOptions): Partial<OrcaConfig> {
@@ -366,3 +529,9 @@ function buildFlags(opts: RunOptions): Partial<OrcaConfig> {
   return flags
 }
 
+function resolveTaskRunKind(opts: RunOptions): TaskRunKind {
+  if (opts.doneWhen) return 'goal-loop'
+  if (opts.mission) return 'mission'
+  if (opts.plan) return 'plan'
+  return 'run'
+}
