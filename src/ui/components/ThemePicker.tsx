@@ -8,7 +8,7 @@
 
 import React, { useState } from 'react'
 import { Box, Text, useInput } from 'ink'
-import { useTerminalSize } from '../useTerminalSize.js'
+import { PickerFrame } from './PickerFrame.js'
 
 interface ThemeOption {
   id: string
@@ -33,7 +33,6 @@ interface Props {
 }
 
 export function ThemePicker({ onSelect, active }: Props): React.ReactElement {
-  const { cols } = useTerminalSize()
   const [selected, setSelected] = useState(0)
 
   useInput(
@@ -59,23 +58,14 @@ export function ThemePicker({ onSelect, active }: Props): React.ReactElement {
   )
 
   const current = THEMES[selected]!
-  const boxWidth = Math.min(cols - 4, 56)
 
   return (
-    <Box
-      flexDirection="column"
-      borderStyle="round"
+    <PickerFrame
+      title="Choose a theme"
+      subtitle="Browse with arrows, confirm with enter"
       borderColor={current.accent}
-      width={boxWidth}
-      marginLeft={2}
-      paddingLeft={1}
-      paddingRight={1}
+      widthLimit={56}
     >
-      <Box marginBottom={1}>
-        <Text bold>Choose a theme</Text>
-        <Text dimColor>  (arrows to browse, enter to select)</Text>
-      </Box>
-
       {THEMES.map((t, i) => (
         <Box key={t.id}>
           <Text color={i === selected ? t.accent : 'gray'}>
@@ -108,6 +98,6 @@ export function ThemePicker({ onSelect, active }: Props): React.ReactElement {
           <Text inverse color={current.accent}>{` ${current.label} \u2502 model \u2502 ${'█'.repeat(4)}${'░'.repeat(4)} 50% `}</Text>
         </Box>
       </Box>
-    </Box>
+    </PickerFrame>
   )
 }

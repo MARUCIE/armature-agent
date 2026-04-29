@@ -282,6 +282,7 @@ describe('executeReplTurn', () => {
 
   it('passes the active session system prompt through the SDK path', async () => {
     const options = createOptions({
+      currentPermMode: 'plan',
       resolved: {
         provider: 'anthropic',
         model: 'claude-sonnet-4',
@@ -297,6 +298,7 @@ describe('executeReplTurn', () => {
     expect(options.runSDKQuery).toHaveBeenCalledWith(expect.objectContaining({
       config: expect.objectContaining({
         systemPrompt: 'You are in reflect mode.\n\nBase prompt',
+        permissionMode: 'plan',
       }),
     }))
   })

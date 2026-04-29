@@ -7,7 +7,7 @@
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 
 export interface ThreadMessage {
   role: string
@@ -21,6 +21,11 @@ export interface ThreadRecord {
   createdAt: string
   updatedAt: string
   metadata?: Record<string, unknown>
+}
+
+export interface ThreadArtifactBundle {
+  markdownPath: string
+  metadataPath: string
 }
 
 export class ThreadManager {
@@ -88,6 +93,21 @@ export class ThreadManager {
     return record
   }
 
+  /** Clone a thread into a new record */
+  fork(id: string, title?: string, metadata?: Record<string, unknown>): ThreadRecord | null {
+    const record = this.load(id)
+    if (!record) return null
+    return this.create(
+      title || `${record.title} (fork)`,
+      structuredClone(record.messages),
+      {
+        ...(record.metadata || {}),
+        ...(metadata || {}),
+        sourceThreadId: record.id,
+      },
+    )
+  }
+
   /** Simple keyword search across thread titles and message content */
   search(query: string, limit = 5): ThreadRecord[] {
     const q = query.toLowerCase()
@@ -117,6 +137,100 @@ export class ThreadManager {
     if (!existsSync(filePath)) return false
     unlinkSync(filePath)
     return true
+  }
+
+  /** Import a thread record from a JSON file */
+  importFromFile(path: string, titleOverride?: string): ThreadRecord {
+    const raw = JSON.parse(readFileSync(path, 'utf-8')) as ThreadRecord
+    if (!raw || typeof raw !== 'object' || typeof raw.title !== 'string' || !Array.isArray(raw.messages)) {
+      throw new Error('invalid thread file')
+    }
+    return this.create(
+      titleOverride || raw.title,
+      raw.messages,
+      {
+        ...(raw.metadata || {}),
+        importedAt: new Date().toISOString(),
+      },
+    )
+  }
+
+  renderMarkdown(record: ThreadRecord): string {
+    const lines: string[] = [
+      `# Thread: ${record.title}`,
+      '',
+      `- ID: ${record.id}`,
+      `- Created: ${record.createdAt}`,
+      `- Updated: ${record.updatedAt}`,
+      `- Messages: ${record.messages.length}`,
+    ]
+
+    if (record.metadata && Object.keys(record.metadata).length > 0) {
+      lines.push(`- Metadata: ${JSON.stringify(record.metadata)}`)
+    }
+
+    lines.push('', '## Transcript', '')
+
+    for (const message of record.messages) {
+      lines.push(`### ${message.role}`, '', message.content || '_Empty_', '')
+    }
+
+    return lines.join('\n')
+  }
+
+  exportMarkdown(id: string, filePath: string): boolean {
+    const record = this.load(id)
+    if (!record) return false
+    writeFileSync(filePath, this.renderMarkdown(record), 'utf-8')
+    return true
+  }
+
+  share(id: string, filePath?: string): string | null {
+    const record = this.load(id)
+    if (!record) return null
+    const bundle = this.writeArtifactBundle(record, 'thread-share', filePath)
+    return bundle.markdownPath
+  }
+
+  shareBundle(id: string, filePath?: string): ThreadArtifactBundle | null {
+    const record = this.load(id)
+    if (!record) return null
+    return this.writeArtifactBundle(record, 'thread-share', filePath)
+  }
+
+  writeHandoffBundle(id: string, sourceThreadId?: string): ThreadArtifactBundle | null {
+    const record = this.load(id)
+    if (!record) return null
+    return this.writeArtifactBundle(record, 'thread-handoff', undefined, {
+      sourceThreadId: sourceThreadId || record.metadata?.sourceThreadId || null,
+      handoff: true,
+    })
+  }
+
+  private writeArtifactBundle(
+    record: ThreadRecord,
+    kind: 'thread-share' | 'thread-handoff',
+    filePath?: string,
+    extraMetadata?: Record<string, unknown>,
+  ): ThreadArtifactBundle {
+    const sharesDir = join(this.threadsDir, '..', 'shares')
+    mkdirSync(sharesDir, { recursive: true })
+    const stem = kind === 'thread-handoff' ? `handoff-${sanitizeArtifactName(record.id)}` : `thread-${sanitizeArtifactName(record.id)}`
+    const markdownPath = filePath || join(sharesDir, `${stem}.md`)
+    writeFileSync(markdownPath, this.renderMarkdown(record), 'utf-8')
+    const metadataPath = replaceExtension(markdownPath, '.artifact.json')
+    writeFileSync(metadataPath, JSON.stringify({
+      kind,
+      threadId: record.id,
+      title: record.title,
+      messageCount: record.messages.length,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+      generatedAt: new Date().toISOString(),
+      metadata: record.metadata || {},
+      ...extraMetadata,
+    }, null, 2), 'utf-8')
+    return { markdownPath, metadataPath }
   }
 
   // --- internal helpers ---
@@ -152,4 +266,12 @@ function randomChars(len: number): string {
     result += chars[Math.floor(Math.random() * chars.length)]
   }
   return result
+}
+
+function sanitizeArtifactName(name: string): string {
+  return basename(name).replace(/[^A-Za-z0-9._-]+/g, '-')
+}
+
+function replaceExtension(path: string, nextExtension: string): string {
+  return path.replace(/\.[^.]+$/, '') + nextExtension
 }

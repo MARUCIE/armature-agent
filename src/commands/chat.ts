@@ -11,7 +11,22 @@ import { Command } from 'commander'
 import { execSync } from 'node:child_process'
 import { basename } from 'node:path'
 import type { OrcaConfig } from '../config.js'
-import { resolveConfig, resolveProvider } from '../config.js'
+import {
+  clearStoredPermissionRules,
+  configPermissionModeFromRepl,
+  addStoredPermissionRule,
+  detectPermissionModeSource,
+  normalizeStoredPermissionRules,
+  removeStoredPermissionRule,
+  readEffectivePermissionAllowlist,
+  readStoredPermissionAllowlist,
+  replPermissionModeFromConfig,
+  resolveConfig,
+  resolveProvider,
+  setStoredPermissionMode,
+  type PermissionModeSource,
+  type ReplPermissionMode,
+} from '../config.js'
 import { existsSync, writeFileSync, unlinkSync, statSync } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
 import {
@@ -27,6 +42,7 @@ import { messageContentToText } from '../providers/openai-compat.js'
 import type { ChatMessage, PromptContent } from '../providers/openai-compat.js'
 import { StreamMarkdown } from '../markdown.js'
 import { buildSystemPrompt } from '../system-prompt.js'
+import { observeRuntimeEvent } from '../evolution/observer.js'
 import { hooks } from '../hooks.js'
 import { mcpClient } from '../mcp-client.js'
 import { runCommandPicker } from '../command-picker.js'
@@ -35,16 +51,43 @@ import { TokenBudgetManager } from '../token-budget.js'
 import { RetryTracker } from '../retry-intelligence.js'
 import { recordUsage } from '../usage-db.js'
 import { consumeCompletedBackgroundJobs, readBackgroundJobLog } from '../background-jobs.js'
-import { getAgenticWarning, getContextWindowForModel, getPricingForModel, listModelChoices, type ModelChoice } from '../model-catalog.js'
+import {
+  findModelChoice,
+  formatContextWindow,
+  formatPricing,
+  getAgenticWarning,
+  getContextWindowForModel,
+  getPricingForModel,
+  groupModelChoicesByProvider,
+  listModelChoices,
+  modelChoiceKey,
+  type ModelChoice,
+} from '../model-catalog.js'
 import { logInfo, logWarning } from '../logger.js'
 import { ORCA_VERSION } from '../version.js'
 import { ContextMonitor, LoopDetector } from '../harness/index.js'
 import { ModeRegistry } from '../modes/index.js'
+import {
+  applyWorkflowPresetPolicy,
+  buildModePickerDescriptionWithPreset,
+  buildModeSystemPromptBlock,
+  buildStartupSystemPrompt,
+  describeModeChanges,
+  describeWorkflowPresetDefaults,
+  filterToolDefinitionsForMode,
+  formatWorkflowModelPolicy,
+  formatWorkflowOutputStyle,
+  formatWorkflowToolPolicy,
+  getWorkflowPreset,
+  getWorkflowPresetForMode,
+  type WorkflowPreset,
+} from '../modes/index.js'
 import { ThreadManager } from '../memory/threads.js'
 import { matchCognitive, formatCognitiveContext } from '../cognitive-skeleton.js'
 import { PostmortemLog, NotesManager, PromptRepository, LearningJournal } from '../knowledge/index.js'
 import { preprocessFile } from '../preprocess/index.js'
 import { detectFormat } from '../preprocess/index.js'
+import { listSavedSessionSummaries } from '../session-store.js'
 import {
   buildImagePromptContent,
   extractImagePromptInput,
@@ -52,6 +95,7 @@ import {
 } from './chat-input.js'
 import {
   autoSaveSession,
+  buildAutoSessionId,
   buildChatFlags,
   detectConfigFiles,
   saveInputHistory,
@@ -64,12 +108,13 @@ import { handleAsyncReplSlashCommand } from './chat-repl-async-slash.js'
 import { handleReadonlySlashCommand } from './chat-slash-readonly.js'
 import { resetConversationState } from './chat-session-state.js'
 import { applyModeSystemPrompt } from './mode-system-prompt.js'
-import { buildReflectSystemPrompt, prepareReflectPromptContent } from './reflect-mode.js'
+import { prepareReflectPromptContent } from './reflect-mode.js'
+import { emitCommandMessage, formatMarkdownCodeBlock } from '../ui/command-output.js'
 import { listSlashCommandCompletions } from '../slash-commands.js'
 
 // ── Chat Options ─────────────────────────────────────────────────
 
-interface ChatOptions {
+export interface ChatOptions {
   model?: string
   provider?: string
   apiKey?: string
@@ -79,15 +124,68 @@ interface ChatOptions {
   cwd?: string
   safe?: boolean
   effort?: string
-  continue?: boolean
+  continue?: string | boolean
   image?: string[]
 }
 
-interface ChatCommandPreset {
+export interface ChatCommandPreset {
   name?: string
   description?: string
   forceReflect?: boolean
   initialModeId?: string
+  defaultEffort?: 'low' | 'medium' | 'high' | 'max'
+  defaultPermissionMode?: 'yolo' | 'auto' | 'plan'
+}
+
+export interface ResolvedChatPresetRuntimeOptions {
+  effort?: 'low' | 'medium' | 'high' | 'max'
+  forceReflect?: boolean
+  initialModeId?: string
+  initialPermissionMode?: 'yolo' | 'auto' | 'plan'
+}
+
+const RUNTIME_IDENTITY_BLOCK_HEADING = '## Orca Runtime Identity'
+
+export function upsertRuntimeIdentityPrompt(basePrompt: string, provider: string, model: string): string {
+  const trimmedBase = basePrompt.trimEnd()
+  const runtimeBlock = [
+    RUNTIME_IDENTITY_BLOCK_HEADING,
+    `- Active provider: ${provider}`,
+    `- Active model: ${model}`,
+    '- If the user asks which model or provider is active, answer with these exact runtime values.',
+    '- Do not claim that you cannot access the active model/provider when they are listed here.',
+    '- You may still note that provider-side backend aliases or hidden internal revisions cannot be verified beyond this configured runtime model string.',
+  ].join('\n')
+
+  const marker = `\n\n${RUNTIME_IDENTITY_BLOCK_HEADING}\n`
+  const existingIndex = trimmedBase.indexOf(marker)
+  if (existingIndex >= 0) {
+    return `${trimmedBase.slice(0, existingIndex)}\n\n${runtimeBlock}`
+  }
+  if (trimmedBase.startsWith(`${RUNTIME_IDENTITY_BLOCK_HEADING}\n`)) {
+    return runtimeBlock
+  }
+  return trimmedBase ? `${trimmedBase}\n\n${runtimeBlock}` : runtimeBlock
+}
+
+export function resolveChatPresetRuntimeOptions(
+  preset: ChatCommandPreset & { modeId?: string },
+  opts: Pick<ChatOptions, 'effort'>,
+): ResolvedChatPresetRuntimeOptions {
+  return {
+    effort: (opts.effort as ResolvedChatPresetRuntimeOptions['effort'] | undefined) || preset.defaultEffort,
+    forceReflect: preset.forceReflect,
+    initialModeId: preset.initialModeId || preset.modeId,
+    initialPermissionMode: preset.defaultPermissionMode,
+  }
+}
+
+function mapThinkingEffortToReasoningEffort(
+  effort?: import('../output.js').ThinkingEffort,
+): string | undefined {
+  if (!effort) return undefined
+  if (effort === 'max') return 'xhigh'
+  return effort
 }
 
 export function createChatCommand(preset: ChatCommandPreset = {}): Command {
@@ -106,7 +204,7 @@ export function createChatCommand(preset: ChatCommandPreset = {}): Command {
     .option('--cwd <dir>', 'Working directory')
     .option('--safe', 'Enable permission prompts for dangerous tools (default: yolo)')
     .option('--effort <level>', 'Thinking effort: low, medium, high (default), max')
-    .option('-c, --continue', 'Resume the most recent saved session')
+    .option('-c, --continue [id]', 'Resume the most recent saved session, or a specific session by id')
     .option('--image <paths...>', 'Attach one or more local image files (proxy one-shot path only)')
     .action(async (promptParts: string[], opts: ChatOptions) => {
       const parsedImageInput = splitImageArgsAndPrompt(promptParts, opts.image, opts.cwd || process.cwd())
@@ -142,9 +240,21 @@ export function createChatCommand(preset: ChatCommandPreset = {}): Command {
         const resolved = resolveProvider(config)
 
         const cwd = opts.cwd || process.cwd()
-        const reflectSystemPrompt = preset.forceReflect
-          ? buildReflectSystemPrompt(config.systemPrompt || buildSystemPrompt(cwd))
-          : null
+        const presetRuntime = resolveChatPresetRuntimeOptions(preset, opts)
+        const commandMode = presetRuntime.initialModeId
+          ? new ModeRegistry().getMode(presetRuntime.initialModeId)
+          : undefined
+        const commandPreset = presetRuntime.initialModeId
+          ? getWorkflowPresetForMode(presetRuntime.initialModeId)
+          : undefined
+        const oneShotSystemPrompt = buildStartupSystemPrompt(
+          config.systemPrompt || buildSystemPrompt(cwd),
+          {
+            effort: (presetRuntime.effort as import('../output.js').ThinkingEffort | undefined) || 'high',
+            mode: commandMode,
+            preset: commandPreset,
+          },
+        )
 
         if (outputMode === 'streaming') {
           const imagePrompt = opts.image?.length ? buildImagePromptContent(prompt, opts.image, cwd) : undefined
@@ -172,7 +282,7 @@ export function createChatCommand(preset: ChatCommandPreset = {}): Command {
               const earlyInit = (async () => {
                 mcpClient.loadConfigs(cwd)
                 if (mcpClient.configuredCount > 0) {
-                  await mcpClient.connectAll()
+                  await mcpClient.connectStartupSafe()
                 }
               })().catch(() => {})
 
@@ -202,6 +312,10 @@ export function createChatCommand(preset: ChatCommandPreset = {}): Command {
             throw new Error('--image is currently supported only for OpenAI-compatible proxy providers with baseURL configured.')
           }
           const oneShotMcpTools = await loadOneShotMcpTools(cwd, !imagePrompt)
+          const oneShotToolDefs = filterToolDefinitionsForMode(
+            [...(TOOL_DEFINITIONS as Array<Record<string, unknown>>), ...oneShotMcpTools],
+            commandMode,
+          )
           const preparedPrompt = prepareReflectPromptContent(oneShotPrompt, {
             force: preset.forceReflect,
             allowAuto: !preset.forceReflect,
@@ -212,18 +326,22 @@ export function createChatCommand(preset: ChatCommandPreset = {}): Command {
           await executeOneShot(
             preparedPrompt.prompt,
             resolved,
-            reflectSystemPrompt ? { ...config, systemPrompt: reflectSystemPrompt } : config,
+            { ...config, systemPrompt: oneShotSystemPrompt },
             outputMode,
             cwd,
-            oneShotMcpTools,
+            oneShotToolDefs,
+            mapThinkingEffortToReasoningEffort(
+              (presetRuntime.effort as import('../output.js').ThinkingEffort | undefined) || 'high',
+            ),
           )
         } else {
           await runREPL(resolved, config, outputMode, cwd, {
             safe: opts.safe,
-            effort: opts.effort,
+            effort: presetRuntime.effort,
             continue: opts.continue,
-            forceReflect: preset.forceReflect,
-            initialModeId: preset.initialModeId,
+            forceReflect: presetRuntime.forceReflect,
+            initialModeId: presetRuntime.initialModeId,
+            initialPermissionMode: presetRuntime.initialPermissionMode,
           })
         }
       } catch (err) {
@@ -239,11 +357,33 @@ export function createChatCommand(preset: ChatCommandPreset = {}): Command {
 }
 
 export function createReflectCommand(): Command {
+  return createWorkflowPresetCommand('reflect')
+}
+
+export function createReviewCommand(): Command {
+  return createWorkflowPresetCommand('review')
+}
+
+export function createDebugCommand(): Command {
+  return createWorkflowPresetCommand('debug')
+}
+
+export function createArchitectCommand(): Command {
+  return createWorkflowPresetCommand('architect')
+}
+
+function createWorkflowPresetCommand(id: string): Command {
+  const preset = getWorkflowPreset(id)
+  if (!preset) {
+    throw new Error(`Unknown workflow preset: ${id}`)
+  }
   return createChatCommand({
-    name: 'reflect',
-    description: 'Socratic debugging and root-cause investigation',
-    forceReflect: true,
-    initialModeId: 'reflect',
+    name: preset.commandName,
+    description: preset.description,
+    forceReflect: preset.forceReflect,
+    initialModeId: preset.modeId,
+    defaultEffort: preset.defaultEffort,
+    defaultPermissionMode: preset.defaultPermissionMode,
   })
 }
 
@@ -263,6 +403,12 @@ type ModelSelectionTarget = string | Pick<ModelChoice, 'model' | 'provider'>
 
 type AsyncSlashCommand = 'council' | 'race' | 'pipeline' | 'mission' | 'plan'
 type SlashCommandResult = 'exit' | 'handled' | 'pick_model' | 'not_command' | AsyncSlashCommand
+
+interface PickerChoice {
+  value: string
+  label: string
+  description?: string
+}
 
 interface SessionStats {
   turns: number
@@ -302,7 +448,7 @@ export async function loadOneShotMcpTools(
   if (!enableMcp) return []
   mcpClient.loadConfigs(cwd)
   if (mcpClient.configuredCount <= 0) return []
-  const connected = await mcpClient.connectAll()
+  const connected = await mcpClient.connectStartupSafe()
   if (connected.length <= 0) return []
   return await mcpClient.getToolDefinitions() as Array<Record<string, unknown>>
 }
@@ -313,13 +459,22 @@ export async function executeOneShot(
   config: OrcaConfig,
   outputMode: OutputMode,
   cwd: string,
-  mcpTools: Array<Record<string, unknown>> = [],
+  toolDefs: Array<Record<string, unknown>> = [],
+  reasoningEffort?: string,
 ): Promise<void> {
+  const runtimeConfig = {
+    ...config,
+    systemPrompt: upsertRuntimeIdentityPrompt(
+      config.systemPrompt || buildSystemPrompt(cwd),
+      resolved.provider,
+      resolved.model,
+    ),
+  }
   try {
     if (resolved.baseURL) {
-      await runProxyQuery({ prompt, resolved, config, outputMode, cwd, extraToolDefs: mcpTools })
+      await runProxyQuery({ prompt, resolved, config: runtimeConfig, outputMode, cwd, toolDefs, reasoningEffort })
     } else {
-      await runSDKQuery({ prompt, resolved, config, outputMode, cwd })
+      await runSDKQuery({ prompt, resolved, config: runtimeConfig, outputMode, cwd })
     }
   } finally {
     mcpClient.disconnectAll()
@@ -337,7 +492,14 @@ async function runREPL(
   config: OrcaConfig,
   outputMode: OutputMode,
   cwd: string,
-  opts: { safe?: boolean; effort?: string; continue?: boolean; forceReflect?: boolean; initialModeId?: string } = {},
+  opts: {
+    safe?: boolean
+    effort?: string
+    continue?: string | boolean
+    forceReflect?: boolean
+    initialModeId?: string
+    initialPermissionMode?: ReplPermissionMode
+  } = {},
 ): Promise<void> {
   const { createInterface } = await import('node:readline')
   const { homedir: getHomedir } = await import('node:os')
@@ -402,11 +564,11 @@ async function runREPL(
       // Shift+Tab: cycle permission mode (yolo → auto → plan → yolo)
       if (key && key.name === 'tab' && key.shift) {
         const idx = PERM_MODES.indexOf(currentPermMode)
-        currentPermMode = PERM_MODES[(idx + 1) % PERM_MODES.length]!
-        const modeColors: Record<PermMode, string> = {
+        setPermissionMode(PERM_MODES[(idx + 1) % PERM_MODES.length]!)
+        const modeColors: Record<ReplPermissionMode, string> = {
           yolo: '\x1b[33m', auto: '\x1b[36m', plan: '\x1b[32m',
         }
-        process.stderr.write(`\r\x1b[2K${modeColors[currentPermMode]}  mode: ${currentPermMode}\x1b[0m\n`)
+        process.stderr.write(`\r\x1b[2K${modeColors[currentPermMode]}  permissions: ${currentPermMode}\x1b[0m\n`)
         rl.prompt(true)
         return
       }
@@ -447,25 +609,40 @@ async function runREPL(
   let stdinEnded = false
   rl.on('close', () => { stdinEnded = true })
 
+  const modeRegistry = new ModeRegistry()
+
+  // Load custom modes from .orca/modes.json if present
+  const customModesPath = join(cwd, '.orca', 'modes.json')
+  if (existsSync(customModesPath)) {
+    try {
+      modeRegistry.loadFromFile(customModesPath)
+    } catch { /* ignore malformed modes file */ }
+  }
+  if (opts.initialModeId) {
+    modeRegistry.switchTo(opts.initialModeId)
+  }
+
+  const initialPreset = opts.initialModeId ? getWorkflowPresetForMode(opts.initialModeId) : undefined
+  const initialPolicy = applyWorkflowPresetPolicy({
+    effort: ((opts.effort as import('../output.js').ThinkingEffort) || 'high'),
+    permissionMode: opts.initialPermissionMode
+      || replPermissionModeFromConfig(config.permissionMode, Boolean(opts.safe)),
+  }, initialPreset)
+
   // Multi-turn conversation history
   const history: ChatMessage[] = []
-  let sysPrompt = config.systemPrompt || buildSystemPrompt(cwd)
-  if (opts.initialModeId === 'reflect') {
-    sysPrompt = buildReflectSystemPrompt(sysPrompt)
-  }
-
-  // Effort-based system prompt modification
-  const effortPrefix: Record<string, string> = {
-    low: 'Be concise. Give brief answers.\n\n',
-    high: 'Think carefully and thoroughly before answering.\n\n',
-    max: 'Use deep analysis. Consider all edge cases. Think step by step.\n\n',
-  }
-  const effortLevel = opts.effort || 'high'
-  if (effortPrefix[effortLevel]) {
-    sysPrompt = effortPrefix[effortLevel] + sysPrompt
-  }
-
-  history.push({ role: 'system', content: sysPrompt })
+  const baseSystemPrompt = buildStartupSystemPrompt(
+    config.systemPrompt || buildSystemPrompt(cwd),
+    {
+      effort: initialPolicy.effort,
+      mode: modeRegistry.getActive(),
+      preset: initialPreset,
+    },
+  )
+  history.push({
+    role: 'system',
+    content: upsertRuntimeIdentityPrompt(baseSystemPrompt, resolved.provider, resolved.model),
+  })
 
   // Session statistics
   const stats: SessionStats = {
@@ -476,7 +653,7 @@ async function runREPL(
     turnTokens: [],
   }
 
-  // Session resume: --continue flag loads most recent session
+  // Session resume: --continue loads most recent session or a specific id
   let restoredModeId: string | undefined
   let restoredSelection: { provider?: string; model: string } | undefined
   let pendingRestoredHistory: ChatMessage[] | undefined
@@ -485,8 +662,8 @@ async function runREPL(
     | undefined
   let pendingRestoredName: string | undefined
   if (opts.continue) {
-    const { getLastSession } = await import('./session.js')
-    const last = getLastSession()
+    const { getContinuationSession } = await import('./session.js')
+    const last = getContinuationSession(opts.continue)
     if (last) {
       const pending = buildPendingContinueRestore(last)
       if (pending.restore) {
@@ -508,43 +685,43 @@ async function runREPL(
         console.log(`\x1b[33m  ${pending.warning}\x1b[0m`)
       }
     } else {
-      console.log(`\x1b[90m  no saved sessions found — starting fresh.\x1b[0m`)
+      if (typeof opts.continue === 'string' && opts.continue.trim()) {
+        console.log(`\x1b[33m  saved session not found: ${opts.continue} — starting fresh.\x1b[0m`)
+      } else {
+        console.log(`\x1b[90m  no saved sessions found — starting fresh.\x1b[0m`)
+      }
     }
   }
 
   const homeDir = getHomedir()
   const dirName = cwd === homeDir ? '~' : basename(cwd)
+  const currentSessionId = pendingRestoredName || buildAutoSessionId()
 
   // Mutable model (supports /model set)
   let currentModel = resolved.model
   let lastPrompt = '' // for /retry
-  let currentEffort: import('../output.js').ThinkingEffort =
-    (opts.effort as import('../output.js').ThinkingEffort) || 'high'
-  // Permission mode: yolo (auto-approve all) → auto (approve safe, prompt dangerous) → plan (prompt all)
-  type PermMode = 'yolo' | 'auto' | 'plan'
-  const PERM_MODES: PermMode[] = ['yolo', 'auto', 'plan']
-  let currentPermMode: PermMode = opts.safe ? 'auto' : 'yolo'
+  // Permission mode: yolo (auto-approve all) → auto (approve dangerous tools) → plan (approve every tool)
+  const PERM_MODES: ReplPermissionMode[] = ['yolo', 'auto', 'plan']
+  let currentEffort: import('../output.js').ThinkingEffort = initialPolicy.effort
+  let currentPermMode: ReplPermissionMode = initialPolicy.permissionMode
+  let currentPermSource: PermissionModeSource = opts.initialPermissionMode || initialPreset?.defaultPermissionMode
+    ? 'session'
+    : opts.safe
+      ? 'flag'
+      : detectPermissionModeSource(cwd)
 
-  // Sandbox mode: --safe enables OS-level sandboxing for run_command
-  if (opts.safe) setSandboxMode(true)
+  const setPermissionMode = (mode: ReplPermissionMode, source: PermissionModeSource = 'session'): void => {
+    currentPermMode = mode
+    currentPermSource = source
+    setSandboxMode(mode !== 'yolo')
+  }
+  setPermissionMode(currentPermMode, currentPermSource)
 
   // SOTA agent intelligence modules
   const tokenBudget = new TokenBudgetManager(currentModel)
   const retryTracker = new RetryTracker(2)
   const contextMonitor = new ContextMonitor(getContextWindowForModel(currentModel) || 200_000)
   const loopDetector = new LoopDetector()
-  const modeRegistry = new ModeRegistry()
-
-  // Load custom modes from .orca/modes.json if present
-  const customModesPath = join(cwd, '.orca', 'modes.json')
-  if (existsSync(customModesPath)) {
-    try {
-      modeRegistry.loadFromFile(customModesPath)
-    } catch { /* ignore malformed modes file */ }
-  }
-  if (opts.initialModeId) {
-    modeRegistry.switchTo(opts.initialModeId)
-  }
   const modeIdBeforeRestore = modeRegistry.getActive().id
   if (!opts.initialModeId && restoredModeId) {
     if (!modeRegistry.switchTo(restoredModeId)) {
@@ -598,10 +775,28 @@ async function runREPL(
     )
   }
 
+  const syncRuntimeIdentityPrompt = (): void => {
+    const sysIdx = history.findIndex((message) => message.role === 'system')
+    const currentPrompt = sysIdx >= 0
+      ? messageContentToText(history[sysIdx]!.content)
+      : baseSystemPrompt
+    const nextPrompt = upsertRuntimeIdentityPrompt(currentPrompt, resolved.provider, currentModel)
+    const nextSystemMessage = { role: 'system' as const, content: nextPrompt }
+    if (sysIdx >= 0) {
+      history[sysIdx] = nextSystemMessage
+    } else {
+      history.unshift(nextSystemMessage)
+    }
+  }
+
+  syncRuntimeIdentityPrompt()
+
   const threadManager = new ThreadManager()
 
   const shortModel = (m: string) => m.length > 24 ? m.slice(0, 22) + '..' : m
-  const getChoices = (): ModelChoice[] => listModelChoices(config, currentModel)
+  const getChoices = (): ModelChoice[] => listModelChoices(config, currentModel, resolved.provider)
+  const formatModelChoiceDescription = (choice: ModelChoice): string =>
+    `${formatContextWindow(choice.contextWindow)} ctx · ${formatPricing(choice.pricing)}${choice.agentic === 'caution' ? ' · caution' : ''}`
 
   // Get git branch (cached)
   let gitBranch: string | undefined
@@ -612,10 +807,13 @@ async function runREPL(
 
   // Track last turn's output speed for tok/s display
   let lastTokPerSec = 0
+  const getActivePreset = (): WorkflowPreset | undefined => getWorkflowPresetForMode(modeRegistry.getActive().id)
 
   // Session-wide set of file paths already injected by file expansion.
   // Used by tool-level read guard to prevent duplicate reads that explode context.
   const sessionInjectedPaths = new Set<string>()
+  const sessionPermissionAllowlist = new Set<string>()
+  const persistedPermissionAllowlist = new Set(readEffectivePermissionAllowlist(cwd))
 
   // ── UI Layer: ink (TTY) or legacy (pipe/non-interactive) ────────
 
@@ -627,8 +825,8 @@ async function runREPL(
     switch (command) {
       case 'mode-cycle': {
         const idx = PERM_MODES.indexOf(currentPermMode)
-        currentPermMode = PERM_MODES[(idx + 1) % PERM_MODES.length]!
-        session.emitSystemMessage(`mode: ${currentPermMode}`, 'info')
+        setPermissionMode(PERM_MODES[(idx + 1) % PERM_MODES.length]!)
+        session.emitSystemMessage(`permissions: ${currentPermMode}`, 'info')
         session.emitStatusUpdate(getStatusInfo())
         break
       }
@@ -671,10 +869,16 @@ async function runREPL(
              + (stats.totalOutputTokens / 1_000_000) * pricing[1]
     }
       return {
+        sessionId: currentSessionId,
         model: currentModel,
         contextPct: Math.min(100, budget.utilizationPct),
         permMode: currentPermMode,
+        effort: currentEffort,
+        permSource: currentPermSource,
         behaviorMode: modeRegistry.getActive().id,
+        modelPolicySummary: formatWorkflowModelPolicy(getActivePreset()?.modelPolicy),
+        toolPolicySummary: formatWorkflowToolPolicy(getActivePreset()?.toolPolicy),
+        outputStyle: formatWorkflowOutputStyle(getActivePreset()?.outputStyle),
         gitBranch,
         costUsd,
         tokPerSec: lastTokPerSec,
@@ -696,6 +900,7 @@ async function runREPL(
       configFiles: bannerConfigFiles.length > 0 ? bannerConfigFiles : undefined,
       toolCount: TOOL_DEFINITIONS.length,
       hookCount: hooks.totalHooks || undefined,
+      savedSessionCount: listSavedSessionSummaries().length,
     })
   } else {
     const { attachLegacyRenderer } = await import('../ui/legacy-renderer.js')
@@ -712,11 +917,10 @@ async function runREPL(
 
   const emitInlineNotice = (text: string, level: 'info' | 'warn' | 'error' = 'info'): void => {
     if (useInk) {
-      session.emitSystemMessage(text, level)
+      emitCommandMessage(session, text, level)
       return
     }
-    const color = level === 'error' ? '\x1b[31m' : level === 'warn' ? '\x1b[33m' : '\x1b[90m'
-    console.log(`${color}  ${text}\x1b[0m`)
+    emitCommandMessage(undefined, text, level)
   }
 
   const syncHarnessAfterCompaction = (): void => {
@@ -757,6 +961,8 @@ async function runREPL(
       resolved.sdkProvider = nextResolved.sdkProvider
       resolved.headers = nextResolved.headers
     }
+
+    syncRuntimeIdentityPrompt()
 
     return true
   }
@@ -801,6 +1007,45 @@ async function runREPL(
     })
   }
 
+  const resolvePickerSelection = (answer: string | null, choices: PickerChoice[]): string | null => {
+    const trimmed = answer?.trim() || ''
+    if (!trimmed) return null
+
+    const numeric = Number.parseInt(trimmed, 10)
+    if (Number.isInteger(numeric) && String(numeric) === trimmed) {
+      return choices[numeric - 1]?.value ?? null
+    }
+
+    const exactValue = choices.find((choice) => choice.value.toLowerCase() === trimmed.toLowerCase())
+    if (exactValue) return exactValue.value
+
+    const exactLabel = choices.find((choice) => choice.label.toLowerCase() === trimmed.toLowerCase())
+    return exactLabel?.value ?? null
+  }
+
+  const pickOption = async (title: string, choices: PickerChoice[], subtitle?: string): Promise<string | null> => {
+    if (choices.length === 0) return null
+
+    if (useInk) {
+      return session.emitOptionPicker({ title, subtitle, options: choices })
+    }
+
+    console.log(`\x1b[90m  ${title}\x1b[0m`)
+    if (subtitle) console.log(`\x1b[90m  ${subtitle}\x1b[0m`)
+    choices.forEach((choice, index) => {
+      const detail = choice.description ? `  ${choice.description}` : ''
+      console.log(`\x1b[90m    ${index + 1}. ${choice.label}${detail}\x1b[0m`)
+    })
+
+    while (true) {
+      const answer = await promptUser()
+      if (answer === null) return null
+      const selected = resolvePickerSelection(answer, choices)
+      if (selected) return selected
+      emitInlineNotice(`invalid selection. Use 1-${choices.length}.`, 'warn')
+    }
+  }
+
   // ── Progressive Loading: prompt first, heavy init in background ──
   // Hooks: sync file reads (fast, <50ms)
   hooks.load(cwd)
@@ -812,10 +1057,10 @@ async function runREPL(
 
   // Fire background init — don't await, user can start typing immediately
   const bgInit = (async () => {
-    // MCP server connect (all in parallel via connectAll)
+    // MCP startup auto-connect is limited to home/global configs.
     mcpClient.loadConfigs(cwd)
     if (mcpClient.configuredCount > 0) {
-      const connected = await mcpClient.connectAll()
+      const connected = await mcpClient.connectStartupSafe()
       if (connected.length > 0) {
         const mcpTools = await mcpClient.getToolDefinitions()
         mcpToolDefs = mcpTools as Array<Record<string, unknown>>
@@ -880,8 +1125,8 @@ async function runREPL(
 
   while (true) {
     // Periodic auto-save for crash recovery
-        if (stats.turns > 0 && (Date.now() - lastAutoSave > AUTO_SAVE_INTERVAL_MS)) {
-      autoSaveSession(resolved.provider, currentModel, history, stats, modeRegistry.getActive().id)
+    if (stats.turns > 0 && (Date.now() - lastAutoSave > AUTO_SAVE_INTERVAL_MS)) {
+      autoSaveSession(currentSessionId, resolved.provider, currentModel, history, stats, modeRegistry.getActive().id)
       lastAutoSave = Date.now()
     }
 
@@ -940,13 +1185,18 @@ async function runREPL(
             stdio: ['pipe', 'pipe', 'pipe'],
           })
           if (result.trim()) {
-            console.log(`\x1b[90m${result.slice(0, 5000)}\x1b[0m`)
-            if (result.length > 5000) console.log('\x1b[90m  ... (truncated)\x1b[0m')
+            if (useInk) {
+              session.emitText(formatMarkdownCodeBlock(result.slice(0, 5000)))
+              if (result.length > 5000) session.emitSystemMessage('... (truncated)', 'info')
+            } else {
+              console.log(`\x1b[90m${result.slice(0, 5000)}\x1b[0m`)
+              if (result.length > 5000) console.log('\x1b[90m  ... (truncated)\x1b[0m')
+            }
           }
         } catch (err) {
           const execErr = err as { stdout?: string; stderr?: string; message: string; status?: number }
           const output = execErr.stderr || execErr.stdout || execErr.message
-          console.log(`\x1b[31m${output.slice(0, 2000)}\x1b[0m`)
+          emitInlineNotice(output.slice(0, 2000), 'error')
         }
       }
       continue
@@ -966,41 +1216,59 @@ async function runREPL(
       }
 
       // Handle /effort: change thinking intensity
-      if (input.startsWith('/effort')) {
-        const level = input.replace('/effort', '').trim().toLowerCase()
+      const effortArg = matchSlashCommandArg(input, '/effort')
+      if (effortArg !== null) {
+        let level = effortArg.toLowerCase()
         const valid = ['low', 'medium', 'med', 'high', 'max'] as const
         if (!level) {
-          console.log(`\x1b[90m  effort: ${currentEffort}. Options: low, medium, high, max\x1b[0m`)
-          continue
+          const picked = await pickOption(
+            'Select reasoning effort',
+            [
+              { value: 'low', label: 'low', description: 'fastest, light reasoning' },
+              { value: 'medium', label: 'medium', description: 'balanced default' },
+              { value: 'high', label: 'high', description: 'deeper reasoning' },
+              { value: 'max', label: 'max', description: 'slowest, most thorough' },
+            ],
+            `current: ${currentEffort}`,
+          )
+          if (!picked) continue
+          level = picked
         }
         const mapped = level === 'med' ? 'medium' : level
         if (['low', 'medium', 'high', 'max'].includes(mapped)) {
           const old = currentEffort
           currentEffort = mapped as import('../output.js').ThinkingEffort
-          console.log(`\x1b[90m  effort: ${old} → \x1b[36m${currentEffort}\x1b[0m`)
+          emitInlineNotice(`effort: ${old} → ${currentEffort}`)
         } else {
-          console.log(`\x1b[33m  invalid effort. Options: low, medium, high, max\x1b[0m`)
+          emitInlineNotice('invalid effort. Options: low, medium, high, max', 'warn')
         }
         continue
       }
 
       // Handle /mode: switch behavioral profiles
-      if (input.startsWith('/mode')) {
-        const modeArg = input.replace('/mode', '').trim().toLowerCase()
+      const modeArgRaw = matchSlashCommandArg(input, '/mode')
+      if (modeArgRaw !== null) {
+        let modeArg = modeArgRaw.toLowerCase()
         if (!modeArg) {
           const active = modeRegistry.getActive()
           const modes = modeRegistry.listModes()
-          console.log(`\x1b[90m  Active mode: \x1b[36m${active.id}\x1b[0m\x1b[90m (${active.name})\x1b[0m`)
-          console.log('\x1b[90m  Available modes:\x1b[0m')
-          for (const mode of modes) {
-            const marker = mode.id === active.id ? ' \x1b[36m<-\x1b[0m' : ''
-            console.log(`\x1b[90m    ${mode.id.padEnd(14)} ${mode.description}${marker}\x1b[0m`)
-          }
-          continue
+          const picked = await pickOption(
+            'Select behavior mode',
+            modes.map((mode) => ({
+              value: mode.id,
+              label: mode.id,
+              description: buildModePickerDescriptionWithPreset(mode, getWorkflowPresetForMode(mode.id), mode.id === active.id),
+            })),
+            `current: ${active.id} (${active.name})`,
+          )
+          if (!picked) continue
+          modeArg = picked
         }
         const previousMode = modeRegistry.getActive()
         if (modeRegistry.switchTo(modeArg)) {
             const mode = modeRegistry.getActive()
+            const previousPreset = getWorkflowPresetForMode(previousMode.id)
+            const nextPreset = getWorkflowPresetForMode(mode.id)
             // Rebuild system prompt with the exact previous mode prefix removed.
             const sysIdx = history.findIndex(m => m.role === 'system')
             if (sysIdx >= 0) {
@@ -1008,29 +1276,106 @@ async function runREPL(
                 role: 'system',
                 content: applyModeSystemPrompt({
                   currentSystemPrompt: messageContentToText(history[sysIdx]!.content),
-                  previousModePrefix: previousMode.systemPromptPrefix,
-                  nextModePrefix: mode.systemPromptPrefix,
+                  previousModePrefix: buildModeSystemPromptBlock(previousMode, previousPreset),
+                  nextModePrefix: buildModeSystemPromptBlock(mode, nextPreset),
                 }),
               }
             }
-          console.log(`\x1b[90m  mode: \x1b[36m${mode.id}\x1b[0m\x1b[90m (${mode.name})\x1b[0m`)
+          const presetForMode = nextPreset
+          const nextPolicy = applyWorkflowPresetPolicy({
+            effort: currentEffort,
+            permissionMode: currentPermMode,
+          }, presetForMode)
+          if (nextPolicy.effort !== currentEffort) {
+            const old = currentEffort
+            currentEffort = nextPolicy.effort
+            emitInlineNotice(`effort: ${old} → ${currentEffort}`)
+          }
+          if (nextPolicy.permissionMode !== currentPermMode) {
+            const old = currentPermMode
+            setPermissionMode(nextPolicy.permissionMode)
+            emitInlineNotice(`permissions: ${old} → ${currentPermMode}`)
+          }
+          emitInlineNotice(`mode: ${mode.id} (${mode.name})`)
+          emitInlineNotice(`changes: ${describeModeChanges(mode)}`)
+          if (presetForMode) {
+            emitInlineNotice(`preset policy: ${describeWorkflowPresetDefaults(presetForMode)}`)
+          }
           if (mode.tools) {
-            console.log(`\x1b[90m  tools restricted to: ${mode.tools.join(', ')}\x1b[0m`)
+            emitInlineNotice(`tools restricted to: ${mode.tools.join(', ')}`)
           }
           emitStatus()
         } else {
-          console.log(`\x1b[33m  unknown mode: ${modeArg}. Use /mode to list.\x1b[0m`)
+          emitInlineNotice(`unknown mode: ${modeArg}. Use /mode to list.`, 'warn')
         }
         continue
+      }
+
+      const threadArgRaw = matchSlashCommandArg(input, '/thread') ?? matchSlashCommandArg(input, '/threads')
+      if (useInk && threadManager && threadArgRaw !== null) {
+        const [threadSubcmd = '', ...threadRest] = threadArgRaw.split(/\s+/).filter(Boolean)
+        const threadSubarg = threadRest.join(' ').trim()
+        if ((threadSubcmd === 'load' || threadSubcmd === 'delete') && !threadSubarg) {
+          const threads = threadManager.list(20)
+          if (threads.length === 0) {
+            emitInlineNotice('no threads available.', 'warn')
+            continue
+          }
+          const pickedThread = await pickOption(
+            threadSubcmd === 'load' ? 'Load thread' : 'Delete thread',
+            threads.map((thread) => ({
+              value: thread.id,
+              label: thread.id,
+              description: `${thread.title.slice(0, 40)} · ${thread.messages.length} msgs`,
+            })),
+          )
+          if (!pickedThread) continue
+          input = `/thread ${threadSubcmd} ${pickedThread}`
+        }
+      }
+
+      const mcpArgRaw = matchSlashCommandArg(input, '/mcp')
+      if (useInk && mcpArgRaw !== null) {
+        const [mcpSubcmd = '', ...mcpRest] = mcpArgRaw.split(/\s+/).filter(Boolean)
+        const mcpSubarg = mcpRest.join(' ').trim()
+        if ((mcpSubcmd === 'connect' || mcpSubcmd === 'enable' || mcpSubcmd === 'disable') && !mcpSubarg) {
+          const candidateServers = mcpClient
+            .listServers()
+            .filter((server) => {
+              if (mcpSubcmd === 'enable') return server.disabled
+              if (mcpSubcmd === 'disable') return !server.disabled
+              return !server.disabled
+            })
+          if (candidateServers.length === 0) {
+            emitInlineNotice(`no MCP servers available for /mcp ${mcpSubcmd}.`, 'warn')
+            continue
+          }
+          const pickedServer = await pickOption(
+            `MCP ${mcpSubcmd}`,
+            candidateServers.map((server) => ({
+              value: server.name,
+              label: server.name,
+              description: server.disabled
+                ? 'disabled'
+                : server.initialized
+                  ? `connected · pid ${server.pid}`
+                  : server.pid > 0
+                    ? 'starting'
+                    : 'not connected',
+            })),
+          )
+          if (!pickedServer) continue
+          input = `/mcp ${mcpSubcmd} ${pickedServer}`
+        }
       }
 
       // Handle /retry specially
       if (input === '/retry' || input === '/r') {
         if (!lastPrompt) {
-          console.log('\x1b[90m  nothing to retry.\x1b[0m')
+          emitInlineNotice('nothing to retry.')
           continue
         }
-        console.log(`\x1b[90m  retrying: ${lastPrompt.slice(0, 60)}${lastPrompt.length > 60 ? '...' : ''}\x1b[0m`)
+        emitInlineNotice(`retrying: ${lastPrompt.slice(0, 60)}${lastPrompt.length > 60 ? '...' : ''}`)
         // Remove last user+assistant pair from history
         while (history.length > 0 && history[history.length - 1]!.role !== 'system') {
           const last = history[history.length - 1]!
@@ -1049,14 +1394,78 @@ async function runREPL(
         }, undoState, { tokenBudget, contextMonitor }, modeRegistry, threadManager, () => {
           resetTransientSessionState()
           if (useInk) emitStatus()
-        }, useInk ? session : undefined)
+        }, useInk ? session : undefined, currentSessionId, formatWorkflowModelPolicy(getActivePreset()?.modelPolicy), currentEffort, currentPermMode, currentPermSource, () => currentPermMode, setPermissionMode, (mode, scope) => {
+          const path = setStoredPermissionMode(scope, cwd, configPermissionModeFromRepl(mode))
+          if (scope === 'project' || scope === 'global') {
+            if (mode === currentPermMode) {
+              currentPermSource = scope
+            }
+            config.permissionMode = configPermissionModeFromRepl(mode)
+          }
+          return path
+        }, () => currentPermSource, (scope) => {
+          if (scope === 'session') return [...sessionPermissionAllowlist]
+          if (scope === 'global') return readStoredPermissionAllowlist('global', cwd)
+          return [...persistedPermissionAllowlist]
+        }, (scope, ruleKey) => {
+          if (scope === 'session') return sessionPermissionAllowlist.delete(ruleKey)
+          if (scope === 'global') {
+            const result = removeStoredPermissionRule('global', cwd, ruleKey)
+            if (result.removed) {
+              persistedPermissionAllowlist.clear()
+              for (const rule of readEffectivePermissionAllowlist(cwd)) {
+                persistedPermissionAllowlist.add(rule)
+              }
+            }
+            return result.removed
+          }
+          const result = removeStoredPermissionRule('project', cwd, ruleKey)
+          if (result.removed) {
+            persistedPermissionAllowlist.clear()
+            for (const rule of readEffectivePermissionAllowlist(cwd)) {
+              persistedPermissionAllowlist.add(rule)
+            }
+          }
+          return result.removed
+        }, (scope) => {
+          if (scope === 'session') {
+            const count = sessionPermissionAllowlist.size
+            sessionPermissionAllowlist.clear()
+            return count
+          }
+          if (scope === 'global') {
+            const result = clearStoredPermissionRules('global', cwd)
+            persistedPermissionAllowlist.clear()
+            for (const rule of readEffectivePermissionAllowlist(cwd)) {
+              persistedPermissionAllowlist.add(rule)
+            }
+            return result.removedCount
+          }
+          const result = clearStoredPermissionRules('project', cwd)
+          persistedPermissionAllowlist.clear()
+          for (const rule of readEffectivePermissionAllowlist(cwd)) {
+            persistedPermissionAllowlist.add(rule)
+          }
+          return result.removedCount
+        }, (scope) => {
+          const result = normalizeStoredPermissionRules(scope, cwd)
+          persistedPermissionAllowlist.clear()
+          for (const rule of readEffectivePermissionAllowlist(cwd)) {
+            persistedPermissionAllowlist.add(rule)
+          }
+          return {
+            changedCount: result.changedCount,
+            unresolvedCount: result.unresolvedCount,
+            total: result.total,
+          }
+        })
         if (handled === 'exit') {
           saveInputHistory(historyFile, inputHistory)
           mcpClient.disconnectAll()
           await hooks.run('SessionEnd', { event: 'SessionEnd', cwd, model: currentModel })
           // Auto-save session on clean exit (if there was any conversation)
           if (stats.turns > 0) {
-            autoSaveSession(resolved.provider, currentModel, history, stats, modeRegistry.getActive().id)
+            autoSaveSession(currentSessionId, resolved.provider, currentModel, history, stats, modeRegistry.getActive().id)
           }
           if (useInk) {
             const costUsd = computeCost(currentModel, stats.totalInputTokens, stats.totalOutputTokens)
@@ -1077,7 +1486,7 @@ async function runREPL(
               model: currentModel,
             })
           }
-          recordUsage({
+          const usageRef = recordUsage({
             provider: resolved.provider,
             model: currentModel,
             inputTokens: stats.totalInputTokens,
@@ -1087,6 +1496,19 @@ async function runREPL(
             turns: stats.turns,
             command: 'chat',
             cwd,
+          })
+          observeRuntimeEvent({
+            category: 'chat',
+            severity: 'info',
+            summary: 'chat session completed',
+            command: 'chat',
+            provider: resolved.provider,
+            model: currentModel,
+            cwd,
+            evidence: {
+              sessionId: currentSessionId,
+              usageRef: usageRef || undefined,
+            },
           })
           logInfo('chat session ended', {
             cwd,
@@ -1101,25 +1523,61 @@ async function runREPL(
           break
         }
         if (handled === 'pick_model') {
-          // Wait for number input to select model
-          const pick = await promptUser()
-          if (pick === null) break
-          const num = parseInt(pick, 10)
           const choices = getChoices()
-          if (num >= 1 && num <= choices.length) {
-            const oldModel = currentModel
-            if (!applyModelSelection(choices[num - 1]!)) {
+          let selected: ModelChoice | undefined
+          if (useInk) {
+            const groups = groupModelChoicesByProvider(choices)
+            const pickedProvider = await pickOption(
+              'Select provider',
+              groups.map((group) => ({
+                value: group.provider,
+                label: group.provider === resolved.provider ? `${group.provider} *` : group.provider,
+                description: `${group.choices.length} model${group.choices.length === 1 ? '' : 's'}${group.provider === resolved.provider ? ` · current ${currentModel}` : ''}`,
+              })),
+              `current: ${resolved.provider} · ${currentModel}`,
+            )
+            if (pickedProvider === null) continue
+
+            const group = groups.find((entry) => entry.provider === pickedProvider)
+            if (!group) {
+              emitInlineNotice(`invalid provider selection: ${pickedProvider}`, 'warn')
               continue
             }
-            emitStatus()
-            console.log(`\x1b[90m  model: ${oldModel} → \x1b[36m${currentModel}\x1b[0m`)
-            const warning = getAgenticWarning(currentModel)
-            if (warning) console.log(`\x1b[33m  model caution: ${warning}\x1b[0m`)
-            logInfo('model switched via picker', { from: oldModel, to: currentModel, provider: resolved.provider })
-            if (warning) logWarning('model caution', { model: currentModel, provider: resolved.provider, warning })
-          } else if (pick) {
-            console.log('\x1b[33m  invalid selection. Use 1-' + choices.length + '.\x1b[0m')
+
+            const pick = await pickOption(
+              `Select ${pickedProvider} model`,
+              group.choices.map((choice) => ({
+                value: modelChoiceKey(choice),
+                label: choice.model === currentModel && choice.provider === resolved.provider ? `${choice.model} *` : choice.model,
+                description: formatModelChoiceDescription(choice),
+              })),
+              pickedProvider === resolved.provider ? `current: ${currentModel}` : `provider: ${pickedProvider}`,
+            )
+            if (pick === null) continue
+            selected = findModelChoice(group.choices, pick, pickedProvider)
+          } else {
+            const pick = await promptUser()
+            if (pick === null) break
+            const num = parseInt(pick, 10)
+            if (num >= 1 && num <= choices.length) {
+              selected = choices[num - 1]
+            }
           }
+          if (!selected) {
+            emitInlineNotice(`invalid selection. Use 1-${choices.length}.`, 'warn')
+            continue
+          }
+          const oldModel = currentModel
+          const oldProvider = resolved.provider
+          if (!applyModelSelection(selected)) {
+            continue
+          }
+          emitStatus()
+          emitInlineNotice(`model: ${oldProvider}/${oldModel} → ${resolved.provider}/${currentModel}`)
+          const warning = getAgenticWarning(currentModel)
+          if (warning) emitInlineNotice(`model caution: ${warning}`, 'warn')
+          logInfo('model switched via picker', { from: oldModel, fromProvider: oldProvider, to: currentModel, provider: resolved.provider })
+          if (warning) logWarning('model caution', { model: currentModel, provider: resolved.provider, warning })
           continue
         }
         if (handled === 'handled') {
@@ -1169,7 +1627,10 @@ async function runREPL(
       history,
       stats,
       sessionInjectedPaths,
-      mcpToolDefs,
+      toolDefs: filterToolDefinitionsForMode(
+        [...(TOOL_DEFINITIONS as Array<Record<string, unknown>>), ...mcpToolDefs],
+        modeRegistry.getActive(),
+      ),
       tokenBudget,
       contextMonitor,
       retryTracker,
@@ -1177,6 +1638,8 @@ async function runREPL(
       session: useInk ? session : undefined,
       emitStatus,
       emitInlineNotice,
+      sessionId: currentSessionId,
+      reasoningEffort: mapThinkingEffortToReasoningEffort(currentEffort),
       forceReflect: Boolean(opts.forceReflect || inlineReflect || modeRegistry.getActive().id === 'reflect'),
       autoTriggerReflect: !opts.forceReflect && !inlineReflect && modeRegistry.getActive().id !== 'reflect',
       activeModeId: modeRegistry.getActive().id,
@@ -1186,6 +1649,17 @@ async function runREPL(
       onFileWrite: (path, oldContent) => {
         undoState.lastWrite = { path, oldContent }
       },
+      isPermissionGranted: (ruleKey) => sessionPermissionAllowlist.has(ruleKey) || persistedPermissionAllowlist.has(ruleKey),
+      recordPermissionGrant: (ruleKey, scope) => {
+        if (scope === 'session') {
+          sessionPermissionAllowlist.add(ruleKey)
+          return
+        }
+        const path = addStoredPermissionRule('project', cwd, ruleKey)
+        persistedPermissionAllowlist.add(ruleKey)
+        config.permissionAllowlist = [...persistedPermissionAllowlist]
+        emitInlineNotice(`permission rule saved: ${path}`, 'info')
+      },
       runProxyTurn,
       runSDKQuery,
     })
@@ -1193,11 +1667,23 @@ async function runREPL(
     } catch (turnErr) {
       // ── Crash-safe: catch ANY uncaught error in this turn, log it, continue REPL ──
       const msg = turnErr instanceof Error ? turnErr.message : String(turnErr)
+      observeRuntimeEvent({
+        category: 'chat',
+        severity: 'error',
+        summary: `turn error: ${msg}`,
+        command: 'chat',
+        provider: resolved.provider,
+        model: currentModel,
+        cwd,
+        evidence: {
+          sessionId: currentSessionId,
+        },
+      })
       console.error(`\x1b[31m  turn error: ${msg}\x1b[0m`)
       console.error(`\x1b[90m  session continues — type /clear to reset if state is corrupted.\x1b[0m`)
       // Auto-save on error for recovery
       if (stats.turns > 0) {
-        autoSaveSession(resolved.provider, currentModel, history, stats, modeRegistry.getActive().id)
+        autoSaveSession(currentSessionId, resolved.provider, currentModel, history, stats, modeRegistry.getActive().id)
       }
     }
   }
@@ -1221,6 +1707,14 @@ interface UndoState {
   lastWrite: { path: string; oldContent: string | null } | null
 }
 
+export function matchSlashCommandArg(input: string, command: string): string | null {
+  if (input === command) return ''
+  if (!input.startsWith(command)) return null
+  const boundary = input.charAt(command.length)
+  if (!boundary || !/\s/.test(boundary)) return null
+  return input.slice(command.length).trim()
+}
+
 function handleSlashCommand(
   input: string,
   resolved: ResolvedProvider,
@@ -1234,6 +1728,19 @@ function handleSlashCommand(
   threadManager?: ThreadManager,
   onSessionReset?: () => void,
   session?: import('../ui/session.js').ChatSessionEmitter,
+  sessionId?: string,
+  modelPolicyLabel?: string,
+  effortLabel?: import('../output.js').ThinkingEffort,
+  permissionLabel?: ReplPermissionMode,
+  permissionSource?: PermissionModeSource,
+  getPermissionMode?: () => ReplPermissionMode,
+  setPermissionMode?: (mode: ReplPermissionMode) => void,
+  persistPermissionMode?: (mode: ReplPermissionMode, scope: 'project' | 'global') => string,
+  getPermissionSource?: () => PermissionModeSource,
+  getPermissionRules?: (scope: 'session' | 'project' | 'global') => string[],
+  removePermissionRule?: (scope: 'session' | 'project' | 'global', ruleKey: string) => boolean,
+  clearPermissionRules?: (scope: 'session' | 'project' | 'global') => number,
+  normalizePermissionRules?: (scope: 'project' | 'global') => { changedCount: number; unresolvedCount: number; total: number },
 ): SlashCommandResult {
   const parts = input.split(/\s+/)
   const cmd = parts[0]!.toLowerCase()
@@ -1249,7 +1756,14 @@ function handleSlashCommand(
     mc,
     harness,
     session,
+    sessionId,
     modeLabel: modeRegistry?.getActive().id || 'default',
+    modelPolicyLabel,
+    effortLabel,
+    permissionLabel,
+    permissionSource,
+    toolPolicyLabel: formatWorkflowToolPolicy(getWorkflowPresetForMode(modeRegistry?.getActive().id || 'default')?.toolPolicy),
+    outputStyleLabel: formatWorkflowOutputStyle(getWorkflowPresetForMode(modeRegistry?.getActive().id || 'default')?.outputStyle),
   })
   if (readonlyResult !== 'not_handled') {
     return readonlyResult
@@ -1267,6 +1781,14 @@ function handleSlashCommand(
     modeRegistry,
     threadManager,
     session,
+    getPermissionMode,
+    getPermissionSource,
+    getPermissionRules,
+    removePermissionRule,
+    clearPermissionRules,
+    normalizePermissionRules,
+    setPermissionMode,
+    persistPermissionMode,
   })
 }
 
@@ -1283,11 +1805,15 @@ interface ProxyTurnOptions {
   onFirstToken?: () => void
   onStreamToken?: (text: string) => void
   onFileWrite?: (path: string, oldContent: string | null) => void
-  safeMode?: boolean
+  permissionMode?: ReplPermissionMode
+  isPermissionGranted?: (ruleKey: string) => boolean
+  recordPermissionGrant?: (ruleKey: string, scope: 'session' | 'project') => void
   retryTracker?: RetryTracker
   loopDetector?: LoopDetector
   tokenBudget?: TokenBudgetManager
   contextMonitor?: ContextMonitor
+  /** Fully resolved tool definitions (built-in + MCP) */
+  toolDefs?: Array<Record<string, unknown>>
   /** Extra tool definitions to merge (e.g., MCP server tools) */
   extraToolDefs?: Array<Record<string, unknown>>
   /** Files already injected by file expansion — tool reads on these return dedup message */
@@ -1296,10 +1822,14 @@ interface ProxyTurnOptions {
   session?: import('../ui/session.js').ChatSessionEmitter
   /** Callback for high-frequency status refresh during streaming */
   onStreamingStatus?: (tokPerSec: number) => void
+  reasoningEffort?: string
 }
 
 export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTokens: number; outputTokens: number }> {
-  const { prompt, resolved, config, outputMode, history, cwd, abortSignal, onFirstToken, onStreamToken, onFileWrite, safeMode, retryTracker, loopDetector, tokenBudget, contextMonitor, extraToolDefs, injectedPaths, session: emitterOpt, onStreamingStatus } = options
+  const { prompt, resolved, config, outputMode, history, cwd, abortSignal, onFirstToken, onStreamToken, onFileWrite, permissionMode, isPermissionGranted, recordPermissionGrant, retryTracker, loopDetector, tokenBudget, contextMonitor, toolDefs, extraToolDefs, injectedPaths, session: emitterOpt, onStreamingStatus, reasoningEffort } = options
+  const allowedTools = [...(toolDefs || []), ...(extraToolDefs || [])]
+    .map((tool) => (tool.function as { name?: string } | undefined)?.name)
+    .filter((name): name is string => Boolean(name))
 
   const startTime = Date.now()
   let inputTokens = 0
@@ -1313,7 +1843,7 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
   let lastTokUpdate = startTime
 
   for await (const event of streamChat(
-    { apiKey: resolved.apiKey, baseURL: resolved.baseURL!, model: resolved.model, systemPrompt: config.systemPrompt, headers: resolved.headers, reasoningEffort: resolved.reasoningEffort },
+    { apiKey: resolved.apiKey, baseURL: resolved.baseURL!, model: resolved.model, systemPrompt: config.systemPrompt, headers: resolved.headers, reasoningEffort: reasoningEffort || resolved.reasoningEffort },
     prompt,
     history,
     {
@@ -1330,7 +1860,10 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
               baseURL: resolved.baseURL,
             },
             onFileWrite,
-            safeMode,
+            permissionMode,
+            allowedTools,
+            isPermissionGranted,
+            recordPermissionGrant,
             retryTracker,
             loopDetector,
             tokenBudget,
@@ -1347,7 +1880,7 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
       },
       abortSignal,
     },
-    [...(TOOL_DEFINITIONS as Array<Record<string, unknown>>), ...(extraToolDefs || [])],
+    toolDefs || [...(TOOL_DEFINITIONS as Array<Record<string, unknown>>), ...(extraToolDefs || [])],
   )) {
     if (outputMode === 'json') {
       emitJson(event as unknown as Record<string, unknown>)
@@ -1445,7 +1978,7 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
     })
   }
 
-  recordUsage({
+  const usageRef = recordUsage({
     provider: resolved.provider,
     model: resolved.model,
     inputTokens,
@@ -1454,6 +1987,18 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
     durationMs: Date.now() - startTime,
     turns: 1,
     command: 'chat',
+  })
+  observeRuntimeEvent({
+    category: 'chat',
+    severity: 'info',
+    summary: 'chat query completed',
+    command: 'chat',
+    provider: resolved.provider,
+    model: resolved.model,
+    cwd,
+    evidence: {
+      usageRef: usageRef || undefined,
+    },
   })
 
   return { inputTokens, outputTokens }
@@ -1466,15 +2011,28 @@ interface ProxyQueryOptions {
   resolved: ResolvedProvider
   config: OrcaConfig
   outputMode: OutputMode
+  toolDefs?: Array<Record<string, unknown>>
   extraToolDefs?: Array<Record<string, unknown>>
+  reasoningEffort?: string
 }
 
 async function runProxyQuery(options: ProxyQueryOptions & { cwd?: string }): Promise<void> {
+  const cwd = options.cwd || process.cwd()
+  const persistedPermissionAllowlist = new Set(readEffectivePermissionAllowlist(cwd))
   await runProxyTurn({
     ...options,
     history: [],
-    cwd: options.cwd || process.cwd(),
+    cwd,
+    permissionMode: replPermissionModeFromConfig(options.config.permissionMode),
+    isPermissionGranted: (ruleKey) => persistedPermissionAllowlist.has(ruleKey),
+    recordPermissionGrant: (ruleKey, scope) => {
+      if (scope !== 'project') return
+      addStoredPermissionRule('project', cwd, ruleKey)
+      persistedPermissionAllowlist.add(ruleKey)
+    },
+    toolDefs: options.toolDefs,
     extraToolDefs: options.extraToolDefs,
+    reasoningEffort: options.reasoningEffort,
   })
 }
 
@@ -1563,7 +2121,7 @@ async function runSDKQuery(options: SDKQueryOptions): Promise<{ inputTokens: num
     })
   }
 
-  recordUsage({
+  const usageRef = recordUsage({
     provider: resolved.provider,
     model: resolved.model,
     inputTokens,
@@ -1572,6 +2130,18 @@ async function runSDKQuery(options: SDKQueryOptions): Promise<{ inputTokens: num
     durationMs: Date.now() - startTime,
     turns,
     command: 'chat-sdk',
+  })
+  observeRuntimeEvent({
+    category: 'chat',
+    severity: 'info',
+    summary: 'chat sdk query completed',
+    command: 'chat-sdk',
+    provider: resolved.provider,
+    model: resolved.model,
+    cwd,
+    evidence: {
+      usageRef: usageRef || undefined,
+    },
   })
 
   return { inputTokens, outputTokens, turns, text: responseText }

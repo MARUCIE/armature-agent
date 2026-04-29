@@ -8,10 +8,15 @@ import type { ContextMonitor, LoopDetector } from '../harness/index.js'
 import { PostmortemLog } from '../knowledge/index.js'
 import { mcpClient } from '../mcp-client.js'
 import { askPermission, printDiffPreview } from '../output.js'
+import {
+  authorizeToolCall,
+  buildPermissionPreview,
+  executeToolWithPolicy,
+  runPostToolHook,
+} from '../policy-executor.js'
 import type { ChatMessage } from '../providers/openai-compat.js'
 import type { RetryTracker } from '../retry-intelligence.js'
 import type { TokenBudgetManager } from '../token-budget.js'
-import { DANGEROUS_TOOLS, executeTool } from '../tools.js'
 import type { ToolResult } from '../tools.js'
 import type { ChatSessionEmitter } from '../ui/session.js'
 
@@ -36,7 +41,10 @@ export interface ProxyToolCallParams {
   history: ChatMessage[]
   resolved: ProxyToolModelContext
   onFileWrite?: (path: string, oldContent: string | null) => void
-  safeMode?: boolean
+  permissionMode?: 'yolo' | 'auto' | 'plan'
+  allowedTools?: string[]
+  isPermissionGranted?: (ruleKey: string) => boolean
+  recordPermissionGrant?: (ruleKey: string, scope: 'session' | 'project') => void
   retryTracker?: RetryTracker
   loopDetector?: LoopDetector
   tokenBudget?: TokenBudgetManager
@@ -129,28 +137,6 @@ function commitWritableSnapshot(
   onFileWrite(snapshot.fullPath, snapshot.oldContent)
 }
 
-function buildPermissionPreview(name: string, args: ToolArgs): string {
-  if (name === 'write_file') {
-    return `write ${String(args.content || '').length} bytes to ${String(args.path || '')}`
-  }
-  if (name === 'edit_file' || name === 'multi_edit') {
-    return `edit ${String(args.path || '')}`
-  }
-  if (name === 'delete_file') {
-    return `delete ${String(args.path || '')}`
-  }
-  if (name === 'move_file') {
-    return `move ${String(args.source || '')} → ${String(args.destination || '')}`
-  }
-  if (name === 'git_commit') {
-    return `commit: ${String(args.message || '').slice(0, 60)}`
-  }
-  if (name === 'run_command' || name === 'run_background') {
-    return `run: ${String(args.command || '').slice(0, 80)}`
-  }
-  return `${name}: ${JSON.stringify(args).slice(0, 80)}`
-}
-
 function buildSafeModeDiff(name: string, args: ToolArgs, cwd: string): ProxyToolDiff | undefined {
   if ((name !== 'write_file' && name !== 'edit_file') || !args.path) return undefined
   const fullPath = resolvePath(cwd, String(args.path))
@@ -166,7 +152,12 @@ function buildSafeModeDiff(name: string, args: ToolArgs, cwd: string): ProxyTool
   }
 }
 
-async function requestDangerousToolPermission(name: string, args: ToolArgs, cwd: string, session?: ChatSessionEmitter): Promise<boolean> {
+async function requestPermissionDecision(
+  name: string,
+  args: ToolArgs,
+  cwd: string,
+  session?: ChatSessionEmitter,
+): Promise<{ allowed: boolean; scope: 'once' | 'session' | 'project' }> {
   const preview = buildPermissionPreview(name, args)
   const diff = buildSafeModeDiff(name, args, cwd)
   if (session) {
@@ -178,34 +169,11 @@ async function requestDangerousToolPermission(name: string, args: ToolArgs, cwd:
   return askPermission(name, preview)
 }
 
-async function runPreToolHook(name: string, args: ToolArgs, cwd: string): Promise<ToolResult | undefined> {
-  if (!hooks.hasHooks('PreToolUse')) return undefined
-  const hookResult = await hooks.run('PreToolUse', {
-    event: 'PreToolUse',
-    toolName: name,
-    toolInput: args,
-    cwd,
-  })
-  if (!hookResult.continue) {
-    return {
-      success: false,
-      output: `Blocked by hook: ${hookResult.stopReason || 'PreToolUse hook denied'}`,
-    }
-  }
-  if (hookResult.updatedInput) {
-    Object.assign(args, hookResult.updatedInput)
-  }
-  if (hookResult.systemMessage) {
-    console.log(`\x1b[33m  hook: ${hookResult.systemMessage}\x1b[0m`)
-  }
-  return undefined
-}
-
 async function handleSpecialProxyTool(params: ProxyToolCallParams): Promise<ToolResult | undefined> {
-  const { name, args, cwd, resolved, session, safeMode } = params
+  const { name, args, cwd, resolved, session, permissionMode } = params
 
   if (name === 'spawn_agent' || name === 'delegate_task') {
-    if (name === 'delegate_task' && safeMode) {
+    if (name === 'delegate_task' && permissionMode !== 'yolo') {
       return { success: false, output: 'delegate_task is disabled in safe mode.' }
     }
     const subTask = String(args.task || args.context || '')
@@ -234,10 +202,15 @@ async function handleSpecialProxyTool(params: ProxyToolCallParams): Promise<Tool
       : undefined
 
     if (session) {
-      session.emitSystemMessage(`? ${question}`, 'info')
       if (optionsList && optionsList.length > 0) {
-        optionsList.forEach((option, index) => session.emitSystemMessage(`  ${index + 1}. ${option}`, 'info'))
+        const answer = await session.emitOptionPicker({
+          title: question,
+          subtitle: 'Select an option',
+          options: optionsList.map((option) => ({ value: option, label: option })),
+        })
+        return finalizeAskUserResponse(answer, optionsList)
       }
+      session.emitSystemMessage(`? ${question}`, 'info')
       const answer = await session.waitForInput({ cancelOnClear: true })
       if (answer === null && session.consumeCanceledResetSensitiveWait()) {
         throw new ResetSensitiveWaitCanceledError()
@@ -396,18 +369,6 @@ function appendAutoVerify(result: ToolResult, name: string, args: ToolArgs, cwd:
   }
 }
 
-async function runPostToolHook(name: string, args: ToolArgs, result: ToolResult, cwd: string): Promise<void> {
-  if (!hooks.hasHooks('PostToolUse')) return
-  await hooks.run('PostToolUse', {
-    event: 'PostToolUse',
-    toolName: name,
-    toolInput: args,
-    toolOutput: result.output,
-    toolSuccess: result.success,
-    cwd,
-  })
-}
-
 async function finalizeToolResult(options: FinalizeToolResultOptions): Promise<ToolResult> {
   const { name, args, result, cwd, history, retryTracker, loopDetector, tokenBudget, contextMonitor } = options
   applyRetryIntelligence(result, name, args, retryTracker)
@@ -439,7 +400,10 @@ export async function handleProxyToolCall(params: ProxyToolCallParams): Promise<
     cwd,
     history,
     onFileWrite,
-    safeMode,
+    permissionMode,
+    allowedTools,
+    isPermissionGranted,
+    recordPermissionGrant,
     retryTracker,
     loopDetector,
     tokenBudget,
@@ -448,31 +412,30 @@ export async function handleProxyToolCall(params: ProxyToolCallParams): Promise<
     session,
   } = params
 
+  const authorization = await authorizeToolCall({
+    name,
+    args,
+    cwd,
+    permissionMode,
+    allowedTools,
+    isPermissionGranted,
+    requestPermissionDecision: async (toolName, nextArgs, nextCwd) => requestPermissionDecision(toolName, nextArgs, nextCwd, session),
+  })
+  if (!authorization.authorized) {
+    return authorization.result || { success: false, output: 'Tool execution blocked by policy.' }
+  }
+
+  const authorizedArgs = authorization.args
   let writableSnapshot: WritableTargetSnapshot | undefined
-
-  const blockedByHook = await runPreToolHook(name, args, cwd)
-  if (blockedByHook) {
-    return blockedByHook
+  if ((name === 'write_file' || name === 'edit_file' || name === 'multi_edit') && authorizedArgs.path) {
+    writableSnapshot = snapshotWritableTarget(authorizedArgs, cwd)
   }
 
-  if (DANGEROUS_TOOLS.has(name)) {
-    if ((name === 'write_file' || name === 'edit_file' || name === 'multi_edit') && args.path) {
-      writableSnapshot = snapshotWritableTarget(args, cwd)
-    }
-
-    if (safeMode) {
-      const allowed = await requestDangerousToolPermission(name, args, cwd, session)
-      if (!allowed) {
-        return { success: false, output: 'User denied permission.' }
-      }
-    }
-  }
-
-  const specialResult = await handleSpecialProxyTool(params)
+  const specialResult = await handleSpecialProxyTool({ ...params, args: authorizedArgs })
   if (specialResult) {
-    return finalizeToolResult({
+    const finalized = await finalizeToolResult({
       name,
-      args,
+      args: authorizedArgs,
       result: specialResult,
       cwd,
       history,
@@ -481,17 +444,27 @@ export async function handleProxyToolCall(params: ProxyToolCallParams): Promise<
       tokenBudget,
       contextMonitor,
     })
+    if (finalized.success && authorization.grantScope) {
+      recordPermissionGrant?.(authorization.ruleKey, authorization.grantScope)
+    }
+    return finalized
   }
 
-  emitLiveDiffSummary(name, args, cwd, session)
+  emitLiveDiffSummary(name, authorizedArgs, cwd, session)
 
-  const result = executeTool(name, args, cwd, injectedPaths)
+  const result = executeToolWithPolicy({
+    name,
+    args: authorizedArgs,
+    cwd,
+    permissionMode,
+    injectedPaths,
+  })
   if (result.success && (name === 'write_file' || name === 'edit_file' || name === 'multi_edit')) {
     commitWritableSnapshot(writableSnapshot, onFileWrite)
   }
-  return finalizeToolResult({
+  const finalized = await finalizeToolResult({
     name,
-    args,
+    args: authorizedArgs,
     result,
     cwd,
     history,
@@ -500,4 +473,8 @@ export async function handleProxyToolCall(params: ProxyToolCallParams): Promise<
     tokenBudget,
     contextMonitor,
   })
+  if (finalized.success && authorization.grantScope) {
+    recordPermissionGrant?.(authorization.ruleKey, authorization.grantScope)
+  }
+  return finalized
 }

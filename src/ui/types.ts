@@ -9,10 +9,15 @@
 // ── Status Bar ──────────────────────────────────────────────
 
 export interface StatusInfo {
+  sessionId?: string
   model: string
   contextPct: number
   permMode: 'yolo' | 'auto' | 'plan'
+  effort?: 'low' | 'medium' | 'high' | 'max'
   behaviorMode?: string
+  modelPolicySummary?: string
+  toolPolicySummary?: string
+  outputStyle?: string
   gitBranch?: string
   costUsd: number
   tokPerSec?: number
@@ -28,6 +33,8 @@ export interface StatusInfo {
   sessionElapsed?: number
   /** Permission level label (e.g. "L3 high") */
   permLevel?: string
+  /** Where the current permission mode came from */
+  permSource?: 'session' | 'project' | 'global' | 'env' | 'flag' | 'default'
 }
 
 // ── Turn Summary ────────────────────────────────────────────
@@ -87,13 +94,43 @@ export interface ModelProgress {
 export interface PermissionRequest {
   toolName: string
   preview: string
-  resolve: (allowed: boolean) => void
+  resolve: (decision: PermissionDecision) => void
   /** Diff data for file write permissions */
   diff?: {
     filePath: string
     oldContent: string
     newContent: string
   }
+}
+
+export type PermissionDecisionScope = 'once' | 'session' | 'project'
+
+export interface PermissionDecision {
+  allowed: boolean
+  scope: PermissionDecisionScope
+}
+
+export interface OptionPickerOption {
+  value: string
+  label: string
+  description?: string
+}
+
+export interface OptionPickerRequest {
+  title: string
+  subtitle?: string
+  options: OptionPickerOption[]
+  filterable?: boolean
+  filterPlaceholder?: string
+  initialQuery?: string
+  resolve: (value: string | null) => void
+}
+
+export interface DetailPanelInfo {
+  title: string
+  subtitle?: string
+  body: string
+  tone?: 'info' | 'warn' | 'error'
 }
 
 // ── UI Event Union ──────────────────────────────────────────
@@ -108,6 +145,8 @@ export type UIEvent =
   | { type: 'status_update'; info: StatusInfo }
   | { type: 'system_message'; text: string; level: 'info' | 'warn' | 'error' }
   | { type: 'permission_request'; request: PermissionRequest }
+  | { type: 'option_picker_request'; request: OptionPickerRequest }
+  | { type: 'detail_panel'; info: DetailPanelInfo }
   | { type: 'multi_model_progress'; command: string; models: ModelProgress[] }
   | { type: 'multi_model_result'; command: string; model: string; output: string; elapsedMs: number }
   | { type: 'session_end'; info: SessionSummaryInfo }

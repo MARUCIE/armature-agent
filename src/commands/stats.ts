@@ -10,6 +10,7 @@ import { Command } from 'commander'
 import { getStatsOverview, getModelBreakdown, getDailyUsage } from '../usage-db.js'
 import { gatherDoctorReport } from '../doctor.js'
 import { readLogTail } from '../logger.js'
+import { EvolutionStore } from '../evolution/store.js'
 
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -40,6 +41,7 @@ export function createStatsCommand(): Command {
     const models = getModelBreakdown()
     const doctor = gatherDoctorReport(process.cwd())
     const recentErrors = readLogTail('errors', 3)
+    const evolution = new EvolutionStore().getOverview()
 
     const ov: Array<[string, string]> = [
       ['Sessions', String(overview.totalSessions)],
@@ -71,6 +73,13 @@ export function createStatsCommand(): Command {
     if (doctor.provider.warning) {
       console.log(`  \x1b[33mprovider warning:\x1b[0m ${doctor.provider.warning}`)
     }
+
+    const evolutionRows: Array<[string, string]> = [
+      ['Observations', String(evolution.observations)],
+      ['Candidates', `${evolution.candidates.draft}/${evolution.candidates.verified}/${evolution.candidates.promoted}/${evolution.candidates.rejected}`],
+      ['Kinds', `p:${evolution.byKind.prompt} r:${evolution.byKind.rule} t:${evolution.byKind['test-hint']}`],
+    ]
+    printBox('EVOLUTION', evolutionRows)
 
     // Model breakdown
     if (models.length > 0) {

@@ -1,14 +1,30 @@
-import { execFileSync } from 'node:child_process'
+import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { getGlobalConfigPath, listProviders, resolveConfig } from '../config.js'
 import { listBackgroundJobs } from '../background-jobs.js'
 import { hooks } from '../hooks.js'
 import { mcpClient } from '../mcp-client.js'
-import { formatContextWindow, formatPricing, getPricingForModel, type ModelChoice } from '../model-catalog.js'
+import {
+  findModelChoice,
+  formatContextWindow,
+  formatPricing,
+  getPricingForModel,
+  groupModelChoicesByProvider,
+  type ModelChoice,
+} from '../model-catalog.js'
 import { messageContentToText, type ChatMessage } from '../providers/openai-compat.js'
 import { listSessionFiles, loadSessionFile } from '../session-store.js'
 import { TOOL_DEFINITIONS } from '../tools.js'
+import {
+  createCommandConsole,
+  createCommandOutput,
+  escapeMarkdownInline,
+  escapeMarkdownTableCell,
+  formatMarkdownCodeBlock,
+  formatMarkdownCodeSpan,
+  type CommandOutput,
+} from '../ui/command-output.js'
 import type { ChatSessionEmitter } from '../ui/session.js'
 import { buildSafeGitSlashArgs } from './chat-input.js'
 import {
@@ -58,7 +74,38 @@ export interface ReadonlySlashCommandOptions {
   mc: ReadonlySlashModelControl
   harness?: ReadonlySlashHarness
   session?: ChatSessionEmitter
+  sessionId?: string
   modeLabel?: string
+  modelPolicyLabel?: string
+  effortLabel?: string
+  permissionLabel?: string
+  permissionSource?: string
+  toolPolicyLabel?: string
+  outputStyleLabel?: string
+}
+
+function createSafeGitExecOptions(cwd: string): ExecFileSyncOptionsWithStringEncoding {
+  return {
+    cwd,
+    encoding: 'utf-8',
+    timeout: 10_000,
+    maxBuffer: 1024 * 1024,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: {
+      ...process.env,
+      GIT_EXTERNAL_DIFF: '',
+    },
+  }
+}
+
+function buildReadOnlyGitExecArgs(args: string[]): string[] {
+  const [subcommand, ...rest] = args
+  if (!subcommand) return args
+  const prefixedArgs = ['-c', 'diff.external=']
+  if (subcommand === 'diff' || subcommand === 'show' || subcommand === 'log') {
+    return [...prefixedArgs, subcommand, '--no-ext-diff', ...rest]
+  }
+  return [...prefixedArgs, ...args]
 }
 
 function formatSlashHelpEntry(command: SlashCommandDefinition): string {
@@ -66,7 +113,7 @@ function formatSlashHelpEntry(command: SlashCommandDefinition): string {
 }
 
 function formatMarkdownSlashHelpEntry(command: SlashCommandDefinition): string {
-  return '`' + command.name + '` ' + command.description
+  return `\`${command.name}\` ${command.description}`
 }
 
 function renderHelp(session?: ChatSessionEmitter): void {
@@ -113,13 +160,17 @@ function renderHelp(session?: ChatSessionEmitter): void {
   console.log(reset)
 }
 
-
-function renderModelInfo(arg: string, mc: ReadonlySlashModelControl): ReadonlySlashCommandResult {
+function renderModelInfo(
+  arg: string,
+  mc: ReadonlySlashModelControl,
+  output: CommandOutput,
+): ReadonlySlashCommandResult {
+  const console = createCommandConsole(output)
   if (arg.startsWith('set ') || arg.startsWith('use ')) {
     return 'not_handled'
   }
 
-  const current = mc.getChoices().find((choice) => choice.model === mc.getModel())
+  const current = findModelChoice(mc.getChoices(), mc.getModel(), mc.getProvider())
   console.log(`\x1b[90m  provider: ${mc.getProvider()}  model: \x1b[36m${mc.getModel()}\x1b[0m`)
   if (current) {
     console.log(`\x1b[90m  context: ${formatContextWindow(current.contextWindow)}  max out: ${formatContextWindow(current.maxOutput)}  pricing: ${formatPricing(current.pricing)} per 1M in/out\x1b[0m`)
@@ -128,41 +179,39 @@ function renderModelInfo(arg: string, mc: ReadonlySlashModelControl): ReadonlySl
   return 'handled'
 }
 
-function renderModels(mc: ReadonlySlashModelControl): ReadonlySlashCommandResult {
+function renderModels(mc: ReadonlySlashModelControl, output: CommandOutput): ReadonlySlashCommandResult {
+  const console = createCommandConsole(output)
+  const choices = mc.getChoices()
   console.log('\x1b[90m  Available models:\x1b[0m')
-  for (const [index, choice] of mc.getChoices().entries()) {
-    const model = choice.model
-    const current = model === mc.getModel()
-    const idx = `${index + 1}`.padStart(2)
-    const marker = current ? '\x1b[36m' : '\x1b[90m'
-    const arrow = current ? ' →' : '  '
-    console.log(`${marker}  ${idx}.${arrow} ${model}\x1b[0m`)
-    console.log(`\x1b[90m      ${choice.provider} · ${formatContextWindow(choice.contextWindow)} ctx · ${formatPricing(choice.pricing)} per 1M in/out${choice.agentic === 'caution' ? ' · caution' : ''}\x1b[0m`)
+  let index = 0
+  for (const group of groupModelChoicesByProvider(choices)) {
+    console.log(`\x1b[90m  ${group.provider}\x1b[0m`)
+    for (const choice of group.choices) {
+      const model = choice.model
+      const current = model === mc.getModel() && choice.provider === mc.getProvider()
+      const idx = `${index + 1}`.padStart(2)
+      const marker = current ? '\x1b[36m' : '\x1b[90m'
+      const arrow = current ? ' →' : '  '
+      console.log(`${marker}  ${idx}.${arrow} ${model}\x1b[0m`)
+      console.log(`\x1b[90m      ${formatContextWindow(choice.contextWindow)} ctx · ${formatPricing(choice.pricing)} per 1M in/out${choice.agentic === 'caution' ? ' · caution' : ''}\x1b[0m`)
+      index += 1
+    }
   }
-  console.log(`\x1b[90m  Enter number (1-${mc.getChoices().length}):\x1b[0m`)
+  console.log(`\x1b[90m  Enter number (1-${choices.length}):\x1b[0m`)
   return 'pick_model'
 }
 
-function renderDiff(cwd: string, session?: ChatSessionEmitter): void {
+function renderDiff(cwd: string, output: CommandOutput, session?: ChatSessionEmitter): void {
+  const console = createCommandConsole(output)
   try {
-    const stat = execFileSync('git', ['diff', '--stat'], {
-      cwd,
-      encoding: 'utf-8',
-      timeout: 10_000,
-      maxBuffer: 1024 * 1024,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }).trim()
-    const patch = execFileSync('git', ['diff', '--no-color'], {
-      cwd,
-      encoding: 'utf-8',
-      timeout: 10_000,
-      maxBuffer: 1024 * 1024,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }).trim()
+    const gitExecOptions = createSafeGitExecOptions(cwd)
+    const stat = execFileSync('git', buildReadOnlyGitExecArgs(['diff', '--stat']), gitExecOptions).trim()
+    const patch = execFileSync('git', buildReadOnlyGitExecArgs(['diff', '--no-color']), gitExecOptions).trim()
     const diff = [stat, patch].filter(Boolean).join('\n---\n')
     if (diff.trim()) {
+      const safeDiff = diff.slice(0, 4000)
       if (session) {
-        session.emitText(`\`\`\`diff\n${diff.slice(0, 4000)}\n\`\`\`\n`)
+        session.emitText(formatMarkdownCodeBlock(safeDiff, 'diff'))
         if (diff.length > 4000) session.emitSystemMessage('(truncated)', 'info')
       } else {
         console.log(`\x1b[90m${diff.slice(0, 3000)}\x1b[0m`)
@@ -180,7 +229,8 @@ function renderDiff(cwd: string, session?: ChatSessionEmitter): void {
   }
 }
 
-function renderGit(arg: string, cwd: string): void {
+function renderGit(arg: string, cwd: string, output: CommandOutput): void {
+  const console = createCommandConsole(output)
   if (!arg) {
     console.log('\x1b[33m  usage: /git <command>  (e.g., /git status, /git log --oneline -5)\x1b[0m')
     return
@@ -188,13 +238,7 @@ function renderGit(arg: string, cwd: string): void {
 
   try {
     const gitArgs = buildSafeGitSlashArgs(arg)
-    const output = execFileSync('git', gitArgs, {
-      cwd,
-      encoding: 'utf-8',
-      timeout: 10_000,
-      maxBuffer: 1024 * 1024,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    })
+    const output = execFileSync('git', buildReadOnlyGitExecArgs(gitArgs), createSafeGitExecOptions(cwd))
     console.log(`\x1b[90m${output.slice(0, 3000)}\x1b[0m`)
     if (output.length > 3000) console.log('\x1b[90m  ... (truncated)\x1b[0m')
   } catch (error) {
@@ -203,7 +247,8 @@ function renderGit(arg: string, cwd: string): void {
   }
 }
 
-function renderSessions(): void {
+function renderSessions(output: CommandOutput): void {
+  const console = createCommandConsole(output)
   const files = listSessionFiles()
   if (files.length === 0) {
     console.log('\x1b[90m  no saved sessions.\x1b[0m')
@@ -225,7 +270,8 @@ function renderSessions(): void {
   }
 }
 
-function renderJobs(): void {
+function renderJobs(output: CommandOutput): void {
+  const console = createCommandConsole(output)
   const jobs = listBackgroundJobs(10)
   if (jobs.length === 0) {
     console.log('\x1b[90m  no background jobs.\x1b[0m')
@@ -245,7 +291,12 @@ function renderJobs(): void {
   }
 }
 
-function renderCost(stats: ReadonlySlashSessionStats, mc: ReadonlySlashModelControl, session?: ChatSessionEmitter): void {
+function renderCost(
+  stats: ReadonlySlashSessionStats,
+  mc: ReadonlySlashModelControl,
+  output: CommandOutput,
+  session?: ChatSessionEmitter,
+): void {
   const pricing = getPricingForModel(mc.getModel())
   const cost = pricing
     ? (stats.totalInputTokens * pricing[0] + stats.totalOutputTokens * pricing[1]) / 1_000_000
@@ -255,7 +306,7 @@ function renderCost(stats: ReadonlySlashSessionStats, mc: ReadonlySlashModelCont
   if (session) {
     const pricingLabel = pricing ? `$${pricing[0]}/$${pricing[1]} per 1M` : 'n/a'
     session.emitText([
-      `**Cost** — ${mc.getModel()} (${pricingLabel})`,
+      `**Cost** — ${escapeMarkdownInline(mc.getModel())} (${escapeMarkdownInline(pricingLabel)})`,
       '| Metric | Value |',
       '|--------|-------|',
       `| Input | ${stats.totalInputTokens.toLocaleString()} tokens |`,
@@ -269,6 +320,7 @@ function renderCost(stats: ReadonlySlashSessionStats, mc: ReadonlySlashModelCont
   }
 
   const pricingLabel = pricing ? `$${pricing[0]}/$${pricing[1]} per 1M in/out` : 'pricing unavailable'
+  const console = createCommandConsole(output)
   console.log('\x1b[90m  Cost breakdown:\x1b[0m')
   console.log(`\x1b[90m    model:   ${mc.getModel()} (${pricingLabel})\x1b[0m`)
   console.log(`\x1b[90m    input:   ${stats.totalInputTokens.toLocaleString()} tokens\x1b[0m`)
@@ -284,9 +336,17 @@ function renderStatus(
   stats: ReadonlySlashSessionStats,
   cwd: string,
   mc: ReadonlySlashModelControl,
+  output: CommandOutput,
   harness?: ReadonlySlashHarness,
   session?: ChatSessionEmitter,
+  sessionId?: string,
   modeLabel: string = 'default',
+  modelPolicyLabel?: string,
+  effortLabel = 'high',
+  permissionLabel?: string,
+  permissionSource?: string,
+  toolPolicyLabel?: string,
+  outputStyleLabel?: string,
 ): void {
   const messages = history.filter((message) => message.role !== 'system').length
   const budget = harness?.tokenBudget.getBudget(history)
@@ -296,34 +356,48 @@ function renderStatus(
 
   if (session) {
     session.emitText([
-      `**Status** — ${mc.getProvider()}/${mc.getModel()}`,
+      `**Status** — ${escapeMarkdownInline(`${mc.getProvider()}/${mc.getModel()}`)}`,
       '| | |',
       '|---|---|',
       `| Turns | ${stats.turns} |`,
       `| Messages | ${messages} |`,
       `| Context | ${contextLine} |`,
       `| Consumed | ${(stats.totalInputTokens + stats.totalOutputTokens).toLocaleString()} tokens |`,
-      `| Mode | ${modeLabel} |`,
-      `| cwd | \`${cwd}\` |`,
+      `| Session | ${escapeMarkdownTableCell(sessionId || 'n/a')} |`,
+      `| Mode | ${escapeMarkdownTableCell(modeLabel)} |`,
+      `| Model Policy | ${escapeMarkdownTableCell(modelPolicyLabel || 'n/a')} |`,
+      `| Effort | ${escapeMarkdownTableCell(effortLabel)} |`,
+      `| Permissions | ${escapeMarkdownTableCell(permissionLabel ? `${permissionLabel}${permissionSource ? ` (${permissionSource})` : ''}` : 'n/a')} |`,
+      `| Tool Policy | ${escapeMarkdownTableCell(toolPolicyLabel || 'n/a')} |`,
+      `| Output Style | ${escapeMarkdownTableCell(outputStyleLabel || 'n/a')} |`,
+      `| cwd | ${formatMarkdownCodeSpan(cwd)} |`,
       `| Hooks | ${hooks.totalHooks} |`,
       `| MCP | ${mcpClient.configuredCount} servers |`,
     ].join('\n') + '\n')
     return
   }
 
+  const console = createCommandConsole(output)
   console.log('\x1b[90m  Session status:\x1b[0m')
   console.log(`\x1b[90m    provider: \x1b[36m${mc.getProvider()}/${mc.getModel()}\x1b[0m`)
   console.log(`\x1b[90m    turns:    ${stats.turns}\x1b[0m`)
   console.log(`\x1b[90m    messages: ${messages}\x1b[0m`)
   console.log(`\x1b[90m    context:  ${contextLine}\x1b[0m`)
   console.log(`\x1b[90m    consumed: ${(stats.totalInputTokens + stats.totalOutputTokens).toLocaleString()} tokens (cumulative)\x1b[0m`)
+  console.log(`\x1b[90m    session:  ${sessionId || 'n/a'}\x1b[0m`)
   console.log(`\x1b[90m    mode:     ${modeLabel}\x1b[0m`)
+  console.log(`\x1b[90m    model:    ${modelPolicyLabel || 'n/a'}\x1b[0m`)
+  console.log(`\x1b[90m    effort:   ${effortLabel}\x1b[0m`)
+  console.log(`\x1b[90m    perms:    ${permissionLabel ? `${permissionLabel}${permissionSource ? ` (${permissionSource})` : ''}` : 'n/a'}\x1b[0m`)
+  console.log(`\x1b[90m    tools:    ${toolPolicyLabel || 'n/a'}\x1b[0m`)
+  console.log(`\x1b[90m    output:   ${outputStyleLabel || 'n/a'}\x1b[0m`)
   console.log(`\x1b[90m    cwd:      ${cwd}\x1b[0m`)
   console.log(`\x1b[90m    hooks:    ${hooks.totalHooks}\x1b[0m`)
   console.log(`\x1b[90m    mcp:      ${mcpClient.configuredCount} servers\x1b[0m`)
 }
 
-function renderDoctor(resolved: ReadonlySlashResolvedProvider): void {
+function renderDoctor(resolved: ReadonlySlashResolvedProvider, output: CommandOutput): void {
+  const console = createCommandConsole(output)
   console.log('\x1b[90m  Health check:\x1b[0m')
   const providerReady = Boolean(resolved.apiKey) && Boolean(resolved.baseURL)
   console.log(`\x1b[90m    provider: ${providerReady ? '\x1b[32mOK\x1b[0m' : '\x1b[31mNO KEY\x1b[0m'} (${resolved.provider})\x1b[0m`)
@@ -341,7 +415,13 @@ function renderDoctor(resolved: ReadonlySlashResolvedProvider): void {
   console.log(`\x1b[90m    tools:    ${TOOL_DEFINITIONS.length}\x1b[0m`)
 }
 
-function renderConfig(cwd: string, mc: ReadonlySlashModelControl, modeLabel: string): void {
+function renderConfig(
+  cwd: string,
+  mc: ReadonlySlashModelControl,
+  modeLabel: string,
+  output: CommandOutput,
+): void {
+  const console = createCommandConsole(output)
   console.log('\x1b[90m  Config files:\x1b[0m')
   console.log(`\x1b[90m    global: ${getGlobalConfigPath()}\x1b[0m`)
   console.log(`\x1b[90m    project: ${join(cwd, '.orca.json')}\x1b[0m`)
@@ -352,7 +432,8 @@ function renderConfig(cwd: string, mc: ReadonlySlashModelControl, modeLabel: str
   console.log('\x1b[90m  Edit: orca init (project) or ~/.orca/config.json (global)\x1b[0m')
 }
 
-function renderProviders(cwd: string, mc: ReadonlySlashModelControl): void {
+function renderProviders(cwd: string, mc: ReadonlySlashModelControl, output: CommandOutput): void {
+  const console = createCommandConsole(output)
   const resolvedConfig = resolveConfig({ cwd })
   const providers = listProviders(resolvedConfig)
   console.log('\x1b[90m  Providers:\x1b[0m')
@@ -365,6 +446,8 @@ function renderProviders(cwd: string, mc: ReadonlySlashModelControl): void {
 
 export function handleReadonlySlashCommand(options: ReadonlySlashCommandOptions): ReadonlySlashCommandResult {
   const { cmd, arg, resolved, history, stats, cwd, mc, harness, session, modeLabel = 'default' } = options
+  const output = createCommandOutput(session)
+  const console = createCommandConsole(output)
 
   switch (cmd) {
     case '/help':
@@ -375,10 +458,12 @@ export function handleReadonlySlashCommand(options: ReadonlySlashCommandOptions)
 
     case '/model':
     case '/m':
-      return renderModelInfo(arg, mc)
+      if (!arg) return session ? 'pick_model' : renderModels(mc, output)
+      if (arg === 'show' || arg === 'info') return renderModelInfo('', mc, output)
+      return 'not_handled'
 
     case '/models':
-      return renderModels(mc)
+      return session ? 'pick_model' : renderModels(mc, output)
 
     case '/history': {
       const userMessages = history.filter((message) => message.role === 'user').length
@@ -391,11 +476,11 @@ export function handleReadonlySlashCommand(options: ReadonlySlashCommandOptions)
 
     case '/tokens': {
       const totalTokens = stats.totalInputTokens + stats.totalOutputTokens
-      console.log('\x1b[90m')
-      console.log(`  input:  ${stats.totalInputTokens.toLocaleString()} tokens`)
-      console.log(`  output: ${stats.totalOutputTokens.toLocaleString()} tokens`)
-      console.log(`  total:  ${totalTokens.toLocaleString()} tokens`)
-      console.log('\x1b[0m')
+      output.info([
+        `input:  ${stats.totalInputTokens.toLocaleString()} tokens`,
+        `output: ${stats.totalOutputTokens.toLocaleString()} tokens`,
+        `total:  ${totalTokens.toLocaleString()} tokens`,
+      ].join('\n'))
       return 'handled'
     }
 
@@ -403,13 +488,13 @@ export function handleReadonlySlashCommand(options: ReadonlySlashCommandOptions)
       const elapsed = ((Date.now() - stats.startTime) / 1000).toFixed(0)
       const totalTokens = stats.totalInputTokens + stats.totalOutputTokens
       const historyChars = history.reduce((sum, message) => sum + messageContentToText(message.content).length, 0)
-      console.log('\x1b[90m')
-      console.log(`  model:    ${mc.getModel()}`)
-      console.log(`  turns:    ${stats.turns}`)
-      console.log(`  tokens:   ${totalTokens.toLocaleString()} (in: ${stats.totalInputTokens.toLocaleString()} / out: ${stats.totalOutputTokens.toLocaleString()})`)
-      console.log(`  context:  ${historyChars.toLocaleString()} chars in ${history.length} messages`)
-      console.log(`  duration: ${elapsed}s`)
-      console.log('\x1b[0m')
+      output.info([
+        `model:    ${mc.getModel()}`,
+        `turns:    ${stats.turns}`,
+        `tokens:   ${totalTokens.toLocaleString()} (in: ${stats.totalInputTokens.toLocaleString()} / out: ${stats.totalOutputTokens.toLocaleString()})`,
+        `context:  ${historyChars.toLocaleString()} chars in ${history.length} messages`,
+        `duration: ${elapsed}s`,
+      ].join('\n'))
       return 'handled'
     }
 
@@ -418,39 +503,55 @@ export function handleReadonlySlashCommand(options: ReadonlySlashCommandOptions)
       return 'handled'
 
     case '/diff':
-      renderDiff(cwd, session)
+      renderDiff(cwd, output, session)
       return 'handled'
 
     case '/git':
-      renderGit(arg, cwd)
+      renderGit(arg, cwd, output)
       return 'handled'
 
     case '/sessions':
-      renderSessions()
+      renderSessions(output)
       return 'handled'
 
     case '/jobs':
-      renderJobs()
+      renderJobs(output)
       return 'handled'
 
     case '/cost':
-      renderCost(stats, mc, session)
+      renderCost(stats, mc, output, session)
       return 'handled'
 
     case '/status':
-      renderStatus(history, stats, cwd, mc, harness, session, modeLabel)
+      renderStatus(
+        history,
+        stats,
+        cwd,
+        mc,
+        output,
+        harness,
+        session,
+        options.sessionId,
+        modeLabel,
+        options.modelPolicyLabel,
+        options.effortLabel,
+        options.permissionLabel,
+        options.permissionSource,
+        options.toolPolicyLabel,
+        options.outputStyleLabel,
+      )
       return 'handled'
 
     case '/doctor':
-      renderDoctor(resolved)
+      renderDoctor(resolved, output)
       return 'handled'
 
     case '/config':
-      renderConfig(cwd, mc, modeLabel)
+      renderConfig(cwd, mc, modeLabel, output)
       return 'handled'
 
     case '/providers':
-      renderProviders(cwd, mc)
+      renderProviders(cwd, mc, output)
       return 'handled'
 
     default:

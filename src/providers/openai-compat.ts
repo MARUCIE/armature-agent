@@ -186,6 +186,11 @@ function limitToolsForProvider<T>(baseURL: string | undefined, tools: T[] | unde
   return tools.slice(0, maxTools)
 }
 
+function getToolName(tool: Record<string, unknown>): string | undefined {
+  const fn = tool.function as Record<string, unknown> | undefined
+  return typeof fn?.name === 'string' ? fn.name : undefined
+}
+
 function shouldSkipReasoningEffortForChatCompletions(
   options: Pick<OpenAICompatOptions, 'baseURL' | 'model' | 'reasoningEffort'>,
   tools: Array<Record<string, unknown>> | undefined,
@@ -264,6 +269,7 @@ export async function* streamChat(
 ): AsyncGenerator<StreamEvent> {
   const client = await createOpenAIClient(options.apiKey, options.baseURL, options.headers)
   const requestTools = limitToolsForProvider(options.baseURL, tools)
+  const allowedToolNames = new Set((requestTools || []).map(getToolName).filter(Boolean))
   const skipReasoningEffort = shouldSkipReasoningEffortForChatCompletions(options, requestTools)
 
   // Build message array with history
@@ -457,6 +463,9 @@ export async function* streamChat(
 
         // Execute each tool and add results
         for (const tc of toolCalls) {
+          if (!allowedToolNames.has(tc.name)) {
+            throw new Error(`Provider requested disallowed tool: ${tc.name}`)
+          }
           let args: Record<string, unknown> = {}
           try { args = JSON.parse(tc.arguments) } catch { /* use empty */ }
 

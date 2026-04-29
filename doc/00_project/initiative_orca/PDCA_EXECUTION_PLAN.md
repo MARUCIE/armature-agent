@@ -16,6 +16,7 @@
   - CI gate integrity job for matrix sync, static, security, performance, and fast agent-eval gates
   - `orca run` default / goal-loop / mission / plan WorkSession and TaskRun records
   - clean-index command baseline for workflow presets, `permissions`, `evolve`, and git-root helper support
+  - chat operator control plane for sessions, permissions, model picking, command output, and Ink home/detail panels
 - Check evidence:
   - `npm run lint`
   - `npm run build`
@@ -25,6 +26,7 @@
   - `npm test -- tests/release-evidence.test.ts` -> `3` tests
   - `npm test -- tests/run-work-session.test.ts tests/work-session-store.test.ts tests/queue-command.test.ts` -> `14` tests
   - clean staged-index `npm run build`
+  - clean staged-index chat/operator-control regression pack -> `248` tests
   - `npm run test:matrix:sync`
   - `npm run test:static`
   - `npm run test:security`

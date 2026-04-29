@@ -181,4 +181,90 @@ describe('openai-compat multimodal prompt support', () => {
     const lastCall = mockState.params.at(-1)
     expect(lastCall.reasoning_effort).toBe('xhigh')
   })
+
+  it('rejects provider-returned tool calls outside the advertised whitelist', async () => {
+    mockState.responses.push(() => makeStream([
+      {
+        choices: [{
+          delta: {
+            tool_calls: [{
+              index: 0,
+              id: 'call_0',
+              function: {
+                name: 'run_command',
+                arguments: '{"command":"pwd"}',
+              },
+            }],
+          },
+          finish_reason: 'tool_calls',
+        }],
+        usage: { prompt_tokens: 3, completion_tokens: 1 },
+      },
+    ]))
+
+    const allowedTools = [{
+      type: 'function',
+      function: {
+        name: 'read_file',
+        description: 'Read a file',
+        parameters: { type: 'object', properties: {} },
+      },
+    }]
+    const onToolCall = vi.fn()
+
+    const events = []
+    for await (const event of streamChat(
+      baseOpts,
+      'test',
+      undefined,
+      { onToolCall },
+      allowedTools,
+    )) events.push(event)
+
+    expect(onToolCall).not.toHaveBeenCalled()
+    expect(events).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: 'error',
+        error: expect.stringContaining('disallowed tool'),
+      }),
+    ]))
+  })
+
+  it('rejects provider-returned tool calls when no tools were advertised', async () => {
+    mockState.responses.push(() => makeStream([
+      {
+        choices: [{
+          delta: {
+            tool_calls: [{
+              index: 0,
+              id: 'call_0',
+              function: {
+                name: 'run_command',
+                arguments: '{"command":"pwd"}',
+              },
+            }],
+          },
+          finish_reason: 'tool_calls',
+        }],
+        usage: { prompt_tokens: 3, completion_tokens: 1 },
+      },
+    ]))
+
+    const onToolCall = vi.fn()
+    const events = []
+    for await (const event of streamChat(
+      baseOpts,
+      'test',
+      undefined,
+      { onToolCall },
+    )) events.push(event)
+
+    expect(onToolCall).not.toHaveBeenCalled()
+    expect(events).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: 'error',
+        error: expect.stringContaining('disallowed tool'),
+      }),
+    ]))
+  })
 })

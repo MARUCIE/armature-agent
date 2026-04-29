@@ -1,7 +1,59 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { MCPClient } from '../src/mcp-client.js'
 import { createTempProject } from './helpers/temp-project.js'
 import { withEnv } from './helpers/env-snapshot.js'
+
+const FAKE_MCP_SERVER = `
+const fs = require('node:fs')
+const readline = require('node:readline')
+
+const markerPath = process.argv[2]
+if (markerPath) {
+  fs.writeFileSync(markerPath, 'spawned\\n', 'utf8')
+}
+
+const rl = readline.createInterface({ input: process.stdin })
+rl.on('line', (line) => {
+  let msg
+  try {
+    msg = JSON.parse(line)
+  } catch {
+    return
+  }
+
+  if (msg.method === 'initialize') {
+    process.stdout.write(JSON.stringify({
+      jsonrpc: '2.0',
+      id: msg.id,
+      result: {
+        protocolVersion: '2024-11-05',
+        capabilities: {},
+        serverInfo: { name: 'fake-mcp', version: '1.0.0' },
+      },
+    }) + '\\n')
+    return
+  }
+
+  if (msg.method === 'tools/list') {
+    process.stdout.write(JSON.stringify({
+      jsonrpc: '2.0',
+      id: msg.id,
+      result: { tools: [] },
+    }) + '\\n')
+    return
+  }
+
+  if (msg.id !== undefined) {
+    process.stdout.write(JSON.stringify({
+      jsonrpc: '2.0',
+      id: msg.id,
+      result: {},
+    }) + '\\n')
+  }
+})
+`
 
 describe('MCPClient', () => {
   let tempProject: ReturnType<typeof createTempProject>
@@ -26,6 +78,19 @@ describe('MCPClient', () => {
     tempProject = createTempProject(files)
     process.env.HOME = tempProject.dir
     return tempProject
+  }
+
+  function buildNodeServerConfig(scriptPath: string, markerPath: string) {
+    return {
+      command: process.execPath,
+      args: [scriptPath, markerPath],
+    }
+  }
+
+  function writeJsonFile(root: string, relativePath: string, value: unknown) {
+    const fullPath = join(root, relativePath)
+    mkdirSync(dirname(fullPath), { recursive: true })
+    writeFileSync(fullPath, JSON.stringify(value), 'utf-8')
   }
 
   describe('loadConfigs()', () => {
@@ -157,6 +222,30 @@ enabled = false
       expect(client.configuredCount).toBe(2)
     })
 
+    it('preserves config provenance for project and home scopes', async () => {
+      setupIsolated({
+        '.mcp.json': JSON.stringify({
+          'project-server': { command: 'node' },
+        }),
+      })
+
+      const globalTemp = createTempProject({
+        '.orca/mcp.json': JSON.stringify({
+          'home-server': { command: 'node' },
+        }),
+      })
+
+      await withEnv({ HOME: globalTemp.dir }, () => {
+        client.loadConfigs(tempProject.dir)
+
+        const servers = client.listServers()
+        expect(servers.find((server) => server.name === 'project-server')?.scope).toBe('project')
+        expect(servers.find((server) => server.name === 'home-server')?.scope).toBe('home')
+      })
+
+      globalTemp.cleanup()
+    })
+
     it('parses Claude Code format with command, args, and env', () => {
       setupIsolated({
         '.claude/settings.json': JSON.stringify({
@@ -181,6 +270,59 @@ enabled = false
       client.loadConfigs(tempProject.dir)
 
       expect(client.configuredCount).toBe(0)
+    })
+  })
+
+  describe('startup-safe MCP connection policy', () => {
+    it('skips repo-local configs during default startup auto-connect while still connecting home configs', async () => {
+      setupIsolated({
+        'fake-mcp.cjs': FAKE_MCP_SERVER,
+      })
+
+      const scriptPath = join(tempProject.dir, 'fake-mcp.cjs')
+      const projectMarker = join(tempProject.dir, 'project.marker')
+      writeJsonFile(tempProject.dir, '.mcp.json', {
+        'project-malicious': buildNodeServerConfig(scriptPath, projectMarker),
+      })
+
+      const globalTemp = createTempProject({})
+      const homeMarker = join(globalTemp.dir, 'home.marker')
+      writeJsonFile(globalTemp.dir, '.orca/mcp.json', {
+        'home-safe': buildNodeServerConfig(scriptPath, homeMarker),
+      })
+
+      await withEnv({ HOME: globalTemp.dir }, async () => {
+        client.loadConfigs(tempProject.dir)
+        const connected = await client.connectStartupSafe()
+
+        expect(connected).toEqual(['home-safe'])
+        expect(existsSync(homeMarker)).toBe(true)
+        expect(existsSync(projectMarker)).toBe(false)
+
+        client.disconnectAll()
+      })
+
+      globalTemp.cleanup()
+    })
+
+    it('still allows explicit connect for project-scoped configs', async () => {
+      setupIsolated({
+        'fake-mcp.cjs': FAKE_MCP_SERVER,
+      })
+
+      const scriptPath = join(tempProject.dir, 'fake-mcp.cjs')
+      const projectMarker = join(tempProject.dir, 'project.marker')
+      writeJsonFile(tempProject.dir, '.mcp.json', {
+        'project-malicious': buildNodeServerConfig(scriptPath, projectMarker),
+      })
+
+      client.loadConfigs(tempProject.dir)
+      const ok = await client.connect('project-malicious')
+
+      expect(ok).toBe(true)
+      expect(existsSync(projectMarker)).toBe(true)
+
+      client.disconnectAll()
     })
   })
 

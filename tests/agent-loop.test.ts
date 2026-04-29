@@ -169,10 +169,14 @@ describe('Agent Loop: Tool call accumulation', () => {
     ]))
 
     let calledArgs: Record<string, unknown> = {}
+    const editTool = [{
+      type: 'function',
+      function: { name: 'edit_file', description: 'Edit', parameters: {} },
+    }]
     await collectEvents(
       streamChat(baseOpts, 'Edit', undefined, {
         onToolCall: async (_name, args) => { calledArgs = args; return { success: true, output: 'ok' } },
-      }, dummyTools as Array<Record<string, unknown>>)
+      }, editTool as Array<Record<string, unknown>>)
     )
 
     expect(calledArgs.path).toBe('test.ts')

@@ -9,7 +9,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { homedir } from 'node:os'
+import { getOrcaHome } from '../logger.js'
 
 export interface PromptTemplate {
   id: string
@@ -27,8 +27,7 @@ export class PromptRepository {
   private dir: string
 
   constructor() {
-    const home = process.env.ORCA_HOME || process.env.HOME || homedir()
-    this.dir = join(home, '.orca', 'knowledge', 'prompts')
+    this.dir = join(getOrcaHome(), 'knowledge', 'prompts')
     mkdirSync(this.dir, { recursive: true })
   }
 

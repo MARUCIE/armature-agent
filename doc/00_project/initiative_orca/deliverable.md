@@ -1,5 +1,54 @@
 # Deliverable
 
+## 2026-04-29 - Chat Operator Control Plane PDCA Tranche
+
+### Scope
+
+Close ORCA-SWARM-015 by making chat REPL and Ink operator controls for sessions, permissions, models, command output, and detail panels clean-index testable.
+
+### Delivered
+
+- Added runtime identity prompt insertion and workflow preset policy application for one-shot and REPL chat startup.
+- Expanded slash command helpers for model selection, permissions, sessions, threads, knowledge, and recovery flows.
+- Added command-output sanitization / markdown formatting helpers so command output can route safely into Ink sessions.
+- Added Ink home, option picker, detail panel, and permission-scope UI plumbing.
+- Expanded serve/session/model/MCP coverage needed by the same operator-control baseline.
+- Version bumped to `0.8.11`.
+
+### Changed Files
+
+- `src/commands/chat*.ts`
+- `src/commands/serve.ts`
+- `src/commands/session.ts`
+- `src/mcp-client.ts`
+- `src/model-catalog.ts`
+- `src/session-store.ts`
+- `src/ui/*`
+- `tests/chat-*.test.ts`
+- `tests/ink-ui.test.tsx`
+- `tests/command-output.test.ts`
+- `tests/session-command.test.ts`
+- `tests/serve-command.test.ts`
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `doc/00_project/initiative_orca/*`
+
+### Verification
+
+- Clean staged-index `npm run build` -> pass
+- Clean staged-index `npm test -- tests/chat-internals.test.ts tests/chat-slash-mutations.test.ts tests/chat-slash-readonly.test.ts tests/chat-repl-turn.test.ts tests/chat-one-shot-mcp-cleanup.test.ts tests/ink-ui.test.tsx tests/command-output.test.ts tests/session-command.test.ts tests/serve-command.test.ts tests/model-catalog.test.ts tests/mcp-client.test.ts tests/mode-system-prompt.test.ts` -> `248/248`
+- Clean staged-index command pack plus release-evidence guard -> `251/251`
+- Full active-worktree `npm run lint && npm run build && npm test` -> `88` files / `1611` tests
+- `node dist/bin/orca.js --version` -> `0.8.11`
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Chat REPL still does not write canonical WorkSession / TaskRun records | Runtime | Next tranche should bind REPL turns into the queue spine |
+| Ink detail panels are generic operator panels, not yet the full TaskRun evidence timeline | UX | Continue with TaskRun evidence side panel / approval timeline |
+
 ## 2026-04-29 - Clean-Index Command Baseline PDCA Tranche
 
 ### Scope

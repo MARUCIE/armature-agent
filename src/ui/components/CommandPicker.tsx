@@ -4,8 +4,9 @@
  * Replaces the raw ANSI command-picker.ts with an ink component.
  */
 
-import React, { useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Box, Text, useInput } from 'ink'
+import { PickerFrame } from './PickerFrame.js'
 
 export interface CommandDef {
   name: string
@@ -30,6 +31,16 @@ export function CommandPicker({ commands, filter, onSelect, onCancel, active }: 
       c.name.toLowerCase().includes(lower) || c.description.toLowerCase().includes(lower),
     )
   }, [commands, filter])
+
+  useEffect(() => {
+    if (filtered.length === 0) {
+      setSelectedIdx(0)
+      return
+    }
+    if (selectedIdx >= filtered.length) {
+      setSelectedIdx(filtered.length - 1)
+    }
+  }, [filtered.length, selectedIdx])
 
   useInput(
     (_input, key) => {
@@ -56,23 +67,30 @@ export function CommandPicker({ commands, filter, onSelect, onCancel, active }: 
   const visible = filtered.slice(start, start + maxVisible)
 
   return (
-    <Box flexDirection="column" marginLeft={2}>
+    <PickerFrame
+      title="Commands"
+      subtitle={filter ? `filter: /${filter}` : undefined}
+      footer="arrows to browse · enter to select · esc to cancel"
+    >
       {visible.map((cmd, i) => {
         const idx = start + i
         const isSelected = idx === selectedIdx
         return (
           <Box key={cmd.name}>
-            <Text color={isSelected ? 'cyan' : undefined} bold={isSelected}>
-              {isSelected ? '> ' : '  '}
+            <Text color={isSelected ? 'cyan' : 'gray'}>{isSelected ? '▸ ' : '  '}</Text>
+            <Text color={isSelected ? 'cyan' : 'yellow'} bold={isSelected}>
+              {cmd.name.padEnd(16)}
             </Text>
-            <Text color={isSelected ? 'cyan' : 'yellow'}>{cmd.name.padEnd(16)}</Text>
             <Text dimColor>{cmd.description}</Text>
           </Box>
         )
       })}
-      {filtered.length > maxVisible && (
-        <Text dimColor>  ... {filtered.length - maxVisible} more</Text>
-      )}
-    </Box>
+
+      {filtered.length > maxVisible ? (
+        <Box marginTop={1}>
+          <Text dimColor>{`… ${filtered.length - maxVisible} more commands`}</Text>
+        </Box>
+      ) : null}
+    </PickerFrame>
   )
 }

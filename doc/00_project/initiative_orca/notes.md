@@ -1,5 +1,25 @@
 # Notes
 
+## 2026-04-29 - Chat operator control plane PDCA continuation
+
+Context:
+
+- User said `继续` after the clean-index command baseline commit.
+- The next isolated dirty baseline covers chat REPL operator controls and Ink UX plumbing, but it still does not create canonical TaskRun records for chat turns.
+- The boundary is session/model/permissions command ergonomics plus display surfaces, not the final queue-backed chat lifecycle.
+
+PDCA executed:
+
+- Plan: stage the remaining chat/operator-control source and tests together because chat helpers, session store, model catalog, MCP startup, serve recovery, and Ink panels are tightly coupled.
+- Do: added runtime identity prompt handling, workflow preset startup policy, richer slash command helpers, command-output sanitization, Ink home/action/detail/option panels, and expanded serve/session/model/MCP support.
+- Check:
+  - Clean staged-index `npm run build` -> pass.
+  - Clean staged-index `npm test -- tests/chat-internals.test.ts tests/chat-slash-mutations.test.ts tests/chat-slash-readonly.test.ts tests/chat-repl-turn.test.ts tests/chat-one-shot-mcp-cleanup.test.ts tests/ink-ui.test.tsx tests/command-output.test.ts tests/session-command.test.ts tests/serve-command.test.ts tests/model-catalog.test.ts tests/mcp-client.test.ts tests/mode-system-prompt.test.ts` -> `248` tests passed.
+  - Clean staged-index command pack plus release-evidence guard -> `251` tests passed.
+  - `npm run lint && npm run build && npm test` -> `88` files / `1611` tests passed.
+  - `node dist/bin/orca.js --version` -> `0.8.11`.
+- Act: next queue item remains canonical TaskRun production for chat REPL turns and the TaskRun evidence side panel / approval timeline.
+
 ## 2026-04-29 - Clean-index command baseline PDCA continuation
 
 Context:

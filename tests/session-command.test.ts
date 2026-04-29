@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mkdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
@@ -75,6 +75,18 @@ describe('session command recovery', () => {
     expect(session?.session.stats.turns).toBe(1)
   })
 
+  it('resolves a specific continuation session by partial id when requested', async () => {
+    const now = Date.now()
+    writeValidSession('resume-alpha', now - 10_000)
+    writeValidSession('resume-beta', now)
+
+    const { getContinuationSession } = await loadSessionModule()
+    const session = getContinuationSession('alpha')
+
+    expect(session?.name).toBe('resume-alpha')
+    expect(session?.session.model).toBe('gpt-5.4')
+  })
+
   it('preserves saved mode ids when resuming sessions', async () => {
     const now = Date.now()
     writeSessionFile('reflect-session', JSON.stringify({
@@ -108,5 +120,107 @@ describe('session command recovery', () => {
     expect(output).toContain('visible-session')
     expect(output).not.toContain('broken-session')
     expect(output).toContain('1 session(s)')
+  })
+
+  it('exports a saved session to a JSON file', async () => {
+    const now = Date.now()
+    writeValidSession('exportable-session', now)
+    const outFile = join(tmpdir(), `orca-session-export-${Date.now()}.json`)
+
+    const { createSessionCommand } = await loadSessionModule()
+    const command = createSessionCommand()
+    await command.parseAsync(['node', 'session', 'export', 'exportable-session', outFile])
+
+    const exported = JSON.parse(readFileSync(outFile, 'utf-8'))
+    expect(exported.model).toBe('gpt-5.4')
+    expect(exported.stats.turns).toBe(1)
+    rmSync(outFile, { force: true })
+  })
+
+  it('imports a saved session from JSON into ORCA_HOME storage', async () => {
+    const inFile = join(tmpdir(), `orca-session-import-${Date.now()}.json`)
+    writeFileSync(inFile, JSON.stringify({
+      provider: 'openai',
+      model: 'gpt-5.4',
+      history: [{ role: 'user', content: 'import me' }],
+      stats: { turns: 4, inputTokens: 40, outputTokens: 80 },
+      savedAt: new Date().toISOString(),
+    }), 'utf-8')
+
+    const { createSessionCommand, getSessionById } = await loadSessionModule()
+    const command = createSessionCommand()
+    await command.parseAsync(['node', 'session', 'import', inFile, 'imported-session'])
+
+    const imported = getSessionById('imported-session')
+    expect(imported?.name).toBe('imported-session')
+    expect(imported?.session.stats.turns).toBe(4)
+    rmSync(inFile, { force: true })
+  })
+
+  it('forks an existing saved session into a new record', async () => {
+    const now = Date.now()
+    writeValidSession('fork-source', now)
+
+    const { createSessionCommand, getSessionById } = await loadSessionModule()
+    const command = createSessionCommand()
+    await command.parseAsync(['node', 'session', 'fork', 'fork-source', 'fork-copy'])
+
+    const forked = getSessionById('fork-copy')
+    expect(forked?.name).toBe('fork-copy')
+    expect(forked?.session.model).toBe('gpt-5.4')
+  })
+
+  it('exports a saved session as markdown', async () => {
+    const now = Date.now()
+    writeValidSession('markdown-session', now)
+    const outFile = join(tmpdir(), `orca-session-markdown-${Date.now()}.md`)
+
+    const { createSessionCommand } = await loadSessionModule()
+    const command = createSessionCommand()
+    await command.parseAsync(['node', 'session', 'markdown', 'markdown-session', outFile])
+
+    const markdown = readFileSync(outFile, 'utf-8')
+    expect(markdown).toContain('# Session: markdown-session')
+    expect(markdown).toContain('## Transcript')
+    rmSync(outFile, { force: true })
+  })
+
+  it('creates a shared markdown artifact for a saved session', async () => {
+    const now = Date.now()
+    writeValidSession('share-session', now)
+
+    const { createSessionCommand } = await loadSessionModule()
+    const command = createSessionCommand()
+    await command.parseAsync(['node', 'session', 'share', 'share-session'])
+
+    const sharePath = join(orcaHome, 'shares', 'session-share-session.md')
+    const metadataPath = join(orcaHome, 'shares', 'session-share-session.artifact.json')
+    expect(existsSync(sharePath)).toBe(true)
+    expect(existsSync(metadataPath)).toBe(true)
+    expect(readFileSync(sharePath, 'utf-8')).toContain('# Session: share-session')
+    const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'))
+    expect(metadata.kind).toBe('session-share')
+    expect(metadata.name).toBe('share-session')
+  })
+
+  it('creates a handoff session plus handoff artifact bundle', async () => {
+    const now = Date.now()
+    writeValidSession('handoff-source', now)
+
+    const { createSessionCommand, getSessionById } = await loadSessionModule()
+    const command = createSessionCommand()
+    await command.parseAsync(['node', 'session', 'handoff', 'handoff-source', 'handoff-copy'])
+
+    const forked = getSessionById('handoff-copy')
+    expect(forked?.name).toBe('handoff-copy')
+
+    const sharePath = join(orcaHome, 'shares', 'handoff-handoff-copy.md')
+    const metadataPath = join(orcaHome, 'shares', 'handoff-handoff-copy.artifact.json')
+    expect(existsSync(sharePath)).toBe(true)
+    expect(existsSync(metadataPath)).toBe(true)
+    const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'))
+    expect(metadata.kind).toBe('session-handoff')
+    expect(metadata.sourceSessionName).toBe('handoff-source')
+    expect(metadata.name).toBe('handoff-copy')
   })
 })

@@ -20,6 +20,11 @@ export interface ModelChoice {
   note?: string
 }
 
+export interface ModelChoiceGroup {
+  provider: string
+  choices: ModelChoice[]
+}
+
 const DEFAULT_MODELS = [
   { provider: 'anthropic', model: 'claude-opus-4.6' },
   { provider: 'anthropic', model: 'claude-sonnet-4.6' },
@@ -132,7 +137,44 @@ export function getModelChoice(model: string, provider: string): ModelChoice {
   }
 }
 
-export function listModelChoices(config: OrcaConfig, currentModel?: string): ModelChoice[] {
+export function modelChoiceKey(choice: Pick<ModelChoice, 'model' | 'provider'>): string {
+  return `${choice.provider}\t${choice.model}`
+}
+
+export function groupModelChoicesByProvider(choices: ModelChoice[]): ModelChoiceGroup[] {
+  const groups: ModelChoiceGroup[] = []
+  const index = new Map<string, ModelChoiceGroup>()
+
+  for (const choice of choices) {
+    let group = index.get(choice.provider)
+    if (!group) {
+      group = { provider: choice.provider, choices: [] }
+      index.set(choice.provider, group)
+      groups.push(group)
+    }
+    group.choices.push(choice)
+  }
+
+  return groups
+}
+
+export function findModelChoice(
+  choices: ModelChoice[],
+  modelOrKey: string,
+  preferredProvider?: string,
+): ModelChoice | undefined {
+  const exactKey = choices.find((choice) => modelChoiceKey(choice) === modelOrKey)
+  if (exactKey) return exactKey
+
+  if (preferredProvider) {
+    const providerMatch = choices.find((choice) => choice.model === modelOrKey && choice.provider === preferredProvider)
+    if (providerMatch) return providerMatch
+  }
+
+  return choices.find((choice) => choice.model === modelOrKey)
+}
+
+export function listModelChoices(config: OrcaConfig, currentModel?: string, currentProvider = 'current'): ModelChoice[] {
   const choices: ModelChoice[] = []
   const seen = new Set<string>()
 
@@ -160,9 +202,9 @@ export function listModelChoices(config: OrcaConfig, currentModel?: string): Mod
   }
 
   if (currentModel) {
-    const currentKey = choices.find((choice) => choice.model === currentModel)
+    const currentKey = choices.find((choice) => choice.model === currentModel && choice.provider === currentProvider)
     if (!currentKey) {
-      choices.unshift(getModelChoice(currentModel, 'current'))
+      choices.unshift(getModelChoice(currentModel, currentProvider))
     }
   }
 

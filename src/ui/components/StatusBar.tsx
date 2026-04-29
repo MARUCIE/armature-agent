@@ -44,6 +44,10 @@ export function StatusBar({ status }: Props): React.ReactElement {
   if (status.costUsd > 0) stats.push(formatCost(status.costUsd))
   if (status.tokPerSec && status.tokPerSec > 0) stats.push(`${Math.round(status.tokPerSec)} tok/s`)
   if (status.turns > 0) stats.push(`${status.turns} turns`)
+  if (status.sessionId) stats.push(`sid:${status.sessionId.length > 20 ? `${status.sessionId.slice(0, 18)}..` : status.sessionId}`)
+  if (status.modelPolicySummary) stats.push(`model:${status.modelPolicySummary}`)
+  if (status.toolPolicySummary) stats.push(`tools:${status.toolPolicySummary}`)
+  if (status.outputStyle) stats.push(`out:${status.outputStyle}`)
 
   // Sparkline
   let sparkline = ''
@@ -61,6 +65,7 @@ export function StatusBar({ status }: Props): React.ReactElement {
     : status.permMode === 'plan' ? theme.accent
     : theme.success
   const behaviorMode = status.behaviorMode || 'default'
+  const effortLabel = status.effort || 'high'
   const behaviorColor = behaviorMode === 'reflect' ? theme.accent : theme.text
 
   return (
@@ -87,8 +92,11 @@ export function StatusBar({ status }: Props): React.ReactElement {
       <Box>
         <Text color={permColor} bold>{'\u25B8\u25B8'}</Text>
         <Text color={permColor}> {permLabel}</Text>
+        {status.permSource ? <Text dimColor>{` (${status.permSource})`}</Text> : null}
         <Text dimColor> {' \u00B7 '}</Text>
         <Text color={behaviorColor}>mode: {behaviorMode}</Text>
+        <Text dimColor> {' \u00B7 '}</Text>
+        <Text dimColor>effort: {effortLabel}</Text>
         <Text dimColor> (shift+tab to cycle)</Text>
       </Box>
     </Box>

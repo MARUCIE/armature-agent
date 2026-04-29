@@ -339,18 +339,24 @@ function classifyError(message: string): ClassifiedError {
  * Returns true if approved, false if denied.
  * Uses raw stdin keypress (y/n) — works during agent loop.
  */
-export function askPermission(toolName: string, preview: string): Promise<boolean> {
+export function askPermission(toolName: string, preview: string): Promise<{ allowed: boolean; scope: 'once' | 'session' | 'project' }> {
   return new Promise((resolve) => {
     const displayName = toolName === 'write_file' ? 'Write' : toolName === 'run_command' ? 'Bash' : toolName
     console.log()
     console.log(chalk.yellow(`  ⚠ ${displayName}: `) + chalk.white(preview))
-    process.stdout.write(chalk.gray('  allow? ') + chalk.cyan('y') + chalk.gray('/') + chalk.cyan('n') + chalk.gray(' › '))
+    process.stdout.write(
+      chalk.gray('  allow? ')
+      + chalk.cyan('1') + chalk.gray(':once ')
+      + chalk.cyan('2') + chalk.gray(':session ')
+      + chalk.cyan('3') + chalk.gray(':project ')
+      + chalk.cyan('4') + chalk.gray(':deny › ')
+    )
 
     const isTTY = process.stdin.isTTY
     if (!isTTY) {
-      // Non-interactive: auto-approve
-      console.log(chalk.green('y') + chalk.gray(' (auto, non-interactive)'))
-      resolve(true)
+      // Non-interactive: fail closed so approval policy still means something in CI/pipes.
+      console.log(chalk.red('4') + chalk.gray(' (denied, non-interactive)'))
+      resolve({ allowed: false, scope: 'once' })
       return
     }
 
@@ -363,12 +369,18 @@ export function askPermission(toolName: string, preview: string): Promise<boolea
       process.stdin.removeListener('data', handler)
       if (!wasRaw) process.stdin.setRawMode(false)
 
-      if (key === 'y' || key === '\r') {
-        console.log(chalk.green('yes'))
-        resolve(true)
+      if (key === '1' || key === 'y' || key === '\r') {
+        console.log(chalk.green('allow once'))
+        resolve({ allowed: true, scope: 'once' })
+      } else if (key === '2') {
+        console.log(chalk.green('allow session'))
+        resolve({ allowed: true, scope: 'session' })
+      } else if (key === '3') {
+        console.log(chalk.green('allow project'))
+        resolve({ allowed: true, scope: 'project' })
       } else {
-        console.log(chalk.red('no'))
-        resolve(false)
+        console.log(chalk.red('deny'))
+        resolve({ allowed: false, scope: 'once' })
       }
     }
 

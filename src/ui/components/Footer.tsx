@@ -16,10 +16,13 @@ interface Props {
   isInputActive: boolean
   /** Current permission mode */
   permMode: string
+  /** Where current permission mode comes from */
+  permSource?: string
 }
 
-export function Footer({ isGenerating, isInputActive, permMode }: Props): React.ReactElement {
+export function Footer({ isGenerating, isInputActive, permMode, permSource }: Props): React.ReactElement {
   const { cols } = useTerminalSize()
+  const permLabel = permSource ? `${permMode}:${permSource}` : permMode
 
   const shortcuts: Array<{ key: string; label: string }> = []
 
@@ -29,14 +32,14 @@ export function Footer({ isGenerating, isInputActive, permMode }: Props): React.
     shortcuts.push({ key: 'enter', label: 'send' })
     shortcuts.push({ key: 'ctrl+j', label: 'newline' })
     shortcuts.push({ key: '/help', label: 'commands' })
-    shortcuts.push({ key: 'shift+tab', label: permMode })
+    shortcuts.push({ key: 'shift+tab', label: permLabel })
     shortcuts.push({ key: 'ctrl+z', label: 'undo' })
     shortcuts.push({ key: 'ctrl+l', label: 'clear' })
   } else {
     // Idle / waiting for prompt_ready — still show basic hints
     shortcuts.push({ key: 'enter', label: 'send' })
     shortcuts.push({ key: '/help', label: 'commands' })
-    shortcuts.push({ key: 'shift+tab', label: permMode })
+    shortcuts.push({ key: 'shift+tab', label: permLabel })
   }
 
   if (shortcuts.length === 0) return <Box height={0} />

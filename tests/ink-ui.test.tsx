@@ -15,6 +15,8 @@ import { InputArea } from '../src/ui/components/InputArea.js'
 import { TerminalSizeProvider } from '../src/ui/useTerminalSize.js'
 import { ChatSessionEmitter } from '../src/ui/session.js'
 import type { StatusInfo } from '../src/ui/types.js'
+import { App, buildHomeActions, resolveHomeActionSelection } from '../src/ui/components/App.js'
+import { getHomeLayout } from '../src/ui/components/homeLayout.js'
 
 describe('StatusBar', () => {
   const baseStatus: StatusInfo = {
@@ -39,9 +41,33 @@ describe('StatusBar', () => {
   })
 
   it('renders permission mode', () => {
-    const { lastFrame } = render(<TerminalSizeProvider><StatusBar status={baseStatus} /></TerminalSizeProvider>)
+    const { lastFrame } = render(<TerminalSizeProvider><StatusBar status={{ ...baseStatus, permSource: 'project' }} /></TerminalSizeProvider>)
     // New 3-line StatusBar shows permission as "bypass permissions on"
     expect(lastFrame()).toContain('bypass permissions on')
+    expect(lastFrame()).toContain('(project)')
+  })
+
+  it('renders current effort alongside mode and permissions', () => {
+    const { lastFrame } = render(<TerminalSizeProvider><StatusBar status={{ ...baseStatus, effort: 'max' }} /></TerminalSizeProvider>)
+    expect(lastFrame()).toContain('mode: default')
+    expect(lastFrame()).toContain('effort: max')
+  })
+
+  it('renders tool and output policy summary when provided', () => {
+    const { lastFrame } = render(
+      <TerminalSizeProvider><StatusBar status={{
+        ...baseStatus,
+        sessionId: 'auto-2026-04-21T11-00',
+        effort: 'high',
+        modelPolicySummary: 'inherit-current',
+        toolPolicySummary: 'review-only tools',
+        outputStyle: 'review findings',
+      }} /></TerminalSizeProvider>,
+    )
+    expect(lastFrame()).toContain('sid:auto-2026-04-21T11..')
+    expect(lastFrame()).toContain('model:inherit-current')
+    expect(lastFrame()).toContain('tools:review-only')
+    expect(lastFrame()).toContain('out:review findings')
   })
 
   it('renders git branch', () => {
@@ -146,8 +172,9 @@ describe('PermissionPrompt', () => {
     )
     expect(lastFrame()).toContain('write_file')
     expect(lastFrame()).toContain('write 500 bytes')
-    expect(lastFrame()).toContain('[y]')
-    expect(lastFrame()).toContain('[n]')
+    expect(lastFrame()).toContain('Allow')
+    expect(lastFrame()).toContain('Deny')
+    expect(lastFrame()).toContain('arrows move')
   })
 
   it('renders nothing when inactive', async () => {
@@ -211,6 +238,7 @@ describe('CommandPicker', () => {
     )
     expect(lastFrame()).toContain('/history')
     expect(lastFrame()).not.toContain('/model')
+    expect(lastFrame()).toContain('Commands')
   })
 
   it('renders nothing when inactive', async () => {
@@ -219,6 +247,135 @@ describe('CommandPicker', () => {
       <CommandPicker commands={[]} filter="" onSelect={() => {}} onCancel={() => {}} active={false} />,
     )
     expect(lastFrame()).toBe('')
+  })
+})
+
+describe('OptionPicker', () => {
+  it('renders title and options', async () => {
+    const { OptionPicker } = await import('../src/ui/components/OptionPicker.js')
+    const { lastFrame } = render(
+      <OptionPicker
+        title="Select mode"
+        subtitle="current: default"
+        options={[
+          { value: 'default', label: 'default', description: 'Balanced general mode' },
+          { value: 'reflect', label: 'reflect', description: 'Socratic debugging' },
+        ]}
+        onSelect={() => {}}
+        onCancel={() => {}}
+        active={true}
+      />,
+    )
+
+    expect(lastFrame()).toContain('Select mode')
+    expect(lastFrame()).toContain('current: default')
+    expect(lastFrame()).toContain('1. default')
+    expect(lastFrame()).toContain('2. reflect')
+  })
+
+  it('renders filterable mode with initial query applied', async () => {
+    const { OptionPicker } = await import('../src/ui/components/OptionPicker.js')
+    const { lastFrame } = render(
+      <OptionPicker
+        title="Search threads"
+        options={[
+          { value: 'thread-a', label: 'Alpha thread', description: 'design discussion' },
+          { value: 'thread-b', label: 'Beta thread', description: 'release prep' },
+        ]}
+        filterable={true}
+        filterPlaceholder="search"
+        initialQuery="beta"
+        onSelect={() => {}}
+        onCancel={() => {}}
+        active={true}
+      />,
+    )
+
+    expect(lastFrame()).toContain('search:')
+    expect(lastFrame()).toContain('beta')
+    expect(lastFrame()).toContain('Beta thread')
+    expect(lastFrame()).not.toContain('Alpha thread')
+  })
+
+  it('renders longer workflow-change descriptions for mode-style options', async () => {
+    const { OptionPicker } = await import('../src/ui/components/OptionPicker.js')
+    const { lastFrame } = render(
+      <OptionPicker
+        title="Select behavior mode"
+        subtitle="current: debug"
+        options={[
+          { value: 'debug', label: 'debug', description: 'reproduce → isolate → fix → verify · run + edit tools · effort=high · permissions=auto · tools=run + edit tools · output=debug walkthrough · current' },
+          { value: 'architect', label: 'architect', description: 'architecture/planning only · no code changes · plan tools · effort=max · permissions=plan · tools=planning-only tools · output=architecture plan' },
+        ]}
+        onSelect={() => {}}
+        onCancel={() => {}}
+        active={true}
+      />,
+    )
+
+    expect(lastFrame()).toContain('reproduce')
+    expect(lastFrame()).toContain('fix')
+    expect(lastFrame()).toContain('no code changes')
+    expect(lastFrame()).toContain('current')
+    expect(lastFrame()).toContain('effort=max')
+    expect(lastFrame()).toContain('permissions=plan')
+    expect(lastFrame()).toContain('tools=planning-only tools')
+    expect(lastFrame()).toContain('output=architecture plan')
+  })
+
+  it('windows long option lists instead of rendering every row at once', async () => {
+    const { OptionPicker } = await import('../src/ui/components/OptionPicker.js')
+    const { lastFrame } = render(
+      <OptionPicker
+        title="Select model"
+        options={Array.from({ length: 12 }, (_, index) => ({
+          value: `model-${index + 1}`,
+          label: `model-${index + 1}`,
+          description: `provider-${index + 1}`,
+        }))}
+        onSelect={() => {}}
+        onCancel={() => {}}
+        active={true}
+      />,
+    )
+
+    const frame = lastFrame()
+    expect(frame).toContain('1. model-1')
+    expect(frame).toContain('0. model-10')
+    expect(frame).not.toContain('model-12')
+    expect(frame).toContain('↓ 2 more')
+  })
+})
+
+describe('ThemePicker', () => {
+  it('renders the shared picker frame plus theme preview', async () => {
+    const { ThemePicker } = await import('../src/ui/components/ThemePicker.js')
+    const { lastFrame } = render(
+      <ThemePicker onSelect={() => {}} active={true} />,
+    )
+
+    expect(lastFrame()).toContain('Choose a theme')
+    expect(lastFrame()).toContain('Browse with arrows')
+    expect(lastFrame()).toContain('Preview:')
+  })
+})
+
+describe('DetailPanel', () => {
+  it('renders title, subtitle, and markdown body', async () => {
+    const { DetailPanel } = await import('../src/ui/components/DetailPanel.js')
+    const { lastFrame } = render(
+      <DetailPanel
+        info={{
+          title: 'Auth bug triage',
+          subtitle: 'thread-1 · 3 messages',
+          body: '- **user**: login fails',
+        }}
+      />,
+    )
+
+    expect(lastFrame()).toContain('Auth bug triage')
+    expect(lastFrame()).toContain('thread-1')
+    expect(lastFrame()).toContain('login fails')
   })
 })
 
@@ -271,12 +428,12 @@ describe('Footer', () => {
   it('shows send/help hints when input is active', async () => {
     const { Footer } = await import('../src/ui/components/Footer.js')
     const { lastFrame } = render(
-      <TerminalSizeProvider><Footer isGenerating={false} isInputActive={true} permMode="auto" /></TerminalSizeProvider>,
+      <TerminalSizeProvider><Footer isGenerating={false} isInputActive={true} permMode="auto" permSource="project" /></TerminalSizeProvider>,
     )
     expect(lastFrame()).toContain('enter')
     expect(lastFrame()).toContain('send')
     expect(lastFrame()).toContain('/help')
-    expect(lastFrame()).toContain('auto')
+    expect(lastFrame()).toContain('auto:project')
   })
 
   it('shows basic hints when idle', async () => {
@@ -370,6 +527,16 @@ describe('ScrollBox', () => {
 })
 
 describe('Banner', () => {
+  it('drops the orca art when the frame is too narrow', async () => {
+    const { shouldRenderBannerArt } = await import('../src/ui/components/Banner.js')
+    expect(shouldRenderBannerArt(getHomeLayout(24).frameWidth)).toBe(false)
+  })
+
+  it('keeps the orca art when the frame is wide enough', async () => {
+    const { shouldRenderBannerArt } = await import('../src/ui/components/Banner.js')
+    expect(shouldRenderBannerArt(92)).toBe(true)
+  })
+
   it('renders version and cwd', async () => {
     const { Banner } = await import('../src/ui/components/Banner.js')
     const { lastFrame } = render(
@@ -398,6 +565,184 @@ describe('Banner', () => {
     expect(lastFrame()).toContain('CLAUDE.md')
     expect(lastFrame()).toContain('41 tools')
     expect(lastFrame()).toContain('37 hooks')
+  })
+})
+
+describe('HomePanel', () => {
+  it('uses a centered wide-frame layout with balanced split columns', () => {
+    const layout = getHomeLayout(180)
+    expect(layout.split).toBe(true)
+    expect(layout.leftColumnWidth + layout.gap + layout.rightColumnWidth).toBe(layout.frameWidth)
+    expect(layout.primaryWidth).toBe(layout.frameWidth)
+    expect(layout.offset).toBeGreaterThan(0)
+  })
+
+  it('keeps narrow terminals stacked on a single frame width', () => {
+    const layout = getHomeLayout(90)
+    expect(layout.split).toBe(false)
+    expect(layout.leftColumnWidth).toBe(layout.frameWidth)
+    expect(layout.rightColumnWidth).toBe(layout.frameWidth)
+    expect(layout.gap).toBe(0)
+  })
+
+  it('shrinks to the available width on very narrow terminals', () => {
+    const layout = getHomeLayout(32)
+    expect(layout.split).toBe(false)
+    expect(layout.frameWidth).toBe(28)
+    expect(layout.primaryWidth).toBe(28)
+  })
+
+  it('renders a single primary action and trust guidance', async () => {
+    const { HomePanel } = await import('../src/ui/components/HomePanel.js')
+    const status: StatusInfo = {
+      model: 'gpt-5.4',
+      contextPct: 12,
+      permMode: 'auto',
+      permSource: 'default',
+      turns: 0,
+      costUsd: 0,
+      behaviorMode: 'default',
+      effort: 'high',
+    }
+    const { lastFrame } = render(
+      <TerminalSizeProvider><HomePanel status={status} toolCount={41} hookCount={11} /></TerminalSizeProvider>,
+    )
+    expect(lastFrame()).toContain('Start Here')
+    expect(lastFrame()).toContain('Primary action: type a task below and press Enter')
+    expect(lastFrame()).toContain('Trust & State')
+    expect(lastFrame()).toContain('Failure Help')
+    expect(lastFrame()).toContain('prompt on dangerous tools')
+    expect(lastFrame()).toContain('Press Tab for quick actions')
+  })
+
+  it('surfaces saved-session recovery when summaries exist', async () => {
+    const { HomePanel } = await import('../src/ui/components/HomePanel.js')
+    const status: StatusInfo = {
+      model: 'gpt-5.4',
+      contextPct: 12,
+      permMode: 'auto',
+      permSource: 'default',
+      turns: 0,
+      costUsd: 0,
+      behaviorMode: 'default',
+      effort: 'high',
+    }
+    const { lastFrame } = render(
+      <TerminalSizeProvider><HomePanel status={status} toolCount={41} hookCount={11} savedSessionCount={3} /></TerminalSizeProvider>,
+    )
+    expect(lastFrame()).toContain('/sessions')
+    expect(lastFrame()).toContain('3 saved sessions')
+  })
+
+  it('truncates long session ids in the trust panel', async () => {
+    const { HomePanel } = await import('../src/ui/components/HomePanel.js')
+    const status: StatusInfo = {
+      model: 'gpt-5.4',
+      contextPct: 12,
+      permMode: 'auto',
+      permSource: 'default',
+      turns: 0,
+      costUsd: 0,
+      behaviorMode: 'default',
+      effort: 'high',
+      sessionId: 'auto-2026-04-22T23-43-40-extra-long',
+    }
+    const { lastFrame } = render(
+      <TerminalSizeProvider><HomePanel status={status} toolCount={41} hookCount={11} /></TerminalSizeProvider>,
+    )
+    expect(lastFrame()).toContain('Session: auto-2026-04-22T23..')
+    expect(lastFrame()).not.toContain('auto-2026-04-22T23-43-40-extra-long')
+  })
+})
+
+describe('App empty state', () => {
+  it('renders the home panel instead of the legacy quick-start list', () => {
+    const session = new ChatSessionEmitter()
+    const status: StatusInfo = {
+      model: 'gpt-5.4',
+      contextPct: 12,
+      permMode: 'auto',
+      permSource: 'default',
+      turns: 0,
+      costUsd: 0,
+      behaviorMode: 'default',
+      effort: 'high',
+    }
+    const banner = {
+      version: '0.8.0',
+      cwd: '/Users/me/project',
+      model: 'gpt-5.4',
+      permMode: 'auto',
+      toolCount: 41,
+      hookCount: 11,
+    }
+    const { lastFrame } = render(
+      <TerminalSizeProvider><App session={session} initialStatus={status} banner={banner} /></TerminalSizeProvider>,
+    )
+    expect(lastFrame()).toContain('Start Here')
+    expect(lastFrame()).toContain('Quick Paths')
+    expect(lastFrame()).not.toContain('Multi-Model Collaboration')
+  })
+
+  it('opens quick actions from the home panel on Tab', async () => {
+    const session = new ChatSessionEmitter()
+    const status: StatusInfo = {
+      model: 'gpt-5.4',
+      contextPct: 12,
+      permMode: 'auto',
+      permSource: 'default',
+      turns: 0,
+      costUsd: 0,
+      behaviorMode: 'default',
+      effort: 'high',
+    }
+    const banner = {
+      version: '0.8.0',
+      cwd: '/Users/me/project',
+      model: 'gpt-5.4',
+      permMode: 'auto',
+      toolCount: 41,
+      hookCount: 11,
+    }
+    const view = render(
+      <TerminalSizeProvider><App session={session} initialStatus={status} banner={banner} /></TerminalSizeProvider>,
+    )
+    view.stdin.write('\t')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(view.lastFrame()).toContain('Quick Actions')
+    expect(view.lastFrame()).toContain('Review changed files')
+    view.unmount()
+  })
+
+  it('maps quick action values into prompts and commands', () => {
+    expect(resolveHomeActionSelection('prompt:review the changed files')).toBe('review the changed files')
+    expect(resolveHomeActionSelection('command:/doctor')).toBe('/doctor')
+    expect(resolveHomeActionSelection('unknown')).toBeNull()
+  })
+
+  it('builds home actions from trust posture and saved-session state', () => {
+    const autoStatus: StatusInfo = {
+      model: 'gpt-5.4',
+      contextPct: 12,
+      permMode: 'auto',
+      turns: 0,
+      costUsd: 0,
+    }
+    const planStatus: StatusInfo = {
+      model: 'gpt-5.4',
+      contextPct: 12,
+      permMode: 'plan',
+      turns: 0,
+      costUsd: 0,
+    }
+
+    const autoActions = buildHomeActions(autoStatus, 2)
+    expect(autoActions.map((action) => action.label)).toContain('Tighten approval mode')
+    expect(autoActions.map((action) => action.label)).toContain('Inspect saved sessions')
+
+    const planActions = buildHomeActions(planStatus, 0)
+    expect(planActions.map((action) => action.label)).not.toContain('Tighten approval mode')
+    expect(planActions.map((action) => action.label)).not.toContain('Inspect saved sessions')
   })
 })
 
@@ -626,20 +971,20 @@ describe('ChatSessionEmitter', () => {
   it('emitPermissionRequest returns promise resolved by UI', async () => {
     const session = new ChatSessionEmitter()
     // Listen and auto-approve
-    session.on('permission_request', (e: { request: { resolve: (b: boolean) => void } }) => {
-      e.request.resolve(true)
+    session.on('permission_request', (e: { request: { resolve: (d: { allowed: boolean; scope: 'once' | 'session' | 'project' }) => void } }) => {
+      e.request.resolve({ allowed: true, scope: 'once' })
     })
     const result = await session.emitPermissionRequest({ toolName: 'write_file', preview: 'test' })
-    expect(result).toBe(true)
+    expect(result).toEqual({ allowed: true, scope: 'once' })
   })
 
   it('emitPermissionRequest returns false when denied', async () => {
     const session = new ChatSessionEmitter()
-    session.on('permission_request', (e: { request: { resolve: (b: boolean) => void } }) => {
-      e.request.resolve(false)
+    session.on('permission_request', (e: { request: { resolve: (d: { allowed: boolean; scope: 'once' | 'session' | 'project' }) => void } }) => {
+      e.request.resolve({ allowed: false, scope: 'once' })
     })
     const result = await session.emitPermissionRequest({ toolName: 'run_command', preview: 'rm -rf' })
-    expect(result).toBe(false)
+    expect(result).toEqual({ allowed: false, scope: 'once' })
   })
 
   it('emitClear fires clear event', () => {

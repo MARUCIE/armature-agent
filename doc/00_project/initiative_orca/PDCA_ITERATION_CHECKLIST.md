@@ -5,9 +5,9 @@
 | Gate | Result | Evidence |
 | --- | --- | --- |
 | Plan | Pass | `SOTA_GAP_SWARM_AUDIT.md` milestones and atomic task queue |
-| Do | Pass | Hook trust hardening, network-tool approval/guard, `orca queue list/show/follow/takeover/evidence`, `serve /chat` canonical TaskRun records, `orca run` default/goal-loop/mission/plan TaskRun records, shared slash-command registry, release evidence snapshot guard, CI gate integrity, clean-index command baseline |
+| Do | Pass | Hook trust hardening, network-tool approval/guard, `orca queue list/show/follow/takeover/evidence`, `serve /chat` canonical TaskRun records, `orca run` default/goal-loop/mission/plan TaskRun records, shared slash-command registry, release evidence snapshot guard, CI gate integrity, clean-index command baseline, chat operator control plane |
 | Check | Pass | `npm run lint`, `npm run build`, `npm test` -> `88` files / `1611` tests |
-| Act | Pass | ORCA-SWARM-014 completed; HomePanel consumer deferred to UI-baseline split; remaining queue shifts to chat REPL execution contract and Ink evidence UX |
+| Act | Pass | ORCA-SWARM-015 completed; remaining queue shifts to canonical chat REPL TaskRun records and Ink evidence UX |
 
 ## Baseline Checklist
 

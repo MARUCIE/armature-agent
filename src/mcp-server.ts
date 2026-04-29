@@ -6,7 +6,8 @@
  */
 
 import { createInterface } from 'node:readline'
-import { TOOL_DEFINITIONS, executeTool } from './tools.js'
+import { authorizeToolCall, executeToolWithPolicy, runPostToolHook, type PolicyPermissionMode } from './policy-executor.js'
+import { TOOL_DEFINITIONS } from './tools.js'
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -29,15 +30,28 @@ interface JsonRpcResponse {
 export class MCPServer {
   private cwd: string
   private rl: ReturnType<typeof createInterface> | null = null
+  private permissionMode: PolicyPermissionMode
+  private allowedTools?: string[]
+  private isPermissionGranted?: (ruleKey: string) => boolean
 
-  constructor(cwd: string) {
+  constructor(
+    cwd: string,
+    options: {
+      permissionMode?: PolicyPermissionMode
+      allowedTools?: string[]
+      isPermissionGranted?: (ruleKey: string) => boolean
+    } = {},
+  ) {
     this.cwd = cwd
+    this.permissionMode = options.permissionMode || 'auto'
+    this.allowedTools = options.allowedTools
+    this.isPermissionGranted = options.isPermissionGranted
   }
 
   /** Start listening on stdin for JSON-RPC messages (one per line). */
   start(): void {
     this.rl = createInterface({ input: process.stdin, terminal: false })
-    this.rl.on('line', (line: string) => {
+    this.rl.on('line', async (line: string) => {
       let req: JsonRpcRequest
       try {
         req = JSON.parse(line)
@@ -46,14 +60,14 @@ export class MCPServer {
         return
       }
 
-      const res = this.handleRequest(req)
+      const res = await this.handleRequest(req)
       // Notifications (no id) don't get a response
       if (res) this.send(res)
     })
   }
 
   /** Handle a single JSON-RPC request. Returns null for notifications. */
-  handleRequest(req: JsonRpcRequest): JsonRpcResponse | null {
+  async handleRequest(req: JsonRpcRequest): Promise<JsonRpcResponse | null> {
     // Notifications: id is absent or null — no response
     if (req.id === undefined || req.id === null) {
       // Still dispatch for side-effects (e.g. notifications/initialized) but never reply
@@ -76,7 +90,7 @@ export class MCPServer {
           jsonrpc: '2.0',
           id: req.id,
           result: {
-            tools: TOOL_DEFINITIONS.map(t => ({
+            tools: this.getAdvertisedTools().map(t => ({
               name: t.function.name,
               description: t.function.description,
               inputSchema: t.function.parameters,
@@ -87,7 +101,25 @@ export class MCPServer {
       case 'tools/call': {
         const name = (req.params?.name as string) || ''
         const args = (req.params?.arguments as Record<string, unknown>) || {}
-        const toolResult = executeTool(name, args, this.cwd)
+        const authorization = await authorizeToolCall({
+          name,
+          args,
+          cwd: this.cwd,
+          permissionMode: this.permissionMode,
+          allowedTools: this.allowedTools,
+          isPermissionGranted: this.isPermissionGranted,
+        })
+        const toolResult = authorization.authorized
+          ? executeToolWithPolicy({
+            name,
+            args: authorization.args,
+            cwd: this.cwd,
+            permissionMode: this.permissionMode,
+          })
+          : (authorization.result || { success: false, output: 'Tool execution blocked by policy.' })
+        if (authorization.authorized) {
+          await runPostToolHook(name, authorization.args, toolResult, this.cwd)
+        }
         return {
           jsonrpc: '2.0',
           id: req.id,
@@ -115,5 +147,10 @@ export class MCPServer {
 
   private send(res: JsonRpcResponse): void {
     process.stdout.write(JSON.stringify(res) + '\n')
+  }
+
+  private getAdvertisedTools() {
+    if (!this.allowedTools) return TOOL_DEFINITIONS
+    return TOOL_DEFINITIONS.filter((tool) => this.allowedTools!.includes(tool.function.name))
   }
 }

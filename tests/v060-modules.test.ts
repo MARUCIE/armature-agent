@@ -148,6 +148,28 @@ describe('ThreadManager: conversation persistence', () => {
   it('26.16 delete returns false for nonexistent', () => {
     expect(manager.delete('thread-fake-000000')).toBe(false)
   })
+
+  it('26.17 shareBundle writes markdown plus metadata sidecar', () => {
+    const thread = manager.create('Shareable thread', [{ role: 'user', content: 'hello' }])
+    const bundle = manager.shareBundle(thread.id)
+    expect(bundle).not.toBeNull()
+    expect(existsSync(bundle!.markdownPath)).toBe(true)
+    expect(existsSync(bundle!.metadataPath)).toBe(true)
+    const metadata = JSON.parse(readFileSync(bundle!.metadataPath, 'utf-8'))
+    expect(metadata.kind).toBe('thread-share')
+    expect(metadata.threadId).toBe(thread.id)
+  })
+
+  it('26.18 writeHandoffBundle records provenance metadata', () => {
+    const source = manager.create('Source thread', [{ role: 'user', content: 'handoff me' }])
+    const handoff = manager.fork(source.id, 'Handoff copy', { handoff: true })!
+    const bundle = manager.writeHandoffBundle(handoff.id, source.id)
+    expect(bundle).not.toBeNull()
+    const metadata = JSON.parse(readFileSync(bundle!.metadataPath, 'utf-8'))
+    expect(metadata.kind).toBe('thread-handoff')
+    expect(metadata.sourceThreadId).toBe(source.id)
+    expect(metadata.threadId).toBe(handoff.id)
+  })
 })
 
 // ── 2. Guidance Injection in System Prompt ────────────────────

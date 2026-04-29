@@ -19,6 +19,10 @@ export interface SessionStatsLike {
   totalOutputTokens: number
 }
 
+export function buildAutoSessionId(now: Date = new Date()): string {
+  return `auto-${now.toISOString().replace(/[:.]/g, '-').slice(0, 19)}`
+}
+
 export function buildChatFlags(opts: ChatOptionsLike): Partial<OrcaConfig> {
   const flags: Partial<OrcaConfig> = {}
   if (opts.model) flags.model = opts.model
@@ -58,10 +62,9 @@ export function saveInputHistory(historyFile: string, entries: string[]): void {
   }
 }
 
-export function autoSaveSession(provider: string, model: string, history: ChatMessage[], stats: SessionStatsLike, modeId?: string): void {
+export function autoSaveSession(sessionId: string, provider: string, model: string, history: ChatMessage[], stats: SessionStatsLike, modeId?: string): void {
   try {
-    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-    writeSavedSession(`auto-${ts}`, {
+    writeSavedSession(sessionId, {
       provider,
       model,
       modeId,
@@ -73,7 +76,7 @@ export function autoSaveSession(provider: string, model: string, history: ChatMe
       },
       savedAt: new Date().toISOString(),
     })
-    console.log(`\x1b[90m  session auto-saved: auto-${ts}\x1b[0m`)
+    console.log(`\x1b[90m  session auto-saved: ${sessionId}\x1b[0m`)
   } catch {
     // ignore
   }

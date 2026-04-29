@@ -11,6 +11,24 @@ import { resolveConfig, listProviders, resolveProvider } from '../config.js'
 import { formatContextWindow, formatPricing, getModelChoice } from '../model-catalog.js'
 import { logInfo, logWarning } from '../logger.js'
 
+function describeCloudflareAuthMode(): string {
+  const hasGatewayToken = Boolean(
+    process.env.CLOUDFLARE_AI_GATEWAY_API_KEY ||
+    process.env.CF_AIG_TOKEN ||
+    process.env.CLOUDFLARE_API_TOKEN,
+  )
+  const providerKeys = []
+  if (process.env.OPENAI_API_KEY) providerKeys.push('openai')
+  if (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN) providerKeys.push('anthropic')
+  if (process.env.GOOGLE_API_KEY || process.env.GOOGLE_AI_STUDIO_KEY || process.env.GEMINI_API_KEY) providerKeys.push('google')
+  if (process.env.XAI_API_KEY) providerKeys.push('xai')
+
+  if (hasGatewayToken && providerKeys.length) return `hybrid · provider keys: ${providerKeys.join(', ')}`
+  if (hasGatewayToken) return 'gateway token'
+  if (providerKeys.length) return `request-based · provider keys: ${providerKeys.join(', ')}`
+  return 'no auth detected'
+}
+
 export function createProvidersCommand(): Command {
   const cmd = new Command('providers')
     .description('List and test configured providers')
@@ -67,6 +85,9 @@ export function createProvidersCommand(): Command {
       const pricing = formatPricing(choice.pricing)
       const caution = choice.note ? ` · caution: ${choice.note}` : ''
       console.log(`  \x1b[90m${' '.repeat(16)}ctx ${context} · ${pricing}/1M in/out${caution}\x1b[0m`)
+      if (p.id === 'cloudflare' || p.id === 'claudeflare') {
+        console.log(`  \x1b[90m${' '.repeat(16)}auth ${describeCloudflareAuthMode()}\x1b[0m`)
+      }
       if (choice.note) logWarning('provider model caution', { provider: p.id, model: p.model, warning: choice.note })
     }
 
@@ -103,6 +124,9 @@ export function createProvidersCommand(): Command {
       console.log(`  Testing \x1b[1m${resolved.provider}\x1b[0m ...`)
       console.log(`  \x1b[90mEndpoint: ${resolved.baseURL || '(not set)'}\x1b[0m`)
       console.log(`  \x1b[90mModel: ${resolved.model}\x1b[0m`)
+      if (resolved.provider === 'cloudflare' || resolved.provider === 'claudeflare') {
+        console.log(`  \x1b[90mAuth: ${describeCloudflareAuthMode()}\x1b[0m`)
+      }
       const choice = getModelChoice(resolved.model, resolved.provider)
       console.log(`  \x1b[90mContext: ${formatContextWindow(choice.contextWindow)} · Pricing: ${formatPricing(choice.pricing)} per 1M in/out\x1b[0m`)
       if (choice.note) {

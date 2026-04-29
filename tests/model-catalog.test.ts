@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { listModelChoices, getAgenticWarning, formatContextWindow, formatPricing } from '../src/model-catalog.js'
+import {
+  findModelChoice,
+  formatContextWindow,
+  formatPricing,
+  getAgenticWarning,
+  groupModelChoicesByProvider,
+  listModelChoices,
+  modelChoiceKey,
+} from '../src/model-catalog.js'
 import type { OrcaConfig } from '../src/config.js'
 
 describe('model catalog', () => {
@@ -19,6 +27,14 @@ describe('model catalog', () => {
         disabled: false,
         aggregator: false,
       },
+      cloudflare: {
+        apiKey: 'test-cloudflare',
+        baseURL: 'https://gateway.ai.cloudflare.com/v1/account/default/compat',
+        models: ['anthropic/claude-opus-4.7', 'openai/gpt-5.4', 'google/gemini-3.1-pro'],
+        defaultModel: 'anthropic/claude-opus-4.7',
+        disabled: false,
+        aggregator: true,
+      },
     },
     defaultProvider: 'openai',
     defaultModel: 'gpt-5.4',
@@ -31,11 +47,35 @@ describe('model catalog', () => {
     const models = listModelChoices(baseConfig)
     expect(models.some((m) => m.model === 'gpt-5.4' && m.provider === 'openai')).toBe(true)
     expect(models.some((m) => m.model === 'gemini-3.1-pro' && m.provider === 'google')).toBe(true)
+    expect(models.some((m) => m.model === 'anthropic/claude-opus-4.7' && m.provider === 'cloudflare')).toBe(true)
   })
 
   it('injects current model if not present in config', () => {
     const models = listModelChoices(baseConfig, 'custom-agent-model')
     expect(models[0]!.model).toBe('custom-agent-model')
+  })
+
+  it('keeps duplicate model names provider-addressable', () => {
+    const models = listModelChoices({
+      ...baseConfig,
+      providers: {
+        ...baseConfig.providers,
+        poe: {
+          apiKey: 'test-poe',
+          baseURL: 'https://api.poe.com/v1',
+          models: ['gpt-5.4'],
+          defaultModel: 'gpt-5.4',
+          disabled: false,
+          aggregator: true,
+        },
+      },
+    })
+
+    const poeGpt = models.find((model) => model.model === 'gpt-5.4' && model.provider === 'poe')
+    expect(poeGpt).toBeDefined()
+    expect(findModelChoice(models, modelChoiceKey(poeGpt!))?.provider).toBe('poe')
+    expect(findModelChoice(models, 'gpt-5.4', 'poe')?.provider).toBe('poe')
+    expect(groupModelChoicesByProvider(models).some((group) => group.provider === 'poe' && group.choices.length === 1)).toBe(true)
   })
 
   it('marks flash-lite as cautionary for agentic workflows', () => {

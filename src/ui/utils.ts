@@ -3,6 +3,10 @@ export function truncateLabel(label: string, maxLen: number = 60): string {
   return label.length > maxLen ? label.slice(0, maxLen - 3) + '...' : label
 }
 
+export function truncateSessionId(sessionId: string, maxLen: number = 20): string {
+  return sessionId.length > maxLen ? `${sessionId.slice(0, maxLen - 2)}..` : sessionId
+}
+
 interface SlashCommandLike {
   name: string
 }

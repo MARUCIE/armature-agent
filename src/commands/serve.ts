@@ -11,21 +11,55 @@
 
 import { Command } from 'commander'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
-import { listProviders, resolveConfig, resolveProvider } from '../config.js'
+import { listProviders, readEffectivePermissionAllowlist, replPermissionModeFromConfig, resolveConfig, resolveProvider } from '../config.js'
 import { streamChat, chatOnce } from '../providers/openai-compat.js'
 import { buildSystemPrompt } from '../system-prompt.js'
+import { isAuthorizedRequest, resolveServeAuthToken } from '../policy-executor.js'
 import { recordUsage } from '../usage-db.js'
 import type { OrcaConfig } from '../config.js'
 import { getModelChoice, formatContextWindow, formatPricing, getPricingForModel } from '../model-catalog.js'
 import { gatherDoctorReport } from '../doctor.js'
+import { EvolutionStore } from '../evolution/store.js'
+import { observeRuntimeEvent } from '../evolution/observer.js'
 import { logInfo, logWarning } from '../logger.js'
 import { MCPServer } from '../mcp-server.js'
-import { createTaskRun, createWorkSession, finishTaskRun } from '../work-session-store.js'
+import {
+  getLatestSavedSessionSummary,
+  getSavedSessionDetailByName,
+  listSavedSessionSummaries,
+} from '../session-store.js'
+import {
+  createTaskRun,
+  createWorkSession,
+  finishTaskRun,
+  getLatestWorkSessionSummary,
+  getTaskRunDetailById,
+  getWorkSessionDetailById,
+  listTaskRunSummaries,
+  listWorkSessionSummaries,
+} from '../work-session-store.js'
+
+export const MAX_CHAT_BODY_BYTES = 1024 * 1024
+const LOOKUP_ID_PATTERN = /^[A-Za-z0-9._-]+$/
 
 export interface ServerState {
   config: OrcaConfig
   resolved: ReturnType<typeof resolveProvider>
   cwd: string
+  authToken?: string
+}
+
+export function resolveServeAuthTokenForHost(host: string, envToken = process.env.ORCA_SERVE_TOKEN): string | undefined {
+  return resolveServeAuthToken(isLoopbackHost, host, envToken)
+}
+
+function decodeLookupId(rawSegment: string): string | null {
+  try {
+    const decoded = decodeURIComponent(rawSegment)
+    return LOOKUP_ID_PATTERN.test(decoded) ? decoded : null
+  } catch {
+    return null
+  }
 }
 
 function getServeModelMetadata(provider: string, model: string): Record<string, unknown> {
@@ -42,26 +76,85 @@ function getServeModelMetadata(provider: string, model: string): Record<string, 
   }
 }
 
-function parseBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+class RequestBodyTooLargeError extends Error {
+  constructor(limitBytes: number) {
+    super(`Request body too large (max ${limitBytes} bytes)`)
+    this.name = 'RequestBodyTooLargeError'
+  }
+}
+
+function parseBody(req: IncomingMessage, limitBytes: number): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
-    let data = ''
-    req.on('data', chunk => { data += chunk })
+    const chunks: Buffer[] = []
+    let totalBytes = 0
+    let settled = false
+
+    req.on('data', chunk => {
+      if (settled) return
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+      totalBytes += buffer.length
+      if (totalBytes > limitBytes) {
+        settled = true
+        reject(new RequestBodyTooLargeError(limitBytes))
+        return
+      }
+      chunks.push(buffer)
+    })
     req.on('end', () => {
+      if (settled) return
+      settled = true
+      const data = Buffer.concat(chunks).toString('utf8')
       try { resolve(JSON.parse(data || '{}')) }
       catch { reject(new Error('Invalid JSON body')) }
     })
-    req.on('error', reject)
+    req.on('error', err => {
+      if (settled) return
+      settled = true
+      reject(err)
+    })
   })
 }
 
-function cors(res: ServerResponse): void {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+function getDeclaredContentLength(req: IncomingMessage): number | undefined {
+  const raw = req.headers['content-length']
+  const value = Array.isArray(raw) ? raw[0] : raw
+  if (!value) return undefined
+  const parsed = Number.parseInt(value, 10)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined
+}
+
+function cors(req: IncomingMessage, res: ServerResponse): void {
+  const origin = req.headers.origin
+  if (typeof origin === 'string' && isLoopbackOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 }
 
-function json(res: ServerResponse, status: number, data: unknown): void {
-  cors(res)
+function isLoopbackOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin)
+    return isLoopbackHost(url.hostname)
+  } catch {
+    return false
+  }
+}
+
+function isLoopbackHost(host: string): boolean {
+  return host === '127.0.0.1' || host === 'localhost' || host === '::1'
+}
+
+function isLoopbackRequest(req: IncomingMessage): boolean {
+  const remote = req.socket.remoteAddress || ''
+  return remote === '127.0.0.1'
+    || remote === '::1'
+    || remote === '::ffff:127.0.0.1'
+}
+
+function json(req: IncomingMessage, res: ServerResponse, status: number, data: unknown): void {
+  cors(req, res)
   res.writeHead(status, { 'Content-Type': 'application/json' })
   res.end(JSON.stringify(data))
 }
@@ -69,23 +162,34 @@ function json(res: ServerResponse, status: number, data: unknown): void {
 function summarizeTaskPrompt(prompt: string): string {
   const normalized = prompt.replace(/\s+/g, ' ').trim()
   if (normalized.length <= 120) return normalized
-  return normalized.slice(0, 117) + '...'
-}
-
-function calculateUsageCostUsd(model: string, inputTokens: number, outputTokens: number): number {
-  const pricing = getPricingForModel(model)
-  return pricing ? (inputTokens * pricing[0] + outputTokens * pricing[1]) / 1_000_000 : 0
+  return `${normalized.slice(0, 117)}...`
 }
 
 async function handleChat(req: IncomingMessage, res: ServerResponse, state: ServerState): Promise<void> {
-  const body = await parseBody(req)
+  const declaredContentLength = getDeclaredContentLength(req)
+  if (declaredContentLength !== undefined && declaredContentLength > MAX_CHAT_BODY_BYTES) {
+    req.resume()
+    json(req, res, 413, { error: `Request body too large (max ${MAX_CHAT_BODY_BYTES} bytes)` })
+    return
+  }
+
+  let body: Record<string, unknown>
+  try {
+    body = await parseBody(req, MAX_CHAT_BODY_BYTES)
+  } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      json(req, res, 413, { error: err.message })
+      return
+    }
+    throw err
+  }
   const prompt = (body.prompt as string) || ''
   const model = (body.model as string) || state.resolved.model
   const stream = body.stream !== false // default: streaming
   logInfo('serve chat request', { model, stream, cwd: state.cwd })
 
   if (!prompt) {
-    json(res, 400, { error: 'Missing "prompt" field' })
+    json(req, res, 400, { error: 'Missing "prompt" field' })
     return
   }
 
@@ -115,10 +219,9 @@ async function handleChat(req: IncomingMessage, res: ServerResponse, state: Serv
         outputTokens: 0,
         costUsd: 0,
         durationMs: 0,
-        turns: 1,
       },
     })
-    json(res, 500, {
+    json(req, res, 500, {
       error: 'No baseURL configured for provider',
       workSessionId: workSession.id,
       taskRunId: taskRun.id,
@@ -134,15 +237,13 @@ async function handleChat(req: IncomingMessage, res: ServerResponse, state: Serv
         { apiKey: state.resolved.apiKey, baseURL: state.resolved.baseURL, model },
         prompt,
       )
-      const durationMs = Date.now() - startTime
-      const costUsd = calculateUsageCostUsd(model, result.inputTokens, result.outputTokens)
-      recordUsage({
+      const usageRef = recordUsage({
         provider: state.resolved.provider,
         model,
         inputTokens: result.inputTokens,
         outputTokens: result.outputTokens,
-        costUsd,
-        durationMs,
+        costUsd: (() => { const p = getPricingForModel(model); return p ? (result.inputTokens * p[0] + result.outputTokens * p[1]) / 1_000_000 : 0 })(),
+        durationMs: Date.now() - startTime,
         command: 'serve',
         cwd: state.cwd,
       })
@@ -152,13 +253,28 @@ async function handleChat(req: IncomingMessage, res: ServerResponse, state: Serv
         usage: {
           inputTokens: result.inputTokens,
           outputTokens: result.outputTokens,
-          costUsd,
-          durationMs,
+          costUsd: (() => { const p = getPricingForModel(model); return p ? (result.inputTokens * p[0] + result.outputTokens * p[1]) / 1_000_000 : 0 })(),
+          durationMs: Date.now() - startTime,
           turns: 1,
         },
       })
+      observeRuntimeEvent({
+        category: 'serve',
+        severity: 'info',
+        summary: 'serve chat completed',
+        details: `stream=false`,
+        command: 'serve',
+        provider: state.resolved.provider,
+        model,
+        cwd: state.cwd,
+        evidence: {
+          workSessionId: workSession.id,
+          taskRunId: taskRun.id,
+          usageRef: usageRef || undefined,
+        },
+      })
       logInfo('serve chat completed', { provider: state.resolved.provider, model, stream: false, inputTokens: result.inputTokens, outputTokens: result.outputTokens })
-      json(res, 200, {
+      json(req, res, 200, {
         text: result.text,
         model,
         inputTokens: result.inputTokens,
@@ -167,27 +283,42 @@ async function handleChat(req: IncomingMessage, res: ServerResponse, state: Serv
         taskRunId: taskRun.id,
       })
     } catch (err) {
-      const durationMs = Date.now() - startTime
-      const summary = err instanceof Error ? err.message : String(err)
-      logWarning('serve chat failed', { provider: state.resolved.provider, model, error: summary })
+      logWarning('serve chat failed', { provider: state.resolved.provider, model, error: err instanceof Error ? err.message : String(err) })
       finishTaskRun(taskRun.id, {
         status: 'failed',
-        summary,
+        summary: err instanceof Error ? err.message : String(err),
         usage: {
           inputTokens: 0,
           outputTokens: 0,
           costUsd: 0,
-          durationMs,
+          durationMs: Date.now() - startTime,
           turns: 1,
         },
       })
-      json(res, 500, { error: summary, workSessionId: workSession.id, taskRunId: taskRun.id })
+      observeRuntimeEvent({
+        category: 'serve',
+        severity: 'error',
+        summary: `serve chat failed: ${err instanceof Error ? err.message : String(err)}`,
+        command: 'serve',
+        provider: state.resolved.provider,
+        model,
+        cwd: state.cwd,
+        evidence: {
+          workSessionId: workSession.id,
+          taskRunId: taskRun.id,
+        },
+      })
+      json(req, res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+        workSessionId: workSession.id,
+        taskRunId: taskRun.id,
+      })
     }
     return
   }
 
   // SSE streaming
-  cors(res)
+  cors(req, res)
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -231,13 +362,26 @@ async function handleChat(req: IncomingMessage, res: ServerResponse, state: Serv
   } catch (err) {
     failed = true
     failureSummary = err instanceof Error ? err.message : String(err)
-    logWarning('serve streaming chat failed', { provider: state.resolved.provider, model, error: failureSummary })
-    res.write(`data: ${JSON.stringify({ type: 'error', error: failureSummary })}\n\n`)
+    logWarning('serve streaming chat failed', { provider: state.resolved.provider, model, error: err instanceof Error ? err.message : String(err) })
+    observeRuntimeEvent({
+      category: 'serve',
+      severity: 'error',
+      summary: `serve streaming chat failed: ${err instanceof Error ? err.message : String(err)}`,
+      command: 'serve',
+      provider: state.resolved.provider,
+      model,
+      cwd: state.cwd,
+      evidence: {
+        workSessionId: workSession.id,
+        taskRunId: taskRun.id,
+      },
+    })
+    res.write(`data: ${JSON.stringify({ type: 'error', error: err instanceof Error ? err.message : String(err) })}\n\n`)
   }
 
   const durationMs = Date.now() - startTime
-  const costUsd = calculateUsageCostUsd(model, totalInput, totalOutput)
-  recordUsage({
+  const costUsd = (() => { const p = getPricingForModel(model); return p ? (totalInput * p[0] + totalOutput * p[1]) / 1_000_000 : 0 })()
+  const usageRef = recordUsage({
     provider: state.resolved.provider,
     model,
     inputTokens: totalInput,
@@ -258,6 +402,21 @@ async function handleChat(req: IncomingMessage, res: ServerResponse, state: Serv
       turns: 1,
     },
   })
+  observeRuntimeEvent({
+    category: 'serve',
+    severity: failed ? 'warn' : 'info',
+    summary: failed ? 'serve streaming chat failed' : 'serve streaming chat completed',
+    details: `stream=true`,
+    command: 'serve',
+    provider: state.resolved.provider,
+    model,
+    cwd: state.cwd,
+    evidence: {
+      workSessionId: workSession.id,
+      taskRunId: taskRun.id,
+      usageRef: usageRef || undefined,
+    },
+  })
   logInfo('serve streaming chat completed', { provider: state.resolved.provider, model, stream: true, inputTokens: totalInput, outputTokens: totalOutput })
 
   res.write('data: [DONE]\n\n')
@@ -268,7 +427,7 @@ export function createOrcaHttpServer(state: ServerState) {
   return createServer(async (req, res) => {
     // CORS preflight
     if (req.method === 'OPTIONS') {
-      cors(res)
+      cors(req, res)
       res.writeHead(204)
       res.end()
       return
@@ -277,15 +436,150 @@ export function createOrcaHttpServer(state: ServerState) {
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`)
 
     try {
+      if (!isAuthorizedRequest(req, state.authToken)) {
+        cors(req, res)
+        res.writeHead(401, {
+          'Content-Type': 'application/json',
+          'WWW-Authenticate': 'Bearer',
+        })
+        res.end(JSON.stringify({ error: 'Unauthorized' }))
+        return
+      }
+
       if (url.pathname === '/health') {
-        json(res, 200, {
+        json(req, res, 200, {
           status: 'ok',
           provider: state.resolved.provider,
           model: state.resolved.model,
           modelMetadata: getServeModelMetadata(state.resolved.provider, state.resolved.model),
         })
+      } else if (url.pathname === '/work-sessions') {
+        if (!isLoopbackRequest(req)) {
+          json(req, res, 403, { error: 'Work-session metadata is available only from loopback clients' })
+          return
+        }
+        json(req, res, 200, { workSessions: listWorkSessionSummaries() })
+      } else if (url.pathname === '/evolution') {
+        if (!isLoopbackRequest(req)) {
+          json(req, res, 403, { error: 'Evolution metadata is available only from loopback clients' })
+          return
+        }
+        json(req, res, 200, new EvolutionStore().getOverview())
+      } else if (url.pathname === '/evolution/candidates') {
+        if (!isLoopbackRequest(req)) {
+          json(req, res, 403, { error: 'Evolution metadata is available only from loopback clients' })
+          return
+        }
+        const kind = url.searchParams.get('kind') as 'prompt' | 'rule' | 'test-hint' | null
+        const status = url.searchParams.get('status') as 'draft' | 'verified' | 'promoted' | 'rejected' | null
+        const limit = Number.parseInt(url.searchParams.get('limit') || '20', 10)
+        json(req, res, 200, {
+          candidates: new EvolutionStore().listCandidateSummaries({
+            kind: kind || undefined,
+            status: status || undefined,
+            limit: Number.isFinite(limit) && limit > 0 ? limit : 20,
+          }),
+        })
+      } else if (url.pathname === '/work-sessions/latest') {
+        if (!isLoopbackRequest(req)) {
+          json(req, res, 403, { error: 'Work-session metadata is available only from loopback clients' })
+          return
+        }
+        const latest = getLatestWorkSessionSummary()
+        if (!latest) {
+          json(req, res, 404, { error: 'No work sessions' })
+          return
+        }
+        json(req, res, 200, latest)
+      } else if (url.pathname.startsWith('/work-sessions/') && url.pathname.endsWith('/task-runs')) {
+        if (!isLoopbackRequest(req)) {
+          json(req, res, 403, { error: 'Work-session metadata is available only from loopback clients' })
+          return
+        }
+        const id = decodeLookupId(url.pathname.slice('/work-sessions/'.length, -'/task-runs'.length))
+        if (!id) {
+          json(req, res, 404, { error: 'Not found' })
+          return
+        }
+        const detail = getWorkSessionDetailById(id)
+        if (!detail) {
+          json(req, res, 404, { error: `Work session "${id}" not found` })
+          return
+        }
+        json(req, res, 200, { workSessionId: id, taskRuns: listTaskRunSummaries(id) })
+      } else if (url.pathname.startsWith('/work-sessions/')) {
+        if (!isLoopbackRequest(req)) {
+          json(req, res, 403, { error: 'Work-session metadata is available only from loopback clients' })
+          return
+        }
+        const id = decodeLookupId(url.pathname.slice('/work-sessions/'.length))
+        if (!id) {
+          json(req, res, 404, { error: 'Not found' })
+          return
+        }
+        const detail = getWorkSessionDetailById(id)
+        if (!detail) {
+          json(req, res, 404, { error: `Work session "${id}" not found` })
+          return
+        }
+        json(req, res, 200, detail)
+      } else if (url.pathname === '/sessions') {
+        if (!isLoopbackRequest(req)) {
+          json(req, res, 403, { error: 'Session metadata is available only from loopback clients' })
+          return
+        }
+        json(req, res, 200, { sessions: listSavedSessionSummaries() })
+      } else if (url.pathname === '/sessions/latest') {
+        if (!isLoopbackRequest(req)) {
+          json(req, res, 403, { error: 'Session metadata is available only from loopback clients' })
+          return
+        }
+        const latest = getLatestSavedSessionSummary()
+        if (!latest) {
+          json(req, res, 404, { error: 'No saved sessions' })
+          return
+        }
+        json(req, res, 200, latest)
+      } else if (url.pathname.startsWith('/sessions/')) {
+        if (!isLoopbackRequest(req)) {
+          json(req, res, 403, { error: 'Session metadata is available only from loopback clients' })
+          return
+        }
+        const id = decodeLookupId(url.pathname.slice('/sessions/'.length))
+        if (!id) {
+          json(req, res, 404, { error: 'Not found' })
+          return
+        }
+        const detail = getSavedSessionDetailByName(id)
+        if (!detail) {
+          json(req, res, 404, { error: `Session "${id}" not found` })
+          return
+        }
+        json(req, res, 200, detail)
+      } else if (url.pathname === '/task-runs') {
+        if (!isLoopbackRequest(req)) {
+          json(req, res, 403, { error: 'Task-run metadata is available only from loopback clients' })
+          return
+        }
+        json(req, res, 200, { taskRuns: listTaskRunSummaries() })
+      } else if (url.pathname.startsWith('/task-runs/')) {
+        if (!isLoopbackRequest(req)) {
+          json(req, res, 403, { error: 'Task-run metadata is available only from loopback clients' })
+          return
+        }
+        const id = decodeLookupId(url.pathname.slice('/task-runs/'.length))
+        if (!id) {
+          json(req, res, 404, { error: 'Not found' })
+          return
+        }
+        const detail = getTaskRunDetailById(id)
+        if (!detail) {
+          json(req, res, 404, { error: `Task run "${id}" not found` })
+          return
+        }
+        json(req, res, 200, detail)
       } else if (url.pathname === '/doctor') {
-        json(res, 200, gatherDoctorReport(state.cwd))
+        json(req, res, 200, gatherDoctorReport(state.cwd))
       } else if (url.pathname === '/chat' && req.method === 'POST') {
         await handleChat(req, res, state)
       } else if (url.pathname === '/providers') {
@@ -293,9 +587,9 @@ export function createOrcaHttpServer(state: ServerState) {
           ...provider,
           modelMetadata: getServeModelMetadata(provider.id, provider.model),
         }))
-        json(res, 200, { providers, default: state.resolved.provider })
+        json(req, res, 200, { providers, default: state.resolved.provider })
       } else {
-        json(res, 404, { error: 'Not found. Endpoints: POST /chat, GET /health, GET /providers, GET /doctor' })
+        json(req, res, 404, { error: 'Not found. Endpoints: POST /chat, GET /health, GET /providers, GET /doctor, GET /sessions, GET /sessions/latest, GET /sessions/:id, GET /work-sessions, GET /work-sessions/latest, GET /work-sessions/:id, GET /work-sessions/:id/task-runs, GET /task-runs, GET /task-runs/:id' })
       }
     } catch (err) {
       logWarning('serve request failed', {
@@ -303,7 +597,7 @@ export function createOrcaHttpServer(state: ServerState) {
         method: req.method,
         error: err instanceof Error ? err.message : String(err),
       })
-      json(res, 500, { error: err instanceof Error ? err.message : String(err) })
+      json(req, res, 500, { error: err instanceof Error ? err.message : String(err) })
     }
   })
 }
@@ -326,13 +620,19 @@ export function createServeCommand(): Command {
       const cwd = process.cwd()
 
       if (opts.mcp) {
-        const mcp = new MCPServer(cwd)
+        const persistedPermissionAllowlist = new Set(readEffectivePermissionAllowlist(cwd))
+        const mcp = new MCPServer(cwd, {
+          permissionMode: replPermissionModeFromConfig(config.permissionMode),
+          allowedTools: config.tools,
+          isPermissionGranted: (ruleKey) => persistedPermissionAllowlist.has(ruleKey),
+        })
         process.stderr.write('Orca MCP server started (stdio mode)\n')
         mcp.start()
         return
       }
 
-      const state: ServerState = { config, resolved, cwd }
+      const authToken = resolveServeAuthTokenForHost(opts.host)
+      const state: ServerState = { config, resolved, cwd, authToken }
       const server = createOrcaHttpServer(state)
 
       const port = parseInt(opts.port, 10) || 0
@@ -353,6 +653,18 @@ export function createServeCommand(): Command {
         console.log(`  \x1b[90m  GET  /health         Server status\x1b[0m`)
         console.log(`  \x1b[90m  GET  /providers      List providers\x1b[0m`)
         console.log(`  \x1b[90m  GET  /doctor         Runtime diagnostics\x1b[0m`)
+        console.log(`  \x1b[90m  GET  /sessions       Saved session summaries\x1b[0m`)
+        console.log(`  \x1b[90m  GET  /sessions/latest Latest saved session summary\x1b[0m`)
+        console.log(`  \x1b[90m  GET  /sessions/:id   Saved session detail (loopback only)\x1b[0m`)
+        console.log(`  \x1b[90m  GET  /work-sessions  Work session summaries (loopback only)\x1b[0m`)
+        console.log(`  \x1b[90m  GET  /work-sessions/latest Latest work session summary (loopback only)\x1b[0m`)
+        console.log(`  \x1b[90m  GET  /work-sessions/:id Work session detail (loopback only)\x1b[0m`)
+        console.log(`  \x1b[90m  GET  /work-sessions/:id/task-runs Task runs for a work session (loopback only)\x1b[0m`)
+        console.log(`  \x1b[90m  GET  /task-runs      Task run summaries (loopback only)\x1b[0m`)
+        console.log(`  \x1b[90m  GET  /task-runs/:id  Task run detail (loopback only)\x1b[0m`)
+        if (authToken) {
+          console.log(`  \x1b[90mAuth: Bearer token required for HTTP requests\x1b[0m`)
+        }
         console.log()
         console.log(`  \x1b[90mTest: curl -N http://${opts.host}:${actualPort}/chat -d '{"prompt":"hello"}'\x1b[0m`)
         console.log()

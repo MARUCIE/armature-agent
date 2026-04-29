@@ -9,6 +9,8 @@ import React, { useState, useEffect } from 'react'
 import { Box, Text } from 'ink'
 import { useTheme } from '../theme.js'
 import { useTerminalSize } from '../useTerminalSize.js'
+import { truncateSessionId } from '../utils.js'
+import { getHomeLayout } from './homeLayout.js'
 
 // Orca pixel art (compact version — 8 lines)
 const ORCA_LINES = [
@@ -21,6 +23,12 @@ const ORCA_LINES = [
   '     \u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2588\u2588\u2588\u2580\u2584\u2588\u2580',
   '          \u2591\u2591\u2591\u2591\u2591\u2591\u2591\u2580\u2588\u2588\u2588\u2580',
 ]
+
+const ORCA_ART_WIDTH = ORCA_LINES.reduce((max, line) => Math.max(max, line.length), 0)
+
+export function shouldRenderBannerArt(frameWidth: number): boolean {
+  return frameWidth >= ORCA_ART_WIDTH
+}
 
 interface Props {
   version: string
@@ -36,6 +44,7 @@ interface Props {
 export function Banner({ version, cwd, configFiles, toolCount, hookCount, model, permMode, sessionId }: Props): React.ReactElement {
   const { cols } = useTerminalSize()
   const theme = useTheme()
+  const layout = getHomeLayout(cols)
   const shortCwd = abbreviatePath(cwd)
 
   // Swim animation
@@ -49,7 +58,8 @@ export function Banner({ version, cwd, configFiles, toolCount, hookCount, model,
 
   const progress = Math.min(1, frame / totalFrames)
   const ease = 1 - Math.pow(1 - progress, 3)
-  const maxDrift = Math.max(0, cols - 30)
+  const showArt = shouldRenderBannerArt(layout.frameWidth)
+  const maxDrift = showArt ? Math.max(0, layout.frameWidth - ORCA_ART_WIDTH) : 0
   const drift = Math.round(maxDrift * (1 - ease))
 
   // Info rows
@@ -65,7 +75,7 @@ export function Banner({ version, cwd, configFiles, toolCount, hookCount, model,
     rows.push(['Config:', configFiles.join(', ')])
   }
   if (sessionId) {
-    rows.push(['Session:', sessionId.length > 20 ? sessionId.slice(0, 18) + '..' : sessionId])
+    rows.push(['Session:', truncateSessionId(sessionId)])
   }
 
   let fleetLine: string | null = null
@@ -75,27 +85,27 @@ export function Banner({ version, cwd, configFiles, toolCount, hookCount, model,
   } catch {}
   if (fleetLine) rows.push(['Fleet:', fleetLine])
 
-  const boxWidth = Math.min(cols - 4, 60)
+  const labelWidth = rows.reduce((max, [label]) => Math.max(max, label.length), 0) + 1
 
   return (
-    <Box flexDirection="column" marginBottom={1}>
-      {/* Orca pixel art with swim animation */}
-      <Box flexDirection="column">
-        {ORCA_LINES.map((line, i) => {
-          const wave = Math.round(Math.sin((frame / totalFrames) * Math.PI * 3 + i * 0.4) * 2 * (1 - progress))
-          const pad = Math.max(0, Math.min(maxDrift, drift + wave))
-          return <Text key={i} color={theme.accent}>{' '.repeat(pad)}{line}</Text>
-        })}
-      </Box>
+    <Box flexDirection="column" marginBottom={1} marginLeft={layout.offset}>
+      {showArt ? (
+        <Box flexDirection="column">
+          {ORCA_LINES.map((line, i) => {
+            const wave = Math.round(Math.sin((frame / totalFrames) * Math.PI * 3 + i * 0.4) * 2 * (1 - progress))
+            const pad = Math.max(0, Math.min(maxDrift, drift + wave))
+            return <Text key={i} color={theme.accent}>{' '.repeat(pad)}{line}</Text>
+          })}
+        </Box>
+      ) : null}
 
       {/* Codex-style info box */}
       <Box
         flexDirection="column"
         borderStyle="round"
         borderColor={theme.accent}
-        width={boxWidth}
-        marginLeft={2}
-        marginTop={1}
+        width={layout.frameWidth}
+        marginTop={showArt ? 1 : 0}
         paddingLeft={1}
         paddingRight={1}
       >
@@ -106,7 +116,7 @@ export function Banner({ version, cwd, configFiles, toolCount, hookCount, model,
         </Box>
         {rows.map(([label, value], i) => (
           <Box key={i}>
-            <Text dimColor>{label.padEnd(16)}</Text>
+            <Text dimColor>{label.padEnd(labelWidth)}</Text>
             <Text>{value}</Text>
           </Box>
         ))}

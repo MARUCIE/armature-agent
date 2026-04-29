@@ -24,6 +24,9 @@ import type {
   ToolStartInfo,
   ToolEndInfo,
   PermissionRequest,
+  PermissionDecision,
+  OptionPickerRequest,
+  DetailPanelInfo,
   ModelProgress,
 } from './types.js'
 
@@ -72,16 +75,45 @@ export class ChatSessionEmitter extends EventEmitter {
     this.emitUI({ type: 'system_message', text, level })
   }
 
-  /** Emit permission request and wait for UI response. Returns true if allowed. */
+  emitDetailPanel(info: DetailPanelInfo): void {
+    this.emitUI({ type: 'detail_panel', info })
+  }
+
+  /** Emit permission request and wait for UI response. */
   emitPermissionRequest(req: {
     toolName: string
     preview: string
     diff?: { filePath: string; oldContent: string; newContent: string }
-  }): Promise<boolean> {
-    return new Promise<boolean>((resolve) => {
+  }): Promise<PermissionDecision> {
+    return new Promise<PermissionDecision>((resolve) => {
       this.emitUI({
         type: 'permission_request',
         request: { toolName: req.toolName, preview: req.preview, resolve, diff: req.diff },
+      })
+    })
+  }
+
+  /** Emit an option picker request and wait for UI selection. Returns selected value or null. */
+  emitOptionPicker(req: {
+    title: string
+    subtitle?: string
+    options: OptionPickerRequest['options']
+    filterable?: boolean
+    filterPlaceholder?: string
+    initialQuery?: string
+  }): Promise<string | null> {
+    return new Promise<string | null>((resolve) => {
+      this.emitUI({
+        type: 'option_picker_request',
+        request: {
+          title: req.title,
+          subtitle: req.subtitle,
+          options: req.options,
+          filterable: req.filterable,
+          filterPlaceholder: req.filterPlaceholder,
+          initialQuery: req.initialQuery,
+          resolve,
+        },
       })
     })
   }

@@ -15,7 +15,7 @@ The one CLI that can do what no single-vendor CLI can: ask Claude, GPT, and Gemi
 
 ```
        ..:::....
-    .::------::::..          Orca  v0.8.10
+    .::------::::..          Orca  v0.8.11
   .::--========----::::..    provider-neutral agent runtime
 .:--==+++*****+++===---::::..
 .:-=++**#########**++==---::..
@@ -473,7 +473,7 @@ Tested: 1611 automated tests, fast gate `63/63`, nightly gate `66/66`, release g
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Orca CLI  v0.8.10                                  │
+│  Orca CLI  v0.8.11                                  │
 │  TypeScript ESM CLI · 88 test files · 1611 tests    │
 ├─────────────────────────────────────────────────────┤
 │  Command Layer                                      │

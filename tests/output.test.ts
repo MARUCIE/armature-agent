@@ -30,4 +30,21 @@ describe('output', () => {
     expect(parsed.data).toBe('hello')
     expect(parsed.timestamp).toBeDefined()
   })
+
+  it('denies permission prompts when stdin is non-interactive', async () => {
+    const original = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY')
+    Object.defineProperty(process.stdin, 'isTTY', { value: false, configurable: true })
+
+    try {
+      const { askPermission } = await import('../src/output.js')
+      await expect(askPermission('run_command', 'npm publish')).resolves.toEqual({
+        allowed: false,
+        scope: 'once',
+      })
+    } finally {
+      if (original) {
+        Object.defineProperty(process.stdin, 'isTTY', original)
+      }
+    }
+  })
 })

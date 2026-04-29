@@ -1,4 +1,4 @@
-import type { OrcaConfig } from '../config.js'
+import { configPermissionModeFromRepl, type OrcaConfig } from '../config.js'
 import { hooks } from '../hooks.js'
 import { ContextMonitor, LoopDetector } from '../harness/index.js'
 import { getPricingForModel } from '../model-catalog.js'
@@ -8,7 +8,8 @@ import { chatOnce, messageContentToText } from '../providers/openai-compat.js'
 import type { ChatMessage, PromptContent } from '../providers/openai-compat.js'
 import { RetryTracker } from '../retry-intelligence.js'
 import { TokenBudgetManager } from '../token-budget.js'
-import { autoSaveSession } from './chat-support.js'
+import { autoSaveSession, buildAutoSessionId } from './chat-support.js'
+import { observeRuntimeEvent } from '../evolution/observer.js'
 import { buildImagePromptContent, expandFileReferences, extractImagePromptInput } from './chat-input.js'
 import { matchCognitive, formatCognitiveContext } from '../cognitive-skeleton.js'
 import { isMultiTaskPrompt } from '../planner/index.js'
@@ -45,7 +46,7 @@ interface ExecuteReplTurnOptions<TResolved extends ReplTurnResolvedProviderBase>
   history: ChatMessage[]
   stats: SessionStatsLike
   sessionInjectedPaths: Set<string>
-  mcpToolDefs: Array<Record<string, unknown>>
+  toolDefs?: Array<Record<string, unknown>>
   tokenBudget: TokenBudgetManager
   contextMonitor: ContextMonitor
   retryTracker: RetryTracker
@@ -53,11 +54,15 @@ interface ExecuteReplTurnOptions<TResolved extends ReplTurnResolvedProviderBase>
   session?: ChatSessionEmitter
   emitStatus: () => void
   emitInlineNotice: (text: string, level?: 'info' | 'warn' | 'error') => void
+  reasoningEffort?: string
   forceReflect?: boolean
   autoTriggerReflect?: boolean
   activeModeId?: string
+  sessionId?: string
   setLastTokPerSec: (value: number) => void
   onFileWrite: (path: string, oldContent: string | null) => void
+  isPermissionGranted?: (ruleKey: string) => boolean
+  recordPermissionGrant?: (ruleKey: string, scope: 'session' | 'project') => void
   runProxyTurn: (options: {
     prompt: PromptContent
     resolved: TResolved
@@ -69,15 +74,19 @@ interface ExecuteReplTurnOptions<TResolved extends ReplTurnResolvedProviderBase>
     onFirstToken?: () => void
     onStreamToken?: (text: string) => void
     onFileWrite?: (path: string, oldContent: string | null) => void
-    safeMode?: boolean
+    permissionMode?: PermMode
+    isPermissionGranted?: (ruleKey: string) => boolean
+    recordPermissionGrant?: (ruleKey: string, scope: 'session' | 'project') => void
     retryTracker?: RetryTracker
     loopDetector?: LoopDetector
     tokenBudget?: TokenBudgetManager
     contextMonitor?: ContextMonitor
+    toolDefs?: Array<Record<string, unknown>>
     extraToolDefs?: Array<Record<string, unknown>>
     injectedPaths?: Set<string>
     session?: ChatSessionEmitter
     onStreamingStatus?: (tokPerSec: number) => void
+    reasoningEffort?: string
   }) => Promise<{ inputTokens: number; outputTokens: number }>
   runSDKQuery: (options: {
     prompt: PromptContent
@@ -103,7 +112,7 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
     history,
     stats,
     sessionInjectedPaths,
-    mcpToolDefs,
+    toolDefs,
     tokenBudget,
     contextMonitor,
     retryTracker,
@@ -111,11 +120,14 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
     session,
     emitStatus,
     emitInlineNotice,
+    reasoningEffort,
     forceReflect,
     autoTriggerReflect,
     activeModeId,
     setLastTokPerSec,
     onFileWrite,
+    isPermissionGranted,
+    recordPermissionGrant,
     runProxyTurn,
     runSDKQuery,
   } = options
@@ -237,18 +249,21 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
           if (progress) progress.addText(text)
         },
         onFileWrite,
-        safeMode: currentPermMode !== 'yolo',
+        permissionMode: currentPermMode,
+        isPermissionGranted,
+        recordPermissionGrant,
         retryTracker,
         loopDetector,
         tokenBudget,
         contextMonitor,
-        extraToolDefs: mcpToolDefs,
+        toolDefs,
         injectedPaths: sessionInjectedPaths,
         session,
         onStreamingStatus: (tokPerSec) => {
           setLastTokPerSec(tokPerSec)
           if (useInk) emitStatus()
         },
+        reasoningEffort,
       })
       stats.turns++
       stats.totalInputTokens += result.inputTokens
@@ -298,7 +313,11 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
       const result = await runSDKQuery({
         prompt: turnPrompt,
         resolved,
-        config: activeSystemPrompt ? { ...config, systemPrompt: activeSystemPrompt } : config,
+        config: {
+          ...config,
+          systemPrompt: activeSystemPrompt || config.systemPrompt,
+          permissionMode: configPermissionModeFromRepl(currentPermMode),
+        },
         outputMode,
         cwd,
         history,
@@ -387,6 +406,7 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
     contextMonitor,
       retryTracker,
       activeModeId,
+      sessionId: options.sessionId,
       emitStatus,
       emitInlineNotice,
   })
@@ -511,10 +531,11 @@ function applyPostTurnCompaction(options: {
   contextMonitor: ContextMonitor
   retryTracker: RetryTracker
   activeModeId?: string
+  sessionId?: string
   emitStatus: () => void
   emitInlineNotice: (text: string, level?: 'info' | 'warn' | 'error') => void
 }): void {
-  const { resolved, currentModel, cwd, history, stats, tokenBudget, contextMonitor, retryTracker, activeModeId, emitStatus, emitInlineNotice } = options
+  const { resolved, currentModel, cwd, history, stats, tokenBudget, contextMonitor, retryTracker, activeModeId, sessionId, emitStatus, emitInlineNotice } = options
   const budget = tokenBudget.getBudget(history)
 
   if (budget.risk === 'red') {
@@ -522,11 +543,24 @@ function applyPostTurnCompaction(options: {
     const result = tokenBudget.smartCompact(history, 1)
     hooks.run('PostCompact', { event: 'PostCompact', cwd })
     emitInlineNotice(`auto-compact (${budget.utilizationPct}%): ${result.summary}`, 'error')
+    observeRuntimeEvent({
+      category: 'chat',
+      severity: 'warn',
+      summary: 'context pressure triggered auto-compact',
+      details: `risk=red utilization=${budget.utilizationPct}% summary=${result.summary}`,
+      command: 'chat',
+      provider: resolved.provider,
+      model: currentModel,
+      cwd,
+      evidence: {
+        sessionId,
+      },
+    })
     tokenBudget.clearCurrentUsage()
     contextMonitor.clearCurrentUsage()
     emitStatus()
     retryTracker.cleanup()
-    autoSaveSession(resolved.provider, currentModel, history, stats, activeModeId)
+    autoSaveSession(sessionId || buildAutoSessionId(), resolved.provider, currentModel, history, stats, activeModeId)
     emitInlineNotice('session auto-saved. Context freed — continuing.', 'info')
     return
   }
@@ -537,6 +571,19 @@ function applyPostTurnCompaction(options: {
     hooks.run('PostCompact', { event: 'PostCompact', cwd })
     if (result.dropped > 0 || result.tokensFreed > 0) {
       emitInlineNotice(`auto-compact (${budget.utilizationPct}%): ${result.summary}`, 'warn')
+      observeRuntimeEvent({
+        category: 'chat',
+        severity: 'warn',
+        summary: 'context pressure triggered auto-compact',
+        details: `risk=orange utilization=${budget.utilizationPct}% summary=${result.summary}`,
+        command: 'chat',
+        provider: resolved.provider,
+        model: currentModel,
+        cwd,
+        evidence: {
+          sessionId,
+        },
+      })
       tokenBudget.clearCurrentUsage()
       contextMonitor.clearCurrentUsage()
       emitStatus()
@@ -550,6 +597,19 @@ function applyPostTurnCompaction(options: {
     hooks.run('PostCompact', { event: 'PostCompact', cwd })
     if (result.dropped > 0 || result.tokensFreed > 0) {
       emitInlineNotice(`auto-compact (${budget.utilizationPct}%): ${result.summary}`, 'warn')
+      observeRuntimeEvent({
+        category: 'chat',
+        severity: 'warn',
+        summary: 'context pressure triggered auto-compact',
+        details: `risk=yellow utilization=${budget.utilizationPct}% summary=${result.summary}`,
+        command: 'chat',
+        provider: resolved.provider,
+        model: currentModel,
+        cwd,
+        evidence: {
+          sessionId,
+        },
+      })
       tokenBudget.clearCurrentUsage()
       contextMonitor.clearCurrentUsage()
       emitStatus()

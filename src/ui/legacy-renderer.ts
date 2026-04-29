@@ -74,8 +74,8 @@ export function attachLegacyRenderer(session: ChatSessionEmitter): () => void {
 
       case 'permission_request':
         askPermission(event.request.toolName, event.request.preview)
-          .then(allowed => event.request.resolve(allowed))
-          .catch(() => event.request.resolve(false))
+          .then(decision => event.request.resolve(decision))
+          .catch(() => event.request.resolve({ allowed: false, scope: 'once' }))
         break
 
       case 'session_end': {

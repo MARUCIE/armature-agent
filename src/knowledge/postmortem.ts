@@ -16,7 +16,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { homedir } from 'node:os'
+import { getOrcaHome } from '../logger.js'
 
 export interface Postmortem {
   id: string
@@ -36,8 +36,7 @@ export class PostmortemLog {
   private dir: string
 
   constructor() {
-    const home = process.env.ORCA_HOME || process.env.HOME || homedir()
-    this.dir = join(home, '.orca', 'knowledge', 'postmortems')
+    this.dir = join(getOrcaHome(), 'knowledge', 'postmortems')
     mkdirSync(this.dir, { recursive: true })
   }
 

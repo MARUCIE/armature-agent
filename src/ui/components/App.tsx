@@ -14,10 +14,10 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { Box, Text } from 'ink'
+import { Box, Text, useInput } from 'ink'
 import type { ChatSessionEmitter } from '../session.js'
 import { hasConfiguredThemePreference, useTheme, useThemeController } from '../theme.js'
-import type { UIEvent, StatusInfo, TurnSummaryInfo, ToolStartInfo, ToolEndInfo, ModelProgress } from '../types.js'
+import type { UIEvent, StatusInfo, TurnSummaryInfo, ToolStartInfo, ToolEndInfo, ModelProgress, DetailPanelInfo } from '../types.js'
 import { StatusBar } from './StatusBar.js'
 import { InputArea } from './InputArea.js'
 import { ThinkingSpinner } from './ThinkingSpinner.js'
@@ -28,8 +28,11 @@ import { MultiModelProgress } from './MultiModelProgress.js'
 import { Footer } from './Footer.js'
 import { MarkdownText } from './MarkdownText.js'
 import { Banner } from './Banner.js'
+import { DetailPanel } from './DetailPanel.js'
 import { CommandPicker } from './CommandPicker.js'
+import { OptionPicker } from './OptionPicker.js'
 import { DiffPreview } from './DiffPreview.js'
+import { HomePanel } from './HomePanel.js'
 import { ThemePicker } from './ThemePicker.js'
 import { ScrollBox } from './ScrollBox.js'
 import type { ScrollBoxHandle } from './ScrollBox.js'
@@ -38,6 +41,43 @@ import { getCommandPickerFilter, shouldShowCommandPicker, truncateLabel } from '
 import { listSlashCommandPickerItems } from '../../slash-commands.js'
 
 const SLASH_COMMANDS = listSlashCommandPickerItems()
+
+export function resolveHomeActionSelection(value: string): string | null {
+  if (value.startsWith('prompt:')) return value.slice('prompt:'.length)
+  if (value.startsWith('command:')) return value.slice('command:'.length)
+  return null
+}
+
+export function buildHomeActions(status: StatusInfo, savedSessionCount = 0): Array<{ value: string; label: string; description: string }> {
+  const actions = [
+    { value: 'prompt:review the changed files', label: 'Review changed files', description: 'Start with a concrete review prompt' },
+    { value: 'prompt:debug the failing tests', label: 'Debug failing tests', description: 'Drop straight into a high-signal debugging ask' },
+  ]
+
+  if (status.permMode !== 'plan') {
+    actions.push({
+      value: 'command:/permissions',
+      label: 'Tighten approval mode',
+      description: 'Inspect or move into a stricter trust posture',
+    })
+  }
+
+  if (savedSessionCount > 0) {
+    actions.push({
+      value: 'command:/sessions',
+      label: 'Inspect saved sessions',
+      description: `Review ${savedSessionCount} saved session${savedSessionCount === 1 ? '' : 's'} before starting fresh`,
+    })
+  }
+
+  actions.push({
+    value: 'command:/doctor',
+    label: 'Run doctor',
+    description: 'Check config, provider, and runtime health',
+  })
+
+  return actions
+}
 
 export interface BannerInfo {
   version: string
@@ -48,6 +88,7 @@ export interface BannerInfo {
   model?: string
   permMode?: string
   sessionId?: string
+  savedSessionCount?: number
 }
 
 interface Props {
@@ -59,11 +100,12 @@ interface Props {
 /** A completed output block (static, won't re-render) */
 interface OutputBlock {
   id: string
-  type: 'text' | 'tool' | 'system'
+  type: 'text' | 'tool' | 'system' | 'detail'
   content: string
   toolStart?: ToolStartInfo
   toolEnd?: ToolEndInfo
   level?: 'info' | 'warn' | 'error'
+  detailInfo?: DetailPanelInfo
 }
 
 /** Active tool call with animated spinner — lives outside <Static> so it can re-render */
@@ -126,8 +168,17 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
   const [inputHistory, setInputHistory] = useState<string[]>([])
   const [lastTurnSummary, setLastTurnSummary] = useState<TurnSummaryInfo | null>(null)
   const [permRequest, setPermRequest] = useState<{
-    toolName: string; preview: string; resolve: (b: boolean) => void
+    toolName: string; preview: string; resolve: (decision: { allowed: boolean; scope: 'once' | 'session' | 'project' }) => void
     diff?: { filePath: string; oldContent: string; newContent: string }
+  } | null>(null)
+  const [optionPickerRequest, setOptionPickerRequest] = useState<{
+    title: string
+    subtitle?: string
+    options: Array<{ value: string; label: string; description?: string }>
+    filterable?: boolean
+    filterPlaceholder?: string
+    initialQuery?: string
+    resolve: (value: string | null) => void
   } | null>(null)
   const [multiModelState, setMultiModelState] = useState<{ command: string; models: ModelProgress[] } | null>(null)
   const [activeTool, setActiveTool] = useState<{ id: string; start: ToolStartInfo; startTime: number } | null>(null)
@@ -215,6 +266,10 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
           setBlocks(b => [...b, { id: blockId(), type: 'system', content: event.text, level: event.level }])
           break
 
+        case 'detail_panel':
+          setBlocks(b => [...b, { id: blockId(), type: 'detail', content: '', detailInfo: event.info }])
+          break
+
         case 'turn_summary': {
           // Flush both textBuffer and streamingText (textBuffer may have unflushed tokens)
           const turnRemaining = textBuffer.current
@@ -251,11 +306,27 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
             toolName: event.request.toolName,
             preview: event.request.preview,
             diff: event.request.diff,
-            resolve: (allowed) => {
-              event.request.resolve(allowed)
+            resolve: (decision) => {
+              event.request.resolve(decision)
               setPermRequest(null)
             },
           })
+          break
+
+        case 'option_picker_request':
+          setOptionPickerRequest({
+            title: event.request.title,
+            subtitle: event.request.subtitle,
+            options: event.request.options,
+            filterable: event.request.filterable,
+            filterPlaceholder: event.request.filterPlaceholder,
+            initialQuery: event.request.initialQuery,
+            resolve: (value) => {
+              event.request.resolve(value)
+              setOptionPickerRequest(null)
+            },
+          })
+          setInputActive(false)
           break
 
         case 'multi_model_progress':
@@ -290,9 +361,17 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
           setThinking(false)
           setInputActive(false)
           setPermRequest(null)
+          if (optionPickerRequest) {
+            optionPickerRequest.resolve(null)
+          }
+          setOptionPickerRequest(null)
           break
 
         case 'clear':
+          if (optionPickerRequest) {
+            optionPickerRequest.resolve(null)
+          }
+          setOptionPickerRequest(null)
           setBlocks([])
           setStreamingText('')
           textBuffer.current = ''
@@ -303,28 +382,14 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
 
     session.on('*', handler)
     return () => { session.removeListener('*', handler) }
-  }, [session])
+  }, [session, optionPickerRequest])
 
   // Input value tracking (for command picker)
   const handleInputChange = useCallback((val: string) => {
     setInputValue(val)
   }, [])
 
-  // Command picker selection
-  const handleCommandSelect = useCallback((command: string) => {
-    // Submit the selected command
-    setInputHistory(prev => [...prev, command])
-    setInputActive(false)
-    setInputValue('')
-    session.submitInput(command)
-  }, [session])
-
-  const handleCommandCancel = useCallback(() => {
-    setInputValue('')
-  }, [])
-
-  // Input submission
-  const handleSubmit = useCallback((text: string) => {
+  const submitInputValue = useCallback((text: string) => {
     if (text) {
       setInputHistory(prev => [...prev, text])
     }
@@ -332,6 +397,20 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
     setInputValue('')
     session.submitInput(text || null)
   }, [session])
+
+  // Command picker selection
+  const handleCommandSelect = useCallback((command: string) => {
+    submitInputValue(command)
+  }, [submitInputValue])
+
+  const handleCommandCancel = useCallback(() => {
+    setInputValue('')
+  }, [])
+
+  // Input submission
+  const handleSubmit = useCallback((text: string) => {
+    submitInputValue(text)
+  }, [submitInputValue])
 
   const handleAbort = useCallback(() => {
     session.emitAbort()
@@ -366,6 +445,40 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
   }, [setThemeId])
 
   const hasContent = blocks.length > 0 || streamingText || thinking || activeTool || multiModelState
+  const homeActionsAvailable = !hasContent
+    && inputActive
+    && !permRequest
+    && !showThemePicker
+    && !optionPickerRequest
+    && !showPicker
+    && inputValue.length === 0
+
+  const openHomeActions = useCallback(() => {
+    setOptionPickerRequest({
+      title: 'Quick Actions',
+      subtitle: 'Choose a common starting path',
+      options: buildHomeActions(status, banner?.savedSessionCount).map((option) => ({
+        value: option.value,
+        label: option.label,
+        description: option.description,
+      })),
+      resolve: (value) => {
+        setOptionPickerRequest(null)
+        setInputActive(true)
+        if (!value) return
+        const nextInput = resolveHomeActionSelection(value)
+        if (nextInput) submitInputValue(nextInput)
+      },
+    })
+    setInputActive(false)
+  }, [banner?.savedSessionCount, status, submitInputValue])
+
+  useInput((_input, key) => {
+    if (!homeActionsAvailable) return
+    if (key.tab && !key.shift) {
+      openHomeActions()
+    }
+  }, { isActive: homeActionsAvailable })
 
   return (
     <Box flexDirection="column" flexGrow={1}>
@@ -395,35 +508,12 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
 
         {/* Empty state guide — SOTA feature showcase */}
         {!hasContent && (
-          <Box marginLeft={2} marginTop={1} marginBottom={1} flexDirection="column">
-            <Text color={theme.accent} bold>Quick start</Text>
-            <Text dimColor>  Ask anything in natural language, or use commands below.</Text>
-            <Text> </Text>
-            <Text color={theme.accent} bold>Multi-Model Collaboration</Text>
-            <Text dimColor>  /council    Ask N models, judge synthesizes best answer</Text>
-            <Text dimColor>  /race       First model to answer wins (speed race)</Text>
-            <Text dimColor>  /pipeline   Plan {'\u2192'} Code {'\u2192'} Review chain across models</Text>
-            <Text> </Text>
-            <Text color={theme.accent} bold>Autonomous Execution</Text>
-            <Text dimColor>  /mission    Autonomous multi-step task execution</Text>
-            <Text dimColor>  /plan       Task decomposition with acceptance criteria</Text>
-            <Text dimColor>  /commit     Stage, diff, and commit changes</Text>
-            <Text> </Text>
-            <Text color={theme.accent} bold>Session Control</Text>
-            <Text dimColor>  /model      Show or switch model</Text>
-            <Text dimColor>  /effort     Set reasoning effort (low/medium/high)</Text>
-            <Text dimColor>  /mode       Switch behavioral profile</Text>
-            <Text dimColor>  /compact    Smart context compaction</Text>
-            <Text> </Text>
-            <Text color={theme.accent} bold>Tools & Diagnostics</Text>
-            <Text dimColor>  /status     Session overview with context/cost/tokens</Text>
-            <Text dimColor>  /diff       Show git diff of current changes</Text>
-            <Text dimColor>  /doctor     Runtime health check</Text>
-            <Text dimColor>  /mcp        Connected MCP servers</Text>
-            <Text dimColor>  !command    Shell escape (run any terminal command)</Text>
-            <Text> </Text>
-            <Text dimColor>  /help       Full command reference</Text>
-          </Box>
+          <HomePanel
+            status={status}
+            toolCount={banner?.toolCount}
+            hookCount={banner?.hookCount}
+            savedSessionCount={banner?.savedSessionCount}
+          />
         )}
 
         {/* Output blocks (regular render — Static incompatible with fullscreen layout) */}
@@ -434,6 +524,9 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
                 <ToolCallBlock start={block.toolStart} end={block.toolEnd} />
               </Box>
             )
+          }
+          if (block.type === 'detail' && block.detailInfo) {
+            return <DetailPanel key={block.id} info={block.detailInfo} />
           }
           if (block.type === 'system') {
             const color = block.level === 'error' ? theme.error : block.level === 'warn' ? theme.warning : theme.info
@@ -494,6 +587,20 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
           />
         )}
 
+        {optionPickerRequest && (
+          <OptionPicker
+            title={optionPickerRequest.title}
+            subtitle={optionPickerRequest.subtitle}
+            options={optionPickerRequest.options}
+            filterable={optionPickerRequest.filterable}
+            filterPlaceholder={optionPickerRequest.filterPlaceholder}
+            initialQuery={optionPickerRequest.initialQuery}
+            onSelect={(value) => optionPickerRequest.resolve(value)}
+            onCancel={() => optionPickerRequest.resolve(null)}
+            active={!!optionPickerRequest}
+          />
+        )}
+
         {/* Input area */}
         <InputArea
           onSubmit={handleSubmit}
@@ -504,7 +611,7 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
           onChange={handleInputChange}
           active={inputActive && !permRequest && !showThemePicker}
           permissionBlocked={!!permRequest || showThemePicker}
-          pickerActive={showPicker}
+          pickerActive={showPicker || !!optionPickerRequest}
           history={inputHistory}
         />
 
@@ -516,6 +623,7 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
           isGenerating={thinking}
           isInputActive={inputActive && !permRequest}
           permMode={status.permMode}
+          permSource={status.permSource}
         />
       </Box>
     </Box>

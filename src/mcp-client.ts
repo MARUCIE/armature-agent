@@ -25,6 +25,18 @@ interface MCPServerConfig {
   cwd?: string
 }
 
+type MCPConfigScope = 'project' | 'home'
+
+interface MCPConfigProvenance {
+  path: string
+  scope: MCPConfigScope
+}
+
+interface LoadedMCPServerConfig {
+  config: MCPServerConfig
+  provenance: MCPConfigProvenance
+}
+
 interface JSONRPCRequest {
   jsonrpc: '2.0'
   id: number
@@ -65,7 +77,7 @@ interface MCPConnection {
 
 export class MCPClient {
   private connections = new Map<string, MCPConnection>()
-  private configs = new Map<string, MCPServerConfig>()
+  private configs = new Map<string, LoadedMCPServerConfig>()
   private disabled = new Set<string>()
 
   /** Load server configs from project/global config files.
@@ -75,14 +87,14 @@ export class MCPClient {
     const home = process.env.HOME || '/tmp'
 
     // Native Orca configs
-    const jsonPaths = [
-      join(cwd, '.mcp.json'),
-      join(cwd, '.orca.json'),
-      join(cwd, '.orca', 'mcp.json'),
-      join(home, '.orca', 'mcp.json'),
+    const jsonSources: Array<{ path: string; scope: MCPConfigScope }> = [
+      { path: join(cwd, '.mcp.json'), scope: 'project' },
+      { path: join(cwd, '.orca.json'), scope: 'project' },
+      { path: join(cwd, '.orca', 'mcp.json'), scope: 'project' },
+      { path: join(home, '.orca', 'mcp.json'), scope: 'home' },
     ]
 
-    for (const configPath of jsonPaths) {
+    for (const { path: configPath, scope } of jsonSources) {
       if (!existsSync(configPath)) continue
       try {
         const raw = JSON.parse(readFileSync(configPath, 'utf-8'))
@@ -90,7 +102,10 @@ export class MCPClient {
         if (typeof servers === 'object' && !Array.isArray(servers)) {
           for (const [name, config] of Object.entries(servers)) {
             if (typeof config === 'object' && config !== null) {
-              this.configs.set(name, config as MCPServerConfig)
+              this.setConfig(name, config as MCPServerConfig, {
+                path: configPath,
+                scope,
+              })
             }
           }
         }
@@ -98,11 +113,11 @@ export class MCPClient {
     }
 
     // Claude Code: .claude/settings.json (project + global)
-    const claudeSettingsPaths = [
-      join(cwd, '.claude', 'settings.json'),
-      join(home, '.claude', 'settings.json'),
+    const claudeSettingsSources: Array<{ path: string; scope: MCPConfigScope }> = [
+      { path: join(cwd, '.claude', 'settings.json'), scope: 'project' },
+      { path: join(home, '.claude', 'settings.json'), scope: 'home' },
     ]
-    for (const settingsPath of claudeSettingsPaths) {
+    for (const { path: settingsPath, scope } of claudeSettingsSources) {
       if (!existsSync(settingsPath)) continue
       try {
         const raw = JSON.parse(readFileSync(settingsPath, 'utf-8'))
@@ -114,10 +129,13 @@ export class MCPClient {
               const cc = config as Record<string, unknown>
               // Claude Code uses { command, args, env } — same as MCP standard
               if (cc.command) {
-                this.configs.set(name, {
+                this.setConfig(name, {
                   command: String(cc.command),
                   args: Array.isArray(cc.args) ? cc.args.map(String) : undefined,
                   env: cc.env && typeof cc.env === 'object' ? cc.env as Record<string, string> : undefined,
+                }, {
+                  path: settingsPath,
+                  scope,
                 })
               }
             }
@@ -150,7 +168,10 @@ export class MCPClient {
             ? argsMatch[1]!.split(',').map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean)
             : undefined
 
-          this.configs.set(name, { command, args })
+          this.setConfig(name, { command, args }, {
+            path: codexConfigPath,
+            scope: 'home',
+          })
         }
       } catch { /* ignore parse errors */ }
     }
@@ -158,11 +179,12 @@ export class MCPClient {
 
   /** Connect to a specific MCP server */
   async connect(name: string): Promise<boolean> {
-    const config = this.configs.get(name)
-    if (!config) return false
+    const loaded = this.configs.get(name)
+    if (!loaded) return false
     if (this.connections.has(name)) return true
 
     try {
+      const config = loaded.config
       const args = config.args || []
       // Expand ${VAR} references in env values (Claude Code config convention)
       const rawEnv = config.env || {}
@@ -240,8 +262,12 @@ export class MCPClient {
   }
 
   /** Connect to all configured servers in parallel (skips disabled) */
-  async connectAll(): Promise<string[]> {
-    const names = [...this.configs.keys()].filter(n => !this.disabled.has(n))
+  async connectAll(options: { startupSafeOnly?: boolean } = {}): Promise<string[]> {
+    const names = [...this.configs.keys()].filter((name) => {
+      if (this.disabled.has(name)) return false
+      if (!options.startupSafeOnly) return true
+      return this.getConfigProvenance(name)?.scope === 'home'
+    })
     const results = await Promise.allSettled(
       names.map(async (name) => {
         const ok = await this.connect(name)
@@ -251,6 +277,11 @@ export class MCPClient {
     return results
       .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled' && r.value !== null)
       .map(r => r.value)
+  }
+
+  /** Connect only startup-safe configs (home/global scopes, never repo-local). */
+  async connectStartupSafe(): Promise<string[]> {
+    return this.connectAll({ startupSafeOnly: true })
   }
 
   /** Disable a server (disconnect if connected) */
@@ -291,15 +322,30 @@ export class MCPClient {
   }
 
   /** List connected servers */
-  listServers(): Array<{ name: string; initialized: boolean; pid: number; disabled: boolean }> {
-    const result: Array<{ name: string; initialized: boolean; pid: number; disabled: boolean }> = []
+  listServers(): Array<{ name: string; initialized: boolean; pid: number; disabled: boolean; scope?: MCPConfigScope; configPath?: string }> {
+    const result: Array<{ name: string; initialized: boolean; pid: number; disabled: boolean; scope?: MCPConfigScope; configPath?: string }> = []
     for (const [name, conn] of this.connections) {
-      result.push({ name, initialized: conn.initialized, pid: conn.process.pid || 0, disabled: false })
+      const provenance = this.getConfigProvenance(name)
+      result.push({
+        name,
+        initialized: conn.initialized,
+        pid: conn.process.pid || 0,
+        disabled: false,
+        scope: provenance?.scope,
+        configPath: provenance?.path,
+      })
     }
     // Also list configured but not connected
-    for (const name of this.configs.keys()) {
+    for (const [name, loaded] of this.configs.entries()) {
       if (!this.connections.has(name)) {
-        result.push({ name, initialized: false, pid: 0, disabled: this.disabled.has(name) })
+        result.push({
+          name,
+          initialized: false,
+          pid: 0,
+          disabled: this.disabled.has(name),
+          scope: loaded.provenance.scope,
+          configPath: loaded.provenance.path,
+        })
       }
     }
     return result
@@ -432,7 +478,15 @@ export class MCPClient {
     return [...this.configs.keys()]
   }
 
+  getConfigProvenance(name: string): MCPConfigProvenance | undefined {
+    return this.configs.get(name)?.provenance
+  }
+
   // ── Internal ─────────────────────────────────────────────────
+
+  private setConfig(name: string, config: MCPServerConfig, provenance: MCPConfigProvenance): void {
+    this.configs.set(name, { config, provenance })
+  }
 
   private request(serverName: string, method: string, params: Record<string, unknown>): Promise<unknown> {
     const conn = this.connections.get(serverName)

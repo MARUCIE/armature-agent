@@ -10,7 +10,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
-import { homedir } from 'node:os'
+import { getOrcaHome } from '../logger.js'
 
 export interface Note {
   id: string
@@ -25,8 +25,7 @@ export class NotesManager {
   private dir: string
 
   constructor() {
-    const home = process.env.ORCA_HOME || process.env.HOME || homedir()
-    this.dir = join(home, '.orca', 'knowledge', 'notes')
+    this.dir = join(getOrcaHome(), 'knowledge', 'notes')
     mkdirSync(this.dir, { recursive: true })
   }
 

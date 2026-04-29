@@ -20,6 +20,69 @@ import { runCouncil, runRace, runPipeline, pickDiverseModels } from '../multi-mo
 import { StreamMarkdown } from '../markdown.js'
 import type { PipelineStage } from '../multi-model.js'
 
+function describeAggregatorRoute(
+  config: OrcaConfig,
+  aggregatorId: string | undefined,
+  explicitProvider?: string,
+): string {
+  if (!aggregatorId) return 'direct routing'
+
+  const isForced = Boolean(explicitProvider && explicitProvider === aggregatorId)
+  if (isForced) {
+    return `via ${aggregatorId} (forced override)`
+  }
+
+  const fallbackConfig: OrcaConfig = {
+    ...config,
+    providers: {
+      ...config.providers,
+      [aggregatorId]: {
+        ...(config.providers[aggregatorId] || {}),
+        disabled: true,
+      },
+    },
+  }
+  const fallbackAggregator = findAggregator(fallbackConfig)
+
+  return fallbackAggregator
+    ? `via ${aggregatorId} (preferred) · fallback ${fallbackAggregator}`
+    : `via ${aggregatorId} (preferred)`
+}
+
+function describeBillingPath(aggregatorId: string | undefined): string {
+  switch (aggregatorId) {
+    case 'copilot':
+      return 'copilot subscription'
+    case 'cloudflare':
+    case 'claudeflare':
+      return 'cloudflare credits'
+    case 'poe':
+      return 'poe credits'
+    case 'openrouter':
+      return 'openrouter credits'
+    case 'zenmux':
+      return 'zenmux account'
+    default:
+      return 'direct provider billing'
+  }
+}
+
+function describeFallbackBillingPath(config: OrcaConfig, aggregatorId: string | undefined): string | undefined {
+  if (!aggregatorId) return undefined
+  const fallbackConfig: OrcaConfig = {
+    ...config,
+    providers: {
+      ...config.providers,
+      [aggregatorId]: {
+        ...(config.providers[aggregatorId] || {}),
+        disabled: true,
+      },
+    },
+  }
+  const fallbackAggregator = findAggregator(fallbackConfig)
+  return fallbackAggregator ? describeBillingPath(fallbackAggregator) : undefined
+}
+
 // ── Council Command ──────────────────────────────────────────────
 
 export function createCouncilCommand(): Command {
@@ -62,15 +125,14 @@ export function createCouncilCommand(): Command {
           process.exit(1)
         }
 
-        const routeLabel = aggregatorId
-          ? `via ${aggregatorId} (aggregator)`
-          : 'direct routing'
+        const routeLabel = describeAggregatorRoute(config, aggregatorId, explicitProvider)
 
         console.log()
         console.log(`\x1b[36m  ╭─────────────────────────────────────────────────╮\x1b[0m`)
         console.log(`\x1b[36m  │  Council Mode · ${models.length} models · judge: ${judgeModel.slice(0, 20).padEnd(20)}│\x1b[0m`)
         console.log(`\x1b[36m  ╰─────────────────────────────────────────────────╯\x1b[0m`)
         console.log(`\x1b[90m  ${routeLabel}\x1b[0m`)
+        console.log(`\x1b[90m  billing: ${describeBillingPath(aggregatorId)}${describeFallbackBillingPath(config, aggregatorId) ? ` · fallback ${describeFallbackBillingPath(config, aggregatorId)}` : ''}\x1b[0m`)
         console.log()
         console.log(`\x1b[90m  prompt: ${prompt.slice(0, 70)}${prompt.length > 70 ? '...' : ''}\x1b[0m`)
         console.log()
@@ -144,13 +206,14 @@ export function createRaceCommand(): Command {
           process.exit(1)
         }
 
-        const routeLabel = aggregatorId ? `via ${aggregatorId}` : 'direct routing'
+        const routeLabel = describeAggregatorRoute(config, aggregatorId, explicitProvider)
 
         console.log()
         console.log(`\x1b[33m  ╭─────────────────────────────────────────╮\x1b[0m`)
         console.log(`\x1b[33m  │  Race Mode · ${String(models.length).padStart(2)} models · first wins   │\x1b[0m`)
         console.log(`\x1b[33m  ╰─────────────────────────────────────────╯\x1b[0m`)
         console.log(`\x1b[90m  ${routeLabel}\x1b[0m`)
+        console.log(`\x1b[90m  billing: ${describeBillingPath(aggregatorId)}${describeFallbackBillingPath(config, aggregatorId) ? ` · fallback ${describeFallbackBillingPath(config, aggregatorId)}` : ''}\x1b[0m`)
         console.log()
 
         const result = await runRace({
@@ -220,7 +283,7 @@ export function createPipelineCommand(): Command {
           )
         }
 
-        const routeLabel = aggregatorId ? `via ${aggregatorId}` : 'direct routing'
+        const routeLabel = describeAggregatorRoute(config, aggregatorId, explicitProvider)
 
         console.log()
         console.log(`\x1b[35m  ╭─────────────────────────────────────────────╮\x1b[0m`)
@@ -228,6 +291,7 @@ export function createPipelineCommand(): Command {
         console.log(`\x1b[35m  │  ${stages.map(s => s.role).join(' → ').padEnd(43)}│\x1b[0m`)
         console.log(`\x1b[35m  ╰─────────────────────────────────────────────╯\x1b[0m`)
         console.log(`\x1b[90m  ${routeLabel}\x1b[0m`)
+        console.log(`\x1b[90m  billing: ${describeBillingPath(aggregatorId)}${describeFallbackBillingPath(config, aggregatorId) ? ` · fallback ${describeFallbackBillingPath(config, aggregatorId)}` : ''}\x1b[0m`)
         console.log()
 
         const result = await runPipeline({

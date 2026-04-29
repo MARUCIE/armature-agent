@@ -20,9 +20,16 @@ const READ_ONLY_GIT_SUBCOMMANDS = new Set([
   'log',
   'diff',
   'show',
-  'branch',
   'rev-parse',
   'ls-files',
+  'branch',
+])
+
+const UNSAFE_GIT_SLASH_ARGS = new Set([
+  '-o',
+  '--output',
+  '--ext-diff',
+  '--no-index',
 ])
 
 const FILE_EXTENSION_PATTERN = 'html|htm|md|ts|tsx|js|jsx|json|txt|py|go|rs|css|scss|yaml|yml|toml|xml|csv|sql|sh|zsh|bash|swift|kt|java|c|cpp|h|rb|php|vue|svelte|png|jpg|jpeg|gif|webp|bmp|pdf|docx|pptx|xlsx|svg|mp3|wav|m4a|ogg|flac|mp4|mov|avi|mkv'
@@ -146,7 +153,45 @@ export function buildSafeGitSlashArgs(arg: string): string[] {
     throw new Error(`Unsupported /git subcommand: ${subcommand}. Allowed: ${[...READ_ONLY_GIT_SUBCOMMANDS].join(', ')}`)
   }
 
+  if (subcommand === 'branch') {
+    validateReadOnlyBranchArgs(gitArgs.slice(1))
+  }
+
+  for (const gitArg of gitArgs.slice(1)) {
+    if (UNSAFE_GIT_SLASH_ARGS.has(gitArg) || gitArg.startsWith('--output=')) {
+      throw new Error(`Unsafe /git argument: ${gitArg}`)
+    }
+  }
+
   return gitArgs
+}
+
+function validateReadOnlyBranchArgs(args: string[]): void {
+  if (args.length === 0) return
+
+  const SAFE_BRANCH_FLAGS = new Set([
+    '--list',
+    '-l',
+    '--show-current',
+    '-a',
+    '--all',
+    '-r',
+    '--remotes',
+  ])
+
+  let allowsPatterns = false
+  for (const arg of args) {
+    if (SAFE_BRANCH_FLAGS.has(arg)) {
+      if (arg === '--list' || arg === '-l') allowsPatterns = true
+      continue
+    }
+    if (arg.startsWith('-')) {
+      throw new Error(`Unsafe /git branch argument: ${arg}`)
+    }
+    if (!allowsPatterns) {
+      throw new Error(`Unsafe /git branch argument: ${arg}`)
+    }
+  }
 }
 
 function appendDedupHint(text: string, paths: Set<string>): string {

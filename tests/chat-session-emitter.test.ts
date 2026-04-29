@@ -70,4 +70,21 @@ describe('ChatSessionEmitter', () => {
     session.submitInput('fresh input')
     await expect(pending).resolves.toBe('fresh input')
   })
+
+  it('resolves option picker requests through the UI event bridge', async () => {
+    const session = new ChatSessionEmitter()
+    session.on('option_picker_request', (event) => {
+      expect(event.request.title).toBe('Select model')
+      expect(event.request.options.map((option) => option.value)).toEqual(['a', 'b'])
+      event.request.resolve('b')
+    })
+
+    await expect(session.emitOptionPicker({
+      title: 'Select model',
+      options: [
+        { value: 'a', label: 'Model A' },
+        { value: 'b', label: 'Model B' },
+      ],
+    })).resolves.toBe('b')
+  })
 })

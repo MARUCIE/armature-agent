@@ -8,9 +8,19 @@
  */
 
 import { Command } from 'commander'
-import { unlinkSync } from 'node:fs'
-import { messageContentToText, type ChatMessage } from '../providers/openai-compat.js'
-import { getLatestSavedSession, getSavedSessionById, listSavedSessions, listSessionFiles } from '../session-store.js'
+import { unlinkSync, writeFileSync } from 'node:fs'
+import { messageContentToText } from '../providers/openai-compat.js'
+import {
+  cloneSavedSession,
+  getLatestSavedSession,
+  getSavedSessionById,
+  importSavedSessionFromFile,
+  listSavedSessions,
+  listSessionFiles,
+  writeSessionHandoffArtifact,
+  writeSessionMarkdownArtifact,
+  writeSharedSessionArtifact,
+} from '../session-store.js'
 
 /**
  * Get the most recent session for `orca -c` continuation.
@@ -24,6 +34,13 @@ export function getLastSession() {
  */
 export function getSessionById(id: string) {
   return getSavedSessionById(id)
+}
+
+export function getContinuationSession(id?: string | boolean) {
+  if (typeof id === 'string' && id.trim()) {
+    return getSavedSessionById(id)
+  }
+  return getLatestSavedSession()
 }
 
 export function createSessionCommand(): Command {
@@ -57,7 +74,7 @@ export function createSessionCommand(): Command {
     }
 
     console.log()
-    console.log(`  \x1b[90m${sessions.length} session(s) · Continue last: orca -c\x1b[0m`)
+    console.log(`  \x1b[90m${sessions.length} session(s) · Continue last: orca -c · Specific: orca -c <id>\x1b[0m`)
     console.log()
   }
 
@@ -80,6 +97,7 @@ export function createSessionCommand(): Command {
 
       console.log()
       console.log(`  \x1b[1m${result.name}\x1b[0m`)
+      console.log(`  \x1b[90mID: ${result.name}\x1b[0m`)
       console.log(`  \x1b[90mModel: ${result.session.model} · Turns: ${result.session.stats?.turns || 0}\x1b[0m`)
       console.log()
 
@@ -103,6 +121,100 @@ export function createSessionCommand(): Command {
       }
       unlinkSync(match.path)
       console.log(`  \x1b[90mdeleted: ${match.name}\x1b[0m`)
+    })
+
+  cmd.command('export')
+    .argument('<id>', 'Session ID (partial match)')
+    .argument('<file>', 'Output JSON file')
+    .description('Export a saved session to a JSON file')
+    .action((id: string, file: string) => {
+      const result = getSessionById(id)
+      if (!result) {
+        console.error(`\x1b[31m  error: session "${id}" not found\x1b[0m`)
+        process.exit(1)
+      }
+      writeFileSync(file, JSON.stringify(result.session, null, 2), 'utf-8')
+      console.log(`  \x1b[90mexported: ${result.name} -> ${file}\x1b[0m`)
+    })
+
+  cmd.command('import')
+    .argument('<file>', 'Input JSON file')
+    .argument('[name]', 'Optional new session name')
+    .description('Import a saved session from a JSON file')
+    .action((file: string, name?: string) => {
+      try {
+        const imported = importSavedSessionFromFile(file, name)
+        console.log(`  \x1b[90mimported: ${imported.name}\x1b[0m`)
+      } catch (error) {
+        console.error(`\x1b[31m  error: ${error instanceof Error ? error.message : error}\x1b[0m`)
+        process.exit(1)
+      }
+    })
+
+  cmd.command('fork')
+    .argument('<id>', 'Session ID (partial match)')
+    .argument('[name]', 'Optional new session name')
+    .description('Fork a saved session into a new session record')
+    .action((id: string, name?: string) => {
+      const nextName = name || `fork-${Date.now()}`
+      const forked = cloneSavedSession(id, nextName)
+      if (!forked) {
+        console.error(`\x1b[31m  error: session "${id}" not found\x1b[0m`)
+        process.exit(1)
+      }
+      console.log(`  \x1b[90mforked: ${id} -> ${forked.name}\x1b[0m`)
+    })
+
+  cmd.command('markdown')
+    .argument('<id>', 'Session ID (partial match)')
+    .argument('<file>', 'Output Markdown file')
+    .description('Export a saved session as Markdown')
+    .action((id: string, file: string) => {
+      const result = getSessionById(id)
+      if (!result) {
+        console.error(`\x1b[31m  error: session "${id}" not found\x1b[0m`)
+        process.exit(1)
+      }
+      writeSessionMarkdownArtifact(result.name, result.session, file)
+      console.log(`  \x1b[90mexported markdown: ${result.name} -> ${file}\x1b[0m`)
+    })
+
+  cmd.command('share')
+    .argument('<id>', 'Session ID (partial match)')
+    .argument('[file]', 'Optional output Markdown file')
+    .description('Create a shareable Markdown artifact for a saved session')
+    .action((id: string, file?: string) => {
+      const result = getSessionById(id)
+      if (!result) {
+        console.error(`\x1b[31m  error: session "${id}" not found\x1b[0m`)
+        process.exit(1)
+      }
+      const bundle = writeSharedSessionArtifact(result.name, result.session, file)
+      console.log(`  \x1b[90mshared session artifact: ${bundle.markdownPath}\x1b[0m`)
+      console.log(`  \x1b[90mmetadata: ${bundle.metadataPath}\x1b[0m`)
+    })
+
+  cmd.command('handoff')
+    .argument('<id>', 'Session ID (partial match)')
+    .argument('[name]', 'Optional new handoff session name')
+    .argument('[file]', 'Optional output Markdown file for the handoff artifact')
+    .description('Fork a session and create a handoff artifact bundle')
+    .action((id: string, name?: string, file?: string) => {
+      const source = getSessionById(id)
+      if (!source) {
+        console.error(`\x1b[31m  error: session "${id}" not found\x1b[0m`)
+        process.exit(1)
+      }
+      const nextName = name || `handoff-${Date.now()}`
+      const forked = cloneSavedSession(id, nextName)
+      if (!forked) {
+        console.error(`\x1b[31m  error: session "${id}" not found\x1b[0m`)
+        process.exit(1)
+      }
+      const bundle = writeSessionHandoffArtifact(source.name, forked.name, forked.session, file)
+      console.log(`  \x1b[90mhandoff session created: ${forked.name}\x1b[0m`)
+      console.log(`  \x1b[90mhandoff artifact: ${bundle.markdownPath}\x1b[0m`)
+      console.log(`  \x1b[90mmetadata: ${bundle.metadataPath}\x1b[0m`)
     })
 
   return cmd
