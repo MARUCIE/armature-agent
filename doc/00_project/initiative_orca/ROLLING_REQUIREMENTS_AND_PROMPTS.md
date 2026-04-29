@@ -12,12 +12,15 @@
 | REQ-20260429-004 | Security | Repo-local hooks must not auto-load without explicit trust | Done | `src/hooks.ts`, `tests/hooks.test.ts` |
 | REQ-20260429-005 | Security | Network-capable tools must use approval gates in `auto` mode | Done | `src/tools.ts`, `tests/chat-proxy-tool-call.test.ts` |
 | REQ-20260429-006 | Runtime | Operators need top-level TaskRun queue inspection | Done | `src/commands/queue.ts`, `tests/queue-command.test.ts` |
+| REQ-20260429-007 | Runtime | Operators need live TaskRun evidence streaming from the queue surface | Done | `orca queue follow`, `tests/queue-command.test.ts` |
+| REQ-20260429-008 | Release | Every commit must include an appropriate version bump, and runtime version surfaces must match `package.json` | Done | `src/version.ts`, `tests/v030-harness.test.ts`, `tests/program.test.ts` |
 
 ### Prompt Ledger
 
 | ID | Prompt / Trigger | Routing | Output |
 | --- | --- | --- | --- |
 | PROMPT-20260429-001 | `/Users/mauricewen/Projects/orca-cli 对orca 进行sota 蜂群审计，输出走风格路由的审计报告，再制定里程碑计划及原子任务清单，之后再队列及蜂群模式pdca执行` | `$audit` + frontend/design/report style router + native swarm lanes | SOTA audit, routed HTML report, milestone plan, atomic queue, PDCA tranche 1 |
+| PROMPT-20260429-002 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-006: `queue follow` |
 
 ### Anti-Regression Q&A
 
@@ -27,7 +30,9 @@
 | Do hook subprocesses inherit provider API keys by default? | No. The hook env is allowlisted. | `tests/hooks.test.ts` |
 | Are `fetch_url` and `web_search` approval-gated in auto mode? | Yes. | `tests/chat-proxy-tool-call.test.ts` |
 | Can `fetch_url` hit `127.0.0.1` or `192.168.*` directly? | No. Literal loopback/private targets are blocked. | `tests/tools.test.ts` |
-| Is there a CLI surface for existing TaskRun records? | Yes: `orca queue list/show`. | `tests/queue-command.test.ts` |
+| Is there a CLI surface for existing TaskRun records? | Yes: `orca queue list/show/follow`. | `tests/queue-command.test.ts` |
+| Can operators stream TaskRun evidence without opening raw files? | Yes: `orca queue follow <id>` tails evidence and exits when the run is terminal. | `tests/queue-command.test.ts` |
+| Can package and runtime CLI versions drift? | No. `program`, output, and Ink banner paths read the package version through `src/version.ts`; tests compare runtime version against `package.json`. | `tests/v030-harness.test.ts`, `tests/program.test.ts` |
 
 ### References
 

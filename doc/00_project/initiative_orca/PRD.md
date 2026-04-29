@@ -7,8 +7,8 @@ New product requirements from the SOTA swarm audit:
 - Repo-local hooks must not load or execute on startup unless project trust is explicit.
 - Network-capable tools (`fetch_url`, `web_search`) must pass through approval policy in `auto` mode.
 - `fetch_url` must reject non-HTTP(S), loopback, private, and link-local literal targets by default.
-- Operators need a top-level queue inspection surface for current `TaskRun` records: `orca queue list/show`.
-- Next tranche must expand queue inspection into `follow`, `takeover`, evidence bundles, and a unified execution contract across `run`, `serve`, mission, and planner surfaces.
+- Operators need a top-level queue inspection surface for current `TaskRun` records: `orca queue list/show/follow`.
+- Next tranche must expand queue inspection into `takeover`, evidence bundles, and a unified execution contract across `run`, `serve`, mission, and planner surfaces.
 
 ## Product Snapshot
 

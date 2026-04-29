@@ -22,9 +22,9 @@ import { gatherDoctorReport } from '../src/doctor.js'
 // ── 1. Version Consistency ──────────────────────────────────────
 
 describe('version consistency', () => {
-  it('16.1 package.json version matches 0.3.0', () => {
+  it('16.1 package.json version is a semver release', () => {
     const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'))
-    expect(pkg.version).toBe('0.8.0')
+    expect(pkg.version).toMatch(/^\d+\.\d+\.\d+$/)
   })
 
   it('16.2 Commander program version matches package.json', () => {

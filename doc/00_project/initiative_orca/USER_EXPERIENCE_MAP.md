@@ -7,12 +7,12 @@ New operator journeys:
 | Journey | User Need | Entry | Evidence |
 | --- | --- | --- | --- |
 | Inspect running/completed agent work | See current TaskRun queue without opening raw files | `orca queue list`, `orca queue show <id>` | `src/commands/queue.ts`, `tests/queue-command.test.ts` |
+| Follow live TaskRun evidence | Stream appended evidence logs until a TaskRun reaches a terminal state | `orca queue follow <id>` | `src/commands/queue.ts`, `tests/queue-command.test.ts` |
 | Trust project hooks explicitly | Prevent arbitrary checked-out repos from running startup hook shell commands | `ORCA_TRUST_PROJECT_HOOKS=1` or trusted `HookManager` | `src/hooks.ts`, `tests/hooks.test.ts` |
 | Approve network-capable tools | Treat outbound fetch/search as a trust boundary | permission prompt for `fetch_url` / `web_search` | `src/tools.ts`, `tests/chat-proxy-tool-call.test.ts` |
 
 Open UX work:
 
-- Add `queue follow` for live TaskRun logs/evidence.
 - Add `queue takeover` for lease-based operator control.
 - Add an evidence drawer to the TUI so review-before-apply is not limited to compact previews.
 

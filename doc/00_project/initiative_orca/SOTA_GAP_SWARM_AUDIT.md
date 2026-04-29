@@ -6,7 +6,7 @@
 - Baseline: dirty working tree audit; existing user changes were preserved
 - Report route: `html-style-router` -> `html-economist-style`
 - Verification baseline before fixes: `npm run lint`, `npm test` (`85` files / `1583` tests), `npm run build`
-- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`86` files / `1593` tests)
+- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`86` files / `1595` tests)
 
 ## Scope
 
@@ -153,7 +153,7 @@ Atomic follow-up:
 | Milestone | Goal | Exit Criteria |
 | --- | --- | --- |
 | M0 Trust Hardening | Close immediate repo-trust and network-tool risks | Repo-local hooks require explicit trust; network tools approval-gated; targeted security tests pass |
-| M1 Queue Visibility | Make current TaskRun state inspectable | `orca queue list/show` shipped; status filtering and evidence display covered |
+| M1 Queue Visibility | Make current TaskRun state inspectable | `orca queue list/show/follow` shipped; status filtering and evidence streaming covered |
 | M2 Unified Execution Contract | One run object across CLI, serve, mission, planner | All surfaces create/update canonical execution records |
 | M3 Evidence Console | Review-before-apply becomes inspectable | TUI and CLI show changed files, diffs, logs, approvals, artifacts |
 | M4 Gate Integrity | CI enforces documented gates | CI runs declared matrix/security/performance/eval gates or explicitly marks deferred rows |
@@ -168,7 +168,7 @@ Atomic follow-up:
 | ORCA-SWARM-003 | P0 | Approval-gate `fetch_url` and `web_search` in auto mode | security | done |
 | ORCA-SWARM-004 | P0 | Block private/loopback/link-local targets in `fetch_url` | security | done |
 | ORCA-SWARM-005 | P1 | Add `orca queue list/show` over `TaskRun` records | runtime | done |
-| ORCA-SWARM-006 | P1 | Add `queue follow` for live log/evidence streaming | runtime | pending |
+| ORCA-SWARM-006 | P1 | Add `queue follow` for live log/evidence streaming | runtime | done |
 | ORCA-SWARM-007 | P1 | Add `queue takeover` lease model | architecture | pending |
 | ORCA-SWARM-008 | P1 | Convert `serve /chat` into a canonical run endpoint | architecture | pending |
 | ORCA-SWARM-009 | P1 | Add evidence drawer for TaskRun logs/diffs/artifacts | UX | pending |
@@ -212,7 +212,7 @@ Verification executed:
 - Combined targeted regression pack -> `190` tests passed
 - `npm run lint` -> pass
 - `npm run build` -> pass
-- Final `npm test` -> `86` files / `1593` tests passed
+- Final `npm test` -> `86` files / `1595` tests passed
 - `node dist/bin/orca.js --help` -> `queue` command visible
 - `node dist/bin/orca.js queue list --limit 3` -> empty-state renders successfully
 
@@ -226,8 +226,8 @@ Pre-fix baseline evidence:
 
 Next queue items should proceed in this order:
 
-1. `queue follow` and evidence streaming.
-2. Execution contract unification.
+1. Execution contract unification.
+2. Queue takeover and lease state.
 3. Evidence console and review-before-apply expansion.
 4. CI gate integrity.
 5. Documentation count drift cleanup.
@@ -236,5 +236,5 @@ Next queue items should proceed in this order:
 
 - DNS names that resolve to private IPs are not yet resolved and blocked before `curl`; only literal private hosts and localhost-style names are blocked in this tranche.
 - Repo-local hooks now have an env trust switch, but a first-class `orca hooks trust` UX does not exist yet.
-- `orca queue` is read-only visibility, not a durable scheduler or lease manager.
+- `orca queue` now supports list/show/follow, but is not yet a durable scheduler or lease manager.
 - Full `npm test` and `npm run build` should be rerun after documentation closeout to refresh the final all-suite evidence.

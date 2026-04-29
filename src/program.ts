@@ -21,6 +21,7 @@ import { createPRCommand } from './commands/pr.js'
 import { createServeCommand } from './commands/serve.js'
 import { createEvolveCommand } from './commands/evolve.js'
 import { listWorkflowPresets } from './modes/index.js'
+import { ORCA_VERSION } from './version.js'
 
 export function createProgram(): Command {
   const workflowPresetHelp = listWorkflowPresets()
@@ -29,7 +30,7 @@ export function createProgram(): Command {
 
   const program = new Command()
     .name('orca')
-    .version('0.8.0')
+    .version(ORCA_VERSION)
     .enablePositionalOptions()
     .passThroughOptions()
     .description(

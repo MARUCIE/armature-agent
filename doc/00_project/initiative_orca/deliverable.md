@@ -1,5 +1,58 @@
 # Deliverable
 
+## 2026-04-29 - Queue Follow PDCA Tranche
+
+### Scope
+
+Continue the SOTA swarm atomic queue by completing ORCA-SWARM-006: make TaskRun evidence followable from the CLI without adding scheduler or lease semantics yet.
+
+### Delivered
+
+- `orca queue follow <task-run-id>`
+- `--once` for snapshot mode
+- `--lines <n>` for initial evidence tail size
+- `--interval <ms>` for running TaskRun polling
+- Background-job log attachment when a TaskRun carries `backgroundJobId`
+- Runtime version surfaces now derive from package version instead of stale `0.8.0` literals
+
+### Changed Files
+
+- `src/commands/queue.ts`
+- `src/background-jobs.ts`
+- `src/version.ts`
+- `src/program.ts`
+- `src/output.ts`
+- `src/commands/chat.ts`
+- `tests/queue-command.test.ts`
+- `tests/program.test.ts`
+- `tests/v030-harness.test.ts`
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `doc/00_project/initiative_orca/*`
+
+### Simplifications Made
+
+- Follow mode reads from existing `TaskRun.evidence` and background-job metadata; no new queue daemon or scheduler abstraction.
+- Running follow exits on terminal TaskRun states and uses polling instead of a separate watcher dependency.
+
+### Verification
+
+- `npm run lint`
+- `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts tests/program.test.ts tests/command-contracts.test.ts` -> `39/39`
+- `npm test -- tests/v030-harness.test.ts tests/program.test.ts tests/queue-command.test.ts tests/work-session-store.test.ts tests/command-contracts.test.ts` -> `59/59`
+- `npm run build`
+- `npm test` -> `1595/1595` across `86` files
+- `node dist/bin/orca.js --version` -> `0.8.2`
+- `node dist/bin/orca.js queue follow <fixture-task-run> --once --lines 1` -> printed fixture evidence tail
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| `queue follow` is still read-only and cannot claim or resume work | Runtime/architecture | Execute ORCA-SWARM-007 `queue takeover` lease model |
+| Evidence paths are tailed from local files only | Runtime/UX | Attach richer structured evidence bundles before TUI evidence drawer |
+
 ## 2026-04-29 - SOTA Swarm Audit and PDCA Tranche 1
 
 ### Scope
@@ -64,7 +117,7 @@ Audit Orca with a multi-lane SOTA swarm, publish the routed report, convert find
 | --- | --- | --- |
 | `fetch_url` blocks literal private hosts but does not yet resolve DNS names before curl | Runtime/security | Add DNS resolution and block resolved private addresses before execution |
 | Project hook trust has an env/programmatic switch but no first-class CLI UX | Runtime/security | Add `orca hooks trust/status` or equivalent approval surface |
-| `orca queue` is read-only and does not implement leases, follow, or takeover | Runtime/architecture | Execute ORCA-SWARM-006 and ORCA-SWARM-007 |
+| `orca queue` is read-only and does not implement leases or takeover | Runtime/architecture | Execute ORCA-SWARM-007 |
 | CI still under-enforces documented matrix/security/performance/eval gates | Verification | Execute ORCA-SWARM-012 |
 
 ## 2026-04-26 — Provider-grouped model picker（完成）

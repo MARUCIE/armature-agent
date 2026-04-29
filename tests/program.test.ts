@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { createProgram } from '../src/program.js'
 import { listWorkflowPresets } from '../src/modes/index.js'
 import { getWorkflowPreset } from '../src/modes/index.js'
@@ -11,8 +13,9 @@ describe('program', () => {
   })
 
   it('has version set', () => {
+    const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8')) as { version: string }
     const program = createProgram()
-    expect(program.version()).toBe('0.8.0')
+    expect(program.version()).toBe(pkg.version)
   })
 
   it('registers init command', () => {

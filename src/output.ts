@@ -9,6 +9,7 @@
 import chalk from 'chalk'
 import { logError, logWarning } from './logger.js'
 import { getFleetSummaryLine } from './fleet-env.js'
+import { ORCA_VERSION } from './version.js'
 
 export type OutputMode = 'streaming' | 'json'
 
@@ -36,7 +37,7 @@ const RST = '\x1b[0m'
 
 // ── Banner ──────────────────────────────────────────────────────────
 
-const VERSION = '0.8.0'
+const VERSION = ORCA_VERSION
 
 // Orca — cute killer whale with dorsal fin, eye patch, body, belly, and iconic tail flukes
 // Tail section: body narrows → peduncle → flukes fork up/down (whale signature)

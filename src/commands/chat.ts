@@ -37,6 +37,7 @@ import { recordUsage } from '../usage-db.js'
 import { consumeCompletedBackgroundJobs, readBackgroundJobLog } from '../background-jobs.js'
 import { getAgenticWarning, getContextWindowForModel, getPricingForModel, listModelChoices, type ModelChoice } from '../model-catalog.js'
 import { logInfo, logWarning } from '../logger.js'
+import { ORCA_VERSION } from '../version.js'
 import { ContextMonitor, LoopDetector } from '../harness/index.js'
 import { ModeRegistry } from '../modes/index.js'
 import { ThreadManager } from '../memory/threads.js'
@@ -708,7 +709,7 @@ async function runREPL(
     const configFiles = detectConfigFiles(cwd)
     const bannerConfigFiles = detectConfigFiles(cwd)
     inkInstance = renderInkApp(session, getStatusInfo(), {
-      version: '0.8.0',
+      version: ORCA_VERSION,
       cwd,
       configFiles: bannerConfigFiles.length > 0 ? bannerConfigFiles : undefined,
       toolCount: TOOL_DEFINITIONS.length,

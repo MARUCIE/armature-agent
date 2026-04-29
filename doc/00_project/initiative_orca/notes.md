@@ -1,5 +1,27 @@
 # Notes
 
+## 2026-04-29 - Queue follow PDCA continuation
+
+Context:
+
+- User said `继续` after the SOTA swarm audit commit, so execution continued from the next atomic queue item.
+- Before adding new work, the previous commit was amended to include the missing `src/work-session-store.ts` and `tests/work-session-store.test.ts` dependency so the `queue` surface is commit-complete.
+
+PDCA executed:
+
+- Plan: implement ORCA-SWARM-006 without introducing scheduler or lease semantics.
+- Do: add `orca queue follow <task-run-id>` with `--once`, `--lines`, and `--interval`; stream TaskRun evidence file tails and background-job logs when attached.
+- Do: remove stale hard-coded CLI version strings from `program`, `output`, and Ink startup banner paths by reading the package version through `src/version.ts`.
+- Check:
+  - `npm run lint` -> pass.
+  - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts tests/program.test.ts tests/command-contracts.test.ts` -> `39` tests passed.
+  - `npm test -- tests/v030-harness.test.ts tests/program.test.ts tests/queue-command.test.ts tests/work-session-store.test.ts tests/command-contracts.test.ts` -> `59` tests passed.
+  - `npm run build` -> pass.
+  - Final `npm test` -> `86` files / `1595` tests passed.
+  - `node dist/bin/orca.js --version` -> `0.8.2`.
+  - `node dist/bin/orca.js queue follow <fixture-task-run> --once --lines 1` -> printed the fixture evidence tail.
+- Act: next queue item is ORCA-SWARM-007, lease-based `queue takeover`.
+
 ## 2026-04-29 - SOTA swarm audit and first PDCA tranche
 
 Context:
@@ -28,7 +50,7 @@ PDCA executed:
   - `npm run lint` -> pass.
   - `npm run build` -> pass.
   - Final `npm test` -> `86` files / `1593` tests passed.
-- Act: next queue items are `queue follow`, execution-contract unification, evidence console, CI gate integrity, and doc count cleanup.
+- Act: next queue items are `queue takeover`, execution-contract unification, evidence console, CI gate integrity, and doc count cleanup.
 
 Artifacts:
 

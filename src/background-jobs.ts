@@ -46,6 +46,10 @@ function getMetaPath(id: string): string {
   return join(getBackgroundJobsDir(), `${id}.json`)
 }
 
+function isSafeJobId(id: string): boolean {
+  return basename(id) === id && /^[A-Za-z0-9._-]+$/.test(id)
+}
+
 function readJob(metaPath: string): BackgroundJobRecord | null {
   try {
     return JSON.parse(readFileSync(metaPath, 'utf-8')) as BackgroundJobRecord
@@ -151,6 +155,11 @@ export function listBackgroundJobs(limit = 20): BackgroundJobRecord[] {
   return files
     .map((name) => readJob(join(dir, name)))
     .filter((job): job is BackgroundJobRecord => Boolean(job))
+}
+
+export function getBackgroundJobById(id: string): BackgroundJobRecord | null {
+  if (!isSafeJobId(id)) return null
+  return readJob(getMetaPath(id))
 }
 
 export function consumeCompletedBackgroundJobs(limit = 10): BackgroundJobRecord[] {

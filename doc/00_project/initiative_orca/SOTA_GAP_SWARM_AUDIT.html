@@ -187,7 +187,7 @@
       <p><code>fetch_url</code> 和 <code>web_search</code> 已纳入危险工具集合；<code>fetch_url</code> 现在只接受 HTTP(S)，并默认阻断 loopback、私网、link-local、CGNAT、benchmark 与常见 IPv6 本地网段。</p>
 
       <h3>3. 队列对象有数据基础，但 CLI 可观测性不足</h3>
-      <p>本轮新增 <code>orca queue</code>、<code>orca queue list</code>、<code>orca queue show</code>，先把现有 <code>TaskRun</code> 状态变成一等操作员入口。它不是调度器，也不是 lease manager；这是下一阶段的切入点。</p>
+      <p>本轮新增 <code>orca queue</code>、<code>orca queue list</code>、<code>orca queue show</code>，并在延续轮次补上 <code>orca queue follow</code>，把现有 <code>TaskRun</code> 状态与证据流变成一等操作员入口。它还不是调度器，也不是 lease manager；这是下一阶段的切入点。</p>
 
       <h3>4. 执行路径仍需统一</h3>
       <p><code>run</code> 已经写入 <code>WorkSession/TaskRun</code>，但 <code>serve</code> 更像 prompt proxy，mission/planner 仍有各自编排状态。下一阶段应把所有入口统一写入同一执行记录。</p>
@@ -199,7 +199,7 @@
         <thead><tr><th>Milestone</th><th>目标</th><th>退出条件</th></tr></thead>
         <tbody>
           <tr><td>M0</td><td>信任边界硬化</td><td>项目 hook 显式信任；网络工具审批；安全回归通过。</td></tr>
-          <tr><td>M1</td><td>队列可观测性</td><td><code>orca queue list/show</code> 可检查 TaskRun 与证据。</td></tr>
+          <tr><td>M1</td><td>队列可观测性</td><td><code>orca queue list/show/follow</code> 可检查 TaskRun 与证据流。</td></tr>
           <tr><td>M2</td><td>统一执行契约</td><td>CLI、serve、mission、planner 全部写入同一运行对象。</td></tr>
           <tr><td>M3</td><td>证据控制台</td><td>变更文件、diff、日志、批准记录和 artifact 在应用前可检查。</td></tr>
           <tr><td>M4</td><td>Gate integrity</td><td>CI 真正执行文档宣称的 matrix/security/performance/eval gates。</td></tr>
@@ -218,7 +218,7 @@
           <tr><td>ORCA-SWARM-003</td><td>P0</td><td><code>fetch_url</code> / <code>web_search</code> 自动模式审批</td><td>Done</td></tr>
           <tr><td>ORCA-SWARM-004</td><td>P0</td><td><code>fetch_url</code> 私网/本地网段阻断</td><td>Done</td></tr>
           <tr><td>ORCA-SWARM-005</td><td>P1</td><td><code>orca queue list/show</code></td><td>Done</td></tr>
-          <tr><td>ORCA-SWARM-006</td><td>P1</td><td><code>queue follow</code> 日志与证据流</td><td>Pending</td></tr>
+          <tr><td>ORCA-SWARM-006</td><td>P1</td><td><code>queue follow</code> 日志与证据流</td><td>Done</td></tr>
           <tr><td>ORCA-SWARM-007</td><td>P1</td><td><code>queue takeover</code> lease 模型</td><td>Pending</td></tr>
           <tr><td>ORCA-SWARM-008</td><td>P1</td><td><code>serve</code> 写入 canonical run endpoint</td><td>Pending</td></tr>
           <tr><td>ORCA-SWARM-009</td><td>P1</td><td>TUI TaskRun evidence drawer</td><td>Pending</td></tr>
@@ -234,8 +234,8 @@
       <ul>
         <li><strong>Plan:</strong> 以安全边界和队列可观测性作为第一轮切片，避免在 dirty worktree 中做大范围重构。</li>
         <li><strong>Do:</strong> 修改 <code>src/hooks.ts</code>、<code>src/tools.ts</code>、<code>src/commands/queue.ts</code>、<code>src/program.ts</code> 及对应测试。</li>
-        <li><strong>Check:</strong> 相关安全回归 <code>153</code> tests passed；队列/命令契约 <code>37</code> tests passed；合并 targeted pack <code>190</code> tests passed；最终 <code>npm test</code> 为 <code>86</code> files / <code>1593</code> tests passed；<code>npm run lint</code> 与 <code>npm run build</code> passed。</li>
-        <li><strong>Act:</strong> 下一步推进 <code>queue follow</code>、统一执行契约、证据控制台、CI gate integrity。</li>
+        <li><strong>Check:</strong> 相关安全回归 <code>153</code> tests passed；队列/命令契约 <code>39</code> tests passed；合并 targeted pack <code>190</code> tests passed；最终 <code>npm test</code> 为 <code>86</code> files / <code>1595</code> tests passed；<code>npm run lint</code> 与 <code>npm run build</code> passed。</li>
+        <li><strong>Act:</strong> 下一步推进 <code>queue takeover</code>、统一执行契约、证据控制台、CI gate integrity。</li>
       </ul>
     </section>
 
@@ -253,7 +253,7 @@
   </main>
 
   <footer>
-    Orca CLI v0.8.0 - SOTA 蜂群审计报告 - Maurice | maurice_wen@proton.me - 2026-04-29
+    Orca CLI v0.8.2 - SOTA 蜂群审计报告 - Maurice | maurice_wen@proton.me - 2026-04-29
   </footer>
 </body>
 </html>

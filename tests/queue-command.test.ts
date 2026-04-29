@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { mkdirSync, rmSync } from 'node:fs'
+import { appendFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
@@ -118,5 +118,106 @@ describe('queue command', () => {
     expect(output).toContain('status: completed')
     expect(output).toContain('summary: verified')
     expect(output).toContain('test-log: outputs/test/queue.log')
+  })
+
+  it('follows a task-run evidence snapshot once', async () => {
+    vi.resetModules()
+    const {
+      createTaskRun,
+      createWorkSession,
+      finishTaskRun,
+    } = await import('../src/work-session-store.js')
+    const { createQueueCommand } = await import('../src/commands/queue.js')
+
+    const projectDir = join(homeDir, 'project')
+    mkdirSync(join(projectDir, 'outputs', 'test'), { recursive: true })
+    writeFileSync(join(projectDir, 'outputs', 'test', 'queue.log'), 'first\nsecond\nthird\n', 'utf-8')
+
+    const session = createWorkSession({
+      sourceSurface: 'run',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    const taskRun = createTaskRun({
+      workSessionId: session.id,
+      kind: 'run',
+      title: 'Follow task',
+      surface: 'cli',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    finishTaskRun(taskRun.id, {
+      status: 'completed',
+      evidence: [{ label: 'test-log', path: 'outputs/test/queue.log' }],
+    })
+
+    const logs: string[] = []
+    vi.spyOn(console, 'log').mockImplementation((...args) => { logs.push(args.join(' ')) })
+
+    const command = createQueueCommand()
+    await command.parseAsync(['node', 'queue', 'follow', taskRun.id, '--once', '--lines', '2'])
+
+    const output = logs.join('\n')
+    expect(output).toContain(`Following TaskRun ${taskRun.id}`)
+    expect(output).toContain('test-log:')
+    expect(output).not.toContain('first')
+    expect(output).toContain('second')
+    expect(output).toContain('third')
+  })
+
+  it('streams appended evidence until a task run completes', async () => {
+    vi.resetModules()
+    const {
+      createTaskRun,
+      createWorkSession,
+      finishTaskRun,
+      updateTaskRun,
+    } = await import('../src/work-session-store.js')
+    const { createQueueCommand } = await import('../src/commands/queue.js')
+
+    const projectDir = join(homeDir, 'project')
+    mkdirSync(join(projectDir, 'outputs', 'test'), { recursive: true })
+    const logPath = join(projectDir, 'outputs', 'test', 'live.log')
+    writeFileSync(logPath, 'start\n', 'utf-8')
+
+    const session = createWorkSession({
+      sourceSurface: 'run',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    const taskRun = createTaskRun({
+      workSessionId: session.id,
+      kind: 'run',
+      title: 'Live task',
+      surface: 'cli',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    updateTaskRun(taskRun.id, (current) => ({
+      ...current,
+      evidence: [{ label: 'live-log', path: 'outputs/test/live.log' }],
+    }))
+
+    const logs: string[] = []
+    vi.spyOn(console, 'log').mockImplementation((...args) => { logs.push(args.join(' ')) })
+
+    const command = createQueueCommand()
+    const followPromise = command.parseAsync(['node', 'queue', 'follow', taskRun.id, '--interval', '100', '--lines', '1'])
+    await new Promise((resolve) => setTimeout(resolve, 120))
+    appendFileSync(logPath, 'next\n', 'utf-8')
+    finishTaskRun(taskRun.id, {
+      status: 'completed',
+      evidence: [{ label: 'live-log', path: 'outputs/test/live.log' }],
+    })
+    await followPromise
+
+    const output = logs.join('\n')
+    expect(output).toContain('start')
+    expect(output).toContain('status: completed')
+    expect(output).toContain('next')
   })
 })

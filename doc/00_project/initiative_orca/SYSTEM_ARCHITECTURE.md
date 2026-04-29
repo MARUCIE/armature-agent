@@ -12,11 +12,12 @@ The SOTA swarm audit adds two immediate architectural constraints:
    - `orca queue`
    - `orca queue list --status <status> --work-session <id> --limit <n>`
    - `orca queue show <task-run-id>`
+   - `orca queue follow <task-run-id>`
 
 Open architecture work:
 
 - Promote `WorkSession` / `TaskRun` into the canonical execution contract for `chat`, `run`, `serve`, mission, and planner surfaces.
-- Add queue follow/takeover semantics after the read-only queue surface is stable.
+- Add queue takeover semantics and lease state after the follow surface is stable.
 - Attach evidence bundles to TaskRun so TUI and CLI review surfaces read from one source.
 
 <!-- AI-FLEET:PROJECT_DIR:START -->
