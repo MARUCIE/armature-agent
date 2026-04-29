@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { addStoredPermissionRule, readStoredPermissionAllowlist } from '../src/config.js'
 import { RetryTracker } from '../src/retry-intelligence.js'
 import { ChatSessionEmitter } from '../src/ui/session.js'
+import type { ToolApprovalEventInput } from '../src/policy-executor.js'
 
 const mockState = vi.hoisted(() => ({
   askPermission: vi.fn(),
@@ -119,16 +120,27 @@ describe('chat proxy tool helper', () => {
     mockState.askPermission.mockResolvedValue({ allowed: false, scope: 'once' })
 
     const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const approvals: ToolApprovalEventInput[] = []
     const result = await handleProxyToolCall({
       ...baseParams,
       cwd,
       name: 'run_command',
       args: { command: 'echo hello' },
       permissionMode: 'auto',
+      recordApprovalEvent: (event) => approvals.push(event),
     })
 
     expect(result).toEqual({ success: false, output: 'User denied permission.' })
     expect(mockState.askPermission).toHaveBeenCalledWith('run_command', 'run: echo hello')
+    expect(approvals).toEqual([{
+      toolName: 'run_command',
+      ruleKey: 'run_command|command=echo hello',
+      preview: 'run: echo hello',
+      permissionMode: 'auto',
+      decision: 'denied',
+      scope: 'once',
+      source: 'prompt',
+    }])
   })
 
   it('requires approval for fetch_url in auto permission mode', async () => {
@@ -187,6 +199,7 @@ describe('chat proxy tool helper', () => {
     const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
     writeFileSync(join(cwd, 'note.txt'), 'hello session permissions\n')
     const sessionRules = new Set<string>()
+    const approvals: ToolApprovalEventInput[] = []
     const params = {
       ...baseParams,
       cwd,
@@ -197,6 +210,7 @@ describe('chat proxy tool helper', () => {
       recordPermissionGrant: (ruleKey: string, scope: 'session' | 'project') => {
         if (scope === 'session') sessionRules.add(ruleKey)
       },
+      recordApprovalEvent: (event) => approvals.push(event),
     }
 
     await handleProxyToolCall(params)
@@ -204,6 +218,20 @@ describe('chat proxy tool helper', () => {
 
     expect(mockState.askPermission).toHaveBeenCalledTimes(1)
     expect(sessionRules.size).toBe(1)
+    expect(approvals.map((event) => event.decision)).toEqual(['allowed', 'preapproved'])
+    expect(approvals[0]).toMatchObject({
+      toolName: 'read_file',
+      ruleKey: 'read_file|path=note.txt',
+      permissionMode: 'plan',
+      scope: 'session',
+      source: 'prompt',
+    })
+    expect(approvals[1]).toMatchObject({
+      toolName: 'read_file',
+      ruleKey: 'read_file|path=note.txt',
+      permissionMode: 'plan',
+      source: 'allowlist',
+    })
   })
 
   it('persists approved tools into the project allowlist', async () => {

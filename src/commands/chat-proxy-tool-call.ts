@@ -14,6 +14,7 @@ import {
   executeToolWithPolicy,
   runPostToolHook,
 } from '../policy-executor.js'
+import type { ToolApprovalEventInput } from '../policy-executor.js'
 import type { ChatMessage } from '../providers/openai-compat.js'
 import type { RetryTracker } from '../retry-intelligence.js'
 import type { TokenBudgetManager } from '../token-budget.js'
@@ -45,6 +46,7 @@ export interface ProxyToolCallParams {
   allowedTools?: string[]
   isPermissionGranted?: (ruleKey: string) => boolean
   recordPermissionGrant?: (ruleKey: string, scope: 'session' | 'project') => void
+  recordApprovalEvent?: (event: ToolApprovalEventInput) => void
   retryTracker?: RetryTracker
   loopDetector?: LoopDetector
   tokenBudget?: TokenBudgetManager
@@ -404,6 +406,7 @@ export async function handleProxyToolCall(params: ProxyToolCallParams): Promise<
     allowedTools,
     isPermissionGranted,
     recordPermissionGrant,
+    recordApprovalEvent,
     retryTracker,
     loopDetector,
     tokenBudget,
@@ -420,6 +423,7 @@ export async function handleProxyToolCall(params: ProxyToolCallParams): Promise<
     allowedTools,
     isPermissionGranted,
     requestPermissionDecision: async (toolName, nextArgs, nextCwd) => requestPermissionDecision(toolName, nextArgs, nextCwd, session),
+    recordApprovalEvent,
   })
   if (!authorization.authorized) {
     return authorization.result || { success: false, output: 'Tool execution blocked by policy.' }

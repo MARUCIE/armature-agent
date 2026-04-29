@@ -187,6 +187,57 @@ describe('work-session store', () => {
     })
   })
 
+  it('appends review-before-apply approval events to task runs', async () => {
+    const {
+      appendTaskRunApproval,
+      createTaskRun,
+      createWorkSession,
+      getTaskRunById,
+    } = await import('../src/work-session-store.js')
+
+    const session = createWorkSession({
+      sourceSurface: 'chat',
+      cwd: '/tmp/project-approval',
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    const taskRun = createTaskRun({
+      workSessionId: session.id,
+      kind: 'chat',
+      title: 'Review a write',
+      surface: 'cli',
+      cwd: '/tmp/project-approval',
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+
+    const updated = appendTaskRunApproval(taskRun.id, {
+      toolName: 'write_file',
+      ruleKey: 'write_file|path=src/generated.ts',
+      preview: 'write 28 bytes to src/generated.ts',
+      permissionMode: 'plan',
+      decision: 'allowed',
+      scope: 'session',
+      source: 'prompt',
+    })
+
+    expect(updated?.approvals).toHaveLength(1)
+    expect(updated?.approvals?.[0]).toMatchObject({
+      toolName: 'write_file',
+      ruleKey: 'write_file|path=src/generated.ts',
+      preview: 'write 28 bytes to src/generated.ts',
+      permissionMode: 'plan',
+      decision: 'allowed',
+      scope: 'session',
+      source: 'prompt',
+    })
+    expect(updated?.approvals?.[0]?.id).toMatch(/^approval-/)
+    expect(updated?.approvals?.[0]?.createdAt).toBeTruthy()
+
+    const persisted = getTaskRunById(taskRun.id)
+    expect(persisted?.taskRun.approvals?.[0]?.toolName).toBe('write_file')
+  })
+
   it('claims and replaces task-run leases by TTL and force', async () => {
     const {
       claimTaskRunLease,

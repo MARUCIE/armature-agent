@@ -25,6 +25,23 @@ export interface TaskRunEvidence {
   path: string
 }
 
+export type TaskRunApprovalDecision = 'allowed' | 'denied' | 'preapproved' | 'blocked'
+export type TaskRunApprovalSource = 'prompt' | 'allowlist' | 'policy' | 'hook'
+
+export interface TaskRunApprovalEvent {
+  id: string
+  createdAt: string
+  toolName: string
+  ruleKey: string
+  preview: string
+  permissionMode?: 'yolo' | 'auto' | 'plan'
+  decision: TaskRunApprovalDecision
+  scope?: 'once' | 'session' | 'project'
+  source: TaskRunApprovalSource
+}
+
+export type TaskRunApprovalEventInput = Omit<TaskRunApprovalEvent, 'id' | 'createdAt'>
+
 export interface TaskRunLease {
   id: string
   holder: string
@@ -70,6 +87,7 @@ export interface TaskRun {
   summary?: string
   usage?: TaskRunUsageSummary
   evidence: TaskRunEvidence[]
+  approvals?: TaskRunApprovalEvent[]
   backgroundJobId?: string
   lease?: TaskRunLease
 }
@@ -344,6 +362,7 @@ export function createTaskRun(input: {
     updatedAt: now,
     summary: input.summary,
     evidence: [],
+    approvals: [],
   }
   writeJsonFile(buildTaskRunPath(id), taskRun)
   updateWorkSession(input.workSessionId, (session) => ({
@@ -421,6 +440,20 @@ export function updateTaskRun(
   next.updatedAt = new Date().toISOString()
   writeJsonFile(buildTaskRunPath(id), next)
   return next
+}
+
+export function appendTaskRunApproval(id: string, input: TaskRunApprovalEventInput): TaskRun | null {
+  return updateTaskRun(id, (current) => ({
+    ...current,
+    approvals: [
+      ...(current.approvals || []),
+      {
+        id: `approval-${randomUUID().slice(0, 8)}`,
+        createdAt: new Date().toISOString(),
+        ...input,
+      },
+    ],
+  }))
 }
 
 export function isTerminalTaskRunStatus(status: TaskRunStatus): boolean {

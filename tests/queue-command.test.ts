@@ -254,6 +254,7 @@ describe('queue command', () => {
   it('opens a task-run evidence drawer with artifact previews', async () => {
     vi.resetModules()
     const {
+      appendTaskRunApproval,
       createTaskRun,
       createWorkSession,
       finishTaskRun,
@@ -288,6 +289,15 @@ describe('queue command', () => {
         { label: 'review-diff', path: 'outputs/test/change.diff' },
       ],
     })
+    appendTaskRunApproval(taskRun.id, {
+      toolName: 'write_file',
+      ruleKey: 'write_file|path=src/generated.ts',
+      preview: 'write 28 bytes to src/generated.ts',
+      permissionMode: 'plan',
+      decision: 'allowed',
+      scope: 'project',
+      source: 'prompt',
+    })
 
     const logs: string[] = []
     vi.spyOn(console, 'log').mockImplementation((...args) => { logs.push(args.join(' ')) })
@@ -298,6 +308,10 @@ describe('queue command', () => {
     const output = logs.join('\n')
     expect(output).toContain(`TaskRun Evidence Drawer ${taskRun.id}`)
     expect(output).toContain('summary: drawer ready')
+    expect(output).toContain('Approval Timeline')
+    expect(output).toContain('allowed write_file scope=project source=prompt')
+    expect(output).toContain('rule: write_file|path=src/generated.ts')
+    expect(output).toContain('preview: write 28 bytes to src/generated.ts')
     expect(output).toContain('[1/2] test-log')
     expect(output).toContain('type: log')
     expect(output).toContain('size:')
@@ -312,6 +326,7 @@ describe('queue command', () => {
   it('formats task-run evidence as markdown for the ink detail panel', async () => {
     vi.resetModules()
     const {
+      appendTaskRunApproval,
       createTaskRun,
       createWorkSession,
       finishTaskRun,
@@ -345,8 +360,21 @@ describe('queue command', () => {
       summary: 'side panel ready',
       evidence: [{ label: 'chat-log', path: 'outputs/test/queue.log' }],
     })
+    appendTaskRunApproval(taskRun.id, {
+      toolName: 'edit_file',
+      ruleKey: 'edit_file|path=src/command.ts',
+      preview: 'edit src/command.ts',
+      permissionMode: 'auto',
+      decision: 'preapproved',
+      source: 'allowlist',
+    })
 
     const drawer = buildTaskRunEvidenceDrawer(taskRun.id, { lines: '2' })
+    expect(drawer?.approvals[0]).toMatchObject({
+      toolName: 'edit_file',
+      decision: 'preapproved',
+      source: 'allowlist',
+    })
     expect(drawer?.evidence[0]).toMatchObject({
       label: 'chat-log',
       type: 'log',
@@ -356,6 +384,10 @@ describe('queue command', () => {
     const markdown = formatTaskRunEvidenceDrawerMarkdown(drawer!)
     expect(markdown).toContain(`# TaskRun Evidence ${taskRun.id}`)
     expect(markdown).toContain('- Summary: side panel ready')
+    expect(markdown).toContain('## Approval Timeline')
+    expect(markdown).toContain('`preapproved` `edit_file`')
+    expect(markdown).toContain('- Rule: `edit_file|path=src/command.ts`')
+    expect(markdown).toContain('- Preview: edit src/command.ts')
     expect(markdown).not.toContain('alpha')
     expect(markdown).toContain('beta')
     expect(markdown).toContain('gamma')

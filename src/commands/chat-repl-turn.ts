@@ -16,6 +16,7 @@ import { isMultiTaskPrompt } from '../planner/index.js'
 import type { ChatSessionEmitter } from '../ui/session.js'
 import { detectReflectIntent, prepareReflectPromptContent } from './reflect-mode.js'
 import { ResetSensitiveWaitCanceledError } from './chat-proxy-tool-call.js'
+import type { ToolApprovalEventInput } from '../policy-executor.js'
 
 type PermMode = 'yolo' | 'auto' | 'plan'
 
@@ -63,6 +64,7 @@ interface ExecuteReplTurnOptions<TResolved extends ReplTurnResolvedProviderBase>
   onFileWrite: (path: string, oldContent: string | null) => void
   isPermissionGranted?: (ruleKey: string) => boolean
   recordPermissionGrant?: (ruleKey: string, scope: 'session' | 'project') => void
+  recordApprovalEvent?: (event: ToolApprovalEventInput) => void
   runProxyTurn: (options: {
     prompt: PromptContent
     resolved: TResolved
@@ -77,6 +79,7 @@ interface ExecuteReplTurnOptions<TResolved extends ReplTurnResolvedProviderBase>
     permissionMode?: PermMode
     isPermissionGranted?: (ruleKey: string) => boolean
     recordPermissionGrant?: (ruleKey: string, scope: 'session' | 'project') => void
+    recordApprovalEvent?: (event: ToolApprovalEventInput) => void
     retryTracker?: RetryTracker
     loopDetector?: LoopDetector
     tokenBudget?: TokenBudgetManager
@@ -136,6 +139,7 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
     onFileWrite,
     isPermissionGranted,
     recordPermissionGrant,
+    recordApprovalEvent,
     runProxyTurn,
     runSDKQuery,
   } = options
@@ -271,6 +275,7 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
         permissionMode: currentPermMode,
         isPermissionGranted,
         recordPermissionGrant,
+        recordApprovalEvent,
         retryTracker,
         loopDetector,
         tokenBudget,

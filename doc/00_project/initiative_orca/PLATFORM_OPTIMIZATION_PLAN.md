@@ -18,7 +18,7 @@ The next platform wave is now explicitly ordered:
 4. Evidence console:
    - `orca queue evidence` now opens TaskRun logs, diffs, data, reports, missing artifacts, and capped previews
    - `/evidence <task-run-id>` opens the same drawer model in the Ink `DetailPanel`
-   - extend approvals and tool-call timelines on top of the shared evidence model
+   - approval decisions now append to `TaskRun.approvals` and render before file evidence in both surfaces
 5. Slash command surface:
    - `src/slash-commands.ts` is now the shared registry for REPL completion, Ink picker, and `/help`; HomePanel hint metadata is prepared for the pending UI-baseline split
 6. Chat transcript readability:
@@ -29,6 +29,9 @@ The next platform wave is now explicitly ordered:
 8. Gate integrity:
    - CI now runs matrix sync, static, security, performance, and fast agent-eval gates
    - `agent-eval/manifests/test-matrix.json` is the manifest source for package entrypoints
+9. Next platform tranche:
+   - scheduler / resume semantics over TaskRun leases
+   - model-routing evidence and catalog SSoT
 
 ## Objective
 

@@ -1,5 +1,50 @@
 # Deliverable
 
+## 2026-04-29 - TaskRun Approval Timeline PDCA Tranche
+
+### Scope
+
+Close ORCA-SWARM-018 by making review-before-apply decisions durable and visible through the same TaskRun evidence surfaces used by CLI and Ink.
+
+### Delivered
+
+- Added `TaskRun.approvals` with timestamped policy decision events.
+- Recorded prompted, preapproved, policy-blocked, and hook-blocked approval outcomes in `policy-executor`.
+- Routed chat proxy approval events into the current REPL `TaskRun`.
+- Rendered an `Approval Timeline` above file evidence in `orca queue evidence` and the shared Ink `/evidence` detail panel.
+- Version bumped to `0.8.15`.
+
+### Changed Files
+
+- `src/work-session-store.ts`
+- `src/policy-executor.ts`
+- `src/commands/chat-proxy-tool-call.ts`
+- `src/commands/chat-repl-turn.ts`
+- `src/commands/chat.ts`
+- `src/commands/queue.ts`
+- `tests/work-session-store.test.ts`
+- `tests/chat-proxy-tool-call.test.ts`
+- `tests/queue-command.test.ts`
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `doc/00_project/initiative_orca/*`
+
+### Verification
+
+- `npm test -- tests/work-session-store.test.ts tests/queue-command.test.ts tests/chat-proxy-tool-call.test.ts` -> `40/40`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test` -> `88` files / `1620` tests
+- `node dist/bin/orca.js --version` -> `0.8.15`
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Approval timeline stores policy decisions, not a full per-file review bundle with before/after diffs | UX/runtime | Extend structured evidence bundles when scheduler/resume work starts |
+| Queue leases are still metadata and not yet a durable scheduler/resume control plane | Runtime | ORCA-SWARM-020 |
+
 ## 2026-04-29 - Ink Transcript Readability PDCA Tranche
 
 ### Scope

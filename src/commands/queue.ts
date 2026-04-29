@@ -21,6 +21,7 @@ import {
   listTaskRunSummaries,
   type TaskRunLease,
   type TaskRun,
+  type TaskRunApprovalEvent,
   type TaskRunEvidence,
   type TaskRunStatus,
   type TaskRunSummary,
@@ -63,6 +64,7 @@ export interface TaskRunEvidenceDrawer {
   title: string
   workSessionId: string
   summary?: string
+  approvals: TaskRunApprovalEvent[]
   evidence: TaskRunEvidencePreview[]
 }
 
@@ -379,6 +381,7 @@ export function buildTaskRunEvidenceDrawer(id: string, options: QueueEvidenceOpt
     title: taskRun.title,
     workSessionId: taskRun.workSessionId,
     summary: taskRun.summary,
+    approvals: taskRun.approvals || [],
     evidence,
   }
 }
@@ -392,6 +395,19 @@ export function formatTaskRunEvidenceDrawerMarkdown(drawer: TaskRunEvidenceDrawe
     `- Work session: \`${drawer.workSessionId}\``,
   ]
   if (drawer.summary) lines.push(`- Summary: ${drawer.summary}`)
+  lines.push('')
+
+  lines.push('## Approval Timeline')
+  if (drawer.approvals.length === 0) {
+    lines.push('_No approval events yet._')
+  } else {
+    drawer.approvals.forEach((approval) => {
+      const scope = approval.scope ? ` scope=\`${approval.scope}\`` : ''
+      lines.push(`- ${approval.createdAt} \`${approval.decision}\` \`${approval.toolName}\`${scope} source=\`${approval.source}\``)
+      lines.push(`  - Rule: \`${approval.ruleKey}\``)
+      lines.push(`  - Preview: ${approval.preview}`)
+    })
+  }
   lines.push('')
 
   if (drawer.evidence.length === 0) {
@@ -485,6 +501,19 @@ function renderTaskRunEvidenceDrawer(id: string, options: QueueEvidenceOptions):
   console.log(`  title: ${drawer.title}`)
   console.log(`  work session: ${drawer.workSessionId}`)
   if (drawer.summary) console.log(`  summary: ${drawer.summary}`)
+  console.log()
+
+  console.log('  \x1b[1mApproval Timeline\x1b[0m')
+  if (drawer.approvals.length === 0) {
+    console.log('  \x1b[90m(no approval events yet)\x1b[0m')
+  } else {
+    for (const approval of drawer.approvals) {
+      const scope = approval.scope ? ` scope=${approval.scope}` : ''
+      console.log(`  ${approval.createdAt} ${approval.decision} ${approval.toolName}${scope} source=${approval.source}`)
+      console.log(`    rule: ${approval.ruleKey}`)
+      console.log(`    preview: ${approval.preview}`)
+    }
+  }
   console.log()
 
   if (drawer.evidence.length === 0) {

@@ -5,9 +5,9 @@
 | Gate | Result | Evidence |
 | --- | --- | --- |
 | Plan | Pass | `SOTA_GAP_SWARM_AUDIT.md` milestones and atomic task queue |
-| Do | Pass | Hook trust hardening, network-tool approval/guard, `orca queue list/show/follow/takeover/evidence`, `serve /chat` canonical TaskRun records, `orca run` default/goal-loop/mission/plan TaskRun records, shared slash-command registry, release evidence snapshot guard, CI gate integrity, clean-index command baseline, chat operator control plane, chat REPL TaskRun records, Ink `/evidence <task-run-id>` TaskRun evidence detail panel, visible submitted prompts, structured assistant response panels |
-| Check | Pass | `npm run lint`, `npm run build`, `npm test` -> `88` files / `1619` tests |
-| Act | Pass | ORCA-SWARM-019 completed; remaining queue shifts to approval timeline and scheduler/resume semantics |
+| Do | Pass | Hook trust hardening, network-tool approval/guard, `orca queue list/show/follow/takeover/evidence`, `serve /chat` canonical TaskRun records, `orca run` default/goal-loop/mission/plan TaskRun records, shared slash-command registry, release evidence snapshot guard, CI gate integrity, clean-index command baseline, chat operator control plane, chat REPL TaskRun records, Ink `/evidence <task-run-id>` TaskRun evidence detail panel, visible submitted prompts, structured assistant response panels, review-before-apply approval timeline |
+| Check | Pass | `npm run lint`, `npm run build`, `npm test` -> `88` files / `1620` tests |
+| Act | Pass | ORCA-SWARM-018 and ORCA-SWARM-019 completed; remaining queue shifts to scheduler/resume semantics and model-routing evidence |
 
 ## Baseline Checklist
 

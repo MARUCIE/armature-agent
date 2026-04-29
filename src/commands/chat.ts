@@ -51,7 +51,8 @@ import { TokenBudgetManager } from '../token-budget.js'
 import { RetryTracker } from '../retry-intelligence.js'
 import { recordUsage } from '../usage-db.js'
 import { consumeCompletedBackgroundJobs, readBackgroundJobLog } from '../background-jobs.js'
-import { createTaskRun, createWorkSession, finishTaskRun, updateWorkSession } from '../work-session-store.js'
+import { appendTaskRunApproval, createTaskRun, createWorkSession, finishTaskRun, updateWorkSession } from '../work-session-store.js'
+import type { ToolApprovalEventInput } from '../policy-executor.js'
 import {
   findModelChoice,
   formatContextWindow,
@@ -1703,6 +1704,9 @@ async function runREPL(
           config.permissionAllowlist = [...persistedPermissionAllowlist]
           emitInlineNotice(`permission rule saved: ${path}`, 'info')
         },
+        recordApprovalEvent: (event) => {
+          appendTaskRunApproval(taskRun.id, event)
+        },
         runProxyTurn,
         runSDKQuery,
       })
@@ -1898,6 +1902,7 @@ interface ProxyTurnOptions {
   permissionMode?: ReplPermissionMode
   isPermissionGranted?: (ruleKey: string) => boolean
   recordPermissionGrant?: (ruleKey: string, scope: 'session' | 'project') => void
+  recordApprovalEvent?: (event: ToolApprovalEventInput) => void
   retryTracker?: RetryTracker
   loopDetector?: LoopDetector
   tokenBudget?: TokenBudgetManager
@@ -1916,7 +1921,7 @@ interface ProxyTurnOptions {
 }
 
 export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTokens: number; outputTokens: number }> {
-  const { prompt, resolved, config, outputMode, history, cwd, abortSignal, onFirstToken, onStreamToken, onFileWrite, permissionMode, isPermissionGranted, recordPermissionGrant, retryTracker, loopDetector, tokenBudget, contextMonitor, toolDefs, extraToolDefs, injectedPaths, session: emitterOpt, onStreamingStatus, reasoningEffort } = options
+  const { prompt, resolved, config, outputMode, history, cwd, abortSignal, onFirstToken, onStreamToken, onFileWrite, permissionMode, isPermissionGranted, recordPermissionGrant, recordApprovalEvent, retryTracker, loopDetector, tokenBudget, contextMonitor, toolDefs, extraToolDefs, injectedPaths, session: emitterOpt, onStreamingStatus, reasoningEffort } = options
   const allowedTools = [...(toolDefs || []), ...(extraToolDefs || [])]
     .map((tool) => (tool.function as { name?: string } | undefined)?.name)
     .filter((name): name is string => Boolean(name))
@@ -1954,6 +1959,7 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
             allowedTools,
             isPermissionGranted,
             recordPermissionGrant,
+            recordApprovalEvent,
             retryTracker,
             loopDetector,
             tokenBudget,

@@ -1,5 +1,24 @@
 # Notes
 
+## 2026-04-29 - TaskRun approval timeline PDCA continuation
+
+Context:
+
+- User said `继续` after the Ink transcript readability fix.
+- The remaining M3 evidence-console gap was review-before-apply history: approval decisions were visible only during the live prompt and were not durable TaskRun evidence.
+
+PDCA executed:
+
+- Plan: make approval decisions part of the TaskRun contract rather than separate log files so CLI and Ink evidence cannot drift.
+- Do: added `TaskRun.approvals`, appended policy decision events from `policy-executor` through the chat proxy path, and rendered an Approval Timeline in both `orca queue evidence` and Ink `/evidence`.
+- Check:
+  - `npm test -- tests/work-session-store.test.ts tests/queue-command.test.ts tests/chat-proxy-tool-call.test.ts` -> `40` tests passed.
+  - `npm run lint` -> pass.
+  - `npm run build` -> pass.
+  - `npm test` -> `88` files / `1620` tests passed.
+  - `node dist/bin/orca.js --version` -> `0.8.15`.
+- Act: ORCA-SWARM-018 closes the approval timeline gap; next queue item is scheduler / resume semantics over TaskRun leases.
+
 ## 2026-04-29 - Ink transcript readability PDCA continuation
 
 Context:

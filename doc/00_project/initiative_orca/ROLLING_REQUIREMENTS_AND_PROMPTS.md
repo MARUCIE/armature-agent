@@ -27,6 +27,7 @@
 | REQ-20260429-019 | Runtime | Interactive `orca chat` REPL turns must create and close canonical WorkSession / TaskRun records with status, usage, duration, and runtime evidence | Done | `src/commands/chat.ts`, `src/commands/chat-repl-turn.ts`, `src/work-session-store.ts`, `tests/chat-repl-turn.test.ts`, `tests/work-session-store.test.ts` |
 | REQ-20260429-020 | UX | Operators must inspect TaskRun evidence inside the Ink REPL without leaving the session or opening raw files | Done | `src/commands/queue.ts`, `src/commands/chat-slash-readonly.ts`, `src/slash-commands.ts`, `tests/queue-command.test.ts`, `tests/chat-slash-readonly.test.ts` |
 | REQ-20260429-021 | UX | Submitted Ink prompts must remain visible after sending, and assistant markdown must render as structured terminal output | Done | `src/ui/session.ts`, `src/ui/types.ts`, `src/ui/components/App.tsx`, `src/ui/components/MarkdownText.tsx`, `tests/ink-ui.test.tsx`, `tests/chat-session-emitter.test.ts` |
+| REQ-20260429-022 | UX | Review-before-apply approval decisions must persist on TaskRun evidence and render before file artifacts in CLI and Ink | Done | `src/policy-executor.ts`, `src/work-session-store.ts`, `src/commands/queue.ts`, `tests/chat-proxy-tool-call.test.ts`, `tests/queue-command.test.ts` |
 
 ### Prompt Ledger
 
@@ -46,6 +47,7 @@
 | PROMPT-20260429-012 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-016: chat REPL canonical TaskRun records |
 | PROMPT-20260429-013 | `继` | Continue queued PDCA execution | Completed ORCA-SWARM-017: Ink `/evidence` TaskRun detail panel |
 | PROMPT-20260429-014 | `orca发现几个问题...我输入的提示词看不到...内容输出缺乏结构化的表达` | Screenshot-driven Ink UX fix | Completed ORCA-SWARM-019: visible prompt blocks and structured assistant response panels |
+| PROMPT-20260429-015 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-018: TaskRun approval timeline in CLI / Ink evidence drawer |
 
 ### Anti-Regression Q&A
 
@@ -72,6 +74,7 @@
 | Can Ink inspect TaskRun evidence without opening raw files? | Yes. `/evidence <task-run-id>` opens the same TaskRun evidence drawer model as `orca queue evidence` in an Ink `DetailPanel`. | `tests/chat-slash-readonly.test.ts`, `tests/queue-command.test.ts` |
 | Does Ink keep the submitted user prompt visible after Enter? | Yes. Submitted prompts emit `user_message` and render as highlighted `You` transcript blocks. | `tests/ink-ui.test.tsx`, `tests/chat-session-emitter.test.ts` |
 | Does assistant output still expose raw `###` / `**` markdown as the primary structure? | No. `MarkdownText` renders headings, bullets, inline emphasis/code, links, quotes, and code blocks into structured terminal text inside an `ORCA` panel. | `tests/ink-ui.test.tsx` |
+| Can approval decisions disappear after a review-before-apply prompt? | No. Prompted, preapproved, policy-blocked, and hook-blocked decisions append to `TaskRun.approvals` and render in `orca queue evidence` plus Ink `/evidence`. | `tests/chat-proxy-tool-call.test.ts`, `tests/work-session-store.test.ts`, `tests/queue-command.test.ts` |
 
 ### References
 

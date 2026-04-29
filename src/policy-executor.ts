@@ -6,6 +6,18 @@ import { DANGEROUS_TOOLS, executeTool, isSandboxEnabled, setSandboxMode, type To
 export type PolicyPermissionMode = 'yolo' | 'auto' | 'plan'
 export type PermissionScope = 'once' | 'session' | 'project'
 export type ToolArgs = Record<string, unknown>
+export type ToolApprovalDecision = 'allowed' | 'denied' | 'preapproved' | 'blocked'
+export type ToolApprovalSource = 'prompt' | 'allowlist' | 'policy' | 'hook'
+
+export interface ToolApprovalEventInput {
+  toolName: string
+  ruleKey: string
+  preview: string
+  permissionMode?: PolicyPermissionMode
+  decision: ToolApprovalDecision
+  scope?: PermissionScope
+  source: ToolApprovalSource
+}
 
 export interface PermissionDecision {
   allowed: boolean
@@ -20,6 +32,7 @@ export interface AuthorizeToolCallOptions {
   allowedTools?: string[]
   isPermissionGranted?: (ruleKey: string) => boolean
   requestPermissionDecision?: (name: string, args: ToolArgs, cwd: string) => Promise<PermissionDecision>
+  recordApprovalEvent?: (event: ToolApprovalEventInput) => void
 }
 
 export interface AuthorizeToolCallResult {
@@ -165,14 +178,32 @@ export async function authorizeToolCall(options: AuthorizeToolCallOptions): Prom
   const args = { ...options.args }
   const blockedByHook = await runPreToolHook(options.name, args, options.cwd)
   if (blockedByHook) {
-    return { authorized: false, args, ruleKey: buildPermissionRuleKey(options.name, args, options.cwd), result: blockedByHook }
+    const ruleKey = buildPermissionRuleKey(options.name, args, options.cwd)
+    options.recordApprovalEvent?.({
+      toolName: options.name,
+      ruleKey,
+      preview: buildPermissionPreview(options.name, args),
+      permissionMode: options.permissionMode,
+      decision: 'blocked',
+      source: 'hook',
+    })
+    return { authorized: false, args, ruleKey, result: blockedByHook }
   }
 
   if (options.allowedTools && !options.allowedTools.includes(options.name)) {
+    const ruleKey = buildPermissionRuleKey(options.name, args, options.cwd)
+    options.recordApprovalEvent?.({
+      toolName: options.name,
+      ruleKey,
+      preview: buildPermissionPreview(options.name, args),
+      permissionMode: options.permissionMode,
+      decision: 'blocked',
+      source: 'policy',
+    })
     return {
       authorized: false,
       args,
-      ruleKey: buildPermissionRuleKey(options.name, args, options.cwd),
+      ruleKey,
       result: { success: false, output: `Tool "${options.name}" is not allowed in the current policy.` },
     }
   }
@@ -181,9 +212,29 @@ export async function authorizeToolCall(options: AuthorizeToolCallOptions): Prom
   const dangerous = DANGEROUS_TOOLS.has(options.name)
   const requiresApproval = permissionMode === 'plan' || (permissionMode === 'auto' && dangerous)
   const ruleKey = buildPermissionRuleKey(options.name, args, options.cwd)
+  const alreadyGranted = options.isPermissionGranted?.(ruleKey) || false
 
-  if (requiresApproval && !options.isPermissionGranted?.(ruleKey)) {
+  if (requiresApproval && alreadyGranted) {
+    options.recordApprovalEvent?.({
+      toolName: options.name,
+      ruleKey,
+      preview: buildPermissionPreview(options.name, args),
+      permissionMode,
+      decision: 'preapproved',
+      source: 'allowlist',
+    })
+  }
+
+  if (requiresApproval && !alreadyGranted) {
     if (!options.requestPermissionDecision) {
+      options.recordApprovalEvent?.({
+        toolName: options.name,
+        ruleKey,
+        preview: buildPermissionPreview(options.name, args),
+        permissionMode,
+        decision: 'blocked',
+        source: 'policy',
+      })
       return {
         authorized: false,
         args,
@@ -193,6 +244,15 @@ export async function authorizeToolCall(options: AuthorizeToolCallOptions): Prom
     }
 
     const decision = await options.requestPermissionDecision(options.name, args, options.cwd)
+    options.recordApprovalEvent?.({
+      toolName: options.name,
+      ruleKey,
+      preview: buildPermissionPreview(options.name, args),
+      permissionMode,
+      decision: decision.allowed ? 'allowed' : 'denied',
+      scope: decision.scope,
+      source: 'prompt',
+    })
     if (!decision.allowed) {
       return {
         authorized: false,

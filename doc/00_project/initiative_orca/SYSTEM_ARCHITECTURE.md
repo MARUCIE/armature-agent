@@ -36,10 +36,14 @@ The SOTA swarm audit adds two immediate architectural constraints:
    - `ChatSessionEmitter.emitUserMessage()` exposes submitted prompt text to the UI event stream
    - `App.tsx` renders user turns as highlighted `You` blocks and assistant turns as structured `ORCA` panels
    - `MarkdownText.tsx` handles headings, bullets, inline emphasis, links, blockquotes, and highlighted code blocks without exposing raw markdown syntax as the primary structure
+7. Review-before-apply approval history is part of the TaskRun contract:
+   - `policy-executor` emits prompt, allowlist, policy, and hook decision events
+   - `chat` appends those events to `TaskRun.approvals`
+   - CLI `queue evidence` and Ink `/evidence` render the approval timeline before file evidence
 
 Open architecture work:
 
-- Promote `WorkSession` / `TaskRun` into the canonical execution contract for `chat`, mission, and planner surfaces. The default `run` path and `serve /chat` now write canonical records.
+- Keep `WorkSession` / `TaskRun` as the canonical execution contract across `chat`, `run`, mission, planner, and `serve /chat` surfaces.
 - Promote queue lease semantics from CLI metadata into future scheduler / resume control after the execution contract is unified.
 - Keep `formatTaskRunEvidenceDrawerMarkdown` as the shared rendering contract for CLI `queue evidence` and Ink `/evidence` detail panels.
 - Keep execution handlers separate until the unified execution contract is ready; the registry currently owns discovery metadata, not command behavior.
