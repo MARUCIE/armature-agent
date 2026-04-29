@@ -14,6 +14,8 @@ New operator journeys:
 | Read submitted prompts after sending | Keep the operator's own prompt visible as a distinct highlighted transcript block | Press Enter in Ink chat | `src/ui/components/App.tsx`, `src/ui/session.ts`, `tests/ink-ui.test.tsx` |
 | Read structured assistant output | See headings, bullets, inline emphasis, and code blocks in a framed assistant response panel | Assistant streaming / turn completion | `src/ui/components/App.tsx`, `src/ui/components/MarkdownText.tsx`, `tests/ink-ui.test.tsx` |
 | Claim operator control of a TaskRun | Mark a non-terminal TaskRun as owned by an operator for a bounded TTL | `orca queue takeover <id> --holder <name> --ttl <duration>` | `src/commands/queue.ts`, `src/work-session-store.ts`, `tests/queue-command.test.ts`, `tests/work-session-store.test.ts` |
+| Resume a chat TaskRun | Claim a bounded resume lease and receive the exact saved-session continue command | `orca queue resume <id> --holder <name>` | `src/commands/queue.ts`, `src/work-session-store.ts`, `tests/queue-command.test.ts` |
+| Schedule the next recoverable TaskRun | Skip active leases and unsupported replay records, then claim the next resumable or monitorable item | `orca queue schedule --holder <name>` | `src/commands/queue.ts`, `tests/queue-command.test.ts` |
 | Discover slash commands consistently | See the same command surface in completion, picker, and help, with HomePanel metadata prepared for the pending UI-baseline split | `/`, `Tab`, `/help` | `src/slash-commands.ts`, `tests/slash-commands.test.ts` |
 | Trust release evidence in docs | See README and active PDCA counts aligned with the package version and current full-suite snapshot | README, PDCA docs, `verification_snapshot.json` | `tests/release-evidence.test.ts` |
 | Trust CI gate integrity | See documented matrix/security/performance/eval gates enforced by CI instead of a narrower build/test-only workflow | GitHub Actions, `npm run test:*` | `.github/workflows/ci.yml`, `agent-eval/manifests/test-matrix.json` |
@@ -22,7 +24,7 @@ New operator journeys:
 
 Open UX work:
 
-- Convert queue leases into real scheduler / resume semantics after the unified execution contract lands.
+- Extend resume support beyond chat saved sessions only after non-chat TaskRuns persist replay-safe argv/prompt metadata.
 - Move command handlers behind registry metadata only after the command execution contract is stable.
 - Split the existing HomePanel UI baseline before wiring quick-path command hints to the registry.
 - Keep CI gate labels aligned with `agent-eval/manifests/test-matrix.json` and the generated entrypoint snippet.
@@ -197,9 +199,10 @@ The 2026-04-21 swarm audit adds one sharper constraint to these journeys: they d
 3. `/status` and the live status bar expose that id so the operator can anchor follow-up actions to the same object.
 4. `orca serve` exposes `GET /sessions`, `GET /sessions/latest`, and `GET /sessions/:id` so a future web/IDE client can discover and inspect the durable session object set.
 5. This is the first continuity surface, not the final hosted continuity workflow.
-6. The next continuity step is not another metadata endpoint; it is a real `WorkSession` / `TaskRun` model with queue/take-over semantics and evidence links.
-7. The shipped `WorkSession` / `TaskRun` slice now covers the default `orca run`, goal-loop, mission, plan, and `serve /chat` paths and is inspectable through `serve`.
-8. If `serve` binds to a non-loopback host, `ORCA_SERVE_TOKEN` is now required and HTTP requests must present a bearer token.
+6. The next continuity step is not another metadata endpoint; it is richer replay metadata for non-chat TaskRuns.
+7. The shipped `WorkSession` / `TaskRun` slice now covers the default `orca run`, goal-loop, mission, plan, `orca chat`, and `serve /chat` paths and is inspectable through queue and serve surfaces.
+8. `orca queue resume` and `orca queue schedule` turn saved chat session metadata into concrete continuation commands, while unsupported non-chat replay stays explicit instead of pretending to resume arbitrary runs.
+9. If `serve` binds to a non-loopback host, `ORCA_SERVE_TOKEN` is now required and HTTP requests must present a bearer token.
 
 ### 1i. Stats Dashboard Flow
 

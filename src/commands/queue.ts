@@ -18,11 +18,14 @@ import { formatMarkdownCodeBlock } from '../ui/command-output.js'
 import {
   claimTaskRunLease,
   getTaskRunDetailById,
+  getTaskRunLeaseState,
+  getWorkSessionById,
   listTaskRunSummaries,
   type TaskRunLease,
   type TaskRun,
   type TaskRunApprovalEvent,
   type TaskRunEvidence,
+  type TaskRunLeaseClaimResult,
   type TaskRunStatus,
   type TaskRunSummary,
 } from '../work-session-store.js'
@@ -72,6 +75,24 @@ interface QueueTakeoverOptions {
   force?: boolean
   holder?: string
   ttl?: string
+}
+
+interface QueueResumeOptions extends QueueTakeoverOptions {}
+
+interface QueueScheduleOptions extends QueueTakeoverOptions {
+  workSession?: string
+}
+
+export type TaskRunResumePlanState = 'resumable' | 'monitor' | 'terminal' | 'unsupported'
+
+export interface TaskRunResumePlan {
+  taskRunId: string
+  state: TaskRunResumePlanState
+  reason: string
+  cwd: string
+  command?: string
+  savedSessionId?: string
+  backgroundJobId?: string
 }
 
 function parseLimit(value: string | undefined): number {
@@ -139,6 +160,11 @@ function formatLeaseDetail(lease: TaskRunLease): string {
   const forced = lease.forced ? ' forced' : ''
   const previous = lease.previousHolder ? ` previous=${lease.previousHolder}` : ''
   return `${lease.id} holder=${lease.holder} expires=${lease.expiresAt}${forced}${previous}`
+}
+
+function quoteShellArg(value: string): string {
+  if (/^[A-Za-z0-9_./:=@+-]+$/.test(value)) return value
+  return `'${value.replace(/'/g, `'\\''`)}'`
 }
 
 function formatBytes(bytes: number): string {
@@ -228,6 +254,9 @@ function renderTaskRunDetail(id: string): void {
   if (taskRun.usage) {
     console.log(`  usage: ${taskRun.usage.inputTokens} in / ${taskRun.usage.outputTokens} out / $${taskRun.usage.costUsd.toFixed(6)}`)
   }
+  const resumePlan = buildTaskRunResumePlan(taskRun)
+  console.log(`  resume: ${resumePlan.state} - ${resumePlan.reason}`)
+  if (resumePlan.command) console.log(`  resume command: ${resumePlan.command}`)
   if (taskRun.evidence.length > 0) {
     console.log('  evidence:')
     for (const item of taskRun.evidence) {
@@ -235,6 +264,81 @@ function renderTaskRunDetail(id: string): void {
     }
   }
   console.log()
+}
+
+export function buildTaskRunResumePlan(taskRun: TaskRun): TaskRunResumePlan {
+  if (TERMINAL_TASK_RUN_STATUSES.has(taskRun.status)) {
+    return {
+      taskRunId: taskRun.id,
+      state: 'terminal',
+      reason: `TaskRun is terminal (${taskRun.status})`,
+      cwd: taskRun.cwd,
+    }
+  }
+
+  if (taskRun.backgroundJobId) {
+    const job = getBackgroundJobById(taskRun.backgroundJobId)
+    if (job?.status === 'running') {
+      return {
+        taskRunId: taskRun.id,
+        state: 'monitor',
+        reason: `Background job ${job.id} is still running`,
+        cwd: taskRun.cwd,
+        command: `orca queue follow ${quoteShellArg(taskRun.id)}`,
+        backgroundJobId: job.id,
+      }
+    }
+  }
+
+  const workSession = getWorkSessionById(taskRun.workSessionId)?.session
+  if (workSession?.sourceSurface === 'chat' && workSession.savedSessionId) {
+    return {
+      taskRunId: taskRun.id,
+      state: 'resumable',
+      reason: `Saved chat session ${workSession.savedSessionId} can be continued`,
+      cwd: taskRun.cwd,
+      command: `orca chat --cwd ${quoteShellArg(taskRun.cwd)} --continue ${quoteShellArg(workSession.savedSessionId)}`,
+      savedSessionId: workSession.savedSessionId,
+    }
+  }
+
+  return {
+    taskRunId: taskRun.id,
+    state: 'unsupported',
+    reason: `TaskRun kind "${taskRun.kind}" does not carry replay metadata yet`,
+    cwd: taskRun.cwd,
+  }
+}
+
+function renderResumePlan(plan: TaskRunResumePlan, lease?: TaskRunLease, takeover?: 'new' | 'expired' | 'forced'): void {
+  console.log()
+  console.log(`  \x1b[1mTaskRun ${plan.taskRunId} resume plan\x1b[0m`)
+  console.log(`  state: ${plan.state}`)
+  console.log(`  reason: ${plan.reason}`)
+  console.log(`  cwd: ${plan.cwd}`)
+  if (plan.savedSessionId) console.log(`  saved session: ${plan.savedSessionId}`)
+  if (plan.backgroundJobId) console.log(`  background job: ${plan.backgroundJobId}`)
+  if (lease) {
+    if (takeover) console.log(`  takeover: ${takeover}`)
+    console.log(`  lease: ${formatLeaseDetail(lease)}`)
+  }
+  if (plan.command) {
+    console.log('  command:')
+    console.log(`    ${plan.command}`)
+  }
+  console.log()
+}
+
+function printLeaseClaimError(id: string, result: Extract<TaskRunLeaseClaimResult, { ok: false }>): void {
+  if (result.reason === 'not_found') {
+    console.error(`\x1b[31m  error: task run "${id}" not found\x1b[0m`)
+  } else if (result.reason === 'terminal') {
+    console.error(`\x1b[31m  error: task run "${id}" is terminal (${result.taskRun?.status})\x1b[0m`)
+  } else {
+    console.error(`\x1b[31m  error: task run "${id}" already has an active lease\x1b[0m`)
+    if (result.lease) console.error(`  ${formatLeaseDetail(result.lease)}`)
+    console.error('  rerun with --force to replace it')
+  }
 }
 
 function renderTaskRunTakeover(id: string, options: QueueTakeoverOptions): void {
@@ -246,15 +350,7 @@ function renderTaskRunTakeover(id: string, options: QueueTakeoverOptions): void 
   })
 
   if (!result.ok) {
-    if (result.reason === 'not_found') {
-      console.error(`\x1b[31m  error: task run "${id}" not found\x1b[0m`)
-    } else if (result.reason === 'terminal') {
-      console.error(`\x1b[31m  error: task run "${id}" is terminal (${result.taskRun?.status})\x1b[0m`)
-    } else {
-      console.error(`\x1b[31m  error: task run "${id}" already has an active lease\x1b[0m`)
-      if (result.lease) console.error(`  ${formatLeaseDetail(result.lease)}`)
-      console.error('  rerun with --force to replace it')
-    }
+    printLeaseClaimError(id, result)
     process.exit(1)
   }
 
@@ -264,6 +360,60 @@ function renderTaskRunTakeover(id: string, options: QueueTakeoverOptions): void 
   console.log(`  status: ${result.taskRun.status}`)
   console.log(`  lease: ${formatLeaseDetail(result.lease)}`)
   console.log()
+}
+
+function renderTaskRunResume(id: string, options: QueueResumeOptions): void {
+  const detail = getTaskRunDetailById(id)
+  if (!detail) {
+    console.error(`\x1b[31m  error: task run "${id}" not found\x1b[0m`)
+    process.exit(1)
+  }
+
+  const plan = buildTaskRunResumePlan(detail.taskRun)
+  if (plan.state !== 'resumable' && plan.state !== 'monitor') {
+    renderResumePlan(plan)
+    process.exit(1)
+  }
+
+  const holder = resolveLeaseHolder(options.holder)
+  const result = claimTaskRunLease(id, {
+    holder,
+    ttlMs: parseDurationMs(options.ttl),
+    force: options.force,
+  })
+
+  if (!result.ok) {
+    printLeaseClaimError(id, result)
+    process.exit(1)
+  }
+
+  renderResumePlan(buildTaskRunResumePlan(result.taskRun), result.lease, result.takeover)
+}
+
+function findNextSchedulableTaskRun(options: QueueScheduleOptions): TaskRun | null {
+  const summaries = listTaskRunSummaries()
+    .filter((summary) => !options.workSession || summary.workSessionId.includes(options.workSession))
+    .filter((summary) => !TERMINAL_TASK_RUN_STATUSES.has(summary.status))
+    .sort((left, right) => left.startedAt.localeCompare(right.startedAt))
+
+  for (const summary of summaries) {
+    const detail = getTaskRunDetailById(summary.id)
+    if (!detail) continue
+    if (getTaskRunLeaseState(detail.taskRun) === 'active' && !options.force) continue
+    const plan = buildTaskRunResumePlan(detail.taskRun)
+    if (plan.state === 'resumable' || plan.state === 'monitor') return detail.taskRun
+  }
+
+  return null
+}
+
+function renderTaskRunSchedule(options: QueueScheduleOptions): void {
+  const taskRun = findNextSchedulableTaskRun(options)
+  if (!taskRun) {
+    console.error('\x1b[31m  error: no schedulable TaskRun found\x1b[0m')
+    process.exit(1)
+  }
+  renderTaskRunResume(taskRun.id, options)
 }
 
 function resolveEvidencePath(taskRun: TaskRun, evidence: TaskRunEvidence): string {
@@ -635,6 +785,22 @@ export function createQueueCommand(): Command {
     .option('--ttl <duration>', 'Lease duration: 30s, 15m, 1h, or bare seconds', '15m')
     .option('--force', 'Replace an active unexpired lease')
     .action(renderTaskRunTakeover)
+
+  cmd.command('resume')
+    .argument('<id>', 'TaskRun ID')
+    .description('Acquire a resume lease and print the concrete resume command when available')
+    .option('--holder <name>', 'Operator identity for the resume lease')
+    .option('--ttl <duration>', 'Lease duration: 30s, 15m, 1h, or bare seconds', '15m')
+    .option('--force', 'Replace an active unexpired lease')
+    .action(renderTaskRunResume)
+
+  cmd.command('schedule')
+    .description('Claim the next unleased resumable TaskRun and print its resume command')
+    .option('--holder <name>', 'Operator identity for the resume lease')
+    .option('--ttl <duration>', 'Lease duration: 30s, 15m, 1h, or bare seconds', '15m')
+    .option('--work-session <id>', 'Only schedule TaskRuns from a matching work-session id')
+    .option('--force', 'Replace an active unexpired lease if the selected TaskRun has one')
+    .action(renderTaskRunSchedule)
 
   cmd.command('follow')
     .argument('<id>', 'TaskRun ID')

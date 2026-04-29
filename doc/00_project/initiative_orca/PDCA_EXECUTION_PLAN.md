@@ -21,10 +21,13 @@
   - `/evidence <task-run-id>` opens the shared TaskRun evidence drawer inside the Ink `DetailPanel`
   - submitted Ink prompts render as highlighted transcript blocks and assistant markdown renders in structured response panels
   - review-before-apply approvals append to `TaskRun.approvals` and render in the shared CLI / Ink evidence drawer
+  - `orca queue resume` claims a resume lease and prints a concrete `orca chat --continue <saved-session-id>` command for resumable chat TaskRuns
+  - `orca queue schedule` claims the next unleased resumable or monitorable TaskRun and prints the recovery action
 - Check evidence:
   - `npm run lint`
   - `npm run build`
-  - `npm test` -> `88` files / `1620` tests
+  - `npm test` -> `88` files / `1623` tests
+  - `npm test -- tests/work-session-store.test.ts tests/queue-command.test.ts` -> `17` tests
   - `npm test -- tests/work-session-store.test.ts tests/queue-command.test.ts tests/chat-proxy-tool-call.test.ts` -> `40` tests
   - `npm test -- tests/ink-ui.test.tsx tests/chat-session-emitter.test.ts` -> `84` tests
   - `npm test -- tests/queue-command.test.ts tests/chat-slash-readonly.test.ts tests/slash-commands.test.ts tests/ink-ui.test.tsx` -> `108` tests
@@ -42,8 +45,8 @@
   - `npm run test:ai-eval-fast`
   - gate evidence: `outputs/test-matrix/run-20260429-060205`, `run-20260429-060222`, `run-20260429-060232`, `run-20260429-060243`
 - Act queue:
-  - extend queue leases into true scheduler / resume semantics
   - continue model-routing evidence and catalog SSoT
+  - attach richer structured evidence bundles to serve/background TaskRuns
 
 ## Plan
 

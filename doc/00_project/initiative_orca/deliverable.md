@@ -1,5 +1,47 @@
 # Deliverable
 
+## 2026-04-29 - TaskRun Scheduler/Resume PDCA Tranche
+
+### Scope
+
+Close ORCA-SWARM-020 by turning queue leases into actionable recovery plans for TaskRuns that already carry safe resume metadata.
+
+### Delivered
+
+- Added explicit TaskRun lease-state classification (`none`, `active`, `expired`).
+- Added `orca queue resume <task-run-id>` to claim a resume lease and print the concrete recovery command when available.
+- Added `orca queue schedule` to pick the next unleased resumable or monitorable TaskRun.
+- Chat WorkSessions with saved-session ids now produce `orca chat --cwd ... --continue <saved-session-id>` commands.
+- Running background jobs produce `orca queue follow <task-run-id>` monitor commands; unsupported replay exits without claiming a lease.
+- Version bumped to `0.8.16`.
+
+### Changed Files
+
+- `src/work-session-store.ts`
+- `src/commands/queue.ts`
+- `tests/work-session-store.test.ts`
+- `tests/queue-command.test.ts`
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `doc/00_project/initiative_orca/*`
+
+### Verification
+
+- `npm test -- tests/work-session-store.test.ts tests/queue-command.test.ts` -> `17/17`
+- `npm run lint` -> pass
+- `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `npm run build` -> pass
+- `npm test` -> `88` files / `1623` tests
+- `node dist/bin/orca.js --version` -> `0.8.16`
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Non-chat `run` TaskRuns still do not persist replay-safe argv/prompt metadata | Runtime | Add replay metadata before claiming arbitrary run resume |
+| Approval timeline still stores decisions, not full per-file review bundles | UX/runtime | Extend structured evidence bundles in the next evidence tranche |
+
 ## 2026-04-29 - TaskRun Approval Timeline PDCA Tranche
 
 ### Scope
@@ -43,7 +85,7 @@ Close ORCA-SWARM-018 by making review-before-apply decisions durable and visible
 | Risk | Owner | Follow-up |
 | --- | --- | --- |
 | Approval timeline stores policy decisions, not a full per-file review bundle with before/after diffs | UX/runtime | Extend structured evidence bundles when scheduler/resume work starts |
-| Queue leases are still metadata and not yet a durable scheduler/resume control plane | Runtime | ORCA-SWARM-020 |
+| Queue leases needed actionable resume/schedule semantics | Runtime | Resolved by ORCA-SWARM-020 for chat saved-session recovery; non-chat replay remains a separate metadata task |
 
 ## 2026-04-29 - Ink Transcript Readability PDCA Tranche
 

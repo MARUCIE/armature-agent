@@ -1,5 +1,25 @@
 # Notes
 
+## 2026-04-29 - TaskRun scheduler/resume PDCA continuation
+
+Context:
+
+- User said `继续` after approval timeline and transcript readability tranches, so execution continued with ORCA-SWARM-020.
+- The boundary is actionable queue recovery over existing TaskRun leases, not full replay of every historical command. Non-chat `run` TaskRuns do not yet persist replay-safe argv/prompt metadata.
+
+PDCA executed:
+
+- Plan: classify lease state, build a resume plan from TaskRun + WorkSession metadata, claim a lease only for resumable or monitorable records, and expose one direct command plus one scheduler command.
+- Do: added `getTaskRunLeaseState()`, `buildTaskRunResumePlan()`, `orca queue resume <id>`, and `orca queue schedule`; chat saved sessions print `orca chat --cwd ... --continue <saved-session-id>`, running background jobs print `orca queue follow <id>`, unsupported replay exits without claiming a lease.
+- Check:
+  - `npm test -- tests/work-session-store.test.ts tests/queue-command.test.ts` -> `17` tests passed.
+  - `npm run lint` -> pass.
+  - `npm test -- tests/release-evidence.test.ts` -> `3` tests passed.
+  - `npm run build` -> pass.
+  - `npm test` -> `88` files / `1623` tests passed.
+  - `node dist/bin/orca.js --version` -> `0.8.16`.
+- Act: ORCA-SWARM-020 closes the scheduler/resume tranche for chat saved-session recovery; next queue item is model catalog SSoT plus replay-safe metadata for non-chat TaskRuns.
+
 ## 2026-04-29 - TaskRun approval timeline PDCA continuation
 
 Context:
@@ -17,7 +37,7 @@ PDCA executed:
   - `npm run build` -> pass.
   - `npm test` -> `88` files / `1620` tests passed.
   - `node dist/bin/orca.js --version` -> `0.8.15`.
-- Act: ORCA-SWARM-018 closes the approval timeline gap; next queue item is scheduler / resume semantics over TaskRun leases.
+- Act: ORCA-SWARM-018 closed the approval timeline gap; scheduler / resume semantics were later completed for chat saved-session recovery in ORCA-SWARM-020.
 
 ## 2026-04-29 - Ink transcript readability PDCA continuation
 

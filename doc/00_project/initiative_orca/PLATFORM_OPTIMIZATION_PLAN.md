@@ -10,8 +10,8 @@ The next platform wave is now explicitly ordered:
    - approval-gated network tools
    - private/loopback `fetch_url` guard
 2. Queue visibility:
-   - ship `orca queue list/show/follow/takeover/evidence`
-   - keep lease state as the handoff point for future scheduler / resume semantics
+   - ship `orca queue list/show/follow/takeover/evidence/resume/schedule`
+   - use lease state as the operator handoff point for concrete chat resume and background-job monitor plans
 3. Unified execution contract:
    - `run` default, goal-loop, mission, plan, and `serve /chat` now write canonical `WorkSession` / `TaskRun` records
    - finish model routing and future background agents against the same record model now that `chat` REPL, `run`, and `serve /chat` write canonical records
@@ -30,8 +30,8 @@ The next platform wave is now explicitly ordered:
    - CI now runs matrix sync, static, security, performance, and fast agent-eval gates
    - `agent-eval/manifests/test-matrix.json` is the manifest source for package entrypoints
 9. Next platform tranche:
-   - scheduler / resume semantics over TaskRun leases
    - model-routing evidence and catalog SSoT
+   - replay-safe metadata for non-chat TaskRun resume
 
 ## Objective
 
@@ -245,6 +245,8 @@ Wave 4a progress now started:
 - this establishes a headless continuity discovery layer before richer hosted/web take-over flows
 - `orca run` now writes TaskRun records for default, goal-loop, mission, and plan branches, so queue inspection can see status, summary, usage, and mission-state evidence
 - `orca chat` REPL now writes per-prompt TaskRun records under the active chat WorkSession, so queue inspection can see interactive turn status and usage
+- `orca queue resume` now claims a resume lease and prints the saved-session continuation command for chat TaskRuns
+- `orca queue schedule` now selects the next unleased resumable or monitorable TaskRun instead of treating leases as passive metadata
 - continuity metadata is intentionally treated as trusted-local surface:
   - no wildcard CORS
   - session-discovery endpoints are loopback-only

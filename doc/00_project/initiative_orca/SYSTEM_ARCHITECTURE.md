@@ -15,6 +15,8 @@ The SOTA swarm audit adds two immediate architectural constraints:
    - `orca queue follow <task-run-id>`
    - `orca queue takeover <task-run-id> --holder <name> --ttl <duration>`
    - `orca queue evidence <task-run-id>`
+   - `orca queue resume <task-run-id> --holder <name>`
+   - `orca queue schedule --holder <name>`
 3. Slash-command discovery now has a shared metadata registry:
    - `src/slash-commands.ts`
    - REPL completion
@@ -44,7 +46,7 @@ The SOTA swarm audit adds two immediate architectural constraints:
 Open architecture work:
 
 - Keep `WorkSession` / `TaskRun` as the canonical execution contract across `chat`, `run`, mission, planner, and `serve /chat` surfaces.
-- Promote queue lease semantics from CLI metadata into future scheduler / resume control after the execution contract is unified.
+- Keep scheduler / resume semantics honest: chat TaskRuns with saved-session metadata can print concrete `orca chat --continue` recovery commands; non-chat replay remains unsupported until replay-safe argv/prompt metadata is persisted.
 - Keep `formatTaskRunEvidenceDrawerMarkdown` as the shared rendering contract for CLI `queue evidence` and Ink `/evidence` detail panels.
 - Keep execution handlers separate until the unified execution contract is ready; the registry currently owns discovery metadata, not command behavior.
 - Split the existing HomePanel UI baseline before wiring its command hints to the registry.
@@ -158,7 +160,7 @@ flowchart TD
 | Provider bridge | `src/providers/openai-compat.ts` | Provider-neutral transport and model interaction |
   Note: proxy path now supports multimodal one-shot prompt content (`text` + `image_url` parts) for local image attachments.
 | Agent runtime | `src/tools.ts`, `src/background-jobs.ts`, `src/logger.ts`, `src/hooks.ts`, `src/mcp-client.ts`, `src/retry-intelligence.ts`, `src/auto-verify.ts` | Tool execution, detached job tracking, local runtime logging, hooks, provenance-aware MCP loading, retry behavior, verification helpers |
-| Continuity objects | `src/work-session-store.ts` | File-backed `WorkSession` / `TaskRun` persistence for `run` default/goal-loop/mission/plan, `serve /chat`, queue inspection, and takeover leases |
+| Continuity objects | `src/work-session-store.ts` | File-backed `WorkSession` / `TaskRun` persistence for `run` default/goal-loop/mission/plan, `serve /chat`, queue inspection, takeover leases, lease-state classification, and resume/schedule plans |
 | ink UI | `src/ui/` (18 files) | React terminal UI: App, ScrollBox, InputArea, StatusBar, Banner, Footer, ThinkingSpinner, ToolCallBlock, DiffPreview, MarkdownText, FileLink, PermissionPrompt, MultiModelProgress, CommandPicker, TurnSummary, AlternateScreen + hooks (useTerminalSize, useMouseWheel, usePasteHandler) + modules (cursor, theme, session, types, utils) |
 | IDE integration | `integrations/vscode-orca/` | VS Code extension skeleton that launches `orca` terminal workflows and MCP server directly |
 | Presentation (legacy) | `src/output.ts`, `src/markdown.ts`, `src/command-picker.ts` | Legacy terminal rendering (pre-ink fallback) |
@@ -198,6 +200,7 @@ flowchart TD
 - Serve canonical run entry: `POST /chat` returns `workSessionId` / `taskRunId` for non-streaming requests and emits the same ids in an SSE `metadata` event for streaming requests.
 - Run canonical task entry: `orca run` writes `TaskRun` records for default, goal-loop, mission, and plan branches and stores usage plus mission-state evidence when available.
 - Chat canonical task entry: interactive `orca chat` REPL turns write per-prompt `TaskRun` records under the active chat `WorkSession`, including status, usage, duration, and runtime observation ids.
+- Queue recovery entry: `orca queue resume` and `orca queue schedule` reuse the same lease path, then render a resume plan. Chat saved sessions become `orca chat --cwd ... --continue <saved-session-id>` commands; running background jobs become `orca queue follow <task-run-id>` monitor commands.
 
 ## Legacy Documentation Cross-References
 

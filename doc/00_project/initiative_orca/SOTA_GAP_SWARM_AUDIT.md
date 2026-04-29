@@ -6,7 +6,7 @@
 - Baseline: dirty working tree audit; existing user changes were preserved
 - Report route: `html-style-router` -> `html-economist-style`
 - Verification baseline before fixes: `npm run lint`, `npm test` (`85` files / `1583` tests), `npm run build`
-- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`88` files / `1620` tests)
+- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`88` files / `1623` tests)
 
 ## Scope
 
@@ -44,8 +44,8 @@ Orca has moved beyond basic CLI parity. The strongest areas are provider-neutral
 
 The remaining SOTA gap is now sharper:
 
-1. A single canonical execution contract is still incomplete for `chat` and model routing; `run`, `serve /chat`, mission, and planner now share the TaskRun spine.
-2. Async work is visible, but not yet a durable scheduler / resume system over the queue records.
+1. A single canonical execution contract is now in place for `chat`, `run`, mission, planner, and `serve /chat`; model-routing evidence remains the next drift risk.
+2. Async work is visible and leaseable; queue resume/schedule now produces concrete chat continuation or monitor commands when replay metadata exists.
 3. Review-before-apply now has CLI and Ink TaskRun evidence entry points plus persisted approval timeline semantics.
 4. Trust boundaries were inconsistent around repo-local hooks and network-capable tools.
 5. CI and docs still under-enforce the gate claims already described in project documentation.
@@ -135,7 +135,7 @@ PDCA action executed:
 - `orca queue evidence <task-run-id>` opens a terminal evidence drawer keyed by `TaskRun`.
 - Drawer entries classify logs/diffs/data/reports/artifacts, resolve relative paths, show size and update time, mark missing files, and preview capped tails.
 - `/evidence <task-run-id>` opens the same evidence drawer model inside the Ink `DetailPanel`.
-- Approval timeline is now part of the same TaskRun evidence drawer; remaining work is scheduler / resume semantics over leases.
+- Approval timeline is now part of the same TaskRun evidence drawer; queue leases now feed `resume` and `schedule` plans, while richer per-file review bundles remain future work.
 
 ### High - CI gate claims are broader than enforced gates
 
@@ -187,6 +187,7 @@ PDCA action executed:
 | M3b Slash Command Surface | Command discovery cannot drift across REPL and Ink | Shared registry feeds completion, picker, and `/help`; HomePanel metadata is prepared but not staged into the dirty UI baseline |
 | M3c Release Evidence Snapshot | README/doc verification evidence cannot silently drift | Snapshot and release-evidence test guard README plus active PDCA docs |
 | M4 Gate Integrity | CI enforces documented gates | CI runs matrix sync, static, security, performance, and fast agent-eval gates |
+| M4e Scheduler / Resume Semantics | Queue leases become actionable recovery plans | `orca queue resume` and `orca queue schedule` claim leases and print chat continue or monitor commands |
 | M5 Model Catalog SSoT | Provider routing metadata stops drifting | One model catalog powers runtime, docs, picker, and tests |
 
 ## Atomic Task Queue
@@ -212,7 +213,8 @@ PDCA action executed:
 | ORCA-SWARM-017 | P1 | Expose TaskRun evidence in Ink DetailPanel through `/evidence` | UX | done |
 | ORCA-SWARM-018 | P1 | Add review-before-apply approval timeline over TaskRun evidence | UX | done |
 | ORCA-SWARM-019 | P1 | Make Ink submitted prompts visible and assistant markdown structurally rendered | UX | done |
-| ORCA-SWARM-020 | P1 | Extend TaskRun leases into true scheduler / resume semantics | runtime | pending |
+| ORCA-SWARM-020 | P1 | Extend TaskRun leases into true scheduler / resume semantics | runtime | done |
+| ORCA-SWARM-021 | P1 | Continue model-routing evidence and catalog SSoT | runtime | pending |
 
 ## PDCA Execution Log
 
@@ -250,10 +252,10 @@ Verification executed:
 - Combined targeted regression pack -> `190` tests passed
 - `npm run lint` -> pass
 - `npm run build` -> pass
-- Final `npm test` -> `88` files / `1620` tests passed
+- Final `npm test` -> `88` files / `1623` tests passed
 - Gate integrity targeted tests cover manifest/script/sync behavior.
 - CI now executes `test:matrix:sync`, `test:static`, `test:security`, `test:performance`, and `test:ai-eval-fast`.
-- `node dist/bin/orca.js --version` -> `0.8.15`
+- `node dist/bin/orca.js --version` -> `0.8.16`
 - `npm test -- tests/work-session-store.test.ts tests/queue-command.test.ts tests/chat-proxy-tool-call.test.ts` -> `40` tests passed
 - `npm test -- tests/chat-repl-turn.test.ts tests/work-session-store.test.ts` -> `19` tests passed
 - `npm test -- tests/run-work-session.test.ts tests/work-session-store.test.ts tests/queue-command.test.ts` -> `14` tests passed
@@ -269,6 +271,9 @@ Verification executed:
 - Ink transcript visibility -> submitted prompts render as `You` blocks and assistant markdown renders as structured `ORCA` panels
 - `ai check` attempted -> failed on existing generic harness/doc gates: missing `tests/test_all.py`, legacy docs without required frontmatter/changelog, and historical no-emoji hits; evidence at `outputs/check/20260429-044244-b917cb00`
 - `node dist/bin/orca.js queue takeover <fixture-task-run> --holder smoke --ttl 30s` -> acquired a TaskRun lease
+- `npm test -- tests/work-session-store.test.ts tests/queue-command.test.ts` -> `17` tests passed
+- `orca queue resume <chat-task-run> --holder <name>` -> claims a lease and prints the saved-session continue command
+- `orca queue schedule --holder <name>` -> skips active leases and unsupported replay records, then claims the next resumable chat TaskRun
 - `POST /chat` in serve mode -> returns or emits `workSessionId` and `taskRunId`, then closes TaskRun status on completion/failure
 - `node dist/bin/orca.js --help` -> `queue` command visible
 - `node dist/bin/orca.js queue list --limit 3` -> empty-state renders successfully
@@ -283,15 +288,15 @@ Pre-fix baseline evidence:
 
 Next queue items should proceed in this order:
 
-1. Extend TaskRun leases into true scheduler / resume semantics.
-2. Continue M5 model catalog single-source routing metadata.
-3. Attach richer structured evidence bundles to serve/background TaskRuns.
+1. Continue M5 model catalog single-source routing metadata.
+2. Attach richer structured evidence bundles to serve/background TaskRuns.
+3. Store replay-safe argv/prompt metadata for non-chat TaskRuns before claiming full arbitrary-run resume.
 
 ## Remaining Risks
 
 - DNS names that resolve to private IPs are not yet resolved and blocked before `curl`; only literal private hosts and localhost-style names are blocked in this tranche.
 - Repo-local hooks now have an env trust switch, but a first-class `orca hooks trust` UX does not exist yet.
-- `orca queue` now supports list/show/follow/takeover/evidence and sees chat/run/serve TaskRuns, but is not yet a durable scheduler or process-resume manager.
-- Approval timeline records policy decisions, but richer per-file review bundles and scheduler resume semantics remain separate work.
+- `orca queue resume` supports chat saved-session continuation and running background-job monitoring; non-chat `run` replay remains unsupported until replay-safe argv/prompt metadata is persisted.
+- Approval timeline records policy decisions, but richer per-file review bundles remain separate work.
 - Slash command discovery now has one registry, but command execution handlers still live in the read-only and mutating slash switches.
 - HomePanel registry consumption remains blocked by the existing uncommitted UI baseline and should be split before claiming full ORCA-SWARM-010 closure.

@@ -243,6 +243,7 @@ describe('work-session store', () => {
       claimTaskRunLease,
       createTaskRun,
       createWorkSession,
+      getTaskRunLeaseState,
     } = await import('../src/work-session-store.js')
 
     const session = createWorkSession({
@@ -271,6 +272,8 @@ describe('work-session store', () => {
     if (!first.ok) throw new Error('expected lease claim to succeed')
     expect(first.takeover).toBe('new')
     expect(first.lease.holder).toBe('operator-a')
+    expect(getTaskRunLeaseState(first.taskRun, new Date('2026-04-29T00:00:30.000Z'))).toBe('active')
+    expect(getTaskRunLeaseState(first.taskRun, new Date('2026-04-29T00:01:01.000Z'))).toBe('expired')
 
     const blocked = claimTaskRunLease(taskRun.id, {
       holder: 'operator-b',

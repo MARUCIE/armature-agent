@@ -204,6 +204,168 @@ describe('queue command', () => {
     expect(output).toContain('--force')
   })
 
+  it('resumes a chat task-run by acquiring a lease and printing the continue command', async () => {
+    vi.resetModules()
+    const {
+      createTaskRun,
+      createWorkSession,
+      getTaskRunById,
+    } = await import('../src/work-session-store.js')
+    const { createQueueCommand } = await import('../src/commands/queue.js')
+
+    const projectDir = join(homeDir, 'project with spaces')
+    mkdirSync(projectDir, { recursive: true })
+    const session = createWorkSession({
+      sourceSurface: 'chat',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+      savedSessionId: 'auto-2026-04-29T10-00-00',
+    })
+    const taskRun = createTaskRun({
+      workSessionId: session.id,
+      kind: 'chat',
+      title: 'Resume this chat',
+      surface: 'cli',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+
+    const logs: string[] = []
+    vi.spyOn(console, 'log').mockImplementation((...args) => { logs.push(args.join(' ')) })
+
+    const command = createQueueCommand()
+    await command.parseAsync(['node', 'queue', 'resume', taskRun.id, '--holder', 'operator-r', '--ttl', '30s'])
+
+    const output = logs.join('\n')
+    expect(output).toContain(`TaskRun ${taskRun.id} resume plan`)
+    expect(output).toContain('state: resumable')
+    expect(output).toContain('saved session: auto-2026-04-29T10-00-00')
+    expect(output).toContain("orca chat --cwd '")
+    expect(output).toContain("--continue auto-2026-04-29T10-00-00")
+    expect(output).toContain('holder=operator-r')
+
+    const persisted = getTaskRunById(taskRun.id)
+    expect(persisted?.taskRun.lease?.holder).toBe('operator-r')
+  })
+
+  it('refuses resume for task-runs without replay metadata', async () => {
+    vi.resetModules()
+    const {
+      createTaskRun,
+      createWorkSession,
+      getTaskRunById,
+    } = await import('../src/work-session-store.js')
+    const { createQueueCommand } = await import('../src/commands/queue.js')
+
+    const session = createWorkSession({
+      sourceSurface: 'run',
+      cwd: '/tmp/project',
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    const taskRun = createTaskRun({
+      workSessionId: session.id,
+      kind: 'run',
+      title: 'Unsupported replay',
+      surface: 'cli',
+      cwd: '/tmp/project',
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+
+    const logs: string[] = []
+    vi.spyOn(console, 'log').mockImplementation((...args) => { logs.push(args.join(' ')) })
+    vi.spyOn(process, 'exit').mockImplementation(((code?: string | number | null) => {
+      throw new Error(`exit:${code}`)
+    }) as never)
+
+    const command = createQueueCommand()
+    await expect(command.parseAsync(['node', 'queue', 'resume', taskRun.id])).rejects.toThrow('exit:1')
+
+    const output = logs.join('\n')
+    expect(output).toContain('state: unsupported')
+    expect(output).toContain('does not carry replay metadata yet')
+    expect(getTaskRunById(taskRun.id)?.taskRun.lease).toBeUndefined()
+  })
+
+  it('schedules the next unleased resumable task-run', async () => {
+    vi.resetModules()
+    const {
+      claimTaskRunLease,
+      createTaskRun,
+      createWorkSession,
+      getTaskRunById,
+    } = await import('../src/work-session-store.js')
+    const { createQueueCommand } = await import('../src/commands/queue.js')
+
+    const projectDir = join(homeDir, 'project')
+    mkdirSync(projectDir, { recursive: true })
+    const activeSession = createWorkSession({
+      sourceSurface: 'chat',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+      savedSessionId: 'active-session',
+    })
+    const active = createTaskRun({
+      workSessionId: activeSession.id,
+      kind: 'chat',
+      title: 'Already leased',
+      surface: 'cli',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    claimTaskRunLease(active.id, { holder: 'operator-a', ttlMs: 60_000 })
+
+    const unsupportedSession = createWorkSession({
+      sourceSurface: 'run',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    createTaskRun({
+      workSessionId: unsupportedSession.id,
+      kind: 'run',
+      title: 'Unsupported run',
+      surface: 'cli',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+
+    const resumableSession = createWorkSession({
+      sourceSurface: 'chat',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+      savedSessionId: 'next-session',
+    })
+    const resumable = createTaskRun({
+      workSessionId: resumableSession.id,
+      kind: 'chat',
+      title: 'Next resumable',
+      surface: 'cli',
+      cwd: projectDir,
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+
+    const logs: string[] = []
+    vi.spyOn(console, 'log').mockImplementation((...args) => { logs.push(args.join(' ')) })
+
+    const command = createQueueCommand()
+    await command.parseAsync(['node', 'queue', 'schedule', '--holder', 'scheduler'])
+
+    const output = logs.join('\n')
+    expect(output).toContain(`TaskRun ${resumable.id} resume plan`)
+    expect(output).toContain('--continue next-session')
+    expect(getTaskRunById(active.id)?.taskRun.lease?.holder).toBe('operator-a')
+    expect(getTaskRunById(resumable.id)?.taskRun.lease?.holder).toBe('scheduler')
+  })
+
   it('follows a task-run evidence snapshot once', async () => {
     vi.resetModules()
     const {

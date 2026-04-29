@@ -154,6 +154,8 @@ export interface TaskRunDetail {
   taskRun: TaskRun
 }
 
+export type TaskRunLeaseState = 'none' | 'active' | 'expired'
+
 export type TaskRunLeaseClaimResult =
   | {
     ok: true
@@ -460,6 +462,13 @@ export function isTerminalTaskRunStatus(status: TaskRunStatus): boolean {
   return TERMINAL_TASK_RUN_STATUSES.has(status)
 }
 
+export function getTaskRunLeaseState(taskRun: TaskRun, now: Date = new Date()): TaskRunLeaseState {
+  if (!taskRun.lease) return 'none'
+  const expiresAtMs = Date.parse(taskRun.lease.expiresAt)
+  if (!Number.isFinite(expiresAtMs)) return 'expired'
+  return expiresAtMs > now.getTime() ? 'active' : 'expired'
+}
+
 export function claimTaskRunLease(
   id: string,
   input: {
@@ -479,8 +488,7 @@ export function claimTaskRunLease(
   const now = input.now || new Date()
   const nowMs = now.getTime()
   const existingLease = current.taskRun.lease
-  const existingExpiresAtMs = existingLease ? Date.parse(existingLease.expiresAt) : Number.NaN
-  const existingLeaseActive = existingLease && Number.isFinite(existingExpiresAtMs) && existingExpiresAtMs > nowMs
+  const existingLeaseActive = getTaskRunLeaseState(current.taskRun, now) === 'active'
 
   if (existingLeaseActive && !input.force) {
     return { ok: false, reason: 'active_lease', taskRun: current.taskRun, lease: existingLease }

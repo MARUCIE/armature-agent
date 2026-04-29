@@ -28,6 +28,7 @@
 | REQ-20260429-020 | UX | Operators must inspect TaskRun evidence inside the Ink REPL without leaving the session or opening raw files | Done | `src/commands/queue.ts`, `src/commands/chat-slash-readonly.ts`, `src/slash-commands.ts`, `tests/queue-command.test.ts`, `tests/chat-slash-readonly.test.ts` |
 | REQ-20260429-021 | UX | Submitted Ink prompts must remain visible after sending, and assistant markdown must render as structured terminal output | Done | `src/ui/session.ts`, `src/ui/types.ts`, `src/ui/components/App.tsx`, `src/ui/components/MarkdownText.tsx`, `tests/ink-ui.test.tsx`, `tests/chat-session-emitter.test.ts` |
 | REQ-20260429-022 | UX | Review-before-apply approval decisions must persist on TaskRun evidence and render before file artifacts in CLI and Ink | Done | `src/policy-executor.ts`, `src/work-session-store.ts`, `src/commands/queue.ts`, `tests/chat-proxy-tool-call.test.ts`, `tests/queue-command.test.ts` |
+| REQ-20260429-023 | Runtime | TaskRun leases must support actionable resume/schedule plans without pretending unsupported run kinds are replay-safe | Done | `orca queue resume`, `orca queue schedule`, `src/commands/queue.ts`, `src/work-session-store.ts`, `tests/queue-command.test.ts` |
 
 ### Prompt Ledger
 
@@ -48,6 +49,7 @@
 | PROMPT-20260429-013 | `继` | Continue queued PDCA execution | Completed ORCA-SWARM-017: Ink `/evidence` TaskRun detail panel |
 | PROMPT-20260429-014 | `orca发现几个问题...我输入的提示词看不到...内容输出缺乏结构化的表达` | Screenshot-driven Ink UX fix | Completed ORCA-SWARM-019: visible prompt blocks and structured assistant response panels |
 | PROMPT-20260429-015 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-018: TaskRun approval timeline in CLI / Ink evidence drawer |
+| PROMPT-20260429-016 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-020: `queue resume` and `queue schedule` lease-backed recovery plans |
 
 ### Anti-Regression Q&A
 
@@ -75,6 +77,8 @@
 | Does Ink keep the submitted user prompt visible after Enter? | Yes. Submitted prompts emit `user_message` and render as highlighted `You` transcript blocks. | `tests/ink-ui.test.tsx`, `tests/chat-session-emitter.test.ts` |
 | Does assistant output still expose raw `###` / `**` markdown as the primary structure? | No. `MarkdownText` renders headings, bullets, inline emphasis/code, links, quotes, and code blocks into structured terminal text inside an `ORCA` panel. | `tests/ink-ui.test.tsx` |
 | Can approval decisions disappear after a review-before-apply prompt? | No. Prompted, preapproved, policy-blocked, and hook-blocked decisions append to `TaskRun.approvals` and render in `orca queue evidence` plus Ink `/evidence`. | `tests/chat-proxy-tool-call.test.ts`, `tests/work-session-store.test.ts`, `tests/queue-command.test.ts` |
+| Can `queue resume` claim arbitrary non-chat TaskRuns as replayable? | No. It only prints recovery commands for chat TaskRuns with saved-session metadata or monitor commands for running background jobs; unsupported replay exits without claiming a lease. | `tests/queue-command.test.ts` |
+| Can `queue schedule` hand a second operator an actively leased TaskRun by default? | No. It skips active leases unless `--force` is explicit, and then claims the selected resumable or monitorable TaskRun through the same lease path. | `tests/queue-command.test.ts`, `tests/work-session-store.test.ts` |
 
 ### References
 
