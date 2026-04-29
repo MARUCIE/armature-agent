@@ -46,6 +46,7 @@ Orca CLI is a command-first product. User journeys are structured around termina
 | Review runtime dashboard | See usage, runtime health, and recent error signals in one place | `orca stats` | `src/commands/stats.ts`, `src/doctor.ts`, `src/logger.ts` |
 | Inspect continuity state headlessly | Query the saved-session object set before attaching a richer client | `orca serve` + `GET /sessions|/sessions/latest` | `src/commands/serve.ts`, `src/session-store.ts` |
 | Inspect run continuity state headlessly | Query durable run objects created by the default `orca run` path | `orca serve` + `GET /work-sessions*`, `GET /task-runs*` | `src/commands/serve.ts`, `src/work-session-store.ts` |
+| Execute headless chat as a tracked run | Send a prompt over HTTP and receive durable run ids for later queue inspection | `POST /chat` with JSON or SSE response | `src/commands/serve.ts`, `tests/serve-command.test.ts` |
 | Resume a specific saved session | Continue an exact durable session object instead of only “latest” | `orca -c <id>` | `src/commands/chat.ts`, `src/commands/session.ts` |
 | Inspect one saved session headlessly | Read a single durable session object before designing take-over/resume | `orca serve` + `GET /sessions/:id` | `src/commands/serve.ts`, `src/session-store.ts` |
 | Plan quality expansion | Turn the current automated baseline into a larger SOTA test program with explicit task / grader ownership | `AGENT_EVAL_PLAN.md`, `agent-eval/manifests/*.json` | repo root plan + manifest-based gate workflow |

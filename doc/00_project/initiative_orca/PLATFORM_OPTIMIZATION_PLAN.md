@@ -13,7 +13,8 @@ The next platform wave is now explicitly ordered:
    - ship `orca queue list/show/follow/takeover`
    - keep lease state as the handoff point for future scheduler / resume semantics
 3. Unified execution contract:
-   - make `WorkSession` / `TaskRun` the shared record for `run`, `serve`, mission, planner, and future background agents
+   - `run` and `serve /chat` now write canonical `WorkSession` / `TaskRun` records
+   - finish `chat`, mission, planner, and future background agents against the same record model
 4. Evidence console:
    - attach logs, approvals, diffs, tool calls, and artifacts to TaskRun
 5. Gate integrity:

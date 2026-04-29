@@ -1,5 +1,26 @@
 # Notes
 
+## 2026-04-29 - Serve canonical run PDCA continuation
+
+Context:
+
+- User said `继续` after the queue takeover commit, so execution continued with ORCA-SWARM-008.
+- `serve.ts` and `tests/serve-command.test.ts` already contained unrelated continuity/security endpoint changes in the dirty worktree. This tranche added only the `/chat` canonical run-record behavior on top of that file state.
+
+PDCA executed:
+
+- Plan: convert valid `POST /chat` requests into canonical run records without changing the existing HTTP protocol shape more than necessary.
+- Do: create `WorkSession` / `TaskRun` for valid `serve /chat` requests, close the TaskRun on success/failure, return ids in non-streaming JSON, and emit ids as streaming `metadata` SSE.
+- Check:
+  - `npm test -- tests/serve-command.test.ts tests/work-session-store.test.ts` -> `15` tests passed.
+  - `npm run lint` -> pass.
+  - `npm run build` -> pass.
+  - Full `npm test` -> `86` files / `1600` tests passed.
+  - `node dist/bin/orca.js --version` -> `0.8.4`.
+  - Clean staged-index targeted check: `npm test -- tests/serve-command.test.ts tests/work-session-store.test.ts` -> `7` tests passed.
+  - Clean staged-index checkout at `/tmp/orca-index-008.WnEC1K` exposed pre-existing uncommitted baseline dependencies (`src/program.ts` imports `chat` subcommand exports, `permissions`, `evolve`, and workflow preset surfaces that are not all present in `HEAD`). The active workspace is verified; this tranche does not claim to close that older baseline hygiene debt.
+- Act: next queue item is ORCA-SWARM-009, TaskRun evidence drawer / richer evidence console.
+
 ## 2026-04-29 - Queue takeover PDCA continuation
 
 Context:

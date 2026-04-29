@@ -220,7 +220,7 @@
           <tr><td>ORCA-SWARM-005</td><td>P1</td><td><code>orca queue list/show</code></td><td>Done</td></tr>
           <tr><td>ORCA-SWARM-006</td><td>P1</td><td><code>queue follow</code> 日志与证据流</td><td>Done</td></tr>
           <tr><td>ORCA-SWARM-007</td><td>P1</td><td><code>queue takeover</code> lease 模型</td><td>Done</td></tr>
-          <tr><td>ORCA-SWARM-008</td><td>P1</td><td><code>serve</code> 写入 canonical run endpoint</td><td>Pending</td></tr>
+          <tr><td>ORCA-SWARM-008</td><td>P1</td><td><code>serve</code> 写入 canonical run endpoint</td><td>Done</td></tr>
           <tr><td>ORCA-SWARM-009</td><td>P1</td><td>TUI TaskRun evidence drawer</td><td>Pending</td></tr>
           <tr><td>ORCA-SWARM-010</td><td>P1</td><td>Slash command registry 单一事实源</td><td>Pending</td></tr>
           <tr><td>ORCA-SWARM-011</td><td>P2</td><td>README/doc 测试计数漂移清理</td><td>Pending</td></tr>
@@ -234,8 +234,8 @@
       <ul>
         <li><strong>Plan:</strong> 以安全边界和队列可观测性作为第一轮切片，避免在 dirty worktree 中做大范围重构。</li>
         <li><strong>Do:</strong> 修改 <code>src/hooks.ts</code>、<code>src/tools.ts</code>、<code>src/commands/queue.ts</code>、<code>src/program.ts</code> 及对应测试。</li>
-        <li><strong>Check:</strong> 相关安全回归 <code>153</code> tests passed；队列/命令契约 <code>39</code> tests passed；合并 targeted pack <code>190</code> tests passed；最终 <code>npm test</code> 为 <code>86</code> files / <code>1598</code> tests passed；<code>npm run lint</code> 与 <code>npm run build</code> passed。</li>
-        <li><strong>Act:</strong> 下一步推进统一执行契约、证据控制台、CI gate integrity。</li>
+        <li><strong>Check:</strong> 相关安全回归 <code>153</code> tests passed；队列/命令契约 <code>39</code> tests passed；合并 targeted pack <code>190</code> tests passed；最终 <code>npm test</code> 为 <code>86</code> files / <code>1600</code> tests passed；<code>npm run lint</code> 与 <code>npm run build</code> passed。</li>
+        <li><strong>Act:</strong> 下一步补齐剩余执行契约、证据控制台、CI gate integrity。</li>
       </ul>
     </section>
 
@@ -253,7 +253,7 @@
   </main>
 
   <footer>
-    Orca CLI v0.8.3 - SOTA 蜂群审计报告 - Maurice | maurice_wen@proton.me - 2026-04-29
+    Orca CLI v0.8.4 - SOTA 蜂群审计报告 - Maurice | maurice_wen@proton.me - 2026-04-29
   </footer>
 </body>
 </html>

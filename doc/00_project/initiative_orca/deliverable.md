@@ -1,5 +1,53 @@
 # Deliverable
 
+## 2026-04-29 - Serve Canonical Run PDCA Tranche
+
+### Scope
+
+Complete ORCA-SWARM-008 by making `serve /chat` write the same canonical `WorkSession` / `TaskRun` records used by the CLI run/queue surface.
+
+### Delivered
+
+- Valid `POST /chat` requests now create a `WorkSession` with `sourceSurface: serve`.
+- Each request creates a `TaskRun` with `surface: serve` and `kind: run`.
+- Non-streaming responses include `workSessionId` and `taskRunId`.
+- Streaming responses emit an initial SSE `metadata` event with `workSessionId` and `taskRunId`.
+- TaskRun state closes to `completed` or `failed` for non-streaming, streaming, provider exceptions, stream error events, and missing provider base URL.
+- Runtime observations now include the WorkSession / TaskRun ids.
+- Version bumped to `0.8.4`.
+
+### Changed Files
+
+- `src/commands/serve.ts`
+- `tests/serve-command.test.ts`
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `doc/00_project/initiative_orca/*`
+
+### Simplifications Made
+
+- Reused the existing file-backed WorkSession / TaskRun store; no separate serve-run table.
+- Kept `/chat` as the HTTP entrypoint and added run ids to existing response shapes instead of inventing a second endpoint.
+
+### Verification
+
+- `npm test -- tests/serve-command.test.ts tests/work-session-store.test.ts` -> `15/15`
+- `npm run lint`
+- `npm run build`
+- `npm test` -> `1600/1600` across `86` files
+- `node dist/bin/orca.js --version` -> `0.8.4`
+- Clean staged-index targeted check: `npm test -- tests/serve-command.test.ts tests/work-session-store.test.ts` -> `7/7`
+- Clean staged-index checkout attempted at `/tmp/orca-index-008.WnEC1K`; `npm run lint` is blocked by pre-existing uncommitted baseline dependencies (`src/program.ts` imports command/mode surfaces that are present only in the dirty workspace). This tranche intentionally does not stage those broader changes.
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| `chat`, mission, and planner surfaces still do not all share the same run-record path | Runtime/architecture | Continue M2 execution-contract unification |
+| TaskRun evidence bundles are still thin for serve requests | UX/runtime | Execute ORCA-SWARM-009 evidence drawer / richer evidence attachments |
+| A clean index checkout still depends on older uncommitted baseline work outside this tranche | Release/hygiene | Close the broad command/mode baseline in a separate versioned commit before cutting a clean release artifact |
+
 ## 2026-04-29 - Queue Takeover PDCA Tranche
 
 ### Scope
@@ -48,7 +96,7 @@ Complete ORCA-SWARM-007 by making non-terminal TaskRun records leaseable from th
 
 | Risk | Owner | Follow-up |
 | --- | --- | --- |
-| `queue takeover` is a lease marker, not real execution resume | Runtime/architecture | Execute ORCA-SWARM-008 unified execution contract before scheduler semantics |
+| `queue takeover` is a lease marker, not real execution resume | Runtime/architecture | ORCA-SWARM-008 now covers `serve /chat`; remaining resume semantics stay under M2/M3 |
 | Lease conflict handling is local-file based only | Runtime | Revisit atomic write / lock semantics before using it as a multi-process scheduler |
 
 ## 2026-04-29 - Queue Follow PDCA Tranche

@@ -17,7 +17,7 @@ The SOTA swarm audit adds two immediate architectural constraints:
 
 Open architecture work:
 
-- Promote `WorkSession` / `TaskRun` into the canonical execution contract for `chat`, `run`, `serve`, mission, and planner surfaces.
+- Promote `WorkSession` / `TaskRun` into the canonical execution contract for `chat`, mission, and planner surfaces. The default `run` path and `serve /chat` now write canonical records.
 - Promote queue lease semantics from CLI metadata into future scheduler / resume control after the execution contract is unified.
 - Attach evidence bundles to TaskRun so TUI and CLI review surfaces read from one source.
 
@@ -129,7 +129,7 @@ flowchart TD
 | Provider bridge | `src/providers/openai-compat.ts` | Provider-neutral transport and model interaction |
   Note: proxy path now supports multimodal one-shot prompt content (`text` + `image_url` parts) for local image attachments.
 | Agent runtime | `src/tools.ts`, `src/background-jobs.ts`, `src/logger.ts`, `src/hooks.ts`, `src/mcp-client.ts`, `src/retry-intelligence.ts`, `src/auto-verify.ts` | Tool execution, detached job tracking, local runtime logging, hooks, provenance-aware MCP loading, retry behavior, verification helpers |
-| Continuity objects | `src/work-session-store.ts` | File-backed `WorkSession` / `TaskRun` persistence for the run-first continuity slice |
+| Continuity objects | `src/work-session-store.ts` | File-backed `WorkSession` / `TaskRun` persistence for `run`, `serve /chat`, queue inspection, and takeover leases |
 | ink UI | `src/ui/` (18 files) | React terminal UI: App, ScrollBox, InputArea, StatusBar, Banner, Footer, ThinkingSpinner, ToolCallBlock, DiffPreview, MarkdownText, FileLink, PermissionPrompt, MultiModelProgress, CommandPicker, TurnSummary, AlternateScreen + hooks (useTerminalSize, useMouseWheel, usePasteHandler) + modules (cursor, theme, session, types, utils) |
 | IDE integration | `integrations/vscode-orca/` | VS Code extension skeleton that launches `orca` terminal workflows and MCP server directly |
 | Presentation (legacy) | `src/output.ts`, `src/markdown.ts`, `src/command-picker.ts` | Legacy terminal rendering (pre-ink fallback) |
@@ -166,6 +166,7 @@ flowchart TD
 - Quality gate surfaces: `npm run eval:fast`, `npm run eval:nightly`, `npm run eval:release`, plus `agent-eval/{tasks,graders,manifests,runs}`
 - Serve diagnostics: `/health`, `/providers`, `/doctor`
 - Serve continuity discovery: `/sessions`, `/sessions/latest`, `/sessions/:id`, `/work-sessions`, `/work-sessions/latest`, `/work-sessions/:id`, `/work-sessions/:id/task-runs`, `/task-runs`, `/task-runs/:id`
+- Serve canonical run entry: `POST /chat` returns `workSessionId` / `taskRunId` for non-streaming requests and emits the same ids in an SSE `metadata` event for streaming requests.
 
 ## Legacy Documentation Cross-References
 

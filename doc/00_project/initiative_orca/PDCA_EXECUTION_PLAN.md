@@ -10,12 +10,13 @@
   - `fetch_url` / `web_search` approval gating
   - private/loopback `fetch_url` guard
   - `orca queue list/show/follow/takeover`
+  - `serve /chat` canonical `WorkSession` / `TaskRun` records
 - Check evidence:
   - `npm run lint`
   - `npm run build`
-  - `npm test` -> `86` files / `1598` tests
+  - `npm test` -> `86` files / `1600` tests
 - Act queue:
-  - unified execution contract
+  - complete unified execution contract for remaining chat/mission/planner paths
   - evidence console
   - CI gate integrity
 

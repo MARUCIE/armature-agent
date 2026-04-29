@@ -20,6 +20,7 @@ import { getModelChoice, formatContextWindow, formatPricing, getPricingForModel 
 import { gatherDoctorReport } from '../doctor.js'
 import { logInfo, logWarning } from '../logger.js'
 import { MCPServer } from '../mcp-server.js'
+import { createTaskRun, createWorkSession, finishTaskRun } from '../work-session-store.js'
 
 export interface ServerState {
   config: OrcaConfig
@@ -65,6 +66,17 @@ function json(res: ServerResponse, status: number, data: unknown): void {
   res.end(JSON.stringify(data))
 }
 
+function summarizeTaskPrompt(prompt: string): string {
+  const normalized = prompt.replace(/\s+/g, ' ').trim()
+  if (normalized.length <= 120) return normalized
+  return normalized.slice(0, 117) + '...'
+}
+
+function calculateUsageCostUsd(model: string, inputTokens: number, outputTokens: number): number {
+  const pricing = getPricingForModel(model)
+  return pricing ? (inputTokens * pricing[0] + outputTokens * pricing[1]) / 1_000_000 : 0
+}
+
 async function handleChat(req: IncomingMessage, res: ServerResponse, state: ServerState): Promise<void> {
   const body = await parseBody(req)
   const prompt = (body.prompt as string) || ''
@@ -77,8 +89,40 @@ async function handleChat(req: IncomingMessage, res: ServerResponse, state: Serv
     return
   }
 
+  const workSession = createWorkSession({
+    sourceSurface: 'serve',
+    cwd: state.cwd,
+    provider: state.resolved.provider,
+    model,
+  })
+  const taskRun = createTaskRun({
+    workSessionId: workSession.id,
+    kind: 'run',
+    title: summarizeTaskPrompt(prompt),
+    surface: 'serve',
+    cwd: state.cwd,
+    provider: state.resolved.provider,
+    model,
+    summary: prompt,
+  })
+
   if (!state.resolved.baseURL) {
-    json(res, 500, { error: 'No baseURL configured for provider' })
+    finishTaskRun(taskRun.id, {
+      status: 'failed',
+      summary: 'No baseURL configured for provider',
+      usage: {
+        inputTokens: 0,
+        outputTokens: 0,
+        costUsd: 0,
+        durationMs: 0,
+        turns: 1,
+      },
+    })
+    json(res, 500, {
+      error: 'No baseURL configured for provider',
+      workSessionId: workSession.id,
+      taskRunId: taskRun.id,
+    })
     return
   }
 
@@ -90,21 +134,54 @@ async function handleChat(req: IncomingMessage, res: ServerResponse, state: Serv
         { apiKey: state.resolved.apiKey, baseURL: state.resolved.baseURL, model },
         prompt,
       )
+      const durationMs = Date.now() - startTime
+      const costUsd = calculateUsageCostUsd(model, result.inputTokens, result.outputTokens)
       recordUsage({
         provider: state.resolved.provider,
         model,
         inputTokens: result.inputTokens,
         outputTokens: result.outputTokens,
-        costUsd: (() => { const p = getPricingForModel(model); return p ? (result.inputTokens * p[0] + result.outputTokens * p[1]) / 1_000_000 : 0 })(),
-        durationMs: Date.now() - startTime,
+        costUsd,
+        durationMs,
         command: 'serve',
         cwd: state.cwd,
       })
+      finishTaskRun(taskRun.id, {
+        status: 'completed',
+        summary: 'Serve chat completed',
+        usage: {
+          inputTokens: result.inputTokens,
+          outputTokens: result.outputTokens,
+          costUsd,
+          durationMs,
+          turns: 1,
+        },
+      })
       logInfo('serve chat completed', { provider: state.resolved.provider, model, stream: false, inputTokens: result.inputTokens, outputTokens: result.outputTokens })
-      json(res, 200, { text: result.text, model, inputTokens: result.inputTokens, outputTokens: result.outputTokens })
+      json(res, 200, {
+        text: result.text,
+        model,
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+        workSessionId: workSession.id,
+        taskRunId: taskRun.id,
+      })
     } catch (err) {
-      logWarning('serve chat failed', { provider: state.resolved.provider, model, error: err instanceof Error ? err.message : String(err) })
-      json(res, 500, { error: err instanceof Error ? err.message : String(err) })
+      const durationMs = Date.now() - startTime
+      const summary = err instanceof Error ? err.message : String(err)
+      logWarning('serve chat failed', { provider: state.resolved.provider, model, error: summary })
+      finishTaskRun(taskRun.id, {
+        status: 'failed',
+        summary,
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          costUsd: 0,
+          durationMs,
+          turns: 1,
+        },
+      })
+      json(res, 500, { error: summary, workSessionId: workSession.id, taskRunId: taskRun.id })
     }
     return
   }
@@ -120,6 +197,15 @@ async function handleChat(req: IncomingMessage, res: ServerResponse, state: Serv
   const startTime = Date.now()
   let totalInput = 0
   let totalOutput = 0
+  let failed = false
+  let failureSummary = ''
+
+  res.write(`data: ${JSON.stringify({
+    type: 'metadata',
+    workSessionId: workSession.id,
+    taskRunId: taskRun.id,
+    model,
+  })}\n\n`)
 
   try {
     const events = streamChat(
@@ -135,25 +221,42 @@ async function handleChat(req: IncomingMessage, res: ServerResponse, state: Serv
         totalOutput = event.outputTokens || 0
         res.write(`data: ${JSON.stringify({ type: 'usage', inputTokens: totalInput, outputTokens: totalOutput })}\n\n`)
       } else if (event.type === 'error') {
+        failed = true
+        failureSummary = event.error || 'stream error'
         res.write(`data: ${JSON.stringify({ type: 'error', error: event.error })}\n\n`)
       } else if (event.type === 'done') {
         res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`)
       }
     }
   } catch (err) {
-    logWarning('serve streaming chat failed', { provider: state.resolved.provider, model, error: err instanceof Error ? err.message : String(err) })
-    res.write(`data: ${JSON.stringify({ type: 'error', error: err instanceof Error ? err.message : String(err) })}\n\n`)
+    failed = true
+    failureSummary = err instanceof Error ? err.message : String(err)
+    logWarning('serve streaming chat failed', { provider: state.resolved.provider, model, error: failureSummary })
+    res.write(`data: ${JSON.stringify({ type: 'error', error: failureSummary })}\n\n`)
   }
 
+  const durationMs = Date.now() - startTime
+  const costUsd = calculateUsageCostUsd(model, totalInput, totalOutput)
   recordUsage({
     provider: state.resolved.provider,
     model,
     inputTokens: totalInput,
     outputTokens: totalOutput,
-    costUsd: (() => { const p = getPricingForModel(model); return p ? (totalInput * p[0] + totalOutput * p[1]) / 1_000_000 : 0 })(),
-    durationMs: Date.now() - startTime,
+    costUsd,
+    durationMs,
     command: 'serve',
     cwd: state.cwd,
+  })
+  finishTaskRun(taskRun.id, {
+    status: failed ? 'failed' : 'completed',
+    summary: failed ? failureSummary || 'Serve streaming chat failed' : 'Serve streaming chat completed',
+    usage: {
+      inputTokens: totalInput,
+      outputTokens: totalOutput,
+      costUsd,
+      durationMs,
+      turns: 1,
+    },
   })
   logInfo('serve streaming chat completed', { provider: state.resolved.provider, model, stream: true, inputTokens: totalInput, outputTokens: totalOutput })
 

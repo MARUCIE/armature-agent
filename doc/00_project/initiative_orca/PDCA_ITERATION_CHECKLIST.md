@@ -5,9 +5,9 @@
 | Gate | Result | Evidence |
 | --- | --- | --- |
 | Plan | Pass | `SOTA_GAP_SWARM_AUDIT.md` milestones and atomic task queue |
-| Do | Pass | Hook trust hardening, network-tool approval/guard, `orca queue list/show/follow/takeover` |
-| Check | Pass | `npm run lint`, `npm run build`, `npm test` -> `86` files / `1598` tests |
-| Act | Pass | Follow-up queue items ORCA-SWARM-008 through ORCA-SWARM-012 recorded in `task_plan.md` |
+| Do | Pass | Hook trust hardening, network-tool approval/guard, `orca queue list/show/follow/takeover`, `serve /chat` canonical TaskRun records |
+| Check | Pass | `npm run lint`, `npm run build`, `npm test` -> `86` files / `1600` tests |
+| Act | Pass | Follow-up queue items ORCA-SWARM-009 through ORCA-SWARM-012 recorded in `task_plan.md` |
 
 ## Baseline Checklist
 

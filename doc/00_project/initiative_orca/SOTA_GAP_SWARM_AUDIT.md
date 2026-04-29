@@ -6,7 +6,7 @@
 - Baseline: dirty working tree audit; existing user changes were preserved
 - Report route: `html-style-router` -> `html-economist-style`
 - Verification baseline before fixes: `npm run lint`, `npm test` (`85` files / `1583` tests), `npm run build`
-- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`86` files / `1598` tests)
+- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`86` files / `1600` tests)
 
 ## Scope
 
@@ -154,7 +154,7 @@ Atomic follow-up:
 | --- | --- | --- |
 | M0 Trust Hardening | Close immediate repo-trust and network-tool risks | Repo-local hooks require explicit trust; network tools approval-gated; targeted security tests pass |
 | M1 Queue Visibility | Make current TaskRun state inspectable | `orca queue list/show/follow/takeover` shipped; status filtering, evidence streaming, and lease claims covered |
-| M2 Unified Execution Contract | One run object across CLI, serve, mission, planner | All surfaces create/update canonical execution records |
+| M2 Unified Execution Contract | One run object across CLI, serve, mission, planner | Partial: `run` and `serve /chat` create/update canonical records; chat/mission/planner remain |
 | M3 Evidence Console | Review-before-apply becomes inspectable | TUI and CLI show changed files, diffs, logs, approvals, artifacts |
 | M4 Gate Integrity | CI enforces documented gates | CI runs declared matrix/security/performance/eval gates or explicitly marks deferred rows |
 | M5 Model Catalog SSoT | Provider routing metadata stops drifting | One model catalog powers runtime, docs, picker, and tests |
@@ -170,7 +170,7 @@ Atomic follow-up:
 | ORCA-SWARM-005 | P1 | Add `orca queue list/show` over `TaskRun` records | runtime | done |
 | ORCA-SWARM-006 | P1 | Add `queue follow` for live log/evidence streaming | runtime | done |
 | ORCA-SWARM-007 | P1 | Add `queue takeover` lease model | architecture | done |
-| ORCA-SWARM-008 | P1 | Convert `serve /chat` into a canonical run endpoint | architecture | pending |
+| ORCA-SWARM-008 | P1 | Convert `serve /chat` into a canonical run endpoint | architecture | done |
 | ORCA-SWARM-009 | P1 | Add evidence drawer for TaskRun logs/diffs/artifacts | UX | pending |
 | ORCA-SWARM-010 | P1 | Centralize slash-command registry so HomePanel/completer/TUI cannot drift | UX | pending |
 | ORCA-SWARM-011 | P2 | Align README/doc test counts to current suite evidence | docs | pending |
@@ -212,9 +212,10 @@ Verification executed:
 - Combined targeted regression pack -> `190` tests passed
 - `npm run lint` -> pass
 - `npm run build` -> pass
-- Final `npm test` -> `86` files / `1598` tests passed
-- `node dist/bin/orca.js --version` -> `0.8.3`
+- Final `npm test` -> `86` files / `1600` tests passed
+- `node dist/bin/orca.js --version` -> `0.8.4`
 - `node dist/bin/orca.js queue takeover <fixture-task-run> --holder smoke --ttl 30s` -> acquired a TaskRun lease
+- `POST /chat` in serve mode -> returns or emits `workSessionId` and `taskRunId`, then closes TaskRun status on completion/failure
 - `node dist/bin/orca.js --help` -> `queue` command visible
 - `node dist/bin/orca.js queue list --limit 3` -> empty-state renders successfully
 
@@ -228,7 +229,7 @@ Pre-fix baseline evidence:
 
 Next queue items should proceed in this order:
 
-1. Execution contract unification.
+1. Complete execution contract unification for `chat`, mission, and planner.
 2. Evidence console and review-before-apply expansion.
 3. CI gate integrity.
 4. Documentation count drift cleanup.

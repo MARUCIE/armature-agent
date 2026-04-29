@@ -9,6 +9,7 @@ New product requirements from the SOTA swarm audit:
 - `fetch_url` must reject non-HTTP(S), loopback, private, and link-local literal targets by default.
 - Operators need a top-level queue inspection surface for current `TaskRun` records: `orca queue list/show/follow/takeover`.
 - Next tranche must expand queue inspection into richer evidence bundles and a unified execution contract across `run`, `serve`, mission, and planner surfaces.
+- `serve /chat` must create and close canonical `WorkSession` / `TaskRun` records, returning the ids in non-streaming responses and emitting them as streaming metadata.
 
 ## Product Snapshot
 
@@ -102,6 +103,7 @@ Single-vendor coding CLIs force users into one model family per session. Orca CL
   - the same execution creates a persisted `TaskRun`
   - `serve` can inspect both through read-only continuity endpoints
   - `orca queue takeover` can claim a TTL operator lease on non-terminal `TaskRun` records
+  - `serve /chat` creates a durable `WorkSession` and `TaskRun` for both non-streaming and SSE requests
 - CLI output rendering and markdown streaming
 - Slash-command autocomplete that yields to full command submission once the user starts typing arguments
 - Theme preference persistence that suppresses first-launch onboarding once `ORCA_THEME` or `~/.orca/theme` is already set

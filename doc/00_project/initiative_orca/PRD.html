@@ -293,5 +293,5 @@
 <li>Text file expansion skips image paths that were promoted to attachments.</li>
 <li>Full verification passes (<code>lint</code>, <code>test</code>, <code>build</code>, <code>bench</code>).</li>
 </ul>
-<section><h2>2026-04-29 SOTA 蜂群审计更新</h2><p>新增产品要求：repo-local hooks 必须显式信任后才加载；<code>fetch_url</code> / <code>web_search</code> 必须进入自动模式审批；<code>fetch_url</code> 默认阻断非 HTTP(S)、loopback、私网与 link-local 字面地址；操作员需要通过 <code>orca queue list/show/follow/takeover</code> 检查现有 <code>TaskRun</code>、跟随证据流，并对非终态任务声明有 TTL 的操作员 lease。下一阶段继续推进统一执行契约和证据控制台。</p></section>
+<section><h2>2026-04-29 SOTA 蜂群审计更新</h2><p>新增产品要求：repo-local hooks 必须显式信任后才加载；<code>fetch_url</code> / <code>web_search</code> 必须进入自动模式审批；<code>fetch_url</code> 默认阻断非 HTTP(S)、loopback、私网与 link-local 字面地址；操作员需要通过 <code>orca queue list/show/follow/takeover</code> 检查现有 <code>TaskRun</code>、跟随证据流，并对非终态任务声明有 TTL 的操作员 lease。<code>serve /chat</code> 现在也会创建并关闭 canonical <code>WorkSession</code> / <code>TaskRun</code> 记录。下一阶段继续补齐剩余执行契约和证据控制台。</p></section>
 </article></main></body></html>
