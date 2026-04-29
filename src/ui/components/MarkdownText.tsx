@@ -1,8 +1,7 @@
 /**
- * MarkdownText — renders markdown content in ink using marked + marked-terminal.
+ * MarkdownText — renders common markdown into structured terminal text.
  *
  * Code blocks get full syntax highlighting via highlight.js → ANSI color mapping.
- * Supports 30+ languages (TypeScript, Python, Rust, Go, etc.).
  */
 
 import React, { useMemo } from 'react'
@@ -16,7 +15,7 @@ export function MarkdownText({ children }: Props): React.ReactElement {
   const rendered = useMemo(() => {
     if (!children) return ''
     try {
-      return renderMarkdown(children)
+      return renderStructuredMarkdown(children)
     } catch {
       return children
     }
@@ -59,6 +58,11 @@ const HLJS_COLORS: Record<string, string> = {
   'hljs-bullet':     '\x1b[33m',  // yellow
 }
 const RESET = '\x1b[0m'
+const BOLD = '\x1b[1m'
+const DIM = '\x1b[90m'
+const CYAN = '\x1b[36m'
+const YELLOW = '\x1b[33m'
+const MAGENTA = '\x1b[35m'
 
 /** Convert hljs HTML spans to ANSI-colored text */
 function hljsToAnsi(html: string): string {
@@ -91,39 +95,89 @@ function loadHljs() {
   return hljs
 }
 
-// Module-level markdown rendering (sync)
-let markedInstance: ((src: string) => string) | null = null
+function renderStructuredMarkdown(src: string): string {
+  const out: string[] = []
+  const lines = src.replace(/\r\n/g, '\n').split('\n')
 
-function renderMarkdown(src: string): string {
-  if (!markedInstance) {
-    try {
-      const { marked } = require('marked') as { marked: { parse: (s: string) => string; use: (opts: unknown) => void } }
-      const { markedTerminal } = require('marked-terminal') as { markedTerminal: (opts?: unknown) => unknown }
-
-      // First apply marked-terminal for general markdown formatting
-      marked.use(markedTerminal())
-
-      // Then override code block rendering with hljs syntax highlighting
-      marked.use({
-        renderer: {
-          code(token: { text: string; lang?: string }) {
-            const lang = token.lang || ''
-            let code = token.text
-            const h = loadHljs()
-            if (h && lang && h.getLanguage(lang)) {
-              try {
-                code = hljsToAnsi(h.highlight(code, { language: lang }).value)
-              } catch { /* fallback to plain */ }
-            }
-            return '\n' + code.split('\n').map((l: string) => `    ${l}`).join('\n') + '\n'
-          },
-        },
-      })
-
-      markedInstance = (s: string) => String(marked.parse(s))
-    } catch {
-      markedInstance = (s: string) => s
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] || ''
+    const fence = line.match(/^```([A-Za-z0-9_-]+)?\s*$/)
+    if (fence) {
+      const lang = fence[1] || ''
+      const code: string[] = []
+      i++
+      while (i < lines.length && !/^```\s*$/.test(lines[i] || '')) {
+        code.push(lines[i] || '')
+        i++
+      }
+      out.push(...renderCodeBlock(code.join('\n'), lang))
+      continue
     }
+
+    const heading = line.match(/^(#{1,6})\s+(.+)$/)
+    if (heading) {
+      const level = heading[1]!.length
+      const text = renderInlineMarkdown(heading[2]!.trim())
+      if (out.length > 0 && out[out.length - 1] !== '') out.push('')
+      if (level <= 2) {
+        out.push(`${BOLD}${CYAN}${text}${RESET}`)
+        out.push(`${DIM}${'-'.repeat(Math.min(stripAnsi(text).length, 72))}${RESET}`)
+      } else {
+        out.push(`${BOLD}${text}${RESET}`)
+      }
+      continue
+    }
+
+    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+      out.push(`${DIM}${'-'.repeat(48)}${RESET}`)
+      continue
+    }
+
+    const bullet = line.match(/^(\s*)[-*+]\s+(.+)$/)
+    if (bullet) {
+      out.push(`${bullet[1]}• ${renderInlineMarkdown(bullet[2]!)}`)
+      continue
+    }
+
+    const ordered = line.match(/^(\s*)(\d+)[.)]\s+(.+)$/)
+    if (ordered) {
+      out.push(`${ordered[1]}${ordered[2]}. ${renderInlineMarkdown(ordered[3]!)}`)
+      continue
+    }
+
+    const quote = line.match(/^\s*>\s?(.*)$/)
+    if (quote) {
+      out.push(`${DIM}│${RESET} ${renderInlineMarkdown(quote[1] || '')}`)
+      continue
+    }
+
+    out.push(renderInlineMarkdown(line))
   }
-  return markedInstance(src).trimEnd()
+
+  return out.join('\n').trimEnd()
+}
+
+function renderCodeBlock(code: string, lang: string): string[] {
+  let rendered = code
+  const h = loadHljs()
+  if (h && lang && h.getLanguage(lang)) {
+    try {
+      rendered = hljsToAnsi(h.highlight(code, { language: lang }).value)
+    } catch { /* fallback to plain */ }
+  }
+  return rendered.split('\n').map((line) => `    ${line}`)
+}
+
+function renderInlineMarkdown(text: string): string {
+  return text
+    .replace(/`([^`]+)`/g, `${YELLOW}$1${RESET}`)
+    .replace(/\*\*([^*]+)\*\*/g, `${BOLD}$1${RESET}`)
+    .replace(/__([^_]+)__/g, `${BOLD}$1${RESET}`)
+    .replace(/\*([^*\n]+)\*/g, `${MAGENTA}$1${RESET}`)
+    .replace(/_([^_\n]+)_/g, `${MAGENTA}$1${RESET}`)
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)')
+}
+
+function stripAnsi(text: string): string {
+  return text.replace(/\x1b\[[0-9;]*m/g, '')
 }

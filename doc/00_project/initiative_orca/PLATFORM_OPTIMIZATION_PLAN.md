@@ -21,9 +21,12 @@ The next platform wave is now explicitly ordered:
    - extend approvals and tool-call timelines on top of the shared evidence model
 5. Slash command surface:
    - `src/slash-commands.ts` is now the shared registry for REPL completion, Ink picker, and `/help`; HomePanel hint metadata is prepared for the pending UI-baseline split
-6. Release evidence:
+6. Chat transcript readability:
+   - submitted Ink prompts now remain visible as highlighted `You` transcript blocks
+   - assistant markdown now renders inside structured `ORCA` response panels instead of raw transcript text
+7. Release evidence:
    - `verification_snapshot.json` plus `tests/release-evidence.test.ts` now guards README and active PDCA verification counts
-7. Gate integrity:
+8. Gate integrity:
    - CI now runs matrix sync, static, security, performance, and fast agent-eval gates
    - `agent-eval/manifests/test-matrix.json` is the manifest source for package entrypoints
 

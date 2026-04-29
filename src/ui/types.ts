@@ -137,6 +137,7 @@ export interface DetailPanelInfo {
 
 export type UIEvent =
   | { type: 'text'; text: string }
+  | { type: 'user_message'; text: string }
   | { type: 'thinking_start' }
   | { type: 'thinking_end'; ttfbMs: number }
   | { type: 'tool_start'; info: ToolStartInfo }

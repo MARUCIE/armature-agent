@@ -18,6 +18,10 @@ import type { StatusInfo } from '../src/ui/types.js'
 import { App, buildHomeActions, resolveHomeActionSelection } from '../src/ui/components/App.js'
 import { getHomeLayout } from '../src/ui/components/homeLayout.js'
 
+function stripAnsi(text: string): string {
+  return text.replace(/\x1b\[[0-9;]*m/g, '')
+}
+
 describe('StatusBar', () => {
   const baseStatus: StatusInfo = {
     model: 'claude-sonnet-4.6',
@@ -720,6 +724,65 @@ describe('App empty state', () => {
     expect(resolveHomeActionSelection('unknown')).toBeNull()
   })
 
+  it('keeps submitted user prompts visible in a highlighted transcript block', async () => {
+    const session = new ChatSessionEmitter()
+    const status: StatusInfo = {
+      model: 'gpt-5.4',
+      contextPct: 12,
+      permMode: 'auto',
+      permSource: 'default',
+      turns: 0,
+      costUsd: 0,
+      behaviorMode: 'default',
+      effort: 'high',
+    }
+    const view = render(
+      <TerminalSizeProvider><App session={session} initialStatus={status} /></TerminalSizeProvider>,
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    session.emitUserMessage('银行开户地址策略')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(view.lastFrame()).toContain('You')
+    expect(view.lastFrame()).toContain('银行开户地址策略')
+    view.unmount()
+  })
+
+  it('renders assistant markdown inside a structured response panel after a turn', async () => {
+    const session = new ChatSessionEmitter()
+    const status: StatusInfo = {
+      model: 'gpt-5.4',
+      contextPct: 12,
+      permMode: 'auto',
+      permSource: 'default',
+      turns: 0,
+      costUsd: 0,
+    }
+    const view = render(
+      <TerminalSizeProvider><App session={session} initialStatus={status} /></TerminalSizeProvider>,
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    session.emitText('### One reality check\n- **Do** this first')
+    session.emitTurnSummary({
+      inputTokens: 10,
+      outputTokens: 20,
+      duration: 1000,
+      toolCalls: 0,
+      costUsd: 0,
+      model: 'gpt-5.4',
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const frame = stripAnsi(view.lastFrame())
+    expect(frame).toContain('ORCA')
+    expect(frame).toContain('One reality check')
+    expect(frame).toContain('• Do this first')
+    expect(frame).not.toContain('### One reality check')
+    view.unmount()
+  })
+
   it('builds home actions from trust posture and saved-session state', () => {
     const autoStatus: StatusInfo = {
       model: 'gpt-5.4',
@@ -778,6 +841,19 @@ describe('MarkdownText', () => {
       <MarkdownText>{''}</MarkdownText>,
     )
     expect(lastFrame()).toBe('')
+  })
+
+  it('renders headings and bullets as structured terminal text', async () => {
+    const { MarkdownText } = await import('../src/ui/components/MarkdownText.js')
+    const { lastFrame } = render(
+      <MarkdownText>{'### Concrete judgment\n- **Works** now\n- `Needs proof` next'}</MarkdownText>,
+    )
+    const frame = stripAnsi(lastFrame())
+    expect(frame).toContain('Concrete judgment')
+    expect(frame).toContain('• Works now')
+    expect(frame).toContain('• Needs proof next')
+    expect(frame).not.toContain('### Concrete judgment')
+    expect(frame).not.toContain('**Works**')
   })
 })
 

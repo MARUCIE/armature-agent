@@ -26,6 +26,7 @@
 | REQ-20260429-018 | UX | Chat REPL and Ink operator controls for sessions, permissions, models, command output, and detail panels must be clean-index testable before queue-backed chat execution work continues | Done | `src/commands/chat*.ts`, `src/ui/*`, `tests/chat-*.test.ts`, `tests/ink-ui.test.tsx`, `tests/command-output.test.ts` |
 | REQ-20260429-019 | Runtime | Interactive `orca chat` REPL turns must create and close canonical WorkSession / TaskRun records with status, usage, duration, and runtime evidence | Done | `src/commands/chat.ts`, `src/commands/chat-repl-turn.ts`, `src/work-session-store.ts`, `tests/chat-repl-turn.test.ts`, `tests/work-session-store.test.ts` |
 | REQ-20260429-020 | UX | Operators must inspect TaskRun evidence inside the Ink REPL without leaving the session or opening raw files | Done | `src/commands/queue.ts`, `src/commands/chat-slash-readonly.ts`, `src/slash-commands.ts`, `tests/queue-command.test.ts`, `tests/chat-slash-readonly.test.ts` |
+| REQ-20260429-021 | UX | Submitted Ink prompts must remain visible after sending, and assistant markdown must render as structured terminal output | Done | `src/ui/session.ts`, `src/ui/types.ts`, `src/ui/components/App.tsx`, `src/ui/components/MarkdownText.tsx`, `tests/ink-ui.test.tsx`, `tests/chat-session-emitter.test.ts` |
 
 ### Prompt Ledger
 
@@ -44,6 +45,7 @@
 | PROMPT-20260429-011 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-015: chat operator control plane |
 | PROMPT-20260429-012 | `继续` | Continue queued PDCA execution | Completed ORCA-SWARM-016: chat REPL canonical TaskRun records |
 | PROMPT-20260429-013 | `继` | Continue queued PDCA execution | Completed ORCA-SWARM-017: Ink `/evidence` TaskRun detail panel |
+| PROMPT-20260429-014 | `orca发现几个问题...我输入的提示词看不到...内容输出缺乏结构化的表达` | Screenshot-driven Ink UX fix | Completed ORCA-SWARM-019: visible prompt blocks and structured assistant response panels |
 
 ### Anti-Regression Q&A
 
@@ -68,6 +70,8 @@
 | Can terminal control sequences leak into Ink command output or markdown evidence helpers? | No. Command output is sanitized before routing to console, Ink system messages, markdown spans, tables, and code blocks. | `tests/command-output.test.ts` |
 | Does interactive `orca chat` create queue-visible records for normal prompt turns? | Yes. Each normal REPL prompt is wrapped in a chat `TaskRun` under the REPL `WorkSession`, then finished with status, usage, cost, duration, and runtime observation evidence. | `tests/chat-repl-turn.test.ts`, `tests/work-session-store.test.ts` |
 | Can Ink inspect TaskRun evidence without opening raw files? | Yes. `/evidence <task-run-id>` opens the same TaskRun evidence drawer model as `orca queue evidence` in an Ink `DetailPanel`. | `tests/chat-slash-readonly.test.ts`, `tests/queue-command.test.ts` |
+| Does Ink keep the submitted user prompt visible after Enter? | Yes. Submitted prompts emit `user_message` and render as highlighted `You` transcript blocks. | `tests/ink-ui.test.tsx`, `tests/chat-session-emitter.test.ts` |
+| Does assistant output still expose raw `###` / `**` markdown as the primary structure? | No. `MarkdownText` renders headings, bullets, inline emphasis/code, links, quotes, and code blocks into structured terminal text inside an `ORCA` panel. | `tests/ink-ui.test.tsx` |
 
 ### References
 

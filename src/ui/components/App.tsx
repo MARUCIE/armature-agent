@@ -100,12 +100,49 @@ interface Props {
 /** A completed output block (static, won't re-render) */
 interface OutputBlock {
   id: string
-  type: 'text' | 'tool' | 'system' | 'detail'
+  type: 'assistant' | 'user' | 'tool' | 'system' | 'detail'
   content: string
   toolStart?: ToolStartInfo
   toolEnd?: ToolEndInfo
   level?: 'info' | 'warn' | 'error'
   detailInfo?: DetailPanelInfo
+}
+
+function UserPromptBlock({ content }: { content: string }): React.ReactElement {
+  const theme = useTheme()
+  return (
+    <Box
+      flexDirection="column"
+      borderStyle="round"
+      borderColor={theme.prompt}
+      paddingX={1}
+      marginY={1}
+      width="100%"
+    >
+      <Text color={theme.prompt} bold>You</Text>
+      <Text>{content}</Text>
+    </Box>
+  )
+}
+
+function AssistantMessageBlock({ content, streaming = false }: { content: string; streaming?: boolean }): React.ReactElement {
+  const theme = useTheme()
+  return (
+    <Box
+      flexDirection="column"
+      borderStyle="single"
+      borderColor={streaming ? theme.accent : theme.borderDim}
+      paddingX={1}
+      marginY={1}
+      width="100%"
+    >
+      <Box>
+        <Text color={theme.accent} bold>ORCA</Text>
+        {streaming ? <Text color={theme.dim}> streaming</Text> : null}
+      </Box>
+      <MarkdownText>{content}</MarkdownText>
+    </Box>
+  )
 }
 
 /** Active tool call with animated spinner — lives outside <Static> so it can re-render */
@@ -228,6 +265,10 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
           textBuffer.current += event.text
           break
 
+        case 'user_message':
+          setBlocks(b => [...b, { id: blockId(), type: 'user', content: event.text }])
+          break
+
         case 'thinking_start':
           setThinking(true)
           break
@@ -240,7 +281,7 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
           // Flush any pending streaming text as a block
           setStreamingText(prev => {
             if (prev) {
-              setBlocks(b => [...b, { id: blockId(), type: 'text', content: prev }])
+              setBlocks(b => [...b, { id: blockId(), type: 'assistant', content: prev }])
             }
             return ''
           })
@@ -277,7 +318,7 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
           setStreamingText(prev => {
             const allText = prev + turnRemaining
             if (allText) {
-              setBlocks(b => [...b, { id: blockId(), type: 'text', content: allText }])
+              setBlocks(b => [...b, { id: blockId(), type: 'assistant', content: allText }])
             }
             return ''
           })
@@ -292,7 +333,7 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
           setStreamingText(prev => {
             const allText = prev + promptRemaining
             if (allText) {
-              setBlocks(b => [...b, { id: blockId(), type: 'text', content: allText }])
+              setBlocks(b => [...b, { id: blockId(), type: 'assistant', content: allText }])
             }
             return ''
           })
@@ -392,6 +433,7 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
   const submitInputValue = useCallback((text: string) => {
     if (text) {
       setInputHistory(prev => [...prev, text])
+      session.emitUserMessage(text)
     }
     setInputActive(false)
     setInputValue('')
@@ -532,11 +574,14 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
             const color = block.level === 'error' ? theme.error : block.level === 'warn' ? theme.warning : theme.info
             return <Text key={block.id} color={color}>  {block.content}</Text>
           }
-          return <MarkdownText key={block.id}>{block.content}</MarkdownText>
+          if (block.type === 'user') {
+            return <UserPromptBlock key={block.id} content={block.content} />
+          }
+          return <AssistantMessageBlock key={block.id} content={block.content} />
         })}
 
-        {/* Currently streaming text (raw during stream, markdown on flush) */}
-        {streamingText && <Text>{streamingText}</Text>}
+        {/* Currently streaming assistant text */}
+        {streamingText && <AssistantMessageBlock content={streamingText} streaming />}
 
         {/* Active tool call with spinner (not in Static — re-renders) */}
         {activeTool && (

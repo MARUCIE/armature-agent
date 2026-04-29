@@ -1,5 +1,23 @@
 # Notes
 
+## 2026-04-29 - Ink transcript readability PDCA continuation
+
+Context:
+
+- User shared screenshots showing two concrete UX failures: submitted prompts were not visible after sending, and assistant output looked like raw markdown rather than structured terminal content.
+- The boundary is Ink transcript rendering only; it does not change model prompts, model routing, or the approval timeline.
+
+PDCA executed:
+
+- Plan: make role ownership explicit in the transcript and improve markdown legibility with a small deterministic renderer rather than introducing a new dependency.
+- Do: added `user_message` UI events, rendered prompts as highlighted `You` blocks, wrapped assistant output in `ORCA` response panels, and rendered headings/bullets/emphasis/code with terminal structure.
+- Check:
+  - `npm test -- tests/ink-ui.test.tsx tests/chat-session-emitter.test.ts` -> `84` tests passed.
+  - `npm test -- tests/release-evidence.test.ts tests/ink-ui.test.tsx tests/chat-session-emitter.test.ts` -> `87` tests passed.
+  - `npm run lint && npm run build && npm test` -> `88` files / `1619` tests passed.
+  - `node dist/bin/orca.js --version` -> `0.8.14`.
+- Act: ORCA-SWARM-019 closes the screenshot-reported transcript readability gap; approval timeline and scheduler/resume remain next.
+
 ## 2026-04-29 - Ink TaskRun evidence panel PDCA continuation
 
 Context:

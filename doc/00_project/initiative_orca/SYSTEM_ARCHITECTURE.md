@@ -32,6 +32,10 @@ The SOTA swarm audit adds two immediate architectural constraints:
    - `agent-eval/scripts/sync-test-matrix.py`
    - `agent-eval/generated/test-matrix-entrypoints.md`
    - CI runs matrix sync, static, security, performance, and fast agent-eval gates after the Node matrix
+6. Ink transcript rendering is role-aware:
+   - `ChatSessionEmitter.emitUserMessage()` exposes submitted prompt text to the UI event stream
+   - `App.tsx` renders user turns as highlighted `You` blocks and assistant turns as structured `ORCA` panels
+   - `MarkdownText.tsx` handles headings, bullets, inline emphasis, links, blockquotes, and highlighted code blocks without exposing raw markdown syntax as the primary structure
 
 Open architecture work:
 

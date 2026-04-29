@@ -19,10 +19,12 @@
   - chat operator control plane for sessions, permissions, model picking, command output, and Ink home/detail panels
   - chat REPL turn lifecycle now writes canonical WorkSession / TaskRun records with per-turn status and usage
   - `/evidence <task-run-id>` opens the shared TaskRun evidence drawer inside the Ink `DetailPanel`
+  - submitted Ink prompts render as highlighted transcript blocks and assistant markdown renders in structured response panels
 - Check evidence:
   - `npm run lint`
   - `npm run build`
-  - `npm test` -> `88` files / `1615` tests
+  - `npm test` -> `88` files / `1619` tests
+  - `npm test -- tests/ink-ui.test.tsx tests/chat-session-emitter.test.ts` -> `84` tests
   - `npm test -- tests/queue-command.test.ts tests/chat-slash-readonly.test.ts tests/slash-commands.test.ts tests/ink-ui.test.tsx` -> `108` tests
   - `npm test -- tests/chat-repl-turn.test.ts tests/work-session-store.test.ts` -> `19` tests
   - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests

@@ -1,5 +1,46 @@
 # Deliverable
 
+## 2026-04-29 - Ink Transcript Readability PDCA Tranche
+
+### Scope
+
+Close the screenshot-driven UX gap where submitted prompts disappeared into the input flow and assistant markdown rendered like raw transcript text.
+
+### Delivered
+
+- Added `ChatSessionEmitter.emitUserMessage()` and a `user_message` UI event so submitted prompts can remain visible after Enter.
+- Rendered submitted prompts as highlighted `You` transcript blocks inside the Ink scrollback.
+- Rendered assistant output in structured `ORCA` response panels during streaming and after turn completion.
+- Replaced the raw `###` / `**`-first markdown view with a lightweight terminal markdown renderer for headings, bullets, inline code/emphasis, links, quotes, and highlighted code blocks.
+- Version bumped to `0.8.14`.
+
+### Changed Files
+
+- `src/ui/session.ts`
+- `src/ui/types.ts`
+- `src/ui/components/App.tsx`
+- `src/ui/components/MarkdownText.tsx`
+- `tests/ink-ui.test.tsx`
+- `tests/chat-session-emitter.test.ts`
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `doc/00_project/initiative_orca/*`
+
+### Verification
+
+- `npm test -- tests/ink-ui.test.tsx tests/chat-session-emitter.test.ts` -> `84/84`
+- `npm test -- tests/release-evidence.test.ts tests/ink-ui.test.tsx tests/chat-session-emitter.test.ts` -> `87/87`
+- `npm run lint && npm run build && npm test` -> `88` files / `1619` tests
+- `node dist/bin/orca.js --version` -> `0.8.14`
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| The markdown renderer is intentionally lightweight and does not attempt full CommonMark table/layout semantics | UX | Add specific renderers when a real transcript case proves the need |
+| Review-before-apply still lacks an approval timeline over TaskRun evidence | UX | ORCA-SWARM-018 |
+
 ## 2026-04-29 - Ink TaskRun Evidence Panel PDCA Tranche
 
 ### Scope

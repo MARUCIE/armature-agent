@@ -47,6 +47,10 @@ export class ChatSessionEmitter extends EventEmitter {
     this.emitUI({ type: 'text', text })
   }
 
+  emitUserMessage(text: string): void {
+    this.emitUI({ type: 'user_message', text })
+  }
+
   emitThinkingStart(): void {
     this.emitUI({ type: 'thinking_start' })
   }

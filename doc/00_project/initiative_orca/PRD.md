@@ -15,6 +15,7 @@ New product requirements from the SOTA swarm audit:
 - `orca run` default, goal-loop, mission, plan branches, and interactive `orca chat` turns must create and close canonical `WorkSession` / `TaskRun` records.
 - Next tranche must continue the review-before-apply approval timeline and model-routing evidence work.
 - `serve /chat` must create and close canonical `WorkSession` / `TaskRun` records, returning the ids in non-streaming responses and emitting them as streaming metadata.
+- Ink chat must keep submitted prompts visible after Enter and render assistant markdown in structured response panels instead of raw transcript text.
 
 ## Product Snapshot
 
@@ -65,6 +66,7 @@ Single-vendor coding CLIs force users into one model family per session. Orca CL
 - Multi-model council, race, and pipeline execution
 - Reflect mode for Socratic debugging and root-cause investigation
 - Top-level workflow preset commands for review/debug/architect entry
+- Ink transcript readability: submitted prompts render as highlighted `You` blocks and assistant markdown renders inside `ORCA` panels with structured headings/lists.
 - Mode picker now exposes per-profile workflow-change summaries
 - Workflow preset command metadata now resolves from one registry instead of scattered command-local strings
 - Workflow presets now carry structured default policy fields (`effort`, `permission mode`)

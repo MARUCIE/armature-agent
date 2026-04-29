@@ -232,6 +232,7 @@
           <tr><td>ORCA-SWARM-016</td><td>P1</td><td>Chat REPL canonical TaskRun records</td><td>Done</td></tr>
           <tr><td>ORCA-SWARM-017</td><td>P1</td><td>Ink <code>/evidence</code> TaskRun detail panel</td><td>Done</td></tr>
           <tr><td>ORCA-SWARM-018</td><td>P1</td><td>Review-before-apply approval timeline</td><td>Pending</td></tr>
+          <tr><td>ORCA-SWARM-019</td><td>P1</td><td>Visible submitted prompts and structured assistant panels</td><td>Done</td></tr>
         </tbody>
       </table>
     </section>
@@ -241,7 +242,7 @@
       <ul>
         <li><strong>Plan:</strong> 以安全边界和队列可观测性作为第一轮切片，避免在 dirty worktree 中做大范围重构。</li>
         <li><strong>Do:</strong> 修改 <code>src/hooks.ts</code>、<code>src/tools.ts</code>、<code>src/commands/queue.ts</code>、<code>src/program.ts</code> 及对应测试。</li>
-        <li><strong>Check:</strong> 相关安全回归 <code>153</code> tests passed；队列/命令契约 <code>39</code> tests passed；<code>queue evidence</code> 回归 <code>11</code> tests passed；slash registry / Ink targeted 回归 <code>98</code> tests passed；release evidence 回归 <code>3</code> tests passed；run work-session 回归 <code>14</code> tests passed；chat REPL TaskRun 回归 <code>19</code> tests passed；Ink evidence targeted pack <code>108</code> tests passed；gate integrity 增加 matrix sync、static、security、performance、fast agent-eval gates；clean-index command baseline 通过 staged checkout build；chat operator control plane targeted pack <code>248</code> tests passed；最终 <code>npm test</code> 为 <code>88</code> files / <code>1615</code> tests passed；<code>npm run lint</code> 与 <code>npm run build</code> passed。</li>
+        <li><strong>Check:</strong> 相关安全回归 <code>153</code> tests passed；队列/命令契约 <code>39</code> tests passed；<code>queue evidence</code> 回归 <code>11</code> tests passed；slash registry / Ink targeted 回归 <code>98</code> tests passed；release evidence 回归 <code>3</code> tests passed；run work-session 回归 <code>14</code> tests passed；chat REPL TaskRun 回归 <code>19</code> tests passed；Ink evidence targeted pack <code>108</code> tests passed；Ink transcript readability pack <code>84</code> tests passed；gate integrity 增加 matrix sync、static、security、performance、fast agent-eval gates；clean-index command baseline 通过 staged checkout build；chat operator control plane targeted pack <code>248</code> tests passed；最终 <code>npm test</code> 为 <code>88</code> files / <code>1619</code> tests passed；<code>npm run lint</code> 与 <code>npm run build</code> passed。</li>
         <li><strong>Act:</strong> 下一步进入批准时间线、真实 scheduler / resume 语义与 M5 模型目录单一事实源。</li>
       </ul>
     </section>
@@ -260,7 +261,7 @@
   </main>
 
   <footer>
-    Orca CLI v0.8.13 - SOTA 蜂群审计报告 - Maurice | maurice_wen@proton.me - 2026-04-29
+    Orca CLI v0.8.14 - SOTA 蜂群审计报告 - Maurice | maurice_wen@proton.me - 2026-04-29
   </footer>
 </body>
 </html>

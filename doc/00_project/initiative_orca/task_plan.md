@@ -19,6 +19,7 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 | M4 Gate integrity | Make CI enforce documented gates | Done | CI runs matrix sync, static, security, performance, and fast agent-eval gates |
 | M4b Clean-index command baseline | Restore clean checkout build for declared CLI command surface | Done | `program.ts` command imports, permissions/evolve commands, config permission storage, and git-root helper compile in staged-index checkout |
 | M4c Chat operator control plane | Make REPL/Ink controls for sessions, permissions, models, and detail output inspectable | Done | Slash command helpers, command-output bridge, Ink home/actions/detail panels, and serve/session recovery coverage pass from clean staged checkout |
+| M4d Chat transcript readability | Make submitted prompts and assistant structure visible in Ink | Done | Submitted prompts render as highlighted `You` transcript blocks; assistant markdown renders inside structured `ORCA` panels |
 | M5 Model catalog SSoT | Eliminate model metadata drift | Pending | Runtime, picker, docs, and tests use one catalog |
 
 ### Atomic Task Queue
@@ -43,6 +44,7 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 | ORCA-SWARM-016 | P1 | Record chat REPL turns as canonical WorkSession / TaskRun records | Done |
 | ORCA-SWARM-017 | P1 | Expose TaskRun evidence in Ink DetailPanel through `/evidence` | Done |
 | ORCA-SWARM-018 | P1 | Add review-before-apply approval timeline over TaskRun evidence | Pending |
+| ORCA-SWARM-019 | P1 | Make Ink submitted prompts visible and assistant markdown structurally rendered | Done |
 
 ### First Tranche Verification
 
@@ -63,14 +65,15 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 - `test:security` -> `outputs/test-matrix/run-20260429-060222/matrix.md`.
 - `test:performance` -> `outputs/test-matrix/run-20260429-060232/matrix.md`.
 - `test:ai-eval-fast` -> `outputs/test-matrix/run-20260429-060243/matrix.md`.
-- Final `npm run lint && npm run build && npm test` -> `1615` tests passed across `88` files.
-- Final `npm test` -> `1615` tests passed across `88` files.
-- `node dist/bin/orca.js --version` -> `0.8.13`.
+- Final `npm run lint && npm run build && npm test` -> `1619` tests passed across `88` files.
+- Final `npm test` -> `1619` tests passed across `88` files.
+- `node dist/bin/orca.js --version` -> `0.8.14`.
 - Clean staged-index `npm run build` -> pass for workflow commands, permissions/evolve commands, config permission helpers, and git-root helper.
 - Clean staged-index `npm test -- tests/config.test.ts tests/permissions-command.test.ts tests/program.test.ts tests/command-contracts.test.ts tests/release-evidence.test.ts tests/v030-harness.test.ts` -> `100/100`.
 - Clean staged-index `npm test -- tests/chat-internals.test.ts tests/chat-slash-mutations.test.ts tests/chat-slash-readonly.test.ts tests/chat-repl-turn.test.ts tests/chat-one-shot-mcp-cleanup.test.ts tests/ink-ui.test.tsx tests/command-output.test.ts tests/session-command.test.ts tests/serve-command.test.ts tests/model-catalog.test.ts tests/mcp-client.test.ts tests/mode-system-prompt.test.ts` -> `248/248`.
 - `npm test -- tests/chat-repl-turn.test.ts tests/work-session-store.test.ts` -> `19/19`.
 - `npm test -- tests/queue-command.test.ts tests/chat-slash-readonly.test.ts tests/slash-commands.test.ts tests/ink-ui.test.tsx` -> `108/108`.
+- `npm test -- tests/ink-ui.test.tsx tests/chat-session-emitter.test.ts` -> `84/84`.
 - CI gate job now runs `test:matrix:sync`, `test:static`, `test:security`, `test:performance`, and `test:ai-eval-fast` after the Node matrix passes.
 - `node dist/bin/orca.js queue takeover <fixture-task-run> --holder smoke --ttl 30s` -> acquired a TaskRun lease.
 - `orca queue evidence <task-run-id>` shows typed evidence entries, absolute paths, size, update time, missing-file state, and capped tail previews.
@@ -80,6 +83,7 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 - `orca run` now creates one WorkSession/TaskRun spine for default, goal-loop, mission, and plan paths, including usage summaries and mission-state evidence where available.
 - `orca chat` REPL turns now create and finish queue-visible `TaskRun` records with per-turn status, token usage, duration, and runtime observation evidence.
 - `/evidence <task-run-id>` now opens queue evidence as an Ink `DetailPanel` using the same preview model as `orca queue evidence`.
+- Submitted Ink prompts now remain visible as highlighted `You` transcript blocks, and assistant markdown now renders inside structured `ORCA` response panels.
 
 ### Report
 

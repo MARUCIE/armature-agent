@@ -6,7 +6,7 @@
 - Baseline: dirty working tree audit; existing user changes were preserved
 - Report route: `html-style-router` -> `html-economist-style`
 - Verification baseline before fixes: `npm run lint`, `npm test` (`85` files / `1583` tests), `npm run build`
-- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`88` files / `1615` tests)
+- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`88` files / `1619` tests)
 
 ## Scope
 
@@ -211,6 +211,7 @@ PDCA action executed:
 | ORCA-SWARM-016 | P1 | Record chat REPL turns as canonical WorkSession / TaskRun records | runtime | done |
 | ORCA-SWARM-017 | P1 | Expose TaskRun evidence in Ink DetailPanel through `/evidence` | UX | done |
 | ORCA-SWARM-018 | P1 | Add review-before-apply approval timeline over TaskRun evidence | UX | pending |
+| ORCA-SWARM-019 | P1 | Make Ink submitted prompts visible and assistant markdown structurally rendered | UX | done |
 
 ## PDCA Execution Log
 
@@ -248,10 +249,10 @@ Verification executed:
 - Combined targeted regression pack -> `190` tests passed
 - `npm run lint` -> pass
 - `npm run build` -> pass
-- Final `npm test` -> `88` files / `1615` tests passed
+- Final `npm test` -> `88` files / `1619` tests passed
 - Gate integrity targeted tests cover manifest/script/sync behavior.
 - CI now executes `test:matrix:sync`, `test:static`, `test:security`, `test:performance`, and `test:ai-eval-fast`.
-- `node dist/bin/orca.js --version` -> `0.8.13`
+- `node dist/bin/orca.js --version` -> `0.8.14`
 - `npm test -- tests/chat-repl-turn.test.ts tests/work-session-store.test.ts` -> `19` tests passed
 - `npm test -- tests/run-work-session.test.ts tests/work-session-store.test.ts tests/queue-command.test.ts` -> `14` tests passed
 - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `11` tests passed
@@ -262,6 +263,7 @@ Verification executed:
 - `git diff --cached --check` -> pass
 - `orca queue evidence <task-run-id>` -> evidence drawer renders typed entries, metadata, missing files, and tail previews
 - `/evidence <task-run-id>` -> Ink detail panel renders the shared TaskRun evidence drawer model
+- Ink transcript visibility -> submitted prompts render as `You` blocks and assistant markdown renders as structured `ORCA` panels
 - `ai check` attempted -> failed on existing generic harness/doc gates: missing `tests/test_all.py`, legacy docs without required frontmatter/changelog, and historical no-emoji hits; evidence at `outputs/check/20260429-044244-b917cb00`
 - `node dist/bin/orca.js queue takeover <fixture-task-run> --holder smoke --ttl 30s` -> acquired a TaskRun lease
 - `POST /chat` in serve mode -> returns or emits `workSessionId` and `taskRunId`, then closes TaskRun status on completion/failure

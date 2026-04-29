@@ -1,8 +1,8 @@
 {
-  "packageVersion": "0.8.13",
+  "packageVersion": "0.8.14",
   "evidenceScope": "active-worktree",
   "testFiles": 88,
-  "tests": 1615,
+  "tests": 1619,
   "verifiedCommand": "npm test",
   "verifiedAt": "2026-04-29"
 }

@@ -2,6 +2,18 @@ import { describe, expect, it } from 'vitest'
 import { ChatSessionEmitter } from '../src/ui/session.js'
 
 describe('ChatSessionEmitter', () => {
+  it('emits user_message events for visible submitted prompts', () => {
+    const session = new ChatSessionEmitter()
+    let seen = ''
+    session.on('user_message', (event) => {
+      seen = event.text
+    })
+
+    session.emitUserMessage('show this prompt')
+
+    expect(seen).toBe('show this prompt')
+  })
+
   it('does not emit prompt_ready when consuming buffered input immediately', async () => {
     const session = new ChatSessionEmitter()
     let promptReadyCount = 0
