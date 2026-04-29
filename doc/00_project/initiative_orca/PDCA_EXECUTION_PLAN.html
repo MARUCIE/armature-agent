@@ -3,6 +3,7 @@
 <li>Ground architecture and UX descriptions in actual source files.</li>
 <li>Lock the real current baseline (<code>1280/1280</code> in the latest full run) before proposing any new test-growth target.</li>
 <li>Define separate breadth lanes, depth lanes, and fast / nightly / release gates so the large-scale quality program stays auditable.</li>
+<li>Use <code>SOTA_GAP_SWARM_AUDIT.md</code> to tighten the benchmark into concrete continuity / queue / evidence / trust work items.</li>
 </ul>
 <h2 id="do">Do</h2><ul>
 <li>Implement changes in <code>src/</code> or tests as required by the active task.</li>
@@ -17,10 +18,19 @@
 <li>Fast gate: <code>550-650</code> selected deterministic cases + <code>12</code> task-eval scenarios</li>
 <li>Nightly gate: <code>~1700</code> deterministic cases + <code>36</code> task-eval scenarios</li>
 <li>Release gate: <code>~2210</code> deterministic cases + <code>72</code> task-eval scenarios + packaging/bin smokes + manual CLI journey review</li>
+<li>Current 2026-04-21 swarm-audit evidence refresh:
+  <ul>
+    <li><code>agent-eval/runs/20260421-074245-714923/</code></li>
+    <li><code>agent-eval/runs/20260421-074333-249714/</code></li>
+    <li><code>outputs/manual-cli-smoke/run-20260421-154536/</code></li>
+  </ul>
+</li>
 </ul>
 <h2 id="act">Act</h2><ul>
 <li>Record evidence and residual gaps in <code>deliverable.md</code></li>
 <li>Roll forward requirements and anti-regression notes in <code>ROLLING_REQUIREMENTS_AND_PROMPTS.md</code></li>
 <li>Update <code>AGENT_EVAL_PLAN.md</code> whenever task families, grader rules, or gate thresholds change</li>
+<li>Treat trust hardening as part of Wave 4 delivery, not as a postscript after continuity work lands.</li>
 </ul>
+<section><h2>2026-04-29 队列与蜂群 PDCA</h2><p>本轮已完成 explicit project hook trust、hook env allowlist、<code>fetch_url</code>/<code>web_search</code> 审批、<code>fetch_url</code> 私网阻断，以及只读 <code>orca queue list/show</code>。验证为 <code>npm run lint</code>、<code>npm run build</code>、<code>npm test</code>：86 files / 1593 tests。下一轮进入 <code>queue follow</code>、<code>queue takeover</code>、统一执行契约、证据控制台和 CI gate integrity。</p></section>
 </article></main></body></html>

@@ -15,7 +15,7 @@ This file is the canonical path index for the `Orca CLI` repository.
 | Project root | `/Users/mauricewen/Projects/orca-cli` | Git root and canonical `PROJECT_DIR` |
 | CLI entry | `src/bin/orca.ts` | Node executable entry point |
 | Program assembly | `src/program.ts` | Registers all top-level commands |
-| Commands | `src/commands/` | `chat`, `doctor`, `run`, `multi`, `bench`, `logs`, `providers`, `stats`, `session`, `pr`, `serve`, `init` |
+| Commands | `src/commands/` | `chat`, `doctor`, `run`, `multi`, `bench`, `logs`, `providers`, `stats`, `session`, `queue`, `permissions`, `pr`, `serve`, `init`, `evolve`, workflow presets |
 | Provider bridge | `src/providers/openai-compat.ts` | Provider-neutral runtime transport layer |
 | Multi-model engine | `src/multi-model.ts` | Council, race, pipeline orchestration |
 | Tool surface | `src/tools.ts` | Agent tools available to the runtime |

@@ -2,11 +2,11 @@
 
 # Orca CLI
 
-**Provider-neutral coding agent — 10 providers · 41 tools · MCP server · 6 modes · multi-model collaboration.**
+**Provider-neutral coding agent — 11 providers · 41 tools · MCP server · 6 modes · multi-model collaboration.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/Node-%3E%3D18-green.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/Tests-1280%20passing-brightgreen.svg)](#sota-agent-capabilities)
+[![Tests](https://img.shields.io/badge/Tests-1593%20passing-brightgreen.svg)](#sota-agent-capabilities)
 [![TypeScript](https://img.shields.io/badge/TypeScript-ESM-3178C6.svg)](https://www.typescriptlang.org/)
 
 The one CLI that can do what no single-vendor CLI can: ask Claude, GPT, and Gemini the same question simultaneously, race them, or chain them as specialists. Works with any OpenAI-compatible provider.
@@ -41,6 +41,11 @@ export ANTHROPIC_API_KEY=...     # Anthropic Claude
 export OPENAI_API_KEY=...        # OpenAI GPT
 export POE_API_KEY=...           # Poe (aggregator: all vendors via 1 key)
 export OPENROUTER_API_KEY=...    # OpenRouter (aggregator)
+export CLOUDFLARE_AI_GATEWAY_API_KEY=...   # Cloudflare AI Gateway (aggregator)
+export CLOUDFLARE_AI_GATEWAY_BASE_URL=...  # e.g. https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/compat
+# Or let Orca build the URL:
+export CLOUDFLARE_ACCOUNT_ID=...
+export CLOUDFLARE_AI_GATEWAY_ID=default
 ```
 
 ## Quick Start
@@ -49,6 +54,9 @@ export OPENROUTER_API_KEY=...    # OpenRouter (aggregator)
 orca chat                                    # interactive REPL
 orca chat "explain this codebase"            # one-shot
 orca reflect "why is this test still flaky?" # Socratic debugging / root-cause pass
+orca review "review the changed files"       # code-review preset
+orca debug "reproduce and fix this crash"    # debugging preset
+orca architect "plan the refactor"           # architecture/planning preset
 orca chat --image screenshot.png "what is broken in this UI?"   # proxy multimodal one-shot
 orca run "fix the failing tests"             # task execution
 orca run "add tests" --done-when "tests pass"  # goal-loop: repeat until criteria met
@@ -57,6 +65,20 @@ orca race "write a CSV parser"               # first model wins
 orca pipeline "build REST API" --stages 5    # plan→code→review→fix→verify
 orca stats                                   # token usage + runtime dashboard
 orca session list                            # saved sessions
+orca session fork my-session my-session-v2   # fork a saved session
+orca session export my-session session.json  # export a saved session
+orca session import session.json imported    # import a saved session
+orca session markdown my-session session.md  # export a session as markdown
+orca session share my-session                # create a shareable markdown artifact
+orca session handoff my-session my-handoff   # fork a session and emit a handoff artifact bundle
+orca queue list --status running             # inspect TaskRun queue state
+orca queue show tr-12345678                  # inspect a TaskRun and its evidence
+orca permissions                             # inspect approval mode + policy source + stored rules
+orca permissions set auto --scope project    # persist approval mode
+orca permissions rules                       # inspect stored project/global permission rules
+orca permissions revoke project               # filter and remove one stored rule
+orca permissions clear project               # clear all stored project rules
+orca permissions normalize project           # rewrite legacy rules into canonical descriptors
 orca doctor                                 # runtime/config diagnostics
 orca logs errors                             # tail warning/error log
 orca pr 123                                  # checkout + review PR
@@ -99,6 +121,7 @@ Current scope:
 - GitHub Copilot requests auto-trim tool definitions to the provider's 128-tool limit so `--image` still works even when MCP expands the toolset
 - `gpt-5.x` chat-completions requests with function tools automatically drop `reasoning_effort` because Copilot/OpenAI reject that combination on `/v1/chat/completions`
 - `--image` one-shot requests skip MCP auto-connect so screenshot analysis is not delayed by unrelated MCP startup
+- repo-local/project-scoped MCP configs are loaded but not auto-connected on startup; use `/mcp connect <name>` for explicit opt-in, while trusted home/global MCP configs remain startup-safe
 - direct clipboard-image paste into the ink REPL is not yet implemented; use local image file paths for now
 
 ## Reflect Mode — `/reflect` or `orca reflect`
@@ -166,7 +189,7 @@ orca pipeline "build auth middleware" --plan claude-opus-4.6 --code gpt-5.4 --re
 | Fix | gpt-5.4 | Address review findings |
 | Verify | claude-opus-4.6 | Confirm fix matches plan |
 
-## 10 Providers
+## 11 Providers
 
 Works with any OpenAI-compatible endpoint. Configure in `~/.orca/config.json`:
 
@@ -177,16 +200,29 @@ Works with any OpenAI-compatible endpoint. Configure in `~/.orca/config.json`:
 | openai | Direct | `OPENAI_API_KEY` |
 | poe | Aggregator | `POE_API_KEY` |
 | openrouter | Aggregator | `OPENROUTER_API_KEY` |
+| cloudflare / claudeflare | Aggregator | `CLOUDFLARE_AI_GATEWAY_API_KEY` + (`CLOUDFLARE_AI_GATEWAY_BASE_URL` or `CLOUDFLARE_ACCOUNT_ID`) |
 | deepseek | Direct | `DEEPSEEK_API_KEY` |
 | groq | Direct | `GROQ_API_KEY` |
 | xai | Direct | `XAI_API_KEY` |
 | copilot | Direct | `GH_TOKEN` |
 | local | Direct | (Ollama at localhost:11434) |
 
-**Aggregators** (Poe, OpenRouter) route to all vendors via one API key — ideal for council/race/pipeline.
+**Aggregators** (Poe, OpenRouter, Cloudflare AI Gateway) route to all vendors via one endpoint — ideal for council/race/pipeline.
 **Direct** providers connect to each vendor's own API.
 
 Multi-model routing: aggregator first, direct fallback per model.
+Local policy in this workspace:
+
+- `council` / `race` / `pipeline` prefer **GitHub Copilot** first
+- fallback aggregator order after that is **Cloudflare AI Gateway**
+- Poe/OpenRouter remain available, but no longer win auto-selection on this machine
+
+Current local Cloudflare recommendation in the surrounding AI-Fleet runtime:
+
+- default stable model: `openai/gpt-5.4`
+- currently verified through Cloudflare on this machine:
+  - `openai/gpt-5.4`
+  - `google-ai-studio/gemini-3.1-pro-preview`
 
 `orca providers` now shows per-provider context window, approximate pricing, and caution metadata for the default model, and `orca providers test` surfaces the same metadata before connectivity checks.
 
@@ -224,11 +260,13 @@ Tools the model calls autonomously. Grouped by capability:
 | MCP | mcp_list_servers, mcp_list_resources, mcp_read_resource | 3 |
 | Notebook | notebook_edit | 1 |
 
-9 tools require confirmation in `--safe` mode: write, edit, multi_edit, patch, delete, move, run_command, run_background, git_commit.
+11 tools require confirmation in `--safe` / auto approval mode: write, edit, multi_edit, patch, delete, move, run_command, run_background, git_commit, fetch_url, web_search.
 
 ## 8 Lifecycle Hooks
 
-Configure in `.orca/hooks.json`. Shell commands receive JSON stdin, return JSON stdout.
+Configure global startup hooks in `~/.orca/hooks.json`. Shell commands receive JSON stdin and return JSON stdout.
+
+Repo-local `.orca` / `.claude` hooks require explicit project trust before loading (`ORCA_TRUST_PROJECT_HOOKS=1` or a trusted `HookManager`). This keeps operator-level hooks startup-safe without letting an arbitrary checked-out repository execute hook commands on launch.
 
 | Hook | When | Can Block? |
 |------|------|------------|
@@ -246,8 +284,41 @@ Configure in `.orca/hooks.json`. Shell commands receive JSON stdin, return JSON 
 | Command | Description |
 |---------|-------------|
 | `/help` | Show all commands + tips |
+| `/model` | Open the interactive model picker in chat/REPL |
 | `/models` | Interactive model picker with provider/context/pricing |
-| `/model set <name>` | Switch model mid-session |
+| `/model <name>` / `/model set <name>` | Switch model mid-session |
+| `/mode` / `/mode <name>` | Open the behavior-mode picker or switch directly |
+| `/effort` / `/effort <level>` | Open the reasoning-effort picker or switch directly |
+| `/permissions` | Open the approval-mode detail panel + live picker |
+| `/permissions rules [session\|project\|global]` | Inspect stored permission rules |
+| `orca permissions rules [scope] --status <all\|canonical\|legacy\|unrecognized>` | Filter the rules audit view by rule state |
+| `/permissions revoke <scope> [rule]` | Remove one stored permission rule, or filter and pick one interactively |
+| `/permissions clear [scope]` | Clear stored permission rules for a scope |
+| `/permissions normalize [project\|global\|all]` | Normalize legacy rules into canonical descriptors |
+| `/permissions set <mode>` | Set session approval mode |
+| `/permissions save [mode] [project\|global]` | Persist approval mode |
+
+Permission rules now use stable canonical descriptors such as `write_file|path=src/generated.ts` and `run_command|command=echo hello` instead of volatile preview text.
+Effective runtime permission checks now merge `project` and `global` stored rules.
+`permissions rules` now annotates entries as `canonical`, `legacy`, or `unrecognized`, and legacy `::` rules can be normalized explicitly.
+`/permissions rules <scope> <status>` and `orca permissions rules --status <status>` can now filter that audit view by rule state.
+`/mode` now explains what each workflow profile changes instead of only listing mode names.
+Top-level workflow presets now resolve from the same preset registry that binds command name, description, and `initialModeId`.
+Workflow presets now also carry default policy fields such as `effort` and `permission mode`.
+Switching into a preset-backed workflow profile now applies those default `effort` / `permission mode` values instead of only changing the mode label.
+`/mode` now shows those preset defaults directly in the picker description.
+Preset policy application is now handled through one shared helper for startup and `/mode` switching paths.
+The same startup helper now shapes the initial system prompt for preset-backed one-shot and REPL sessions, so top-level preset commands no longer drift from in-session mode switches.
+`/status` and the REPL status bar now surface the current workflow policy (`mode + effort + permissions`).
+Workflow presets now also expose `tool policy` and `output style`, and `/mode` plus `/status` surface them directly.
+The live `StatusBar` now includes compact `tools:` / `out:` summaries when a preset provides them.
+`/status` now also exposes `model policy`, and the live `StatusBar` includes a compact `model:` summary when present.
+Active mode tool restrictions are now enforced in the proxy tool runtime, not only described in prompt text.
+`/effort` and preset default effort now also map into proxy `reasoning_effort` requests (`max` → `xhigh`) instead of remaining UI-only state.
+Provider-returned `tool_calls` are now rejected unless the tool was explicitly advertised for that request, including the zero-tools case.
+Non-interactive permission prompts now fail closed instead of silently auto-approving.
+The current REPL session now keeps a stable `sessionId`, `/status` surfaces it directly, `orca -c <id>` resumes a specific saved session, the default `orca run` path now creates durable `WorkSession` / `TaskRun` objects, and `orca serve` exposes both saved-session and run-continuity discovery endpoints.
+Those continuity endpoints are intended for local or otherwise trusted deployments; `serve` no longer grants wildcard CORS, and session/task metadata endpoints are loopback-only.
 | `/reflect <prompt>` | Socratic debugging / root-cause investigation |
 | `/council <prompt>` | Multi-model council |
 | `/race <prompt>` | Multi-model race |
@@ -259,6 +330,11 @@ Configure in `.orca/hooks.json`. Shell commands receive JSON stdin, return JSON 
 | `/git <cmd>` | Run git command |
 | `/save [name]` | Save session |
 | `/load [name]` | Load session |
+| `/thread export <id> <file>` | Export thread JSON |
+| `/thread markdown <id> <file>` | Export thread Markdown |
+| `/thread share <id> [file]` | Create a shareable thread artifact bundle |
+| `/thread import <file> [title]` | Import thread JSON |
+| `/thread handoff <id> [title]` | Create a handoff copy plus handoff artifact bundle |
 | `/sessions` | List saved sessions |
 | `/jobs` | List tracked background jobs |
 | `/undo` | Revert last file write |
@@ -302,6 +378,13 @@ orca doctor --cwd ~/Projects/my-app
 - `GET /health` — provider + model metadata
 - `GET /providers` — provider list with model metadata
 - `GET /doctor` — structured runtime diagnostics
+- `GET /sessions`, `GET /sessions/latest`, `GET /sessions/:id` — saved-session continuity discovery
+- `GET /work-sessions`, `GET /work-sessions/latest`, `GET /work-sessions/:id` — run-surface work-session discovery
+- `GET /work-sessions/:id/task-runs`, `GET /task-runs`, `GET /task-runs/:id` — task-run inspection
+
+When `serve` binds to a non-loopback host, `ORCA_SERVE_TOKEN` is now required and HTTP requests must send `Authorization: Bearer <token>`.
+`serve --mcp` now runs tool calls through the same shared policy layer used by the chat path for hooks, tool filtering, approval checks, and sandbox posture.
+In the Ink TUI empty state, `Tab` now opens quick actions so the operator can launch common prompts or diagnostics without typing the full command first.
 
 ## Stats Dashboard
 
@@ -326,12 +409,37 @@ npm run eval:release
 - `eval:nightly` adds deterministic repo verification (`lint` / `test` / `build`)
 - `eval:release` adds `bench` plus a recorded CLI journey artifact under `agent-eval/runs/<run_id>/`
 
+Repo-native layered test entrypoints now also exist:
+
+```bash
+npm run test:static
+npm run test:unit
+npm run test:contract
+npm run test:integration
+npm run test:e2e
+npm run test:security
+npm run test:resilience
+npm run test:performance
+npm run test:ai-eval-fast
+npm run test:matrix
+npm run test:matrix:sync
+```
+
+`npm run test:matrix` writes a fresh evidence bundle under `outputs/test-matrix/run-<timestamp>/`.
+The layer metadata now lives in `agent-eval/manifests/test-matrix.json`, and the package scripts are thin wrappers around the matrix runner.
+The manifest now stores typed `steps[].argv` entries, and the runner executes them without shell interpolation.
+`npm run test:matrix:sync` verifies that `package.json` layer scripts and `agent-eval/generated/test-matrix-entrypoints.md` are still in sync with the manifest.
+
 ## Permission Modes
 
 | Mode | Flag | Default |
 |------|------|---------|
-| YOLO | (none) | **Yes** — auto-approve, actions visible |
-| Safe | `--safe` | No — interactive y/n + diff preview |
+| `auto` | (default) | **Yes** — prompt on dangerous tools only |
+| `plan` | set explicitly | No — prompt on every tool call |
+| `yolo` | set explicitly | No — bypass prompts |
+
+The legacy config value `default` now resolves to the safer REPL posture `auto`, not `yolo`.
+The shared policy executor now also covers MCP tool execution, so dangerous MCP tool calls fail closed unless already granted by policy.
 
 ## Streaming Markdown
 
@@ -357,14 +465,14 @@ Features that close the gap between "tool" and "agent":
 | Multi-edit Atomicity | Failed batch edits leave file unchanged | No partial corruption on error |
 | Background Completion Notifications | `run_background` jobs notify the REPL when they finish, and `/jobs` shows tracked state | Agent can keep working without manual PID polling |
 
-Tested: 1280 automated tests, fast gate `61/61`, nightly gate `64/64`, release gate `67/67`, benchmark `10/10`.
+Tested: 1593 automated tests, fast gate `63/63`, nightly gate `66/66`, release gate `69/69`.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Orca CLI  v0.8.0                                   │
-│  TypeScript ESM CLI · 70 test files · 1280 tests    │
+│  TypeScript ESM CLI · 86 test files · 1593 tests    │
 ├─────────────────────────────────────────────────────┤
 │  Command Layer                                      │
 │  chat · run · council · race · pipeline · serve     │

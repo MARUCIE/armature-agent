@@ -1,5 +1,46 @@
 # Rolling Requirements And Prompts
 
+## 2026-04-29 - SOTA Swarm Audit / Queue / Trust PDCA
+
+### Requirements
+
+| ID | Type | Requirement | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| REQ-20260429-001 | Audit | Run SOTA swarm audit across architecture, security, UX, verification, and docs governance | Done | `SOTA_GAP_SWARM_AUDIT.md` |
+| REQ-20260429-002 | Report | Route human audit report through `html-style-router` using `html-economist-style` | Done | `SOTA_GAP_SWARM_AUDIT.html` |
+| REQ-20260429-003 | Plan | Produce milestone plan and atomic task queue | Done | `task_plan.md`, `SOTA_GAP_SWARM_AUDIT.md` |
+| REQ-20260429-004 | Security | Repo-local hooks must not auto-load without explicit trust | Done | `src/hooks.ts`, `tests/hooks.test.ts` |
+| REQ-20260429-005 | Security | Network-capable tools must use approval gates in `auto` mode | Done | `src/tools.ts`, `tests/chat-proxy-tool-call.test.ts` |
+| REQ-20260429-006 | Runtime | Operators need top-level TaskRun queue inspection | Done | `src/commands/queue.ts`, `tests/queue-command.test.ts` |
+
+### Prompt Ledger
+
+| ID | Prompt / Trigger | Routing | Output |
+| --- | --- | --- | --- |
+| PROMPT-20260429-001 | `/Users/mauricewen/Projects/orca-cli 对orca 进行sota 蜂群审计，输出走风格路由的审计报告，再制定里程碑计划及原子任务清单，之后再队列及蜂群模式pdca执行` | `$audit` + frontend/design/report style router + native swarm lanes | SOTA audit, routed HTML report, milestone plan, atomic queue, PDCA tranche 1 |
+
+### Anti-Regression Q&A
+
+| Question | Expected Answer | Guard |
+| --- | --- | --- |
+| Can repo-local hooks run on startup by default? | No. They require explicit trust. | `tests/hooks.test.ts` |
+| Do hook subprocesses inherit provider API keys by default? | No. The hook env is allowlisted. | `tests/hooks.test.ts` |
+| Are `fetch_url` and `web_search` approval-gated in auto mode? | Yes. | `tests/chat-proxy-tool-call.test.ts` |
+| Can `fetch_url` hit `127.0.0.1` or `192.168.*` directly? | No. Literal loopback/private targets are blocked. | `tests/tools.test.ts` |
+| Is there a CLI surface for existing TaskRun records? | Yes: `orca queue list/show`. | `tests/queue-command.test.ts` |
+
+### References
+
+| Source | URL |
+| --- | --- |
+| OpenAI Codex app | https://openai.com/index/introducing-the-codex-app/ |
+| OpenAI Codex automations | https://openai.com/academy/codex-automations |
+| GitHub Copilot coding agent | https://docs.github.com/en/copilot/concepts/about-copilot-coding-agent |
+| Cursor background agents | https://docs.cursor.com/background-agent/api/overview |
+| Claude Code permissions | https://code.claude.com/docs/en/permissions |
+| OpenCode agents | https://opencode.ai/docs/agents/ |
+| Amp permissions | https://ampcode.com/notes/permissions |
+
 ## Requirements Ledger
 
 | ID | Date | Type | Requirement | Status | Evidence |
@@ -34,6 +75,15 @@
 | REQ-028 | 2026-04-14 | quality-program | Start a large-scale test expansion plan that began from the measured `1263/1263` planning baseline and now tracks the current `1280/1280` suite, expands breadth and depth beyond the old "~1300-case" framing, prioritizes public command-surface gaps, and uses PDCA + `AGENT_EVAL_PLAN.md` as the canonical planning surfaces | done | `AGENT_EVAL_PLAN.md` + PDCA doc updates + supplemental test-gap audit + breadth / depth / packaging tranche tests |
 | REQ-029 | 2026-04-16 | sota-system | Convert the seeded `agent-eval` assets into a manifest-based fast / nightly / release gate system with a shared runner, deterministic gate tasks, a repo lock, root `--continue` smoke, `pr` missing/fetch/checkout failure smokes, tarball install smoke, `run --done-when` local success smoke, `serve /chat` SSE + non-stream happy-path smokes, timeout coverage for `providers test`, and a richer release CLI journey artifact | done | `agent-eval/manifests/*.json`, `agent-eval/scripts/run-gate.py`, `tests/agent-eval-manifests.test.ts`, release run `20260416-025253-525020` |
 | REQ-030 | 2026-04-18 | feature | Port the spirit of Copilot CLI Rubber Duck into Orca as a renamed `reflect` surface with explicit command/slash entrypoints, persistent mode support, and conservative auto-triggering for clear debugging/explanation asks | done | `src/commands/reflect-mode.ts`, `src/commands/chat.ts`, `src/modes/registry.ts`, README/docs, reflect regression tests |
+| REQ-031 | 2026-04-21 | audit | Execute a SOTA gap swarm audit after the benchmark, refresh current PDCA evidence, and tighten the next tranche into continuity + queue + evidence + trust deliverables | done | `SOTA_GAP_SWARM_AUDIT.md`, nightly run `20260421-074245-714923`, release run `20260421-074333-249714`, manual smoke `outputs/manual-cli-smoke/run-20260421-154536/` |
+| REQ-032 | 2026-04-21 | security | Start trust hardening by making the default REPL posture safer and requiring a bearer token for non-loopback `serve` | done | `src/config.ts`, `src/commands/serve.ts`, `tests/config.test.ts`, `tests/serve-command.test.ts`, `outputs/manual-cli-smoke/run-20260421-160704/` |
+| REQ-033 | 2026-04-21 | architecture | Start a unified policy executor so normal tool execution stops diverging between chat and MCP | done | `src/policy-executor.ts`, `src/commands/chat-proxy-tool-call.ts`, `src/mcp-server.ts`, `tests/chat-proxy-tool-call.test.ts`, `tests/v050-modules.test.ts` |
+| REQ-034 | 2026-04-21 | ui-ux | Improve the Ink entry state so the first screen exposes one primary action, trust posture, recovery paths, and failure help | done | `src/ui/components/HomePanel.tsx`, `src/ui/components/App.tsx`, `tests/ink-ui.test.tsx`, `outputs/ui-smoke/run-20260421-165711/home-panel.txt` |
+| REQ-035 | 2026-04-21 | ui-ux | Make the Ink home panel actionable so users can launch common prompts or diagnostics without typing the full command first | done | `src/ui/components/App.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-036 | 2026-04-21 | ui-ux | Make Ink home actions context-aware so recovery and trust actions adapt to current session state | done | `src/ui/components/App.tsx`, `src/ui/components/HomePanel.tsx`, `tests/ink-ui.test.tsx`, `outputs/ui-smoke/run-20260421-171338/home-panel-dynamic.txt` |
+| REQ-037 | 2026-04-22 | test-harness | Keep aggregator-selection verification deterministic after Cloudflare gained routed-provider-key fallback, and refresh canonical fast / nightly / release / matrix evidence on the latest trust-policy tranche | done | `tests/config.test.ts`, `outputs/verification/2026-04-22-gate-refresh.md`, fast `20260422-054119-735043`, nightly `20260422-054727-090885`, release `20260422-054415-886673`, matrix `run-20260422-054827` |
+| REQ-038 | 2026-04-22 | delivery | Execute a Harness-grade full-delivery pass on the current trust-policy + eval tranche, closing review/security blockers, rerunning release gates, and emitting stage artifacts plus rollback evidence | done | `src/{mcp-client.ts,policy-executor.ts,mcp-server.ts,commands/chat.ts,commands/serve.ts}`, `tests/{mcp-client.test.ts,chat-one-shot-mcp-cleanup.test.ts,v050-modules.test.ts,serve-command.test.ts,config.test.ts}`, `outputs/{spec,build,test,security,release,observe,learn}` |
+| REQ-039 | 2026-04-26 | ui-ux | `/model` must keep duplicate model names provider-addressable and make large model lists readable by grouping candidates by provider | done | `src/model-catalog.ts`, `src/commands/chat.ts`, `src/commands/chat-slash-readonly.ts`, `src/ui/components/OptionPicker.tsx`, focused regressions |
 
 ## Prompt / Workflow Notes
 
@@ -44,6 +94,14 @@
 | PROMPT-003 | Start a large-scale test expansion plan for Orca CLI | Measure the real baseline first, then split growth into breadth lanes, depth lanes, and fast / nightly / release gates, with `agent-eval` complementing Vitest instead of duplicating it | Keep it as a parallel planning track if another coding slice is already active; prioritize under-covered public command surfaces before adding more internal-only assertions |
 | PROMPT-004 | Read the SOTA gap docs and build the SOTA system end-to-end | Treat the current plan docs as the gap statement, then land executable manifests, gate entrypoints, and release artifacts instead of stopping at documentation | Do not ask for permission midstream once the project root is clear |
 | PROMPT-005 | Port GitHub Copilot Rubber Duck into Orca but rename and upgrade it | Make it Orca-native rather than a clone: explicit `reflect` entrypoints, persistent mode, structured diagnosis output, and conservative auto-triggering instead of opaque background duplication | Avoid GitHub/Rubber Duck branding in public UX |
+| PROMPT-006 | Execute SOTA gap swarm audit, then PDCA delivery | Use a multi-lane audit to tighten broad benchmark claims into concrete product/security/operator gaps, then refresh nightly/release/manual evidence before closing docs | Do not treat historical artifacts as current proof |
+| PROMPT-007 | Continue from swarm audit with trust hardening first | Prioritize the smallest high-impact trust fixes before larger continuity/queue work: safer defaults and remote-auth guardrails | Do not jump straight into queue/evidence-console implementation while the trust posture is still weak |
+| PROMPT-008 | Continue trust hardening with unified policy executor | After safer defaults and serve auth land, collapse duplicated normal-tool policy logic so REPL and MCP share one executor contract | Keep the first slice narrow: normal tools first, special tools later |
+| PROMPT-009 | Execute frontend UI/UX optimization for the current primary frontend | In this repo the primary frontend is Ink TUI, so optimize the entry shell rather than inventing a browser UI; document browser-only validation gates as `N/A` when the target surface is terminal-only | Keep one primary action and make failure/trust state legible from the first frame |
+| PROMPT-010 | Continue the Ink entry-state optimization with interaction, not more decoration | After the home panel exists, make it actionable through quick actions and keep the interaction model aligned with existing pickers and prompt flow | Prefer reusing `OptionPicker` over inventing a second launcher UI |
+| PROMPT-011 | Continue the home panel with dynamic recommendations | After quick actions exist, make them react to saved-session availability and trust posture rather than staying static | Prefer deterministic context signals over speculative AI recommendation |
+| PROMPT-012 | Refresh the harness baseline after a late-stage provider-routing change | Reproduce the failing gate, fix the smallest stale assumption, then rerun fast / nightly / release / matrix before closing docs | Do not treat lock conflicts or stale machine env as product regressions until they are proven to be runtime bugs |
+| PROMPT-013 | Execute one-click full delivery on the current tranche | Freeze the delivery boundary, treat review findings as blocking gates, fix only the scoped blockers, rerun the full release chain, and emit stage artifacts plus rollback evidence | Do not drift into future roadmap implementation when the user asked for delivery closure on the current tranche |
 
 ## Anti-Regression Q&A
 
@@ -57,7 +115,7 @@
 | How should `git_commit` behave outside a git repo? | Return a normal tool failure payload, not leak raw child-process stderr to the test runner. |
 | Which Hermes-inspired capabilities are now internalized in Orca? | Tool arg coercion, oversized tool result persistence, detached background work, provider-aware model inspection, local logs, doctor diagnostics, serve metadata parity, and stats runtime dashboarding. |
 | Did the SDK need a matching code change? | No. This bundle is Orca-local runtime ergonomics, not a shared SDK seam yet. |
-| What does `/models` show now? | Provider-aware model choices with context window, approximate pricing, and caution metadata instead of a hard-coded Poe-only list. |
+| What does `/models` show now? | Provider-grouped model choices with context window, approximate pricing, and caution metadata; duplicate model names resolve through provider+model identity instead of the first matching name. |
 | What does `orca providers` add now? | It shows readiness plus the same context/pricing/caution metadata used by the REPL model catalog. |
 | Where do Orca runtime logs live now? | `~/.orca/logs/` or `$ORCA_HOME/logs/`, with `agent.log` and `errors.log`. |
 | What does `orca doctor` cover? | Provider/config readiness, hooks, MCP, sessions, background jobs, log files, project context, and git availability. |
@@ -86,6 +144,17 @@
 | How should future test growth be organized? | Use deterministic Vitest breadth/depth lanes plus a manifest-driven `agent-eval` scenario pack, split by fast / nightly / release gates. |
 | Which surfaces are the current high-value gaps to cover next? | deeper `pr` auth/network flows beyond the new missing/invalid/fetch/checkout-failure smokes, additional `session` error contracts beyond missing show/delete, richer `serve /chat` protocol variants beyond the new SSE + non-stream happy/error smokes, richer `run` task-execution paths beyond the new `--done-when` smoke, provider-inspection branches beyond the new transport/timeout failures, and broader installed-binary user-path flows beyond the new tarball install smoke. |
 | What is the main security caveat of the new eval system? | `agent-eval/tasks/*.json` are trusted executable assets because `run-gate.py` executes their commands through `shell=True`; changes to task/manifests should be reviewed like scripts. |
+| What concrete shape did the 2026-04-21 swarm audit give the remaining SOTA gap? | The next tranche is now explicitly: trust hardening, canonical `WorkSession` / `TaskRun` objects, async queue/take-over, and an evidence console. |
+| What gate regression did the PDCA refresh uncover? | `run-gate.py` and `run-test-matrix.py` used `datetime.UTC`, which broke under Python 3.9 in isolated eval environments; both were switched to `timezone.utc` and nightly/release were rerun successfully. |
+| What changed in trust hardening tranche 1? | Legacy config `default` now resolves to REPL `auto`, and non-loopback `serve` now requires `ORCA_SERVE_TOKEN` plus `Authorization: Bearer <token>` on requests. |
+| What changed in trust hardening tranche 2? | `src/policy-executor.ts` now owns the shared normal-tool policy contract, and MCP normal tool execution now fails closed under the same approval/tool-filter/sandbox rules as chat. |
+| What changed in the 2026-04-21 UI/UX tranche? | The Ink empty state now renders a dedicated `HomePanel` with one primary action, trust/state summary, quick paths, and failure help; browser-only validation gates were marked `N/A` because this target surface is TUI. |
+| What changed in the interactive home-panel follow-up? | `Tab` now opens quick actions from the empty state, and those actions can launch common prompts or diagnostics without typing the full command first. |
+| What changed in the context-aware home-action follow-up? | The home panel and quick-action picker now react to saved-session availability and trust posture, so recovery actions such as `/sessions` appear only when they are actually useful. |
+| Why could the aggregator smoke and nightly gate fail on one machine but pass on another? | After Cloudflare gained routed-provider-key fallback, `findAggregator()` could still choose `cloudflare` when only upstream provider keys (for the selected model prefix) were present. Negative aggregator tests must clear those provider env vars too, not just aggregator tokens. |
+| What is the safe default for repo-local MCP after the 2026-04-22 delivery pass? | Repo-local/project-scoped MCP is loaded for discovery but is not auto-connected on startup. Only home/global-scoped MCP is startup-safe by default; project-scoped MCP requires explicit `/mcp connect` or equivalent operator action. |
+| What does `allowedTools: []` mean now? | Deny-all. Any defined allowlist, including the empty list, is authoritative for both `tools/list` advertisement and `tools/call` execution. |
+| Why were hook notices moved to stderr? | MCP uses stdout as line-delimited JSON-RPC transport. Human-readable hook messages on stdout can corrupt protocol framing, so they must go to stderr or a structured payload. |
 | Does `serve` already have any command coverage? | Yes. There is metadata smoke coverage today; the real gap is deeper `/chat`, error-path, and response-contract coverage rather than zero coverage. |
 | What shell pitfall showed up while seeding `agent-eval` tasks? | Do not background the full `&&` chain when a task depends on shell variables such as `TMP_HOME` or `PORT`; define variables in the foreground shell first, then background only the long-running process. |
 | How should Orca expose a Rubber-duck-style workflow? | As `reflect`: explicit `orca reflect`, `/reflect`, and `/mode reflect` surfaces, plus conservative auto-triggering only for clear debugging/explanation prompts. |

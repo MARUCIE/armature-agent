@@ -1,11 +1,14 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Orca CLI User Experience Map</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } }</style></head><body><header><h1>Orca CLI User Experience Map</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#experience-model">Experience Model</a><a href="#journey-map">Journey Map</a><a href="#command-flow-details">Command Flow Details</a><a href="#ux-constraints">UX Constraints</a><a href="#page-route-equivalents">Page / Route Equivalents</a></aside><article class="content markdown-body"><h1 id="orca-cli-user-experience-map">Orca CLI User Experience Map</h1><!-- AI-FLEET:PROJECT_DIR:START -->
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Orca CLI User Experience Map</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } }</style></head><body><header><h1>Orca CLI User Experience Map</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#experience-model">Experience Model</a><a href="#journey-map">Journey Map</a><a href="#command-flow-details">Command Flow Details</a><a href="#1-repl-one-shot-flow">1. REPL / One-Shot Flow</a><a href="#1a-entry-home-panel-flow">1a. Entry / Home Panel Flow</a><a href="#1a-reflect-flow">1a. Reflect Flow</a><a href="#1aa-workflow-preset-flow">1aa. Workflow Preset Flow</a><a href="#1b-model-selection-flow">1b. Model Selection Flow</a><a href="#1c-mode-and-effort-picker-flow">1c. Mode And Effort Picker Flow</a><a href="#1d-permission-trust-flow">1d. Permission / Trust Flow</a><a href="#1e-provider-inspection-flow">1e. Provider Inspection Flow</a><a href="#1f-doctor-flow">1f. Doctor Flow</a><a href="#benchmark-derived-target-journeys-2026-04-21">Benchmark-Derived Target Journeys (2026-04-21)</a><a href="#1g-serve-metadata-flow">1g. Serve Metadata Flow</a><a href="#1h-session-continuity-discovery-flow">1h. Session Continuity Discovery Flow</a><a href="#1i-stats-dashboard-flow">1i. Stats Dashboard Flow</a><a href="#1j-runtime-log-flow">1j. Runtime Log Flow</a><a href="#2-task-execution-flow">2. Task Execution Flow</a><a href="#3-multi-model-collaboration-flow">3. Multi-Model Collaboration Flow</a><a href="#4-background-job-flow">4. Background Job Flow</a><a href="#4a-session-portability-flow">4a. Session Portability Flow</a><a href="#4b-thread-portability-flow">4b. Thread Portability Flow</a><a href="#4b-quality-expansion-flow">4b. Quality Expansion Flow</a><a href="#5-ink-terminal-ui-interaction-model">5. ink Terminal UI Interaction Model</a><a href="#ux-constraints">UX Constraints</a><a href="#page-route-equivalents">Page / Route Equivalents</a><a href="#repl-screenshot-journey-2026-04-20">REPL Screenshot Journey (2026-04-20)</a></aside><article class="content markdown-body"><h1>Orca CLI User Experience Map</h1>
+<!-- AI-FLEET:PROJECT_DIR:START -->
 <ul>
 <li><code>PROJECT_DIR</code>: <code>/Users/mauricewen/Projects/orca-cli</code></li>
 </ul>
 <!-- AI-FLEET:PROJECT_DIR:END -->
 
-<h2 id="experience-model">Experience Model</h2><p>Orca CLI is a command-first product. User journeys are structured around terminal entry points, not URLs.</p>
-<h2 id="journey-map">Journey Map</h2><table>
+<h2 id="experience-model">Experience Model</h2>
+<p>Orca CLI is a command-first product. User journeys are structured around terminal entry points, not URLs.</p>
+<h2 id="journey-map">Journey Map</h2>
+<table>
 <thead>
 <tr>
 <th>Journey</th>
@@ -23,8 +26,26 @@
 <tr>
 <td>Explore interactively</td>
 <td>Ask questions or operate in a REPL</td>
-<td><code>orca</code>, <code>orca chat</code></td>
-<td><code>src/bin/orca.ts</code>, <code>src/commands/chat.ts</code></td>
+<td><code>orca</code>, <code>orca chat</code>, <code>orca -c [id]</code></td>
+<td><code>src/bin/orca.ts</code>, <code>src/commands/chat.ts</code>, <code>src/commands/session.ts</code></td>
+</tr>
+<tr>
+<td>Run operator-wide session automation</td>
+<td>Apply personal runtime hooks such as terminal-title sync across all projects</td>
+<td><code>~/.orca/hooks.json</code> + <code>orca</code></td>
+<td><code>src/hooks.ts</code></td>
+</tr>
+<tr>
+<td>Reflect on a bug or confusing code path</td>
+<td>Run a focused rubber-duck-style diagnosis pass with explicit and persistent entrypoints</td>
+<td><code>orca reflect</code>, <code>/reflect</code>, <code>/mode reflect</code></td>
+<td><code>src/commands/chat.ts</code>, <code>src/commands/reflect-mode.ts</code>, <code>src/modes/registry.ts</code></td>
+</tr>
+<tr>
+<td>Enter a workflow preset explicitly</td>
+<td>Jump straight into code review, debugging, or architecture/planning without first switching <code>/mode</code> manually</td>
+<td><code>orca review</code>, <code>orca debug</code>, <code>orca architect</code></td>
+<td><code>src/commands/chat.ts</code>, <code>src/program.ts</code>, <code>src/modes/registry.ts</code></td>
 </tr>
 <tr>
 <td>Analyze local images</td>
@@ -39,10 +60,34 @@
 <td><code>src/commands/doctor.ts</code>, <code>src/doctor.ts</code></td>
 </tr>
 <tr>
+<td>Connect repo-scoped MCP deliberately</td>
+<td>Review discovered MCP servers, then opt into a project-scoped server instead of auto-spawning it on startup</td>
+<td><code>/mcp connect &lt;name&gt;</code></td>
+<td><code>src/commands/chat.ts</code>, <code>src/mcp-client.ts</code></td>
+</tr>
+<tr>
 <td>Pick a model safely</td>
-<td>Inspect provider, context window, approximate pricing, and caution notes before switching</td>
+<td>Inspect provider, context window, approximate pricing, and caution notes before switching; <code>/model</code> opens the picker and <code>/model &lt;name&gt;</code> switches directly</td>
 <td><code>/model</code>, <code>/models</code></td>
 <td><code>src/commands/chat.ts</code>, <code>src/model-catalog.ts</code></td>
+</tr>
+<tr>
+<td>Switch behavior profile</td>
+<td>Use a picker for finite built-in/custom modes instead of memorizing mode ids, with a visible summary of what each workflow profile changes</td>
+<td><code>/mode</code>, <code>/mode &lt;id&gt;</code></td>
+<td><code>src/commands/chat.ts</code>, <code>src/modes/registry.ts</code></td>
+</tr>
+<tr>
+<td>Tune reasoning depth</td>
+<td>Use a picker for low/medium/high/max effort levels or switch directly by name</td>
+<td><code>/effort</code>, <code>/effort &lt;level&gt;</code></td>
+<td><code>src/commands/chat.ts</code></td>
+</tr>
+<tr>
+<td>Inspect and persist approval mode</td>
+<td>Make trust/approval policy explicit instead of relying on hidden defaults or hotkeys; expose live mode, policy source, stored allowlist counts, and legacy-rule maintenance in one operator surface</td>
+<td><code>orca permissions</code>, <code>orca permissions rules</code>, <code>orca permissions revoke</code>, <code>orca permissions clear</code>, <code>orca permissions normalize</code>, <code>/permissions</code>, <code>/permissions rules</code>, <code>/permissions revoke</code>, <code>/permissions clear</code>, <code>/permissions normalize</code></td>
+<td><code>src/commands/permissions.ts</code>, <code>src/commands/chat-slash-mutations.ts</code>, <code>src/config.ts</code></td>
 </tr>
 <tr>
 <td>Check providers before starting</td>
@@ -61,6 +106,24 @@
 <td>See usage, runtime health, and recent error signals in one place</td>
 <td><code>orca stats</code></td>
 <td><code>src/commands/stats.ts</code>, <code>src/doctor.ts</code>, <code>src/logger.ts</code></td>
+</tr>
+<tr>
+<td>Inspect continuity state headlessly</td>
+<td>Query the saved-session object set before attaching a richer client</td>
+<td><code>orca serve</code> + `GET /sessions</td>
+<td>/sessions/latest`</td>
+</tr>
+<tr>
+<td>Resume a specific saved session</td>
+<td>Continue an exact durable session object instead of only “latest”</td>
+<td><code>orca -c &lt;id&gt;</code></td>
+<td><code>src/commands/chat.ts</code>, <code>src/commands/session.ts</code></td>
+</tr>
+<tr>
+<td>Inspect one saved session headlessly</td>
+<td>Read a single durable session object before designing take-over/resume</td>
+<td><code>orca serve</code> + <code>GET /sessions/:id</code></td>
+<td><code>src/commands/serve.ts</code>, <code>src/session-store.ts</code></td>
 </tr>
 <tr>
 <td>Plan quality expansion</td>
@@ -111,6 +174,18 @@
 <td><code>src/commands/stats.ts</code>, <code>src/commands/session.ts</code></td>
 </tr>
 <tr>
+<td>Move session artifacts across contexts</td>
+<td>fork / export / import / markdown-share / handoff saved sessions for branching and portability, with metadata sidecars for collaboration artifacts</td>
+<td>`orca session fork</td>
+<td>export</td>
+</tr>
+<tr>
+<td>Move thread artifacts across contexts</td>
+<td>export / markdown / share / import / handoff collaborative thread records, with metadata sidecars and handoff bundles</td>
+<td>`/thread export</td>
+<td>markdown</td>
+</tr>
+<tr>
 <td>Track background work</td>
 <td>Start detached work and get notified when it finishes</td>
 <td><code>run_background</code>, <code>/jobs</code></td>
@@ -141,64 +216,206 @@
 <td><code>package.json</code>, <code>AGENT_EVAL_PLAN.md</code></td>
 </tr>
 </tbody></table>
-<h2 id="command-flow-details">Command Flow Details</h2><h3 id="1-repl-one-shot-flow">1. REPL / One-Shot Flow</h3><ol>
+<h2 id="command-flow-details">Command Flow Details</h2>
+<h3 id="1-repl-one-shot-flow">1. REPL / One-Shot Flow</h3>
+<ol>
 <li>User invokes <code>orca</code> or <code>orca chat</code>.</li>
 <li><code>src/bin/orca.ts</code> hands off to <code>src/program.ts</code>.</li>
 <li><code>src/commands/chat.ts</code> resolves config, model, prompt, tool loop, and streaming output.</li>
 <li>User receives formatted markdown and tool events in terminal.</li>
 </ol>
-<h3 id="1b-model-selection-flow">1b. Model Selection Flow</h3><ol>
+<h3 id="1a-entry-home-panel-flow">1a. Entry / Home Panel Flow</h3>
+<ol>
+<li>User opens the REPL with no prior output on screen.</li>
+<li>Orca shows the banner plus a dedicated home panel instead of a long flat command list.</li>
+<li>The home panel emphasizes one primary action: type a concrete task and press Enter.</li>
+<li>Secondary panels expose:<ul>
+<li>trust/state</li>
+<li>quick recovery paths</li>
+<li>failure help</li>
+</ul>
+</li>
+<li><code>Tab</code> opens a quick-action picker for high-frequency prompts and diagnostics.</li>
+<li>The goal is to make the entry screen usable without memorizing slash commands while keeping the prompt bar as the single primary action.</li>
+</ol>
+<h3 id="1a-reflect-flow">1a. Reflect Flow</h3>
+<ol>
+<li>User invokes <code>orca reflect</code>, <code>/reflect ...</code>, or switches the session with <code>/mode reflect</code>.</li>
+<li><code>src/commands/reflect-mode.ts</code> rewrites the prompt into a structured reflection contract: symptom, hypotheses, evidence, root cause, next step.</li>
+<li><code>src/commands/chat.ts</code> reuses the normal agent/tool loop, but with reflect-specific prompt shaping and mode guidance.</li>
+<li>For clear debugging or explanation prompts in standard <code>orca chat</code>, Orca can conservatively auto-trigger reflect and shows an inline notice when it does.</li>
+</ol>
+<h3 id="1aa-workflow-preset-flow">1aa. Workflow Preset Flow</h3>
+<ol>
+<li>User invokes <code>orca review</code>, <code>orca debug</code>, or <code>orca architect</code>.</li>
+<li><code>src/program.ts</code> registers each preset as a top-level command backed by <code>createChatCommand(...)</code>.</li>
+<li>The command enters <code>chat</code> with an <code>initialModeId</code>, so the session starts directly inside the matching built-in mode.</li>
+<li>The operator can still switch modes later with <code>/mode</code>, but the initial entry cost is reduced for high-frequency workflows.</li>
+</ol>
+<h3 id="1b-model-selection-flow">1b. Model Selection Flow</h3>
+<ol>
 <li>User invokes <code>/model</code> or <code>/models</code>.</li>
 <li><code>src/model-catalog.ts</code> derives model metadata from config + known model hints.</li>
-<li>The REPL shows provider, context window, approximate pricing, and caution notes.</li>
+<li>Ink REPL opens a provider-first picker, then a model picker scoped to that provider; duplicate model names are carried as provider+model keys so Poe/Copilot/OpenAI variants do not resolve to the wrong backend.</li>
+<li>Long picker lists are windowed instead of rendered as one dense wall; legacy mode still renders a numbered fallback list grouped by provider.</li>
 <li>If a cautionary model is selected, the REPL warns immediately instead of failing later through degraded tool use.</li>
 </ol>
-<h3 id="1c-provider-inspection-flow">1c. Provider Inspection Flow</h3><ol>
+<h3 id="1c-mode-and-effort-picker-flow">1c. Mode And Effort Picker Flow</h3>
+<ol>
+<li>User invokes <code>/mode</code> or <code>/effort</code> without arguments.</li>
+<li><code>src/commands/chat.ts</code> opens a shared option picker in ink mode rather than printing static text instructions.</li>
+<li><code>/mode</code> descriptions now summarize the workflow delta for each profile, not just the mode name.</li>
+<li>The summary text now comes from the same registry that defines top-level workflow presets, reducing description drift.</li>
+<li>Workflow presets now also define structured default policy fields such as <code>effort</code> and <code>permission mode</code>, rather than relying only on free-text descriptions.</li>
+<li><code>/mode</code> picker descriptions now surface those preset defaults directly, instead of hiding them behind command docs.</li>
+<li>When a selected mode is backed by a workflow preset, Orca also applies the preset&#39;s default <code>effort</code> / <code>permission mode</code> values.</li>
+<li>Startup and <code>/mode</code> switching now use one shared preset-policy application path, and the startup path composes the initial system prompt from mode + preset + effort.</li>
+<li>Workflow presets now also carry <code>tool policy</code> and <code>output style</code>, and <code>/mode</code> descriptions surface them directly.</li>
+<li>Active mode tool restrictions are now enforced in the proxy tool runtime instead of depending only on prompt obedience.</li>
+<li><code>/effort</code> and preset default effort now also flow into proxy <code>reasoning_effort</code>, instead of remaining UI-only state.</li>
+<li><code>/status</code> and the live status bar now surface the current <code>mode + effort + permissions</code> combination instead of only the mode label, while <code>/status</code> additionally exposes <code>tool policy</code> and <code>output style</code>.</li>
+<li><code>model policy</code> is now also exposed in <code>/status</code>, and the live <code>StatusBar</code> shows a compact <code>model:</code> summary when a preset provides it.</li>
+<li>The live <code>StatusBar</code> now shows compact <code>tools:</code> / <code>out:</code> summaries when a preset provides them.</li>
+<li>The picker returns the selected mode id or effort level immediately, and the status bar updates in place.</li>
+</ol>
+<h3 id="1d-permission-trust-flow">1d. Permission / Trust Flow</h3>
+<ol>
+<li>User invokes <code>orca permissions</code> or <code>/permissions</code>.</li>
+<li><code>orca permissions</code> shows the current effective approval mode, persisted project/global config values, rule counts, and the user-facing meaning of each mode.</li>
+<li>Ink <code>/permissions</code> opens a detail panel plus a live picker for <code>yolo</code> / <code>auto</code> / <code>plan</code> and save-to-project/global actions.</li>
+<li><code>/permissions set</code> updates the live REPL policy immediately; <code>/permissions save</code> or <code>orca permissions set --scope ...</code> persists it to config.</li>
+<li><code>plan</code> mode now requests approval for every tool; <code>auto</code> requests approval only for dangerous tools; <code>yolo</code> bypasses prompts.</li>
+<li>The legacy persisted config value <code>default</code> now resolves to <code>auto</code>, so a fresh session no longer starts in fail-open <code>yolo</code>.</li>
+<li>MCP tool execution now goes through the same shared policy executor for hooks, tool filtering, approval checks, and sandbox posture; dangerous tools fail closed when no grant exists.</li>
+<li>Repo-local MCP is no longer auto-connected on startup; only home/global-scoped MCP is startup-safe, and project-scoped MCP requires explicit operator connect.</li>
+<li>Permission prompts now support <code>allow once</code>, <code>allow session</code>, <code>allow project</code>, and <code>deny</code>, so approvals can be promoted into session/project policy inline.</li>
+<li><code>orca permissions rules</code> and <code>/permissions rules</code> expose stored session/project/global rule entries rather than only a count.</li>
+<li><code>orca permissions revoke|clear</code> and <code>/permissions revoke|clear</code> let the operator remove one rule or clear a scope instead of editing config files manually; revoke now supports filter-and-pick selection when the exact rule key is not supplied.</li>
+<li>Stored permission rules now use stable canonical descriptors such as <code>write_file|path=...</code> and <code>run_command|command=...</code>, which makes persistence less sensitive to preview formatting changes.</li>
+<li><code>orca permissions normalize</code> and <code>/permissions normalize</code> rewrite legacy preview-style rules into canonical descriptors instead of leaving them mixed forever.</li>
+<li><code>permissions rules</code> now annotates rule state (<code>canonical</code>, <code>legacy</code>, <code>unrecognized</code>) and shows the normalized target for legacy entries.</li>
+<li>Legacy <code>::</code> rules are explicitly supported by the normalize flow instead of being stranded forever as opaque leftovers.</li>
+<li><code>permissions rules</code> now supports filtering by state (<code>all</code>, <code>canonical</code>, <code>legacy</code>, <code>unrecognized</code>) for faster audits.</li>
+<li>Effective runtime permission checks now merge <code>project</code> and <code>global</code> stored rules instead of only consuming project rules.</li>
+<li>Status/footer hints expose the current permission source (<code>session</code>, <code>project</code>, <code>global</code>, <code>env</code>, <code>flag</code>, <code>default</code>) so the active policy is auditable in-session.</li>
+</ol>
+<h3 id="1e-provider-inspection-flow">1e. Provider Inspection Flow</h3>
+<ol>
 <li>User invokes <code>orca providers</code> or <code>orca providers test</code>.</li>
 <li><code>src/commands/providers.ts</code> resolves configured providers and decorates them with model-catalog metadata.</li>
 <li>The CLI shows readiness plus context/pricing/caution data before the user commits to a session or connectivity test.</li>
 </ol>
-<h3 id="1d-doctor-flow">1d. Doctor Flow</h3><ol>
+<h3 id="1f-doctor-flow">1f. Doctor Flow</h3>
+<ol>
 <li>User invokes <code>orca doctor</code>.</li>
 <li><code>src/doctor.ts</code> gathers provider, project, hook, MCP, session, background-job, and log diagnostics.</li>
 <li>The command emits either a human-readable health summary or JSON for automation.</li>
-<li>Malformed local JSON config files are called out explicitly instead of being hidden in generic stderr noise.</li>
 </ol>
-<h3 id="1f-serve-metadata-flow">1f. Serve Metadata Flow</h3><ol>
+<h2 id="benchmark-derived-target-journeys-2026-04-21">Benchmark-Derived Target Journeys (2026-04-21)</h2>
+<p>These are not fully shipped yet; they are the next continuity targets derived from the SOTA benchmark set.</p>
+<table>
+<thead>
+<tr>
+<th>Target Journey</th>
+<th>User Intent</th>
+<th>Expected Future Surface</th>
+<th>Strongest Benchmark References</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Resume work across terminal / web / IDE</td>
+<td>Start in one surface, continue in another without rebuilding context</td>
+<td>durable session object + shared session id + resumable web/IDE handoff</td>
+<td>Codex, Cursor, OpenCode, GitHub Copilot</td>
+</tr>
+<tr>
+<td>Inspect async execution before taking over</td>
+<td>Review what a detached agent already did before resuming locally</td>
+<td>queue / agent list + status + timeline + take-over action</td>
+<td>Cursor background agents, GitHub Copilot cloud agent, OpenCode web</td>
+</tr>
+<tr>
+<td>Review agent output through evidence rather than trust</td>
+<td>Read logs, session history, and change evidence before merge/apply</td>
+<td>evidence console with logs, timeline, artifacts, and diff links</td>
+<td>GitHub Copilot, Claude Code, Cursor Bugbot</td>
+</tr>
+<tr>
+<td>Share a durable investigation / implementation thread</td>
+<td>Hand off work with state, not just prose summary</td>
+<td>shareable session/thread artifact with optional hosted continuation</td>
+<td>Amp, OpenCode, Codex</td>
+</tr>
+</tbody></table>
+<p>The first shipped foothold for these journeys is now a stable REPL <code>sessionId</code> plus headless session-discovery endpoints.
+The 2026-04-21 swarm audit adds one sharper constraint to these journeys: they do not close until Orca exposes leaseable session/task objects, queue inspection/take-over, review-grade evidence bundles, and a trust model shared across REPL / MCP / serve.
+4. Malformed local JSON config files are called out explicitly instead of being hidden in generic stderr noise.</p>
+<h3 id="1g-serve-metadata-flow">1g. Serve Metadata Flow</h3>
+<ol>
 <li>User starts <code>orca serve</code>.</li>
 <li>HTTP clients can call <code>/health</code>, <code>/providers</code>, and <code>/doctor</code>.</li>
 <li>The headless server returns the same provider/runtime metadata already exposed in the CLI surfaces.</li>
 </ol>
-<h3 id="1g-stats-dashboard-flow">1g. Stats Dashboard Flow</h3><ol>
+<h3 id="1h-session-continuity-discovery-flow">1h. Session Continuity Discovery Flow</h3>
+<ol>
+<li>The REPL now assigns a stable <code>sessionId</code> to the current conversation and reuses the restored id on <code>--continue</code>.</li>
+<li><code>orca -c</code> resumes the latest session, and <code>orca -c &lt;id&gt;</code> resumes a specific saved session object by id.</li>
+<li><code>/status</code> and the live status bar expose that id so the operator can anchor follow-up actions to the same object.</li>
+<li><code>orca serve</code> exposes <code>GET /sessions</code>, <code>GET /sessions/latest</code>, and <code>GET /sessions/:id</code> so a future web/IDE client can discover and inspect the durable session object set.</li>
+<li>This is the first continuity surface, not the final hosted continuity workflow.</li>
+<li>The next continuity step is not another metadata endpoint; it is a real <code>WorkSession</code> / <code>TaskRun</code> model with queue/take-over semantics and evidence links.</li>
+<li>If <code>serve</code> binds to a non-loopback host, <code>ORCA_SERVE_TOKEN</code> is now required and HTTP requests must present a bearer token.</li>
+</ol>
+<h3 id="1i-stats-dashboard-flow">1i. Stats Dashboard Flow</h3>
+<ol>
 <li>User invokes <code>orca stats</code>.</li>
 <li><code>src/commands/stats.ts</code> reads usage history from SQLite.</li>
 <li>The command merges in runtime health from <code>doctor</code> and recent errors from the local logger.</li>
 <li>The user sees both cost metrics and operational state in a single output.</li>
 </ol>
-<h3 id="1e-runtime-log-flow">1e. Runtime Log Flow</h3><ol>
+<h3 id="1j-runtime-log-flow">1j. Runtime Log Flow</h3>
+<ol>
 <li>Runtime warnings/errors and selected info events are persisted via <code>src/logger.ts</code>.</li>
 <li>Files are written to <code>~/.orca/logs/</code> (or <code>$ORCA_HOME/logs/</code>).</li>
 <li><code>orca logs</code> and <code>orca logs errors</code> surface recent entries without requiring direct file inspection.</li>
 </ol>
-<h3 id="2-task-execution-flow">2. Task Execution Flow</h3><ol>
+<h3 id="2-task-execution-flow">2. Task Execution Flow</h3>
+<ol>
 <li>User invokes <code>orca run &quot;task&quot;</code>.</li>
 <li><code>src/commands/run.ts</code> packages the task for the runtime.</li>
 <li>Runtime resolves provider/model config and tool permissions.</li>
 <li>Output streams back through <code>src/output.ts</code> and <code>src/markdown.ts</code>.</li>
 </ol>
-<h3 id="3-multi-model-collaboration-flow">3. Multi-Model Collaboration Flow</h3><ol>
+<h3 id="3-multi-model-collaboration-flow">3. Multi-Model Collaboration Flow</h3>
+<ol>
 <li>User chooses <code>council</code>, <code>race</code>, or <code>pipeline</code>.</li>
 <li><code>src/commands/multi.ts</code> resolves provider strategy.</li>
 <li><code>src/multi-model.ts</code> coordinates parallel or staged calls.</li>
 <li>Result is rendered with verdict, winner, or stage-by-stage output.</li>
 </ol>
-<h3 id="4-background-job-flow">4. Background Job Flow</h3><ol>
+<h3 id="4-background-job-flow">4. Background Job Flow</h3>
+<ol>
 <li>The agent invokes <code>run_background</code>.</li>
 <li><code>src/background-jobs.ts</code> creates a tracked detached job and log artifact.</li>
 <li>The REPL surfaces completion notifications before the next prompt.</li>
 <li><code>/jobs</code> provides a quick state view without falling back to raw PID inspection.</li>
 </ol>
-<h3 id="4b-quality-expansion-flow">4b. Quality Expansion Flow</h3><ol>
+<h3 id="4a-session-portability-flow">4a. Session Portability Flow</h3>
+<ol>
+<li>User invokes <code>orca session fork</code>, <code>orca session export</code>, <code>orca session import</code>, <code>orca session markdown</code>, <code>orca session share</code>, or <code>orca session handoff</code>.</li>
+<li><code>src/commands/session.ts</code> delegates to <code>src/session-store.ts</code>.</li>
+<li>The runtime clones, serializes, or imports a saved session record without mutating the source record in place.</li>
+<li>Shared and handoff session artifacts emit both human-readable Markdown and a metadata sidecar for downstream reuse.</li>
+</ol>
+<h3 id="4b-thread-portability-flow">4b. Thread Portability Flow</h3>
+<ol>
+<li>User invokes <code>/thread export</code>, <code>/thread markdown</code>, <code>/thread share</code>, <code>/thread import</code>, or <code>/thread handoff</code>.</li>
+<li><code>src/commands/chat-slash-mutations.ts</code> delegates to <code>ThreadManager</code>.</li>
+<li>Orca writes/loads JSON thread artifacts and can create a handoff clone with source metadata.</li>
+<li>Share/handoff flows emit Markdown plus metadata sidecars so artifacts stay portable and auditable.</li>
+</ol>
+<h3 id="4b-quality-expansion-flow">4b. Quality Expansion Flow</h3>
+<ol>
 <li>Maintainer measures the current suite baseline from the real repo state.</li>
 <li><code>AGENT_EVAL_PLAN.md</code> defines breadth lanes, depth lanes, gate tiers, and task / grader expectations.</li>
 <li><code>agent-eval/manifests/{fast,nightly,release}.json</code> codify the current gate bundles.</li>
@@ -207,7 +424,8 @@
 <li>Nightly gate adds deterministic repo verification (<code>lint</code>, <code>test</code>, <code>build</code>) ahead of the same black-box bundle.</li>
 <li>Release gate adds <code>bench</code> plus a recorded CLI journey artifact before a ship decision.</li>
 </ol>
-<h3 id="5-ink-terminal-ui-interaction-model">5. ink Terminal UI Interaction Model</h3><p>The REPL now uses ink (React for terminals) as the rendering engine. The UI is a fullscreen alternate-screen layout:</p>
+<h3 id="5-ink-terminal-ui-interaction-model">5. ink Terminal UI Interaction Model</h3>
+<p>The REPL now uses ink (React for terminals) as the rendering engine. The UI is a fullscreen alternate-screen layout:</p>
 <pre><code>┌─────────────────────────────────┐
 │  ScrollBox (content area)       │  ← scrollable: PageUp/Down, g/G, mouse wheel
 │  banner, markdown, tool calls   │  ← stickyScroll: auto-follows bottom
@@ -254,8 +472,16 @@
 <td>Animated orca swimming art + version info</td>
 </tr>
 <tr>
+<td>HomePanel</td>
+<td>Entry-state onboarding shell with one primary action, trust/state summary, quick paths, and failure help</td>
+</tr>
+<tr>
 <td>ThemePicker</td>
 <td>First-launch theme selection that respects persisted preference in <code>ORCA_THEME</code> or <code>~/.orca/theme</code></td>
+</tr>
+<tr>
+<td>OptionPicker</td>
+<td>Shared finite-choice picker for model/mode/effort and tool-side multiple-choice prompts</td>
 </tr>
 <tr>
 <td>Footer</td>
@@ -287,7 +513,7 @@
 </tr>
 <tr>
 <td>CommandPicker</td>
-<td>Slash command autocomplete overlay that only owns the command token, never argument-entry submission</td>
+<td>Slash command autocomplete overlay that only owns the command token, never argument-entry submission, now including <code>/reflect</code></td>
 </tr>
 <tr>
 <td>MultiModelProgress</td>
@@ -327,17 +553,20 @@
 <td>ChatSessionEmitter: typed event bridge between business logic and UI</td>
 </tr>
 </tbody></table>
-<h2 id="ux-constraints">UX Constraints</h2><ul>
+<h2 id="ux-constraints">UX Constraints</h2>
+<ul>
 <li>No browser dependency for core workflows</li>
 <li>Provider configuration must stay legible from CLI affordances</li>
 <li>Multi-model output must remain understandable in a terminal session</li>
 <li>Safe mode vs YOLO mode must remain obvious when dangerous actions exist</li>
+<li>Reflect mode must stay explicit and visible when it is force-enabled, and noticeable when auto-triggered</li>
 <li>Detached work must stay observable without forcing manual shell polling</li>
 <li>Model switching should expose enough metadata to prevent obviously bad runtime choices</li>
 <li>Runtime diagnostics should stay available even after the terminal session ends</li>
 <li>The runtime should provide one explicit health-check surface before users fall back to manual file inspection</li>
 </ul>
-<h2 id="page-route-equivalents">Page / Route Equivalents</h2><table>
+<h2 id="page-route-equivalents">Page / Route Equivalents</h2>
+<table>
 <thead>
 <tr>
 <th>Equivalent Surface</th>
@@ -365,4 +594,46 @@
 <td><code>npm run eval:fast</code>, <code>npm run eval:nightly</code>, <code>npm run eval:release</code></td>
 </tr>
 </tbody></table>
+<h2 id="repl-screenshot-journey-2026-04-20">REPL Screenshot Journey (2026-04-20)</h2>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>User Action</th>
+<th>System Response</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SS-1</td>
+<td>User starts <code>orca chat</code> in REPL mode</td>
+<td>Orca opens the normal interactive session</td>
+<td>CLI REPL</td>
+</tr>
+<tr>
+<td>SS-2</td>
+<td>User enters one or more local image paths in the prompt text</td>
+<td>Orca detects the image files, including quoted paths and shell-escaped spaces</td>
+<td>prompt assembly in <code>chat-input.ts</code></td>
+</tr>
+<tr>
+<td>SS-3</td>
+<td>User includes text plus two or more screenshots</td>
+<td>Orca sends a single multimodal turn with all images attached</td>
+<td>proxy-path multimodal request</td>
+</tr>
+<tr>
+<td>SS-4</td>
+<td>User asks a follow-up question about the same screenshots</td>
+<td>Orca retains the multimodal user turn in history on the proxy path</td>
+<td>preserved proxy history</td>
+</tr>
+<tr>
+<td>SS-5</td>
+<td>User tries direct clipboard bitmap paste</td>
+<td>Not supported yet; user must reference local image files</td>
+<td>documented limitation</td>
+</tr>
+</tbody></table>
+<section><h2>2026-04-29 体验增量：队列与信任</h2><p>新增操作员旅程包括：用 <code>orca queue list/show</code> 检查运行中与已完成的 <code>TaskRun</code>；通过显式信任控制 repo-local hooks；对 <code>fetch_url</code> / <code>web_search</code> 触发权限审批。开放体验任务是 <code>queue follow</code>、<code>queue takeover</code> 和 TUI TaskRun evidence drawer。</p></section>
 </article></main></body></html>

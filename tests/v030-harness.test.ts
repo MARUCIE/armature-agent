@@ -170,7 +170,7 @@ describe('hook banner consistency', () => {
   })
 
   it('16.13 HookManager.totalHooks counts actual handlers, not event types', () => {
-    const manager = new HookManager()
+    const manager = new HookManager({ trustProjectHooks: true })
     const hookDir = join(tmpdir(), `orca-hookcount-${Date.now()}`)
     const fakeHome = join(tmpdir(), `orca-hookcount-home-${Date.now()}`)
     mkdirSync(join(hookDir, '.orca'), { recursive: true })
@@ -200,7 +200,7 @@ describe('hook banner consistency', () => {
   })
 
   it('16.14 printStatus does not output total when called', () => {
-    const manager = new HookManager()
+    const manager = new HookManager({ trustProjectHooks: true })
     const hookDir = join(tmpdir(), `orca-hookstatus-${Date.now()}`)
     const fakeHome = join(tmpdir(), `orca-hookstatus-home-${Date.now()}`)
     mkdirSync(join(hookDir, '.orca'), { recursive: true })

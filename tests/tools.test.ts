@@ -178,6 +178,24 @@ describe('task management', () => {
   })
 })
 
+describe('fetch_url network guard', () => {
+  it('rejects non-http schemes', () => {
+    const result = executeTool('fetch_url', { url: 'file:///etc/passwd' }, testDir)
+    expect(result.success).toBe(false)
+    expect(result.output).toContain('only supports http:// and https://')
+  })
+
+  it('blocks loopback and private network targets', () => {
+    const loopback = executeTool('fetch_url', { url: 'http://127.0.0.1:1234/metadata' }, testDir)
+    const privateHost = executeTool('fetch_url', { url: 'http://192.168.1.10/' }, testDir)
+
+    expect(loopback.success).toBe(false)
+    expect(loopback.output).toContain('blocks loopback')
+    expect(privateHost.success).toBe(false)
+    expect(privateHost.output).toContain('blocks loopback')
+  })
+})
+
 describe('tool_search', () => {
   it('finds tools by keyword', () => {
     const result = executeTool('tool_search', { query: 'git' }, testDir)

@@ -1,11 +1,25 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Orca CLI System Architecture</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } }</style></head><body><header><h1>Orca CLI System Architecture</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#architecture-summary">Architecture Summary</a><a href="#high-level-diagram">High-Level Diagram</a><a href="#layer-breakdown">Layer Breakdown</a><a href="#command-surface-map">Command Surface Map</a><a href="#route-page-map">Route / Page Map</a><a href="#legacy-documentation-cross-references">Legacy Documentation Cross-References</a></aside><article class="content markdown-body"><h1 id="orca-cli-system-architecture">Orca CLI System Architecture</h1><!-- AI-FLEET:PROJECT_DIR:START -->
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Orca CLI System Architecture</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } }</style></head><body><header><h1>Orca CLI System Architecture</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#architecture-summary">Architecture Summary</a><a href="#high-level-diagram">High-Level Diagram</a><a href="#layer-breakdown">Layer Breakdown</a><a href="#command-surface-map">Command Surface Map</a><a href="#route-page-map">Route / Page Map</a><a href="#legacy-documentation-cross-references">Legacy Documentation Cross-References</a><a href="#repl-multimodal-prompt-assembly-2026-04-20">REPL Multimodal Prompt Assembly (2026-04-20)</a></aside><article class="content markdown-body"><h1>Orca CLI System Architecture</h1>
+<!-- AI-FLEET:PROJECT_DIR:START -->
 <ul>
 <li><code>PROJECT_DIR</code>: <code>/Users/mauricewen/Projects/orca-cli</code></li>
 </ul>
 <!-- AI-FLEET:PROJECT_DIR:END -->
 
-<h2 id="architecture-summary">Architecture Summary</h2><p>Orca CLI is a TypeScript ESM CLI product composed of a terminal entry layer, command layer, runtime/config layer, provider bridge, and test/verification layer. It is a CLI runtime, so the primary surface is command invocation and streaming terminal output rather than browser routes.</p>
-<h2 id="high-level-diagram">High-Level Diagram</h2><pre><code class="language-mermaid">flowchart TD
+<h2 id="architecture-summary">Architecture Summary</h2>
+<p>Orca CLI is a TypeScript ESM CLI product composed of a terminal entry layer, command layer, runtime/config layer, provider bridge, and test/verification layer. It is a CLI runtime, so the primary surface is command invocation and streaming terminal output rather than browser routes.</p>
+<p>Hook configuration now resolves from both project-local and operator-global Orca surfaces:</p>
+<ul>
+<li>project: <code>.orca/hooks.json</code>, <code>.orca.json</code></li>
+<li>global: <code>~/.orca/hooks.json</code></li>
+<li>compatibility imports: <code>.claude/hooks.json</code>, <code>.claude/settings.json</code>, <code>.codex/hooks.json</code></li>
+</ul>
+<p>MCP configuration now carries source provenance:</p>
+<ul>
+<li>startup-safe auto-connect: home/global-scoped MCP only</li>
+<li>project-scoped MCP: explicit opt-in through <code>/mcp connect</code> or equivalent operator action</li>
+</ul>
+<h2 id="high-level-diagram">High-Level Diagram</h2>
+<pre><code class="language-mermaid">flowchart TD
   User[Developer in Terminal]
   Bin[src/bin/orca.ts]
   Program[src/program.ts]
@@ -79,7 +93,8 @@
   Render --&gt; TermSize
   Render --&gt; Theme
 </code></pre>
-<h2 id="layer-breakdown">Layer Breakdown</h2><table>
+<h2 id="layer-breakdown">Layer Breakdown</h2>
+<table>
 <thead>
 <tr>
 <th>Layer</th>
@@ -100,12 +115,12 @@
 <tr>
 <td>Command modules</td>
 <td><code>src/commands/*.ts</code></td>
-<td>User-facing CLI flows (<code>chat</code>, <code>run</code>, <code>multi</code>, <code>bench</code>, <code>providers</code>, <code>stats</code>, <code>session</code>, <code>pr</code>, <code>serve</code>, <code>init</code>)</td>
+<td>User-facing CLI flows (<code>chat</code>, <code>reflect</code>, <code>run</code>, <code>multi</code>, <code>bench</code>, <code>providers</code>, <code>stats</code>, <code>session</code>, <code>pr</code>, <code>serve</code>, <code>init</code>)</td>
 </tr>
 <tr>
 <td>Runtime/config</td>
-<td><code>src/config.ts</code>, <code>src/context.ts</code>, <code>src/system-prompt.ts</code>, <code>src/token-budget.ts</code>, <code>src/model-catalog.ts</code>, <code>src/doctor.ts</code></td>
-<td>Resolve providers, model metadata, runtime diagnostics, context, prompts, and runtime limits</td>
+<td><code>src/config.ts</code>, <code>src/context.ts</code>, <code>src/system-prompt.ts</code>, <code>src/token-budget.ts</code>, <code>src/model-catalog.ts</code>, <code>src/doctor.ts</code>, <code>src/commands/reflect-mode.ts</code>, <code>src/modes/registry.ts</code></td>
+<td>Resolve providers, model metadata, runtime diagnostics, context, prompts, runtime limits, and reflect/debugging behavior</td>
 </tr>
 <tr>
 <td>Provider bridge</td>
@@ -120,7 +135,7 @@
 <tr>
 <td>Agent runtime</td>
 <td><code>src/tools.ts</code>, <code>src/background-jobs.ts</code>, <code>src/logger.ts</code>, <code>src/hooks.ts</code>, <code>src/mcp-client.ts</code>, <code>src/retry-intelligence.ts</code>, <code>src/auto-verify.ts</code></td>
-<td>Tool execution, detached job tracking, local runtime logging, hooks, MCP, retry behavior, verification helpers</td>
+<td>Tool execution, detached job tracking, local runtime logging, hooks, provenance-aware MCP loading, retry behavior, verification helpers</td>
 </tr>
 <tr>
 <td>ink UI</td>
@@ -148,7 +163,8 @@
 <td>Deterministic regression coverage plus manifest-driven black-box gate execution for release-grade CLI evaluation</td>
 </tr>
 </tbody></table>
-<h2 id="command-surface-map">Command Surface Map</h2><table>
+<h2 id="command-surface-map">Command Surface Map</h2>
+<table>
 <thead>
 <tr>
 <th>Command</th>
@@ -160,6 +176,11 @@
 <td><code>orca</code> / <code>orca chat</code></td>
 <td><code>src/commands/chat.ts</code></td>
 <td>Interactive REPL and one-shot prompting</td>
+</tr>
+<tr>
+<td><code>orca reflect</code></td>
+<td><code>src/commands/chat.ts</code>, <code>src/commands/reflect-mode.ts</code></td>
+<td>Socratic debugging and root-cause investigation surface</td>
 </tr>
 <tr>
 <td><code>orca run</code></td>
@@ -217,9 +238,11 @@
 <td>Local configuration bootstrap</td>
 </tr>
 </tbody></table>
-<h2 id="route-page-map">Route / Page Map</h2><ul>
+<h2 id="route-page-map">Route / Page Map</h2>
+<ul>
 <li>Web routes: <code>N/A</code></li>
 <li>Primary interaction surface: terminal commands and REPL slash-style workflows</li>
+<li>Reflect/debugging surface: <code>orca reflect</code>, <code>/reflect</code>, <code>/mode reflect</code>, plus conservative prompt-intent auto-triggering in standard chat</li>
 <li>Headless HTTP surface: <code>orca serve</code> (see <code>src/commands/serve.ts</code>)</li>
 <li>Detached job state: <code>~/.orca/background-jobs/</code> or <code>$ORCA_HOME/background-jobs/</code></li>
 <li>Runtime logs: <code>~/.orca/logs/</code> or <code>$ORCA_HOME/logs/</code></li>
@@ -227,9 +250,32 @@
 <li>Quality gate surfaces: <code>npm run eval:fast</code>, <code>npm run eval:nightly</code>, <code>npm run eval:release</code>, plus <code>agent-eval/{tasks,graders,manifests,runs}</code></li>
 <li>Serve diagnostics: <code>/health</code>, <code>/providers</code>, <code>/doctor</code></li>
 </ul>
-<h2 id="legacy-documentation-cross-references">Legacy Documentation Cross-References</h2><ul>
+<h2 id="legacy-documentation-cross-references">Legacy Documentation Cross-References</h2>
+<ul>
 <li><code>doc/THREE_TIER_ARCHITECTURE.md</code>: historical broader ecosystem architecture</li>
 <li><code>doc/MULTI_MODEL_COLLABORATION.md</code>: early collaboration-mode design</li>
 <li><code>doc/SOTA_TEST_PLAN.md</code>: historical hardening plan</li>
 </ul>
+<h2 id="repl-multimodal-prompt-assembly-2026-04-20">REPL Multimodal Prompt Assembly (2026-04-20)</h2>
+<ul>
+<li><code>src/commands/chat-input.ts</code><ul>
+<li>now extracts embedded local image references from prompt text</li>
+<li>keeps image-path detection separate from generic file expansion</li>
+</ul>
+</li>
+<li><code>src/commands/chat-repl-turn.ts</code><ul>
+<li>assembles REPL turns into multimodal <code>PromptContent</code> before proxy dispatch</li>
+<li>keeps auto-reflect intent bound to the original user text, not expanded file content</li>
+</ul>
+</li>
+<li><code>src/commands/chat.ts</code><ul>
+<li>proxy history now stores the original multimodal user turn instead of flattening it immediately</li>
+</ul>
+</li>
+</ul>
+<p>Architectural invariant:</p>
+<ul>
+<li>image attachments are only promoted on the proxy-provider path; SDK/native path remains text-only</li>
+</ul>
+<section><h2>2026-04-29 架构增量：信任边界与队列</h2><p>Hook 加载按信任边界拆分：home/global hooks 仍可安全启动，repo-local <code>.orca</code> / <code>.claude</code> hooks 需要显式项目信任；hook 子进程环境改为 allowlist。<code>TaskRun</code> 现在通过 <code>orca queue</code> 成为一等只读检查入口。后续架构任务是把 <code>WorkSession</code> / <code>TaskRun</code> 提升为 <code>chat</code>、<code>run</code>、<code>serve</code>、mission、planner 共用执行契约。</p></section>
 </article></main></body></html>

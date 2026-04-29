@@ -1,5 +1,10 @@
 # Orca CLI Initiative
 
+## 2026-04-29 Active Audit Artifacts
+
+- `SOTA_GAP_SWARM_AUDIT.md` - canonical SOTA swarm audit, milestone plan, atomic task queue, and PDCA log
+- `SOTA_GAP_SWARM_AUDIT.html` - Chinese `html-economist-style` companion report
+
 ## Canonical Documents
 
 - [PRD](./PRD.md)
@@ -10,6 +15,7 @@
 - [PDCA_EXECUTION_PLAN](./PDCA_EXECUTION_PLAN.md)
 - [PDCA_ITERATION_CHECKLIST](./PDCA_ITERATION_CHECKLIST.md)
 - [ROLLING_REQUIREMENTS_AND_PROMPTS](./ROLLING_REQUIREMENTS_AND_PROMPTS.md)
+- [SOTA_GAP_SWARM_AUDIT](./SOTA_GAP_SWARM_AUDIT.md)
 - [task_plan](./task_plan.md)
 - [notes](./notes.md)
 - [deliverable](./deliverable.md)
@@ -26,3 +32,4 @@
 - [EXECUTION_ROADMAP.html](./EXECUTION_ROADMAP.html)
 - [PDCA_EXECUTION_PLAN.html](./PDCA_EXECUTION_PLAN.html)
 - [PDCA_ITERATION_CHECKLIST.html](./PDCA_ITERATION_CHECKLIST.html)
+- [SOTA_GAP_SWARM_AUDIT.html](./SOTA_GAP_SWARM_AUDIT.html)

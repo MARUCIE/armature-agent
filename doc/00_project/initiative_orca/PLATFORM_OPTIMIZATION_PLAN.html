@@ -107,10 +107,128 @@
 <li>Grow the quality program by matrix lane so count increases stay tied to signal and ownership.</li>
 <li>Keep release evidence under <code>agent-eval/runs/&lt;run_id&gt;/</code> so build / bench / black-box / CLI journey data stay reviewable after the terminal session ends.</li>
 </ol>
+<h2 id="sota-competitive-program-2026-04-20">SOTA Competitive Program (2026-04-20)</h2><p>Highest-value experience gaps after the new report are session lifecycle productization, approval / trust UX, inspect-and-act detail surfaces, remote / IDE / web continuity, and workflow preset packaging.</p><p>Wave 1 progress now landed:</p><ul>
+<li><code>orca session fork</code></li>
+<li><code>orca session export</code></li>
+<li><code>orca session import</code></li>
+<li><code>orca session markdown</code></li>
+<li><code>orca session share</code></li>
+<li><code>orca session handoff</code></li>
+<li><code>/thread export</code></li>
+<li><code>/thread markdown</code></li>
+<li><code>/thread share</code></li>
+<li><code>/thread import</code></li>
+<li><code>/thread handoff</code></li>
+<li>session/thread share flows now emit metadata sidecars</li>
+<li>session handoff now emits a dedicated handoff artifact bundle</li>
+<li>thread handoff now emits a dedicated handoff artifact bundle</li>
+</ol>
+<p>Wave 2 progress now landed:</p><ul>
+<li>top-level <code>orca permissions</code> command for inspecting and persisting approval mode</li>
+<li><code>/permissions</code> slash surface for live session mode changes and persistence</li>
+<li>Ink <code>/permissions</code> detail panel + picker for live mode switching and project/global saves</li>
+<li>explicit <code>permissions rules</code> surfaces for inspecting stored session/project/global approvals</li>
+<li>explicit <code>permissions revoke</code> / <code>permissions clear</code> surfaces for rule lifecycle management</li>
+<li>revoke now supports filter-and-pick selection when the rule key is omitted</li>
+<li>permission rules now persist as stable canonical descriptors (<code>path=...</code>, <code>command=...</code>) rather than preview strings</li>
+<li>explicit <code>permissions normalize</code> surface for legacy rule cleanup</li>
+<li>runtime effective allowlist now consumes both project and global scopes</li>
+<li><code>permissions rules</code> now exposes rule state (<code>canonical</code> / <code>legacy</code> / <code>unrecognized</code>)</li>
+<li>normalize now covers legacy <code>::</code> rule format as well as preview-style <code>|</code></li>
+<li><code>permissions rules</code> now supports state-based filtering for operator audits</li>
+<li>config helpers for reading/writing persisted permission mode</li>
+<li>runtime mapping now honors persisted config instead of relying only on <code>--safe</code></li>
+<li><code>plan</code> mode now requests approval for every tool call</li>
+<li>permission prompts now support <code>once</code> / <code>session</code> / <code>project</code> scopes</li>
+</ul>
+<p>Wave 3 progress now landed:</p><ul>
+<li>top-level explicit workflow preset commands:</li>
+<li><code>orca review</code></li>
+<li><code>orca debug</code></li>
+<li><code>orca architect</code></li>
+<li>presets currently reuse existing built-in modes through <code>createChatCommand({ initialModeId })</code></li>
+<li>this gives Orca a first workflow-packaging surface without introducing a second preset framework</li>
+<li><code>/mode</code> picker descriptions now summarize what each workflow profile changes</li>
+<li>workflow preset registry now carries structured default policy fields (<code>effort</code>, <code>permission mode</code>)</li>
+<li>preset command metadata now resolves from one registry instead of scattered command-local strings</li>
+<li>preset-backed mode switches now apply default effort / permission policy at runtime</li>
+<li>startup and <code>/mode</code> switching now share one preset-policy application path</li>
+<li>status surfaces now expose the active workflow policy combination</li>
+<li>workflow preset registry now also carries <code>tool policy</code> and <code>output style</code></li>
+<li><code>/status</code> and live status surfaces now also expose <code>model policy</code></li>
+<li>live status surfaces now show compact tool/output summaries when available</li>
+<li>startup helper now composes the initial system prompt from the same preset contract used by <code>/mode</code></li>
+<li>proxy tool runtime now enforces the active mode whitelist instead of relying only on prompt text</li>
+<li>session effort / preset default effort now maps into proxy <code>reasoning_effort</code> (<code>max</code> → <code>xhigh</code>)</li>
+<li>provider-returned tool calls now hard-fail unless the tool was explicitly advertised</li>
+<li>non-interactive permission prompts now fail closed instead of silently approving</li>
+<li>SDK-backed REPL turns now consume the composed session prompt plus mapped permission mode</li>
+</ul>
+<h2 id="2026-04-21-sota-sop-benchmark-conclusions">2026-04-21 SOTA SOP Benchmark Conclusions</h2><p>Benchmark set:</p><ul>
+<li>Claude Code</li>
+<li>OpenAI Codex</li>
+<li>Amp</li>
+<li>OpenCode</li>
+<li>Cursor</li>
+<li>GitHub Copilot coding agent</li>
+</ul><p>Cross-product SOP pattern:</p><ol>
+<li>durable session / thread object</li>
+<li>detached or remote execution lane</li>
+<li>explicit approval / review gate</li>
+<li>resumable handoff back into terminal / IDE / PR</li>
+<li>visible evidence surface: logs, queue state, usage, timeline, or share link</li>
+</ol><p>What this means for Orca:</p><ul>
+<li>Wave 3 is now relatively mature compared with the market on workflow packaging and trust clarity.</li>
+<li>Orca’s biggest remaining product gap is Wave 4 continuity, not another round of naming or picker polish.</li>
+<li>The next roadmap should therefore focus on async continuity and evidence surfaces, not just more command aliases.</li>
+<li>The swarm audit further tightened that into a concrete delivery order: trust-default and executor unification, canonical <code>WorkSession</code> / <code>TaskRun</code> objects, async queue + take-over, then the evidence console.</li>
+</ul><p>Re-prioritized next steps:</p><ol>
+<li><strong>Wave 4a — Session Continuity</strong>: durable session ids across terminal / web / IDE; resumable handoff from headless/server runs back into local REPL; shareable session URLs or hosted session views</li>
+<li><strong>Wave 4b — Async Agent Queue</strong>: visible background/remote task list; resumable take-over; queue item detail panel with logs/artifacts</li>
+<li><strong>Wave 4c — Evidence Console</strong>: timeline of tool calls / approvals / artifacts / diffs; operator-first review surface before apply/merge</li>
+<li><strong>Wave 4d — Trust Hardening</strong>: safer default approval posture; shared policy executor across REPL / MCP / serve; transcript/share redaction and stronger artifact permissions</li>
+<li><strong>Wave 5 — Performance / Metrics</strong>: admin/operator metrics once the continuity surfaces exist</li>
+</ol><p>Wave 4a progress now started:</p><ul>
+<li>stable REPL <code>sessionId</code></li>
+<li><code>/status</code> and live status surfaces now expose the active session id</li>
+<li>CLI resume now supports exact durable objects through <code>orca -c &lt;id&gt;</code></li>
+<li><code>orca serve</code> now exposes <code>GET /sessions</code> and <code>GET /sessions/latest</code></li>
+<li><code>orca serve</code> now exposes <code>GET /sessions/:id</code></li>
+<li>this establishes a headless continuity discovery layer before richer hosted/web take-over flows</li>
+<li>continuity metadata is intentionally treated as trusted-local surface: no wildcard CORS, and session-discovery endpoints are loopback-only</li>
+<li>trust hardening has now started: legacy config <code>default</code> resolves to safer REPL <code>auto</code>, non-loopback <code>serve</code> now requires <code>ORCA_SERVE_TOKEN</code>, and a shared policy executor now covers normal chat tools plus MCP tool execution.</li>
+</ul>
+<h2 id="2026-04-21-layered-test-matrix-snapshot">2026-04-21 Layered Test Matrix Snapshot</h2><p>Established evidence-backed layers:</p><ol>
+<li>Static:
+<code>npm run lint</code>, <code>npm run build</code>, dependency/license inventory, heuristic secret scan</li>
+<li>Unit:
+targeted Vitest module suites</li>
+<li>Contract:
+protocol / command-contract / manifest tests</li>
+<li>Integration:
+runtime / session / provider / MCP tests</li>
+<li>E2E:
+workflow and mission tests</li>
+<li>Security:
+adversarial/context/permission regressions plus <code>npm audit --omit=dev --json</code></li>
+<li>Performance:
+<code>orca bench --json</code> plus bench regression tests</li>
+<li>Resilience:
+provider-stream / agent-loop / retry-recovery suites</li>
+<li>AI Eval:
+<code>npm run eval:fast</code></li>
+</ol><p>Repo-native entrypoints now exist for those layers via <code>test:static</code>, <code>test:unit</code>, <code>test:contract</code>, <code>test:integration</code>, <code>test:e2e</code>, <code>test:security</code>, <code>test:resilience</code>, <code>test:performance</code>, <code>test:ai-eval-fast</code>, and <code>test:matrix</code>. The layer metadata now lives in <code>agent-eval/manifests/test-matrix.json</code>, the package scripts are thin wrappers around the runner, the manifest now uses typed <code>steps[].argv</code> entries so the runner no longer needs <code>shell=True</code>, the matrix runner is hardened against path-traversal run ids, and the secret scan no longer follows symlinks outside the repo root.</p><p>Still-missing institutional gates:</p><ul>
+<li>dedicated formatter gate</li>
+<li>dead-code gate</li>
+<li>policy-grade license checker</li>
+<li>dedicated SAST / DAST / IaC / ASVS smoke</li>
+<li>true p95 / throughput / memory budget harness</li>
+</ul>
 <h2 id="guardrails">Guardrails</h2><ul>
 <li>No backward-compatibility shims for obsolete surfaces</li>
 <li>No mock-only validation</li>
 <li>No manual edits in <code>dist/</code></li>
 <li>No new dependency added without explicit request</li>
 </ul>
+<section><h2>2026-04-29 平台优化增量</h2><p>平台波次重排为：信任边界硬化、队列可观测性、统一执行契约、证据控制台、Gate integrity。第一轮已经完成 project hook 显式信任、hook env allowlist、网络工具审批、<code>fetch_url</code> 私网阻断，以及只读 <code>orca queue list/show</code>。</p></section>
 </article></main></body></html>

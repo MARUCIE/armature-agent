@@ -102,8 +102,10 @@ describe('Round 1: Tool Registry', () => {
     }
   })
 
-  it('has exactly 9 dangerous tools', () => {
-    expect(DANGEROUS_TOOLS.size).toBe(9)
+  it('has exactly 11 dangerous tools', () => {
+    expect(DANGEROUS_TOOLS.size).toBe(11)
+    expect(DANGEROUS_TOOLS.has('fetch_url')).toBe(true)
+    expect(DANGEROUS_TOOLS.has('web_search')).toBe(true)
   })
 })
 

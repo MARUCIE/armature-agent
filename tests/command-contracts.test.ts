@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createProgram } from '../src/program.js'
+import { getWorkflowPreset } from '../src/modes/index.js'
+import { listWorkflowPresets } from '../src/modes/index.js'
 
 function getCommand(name: string) {
   const command = createProgram().commands.find((entry) => entry.name() === name)
@@ -18,7 +20,9 @@ describe('public command surface contracts', () => {
       'reflect',
       'doctor',
       'run',
+      'evolve',
       'session',
+      'queue',
       'pr',
       'serve',
       'providers',
@@ -36,6 +40,14 @@ describe('public command surface contracts', () => {
 
     expect(subcommands).toEqual(expect.arrayContaining(['list', 'show', 'delete']))
     expect(session.description()).toBe('Manage saved sessions')
+  })
+
+  it('keeps task-run queue inspection discoverable', () => {
+    const queue = getCommand('queue')
+    const subcommands = queue.commands.map((entry) => entry.name())
+
+    expect(subcommands).toEqual(expect.arrayContaining(['list', 'show']))
+    expect(queue.description()).toBe('Inspect queued and completed task runs')
   })
 
   it('keeps providers connectivity testing surfaced as a first-class subcommand', () => {
@@ -70,11 +82,69 @@ describe('public command surface contracts', () => {
     expect(options).toEqual(expect.arrayContaining(['--port', '--host', '--mcp', '--model', '--provider']))
   })
 
+  it('keeps evolve surfaced as a gated self-observation command', () => {
+    const evolve = getCommand('evolve')
+    const subcommands = evolve.commands.map((entry) => entry.name())
+
+    expect(evolve.description()).toBe('Inspect and gate self-evolution candidates')
+    expect(subcommands).toEqual(expect.arrayContaining([
+      'status',
+      'observations',
+      'candidates',
+      'draft',
+      'verify',
+      'promote',
+      'reject',
+    ]))
+  })
+
   it('keeps reflect surfaced as a first-class debugging command', () => {
     const reflect = getCommand('reflect')
     const options = reflect.options.map((option) => option.long)
 
     expect(reflect.description()).toBe('Socratic debugging and root-cause investigation')
     expect(options).toEqual(expect.arrayContaining(['--model', '--provider', '--api-key', '--json']))
+  })
+
+  it('keeps workflow presets surfaced as first-class commands', () => {
+    const review = getCommand('review')
+    const debug = getCommand('debug')
+    const architect = getCommand('architect')
+
+    expect(review.description()).toBe(getWorkflowPreset('review')!.description)
+    expect(debug.description()).toBe(getWorkflowPreset('debug')!.description)
+    expect(architect.description()).toBe(getWorkflowPreset('architect')!.description)
+  })
+
+  it('keeps workflow presets carrying structured policy metadata', () => {
+    expect(getWorkflowPreset('review')).toMatchObject({
+      modelPolicy: 'inherit-current',
+      defaultEffort: 'high',
+      defaultPermissionMode: 'plan',
+      toolPolicy: 'review-only',
+      outputStyle: 'review-findings',
+    })
+    expect(getWorkflowPreset('debug')).toMatchObject({
+      modelPolicy: 'inherit-current',
+      defaultEffort: 'high',
+      defaultPermissionMode: 'auto',
+      toolPolicy: 'run-edit',
+      outputStyle: 'debug-walkthrough',
+    })
+    expect(getWorkflowPreset('architect')).toMatchObject({
+      modelPolicy: 'inherit-current',
+      defaultEffort: 'max',
+      defaultPermissionMode: 'plan',
+      toolPolicy: 'planning-only',
+      outputStyle: 'architecture-plan',
+    })
+  })
+
+  it('keeps root help aligned with workflow preset registry descriptions', () => {
+    const help = createProgram().helpInformation()
+    for (const preset of listWorkflowPresets()) {
+      expect(help).toContain(preset.commandName)
+      expect(help).toContain(preset.description)
+    }
   })
 })

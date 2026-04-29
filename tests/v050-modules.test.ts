@@ -7,7 +7,7 @@
  *   3. AGENTS.md Auto-Discovery (hierarchical guidance) — 12 tests
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
 import { mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -23,8 +23,8 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     server = new MCPServer(process.cwd())
   })
 
-  it('24.1 initialize returns server info + capabilities', () => {
-    const res = server.handleRequest({
+  it('24.1 initialize returns server info + capabilities', async () => {
+    const res = await server.handleRequest({
       jsonrpc: '2.0',
       id: 1,
       method: 'initialize',
@@ -39,8 +39,8 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     expect(result.capabilities).toBeDefined()
   })
 
-  it('24.2 tools/list returns non-empty tool array with name/description/inputSchema', () => {
-    const res = server.handleRequest({
+  it('24.2 tools/list returns non-empty tool array with name/description/inputSchema', async () => {
+    const res = await server.handleRequest({
       jsonrpc: '2.0',
       id: 2,
       method: 'tools/list',
@@ -55,8 +55,8 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     }
   })
 
-  it('24.3 tools/call executes a real tool (read_file)', () => {
-    const res = server.handleRequest({
+  it('24.3 tools/call executes a real tool (read_file)', async () => {
+    const res = await server.handleRequest({
       jsonrpc: '2.0',
       id: 3,
       method: 'tools/call',
@@ -72,8 +72,8 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     expect(result.content[0].text).toContain('orca-cli')
   })
 
-  it('24.4 tools/call with unknown tool returns isError=true', () => {
-    const res = server.handleRequest({
+  it('24.4 tools/call with unknown tool returns isError=true', async () => {
+    const res = await server.handleRequest({
       jsonrpc: '2.0',
       id: 4,
       method: 'tools/call',
@@ -87,8 +87,8 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     expect(result.isError).toBe(true)
   })
 
-  it('24.5 unknown method returns -32601 error', () => {
-    const res = server.handleRequest({
+  it('24.5 unknown method returns -32601 error', async () => {
+    const res = await server.handleRequest({
       jsonrpc: '2.0',
       id: 5,
       method: 'unknown/method',
@@ -99,16 +99,16 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     expect(res!.error!.message).toContain('unknown/method')
   })
 
-  it('24.6 notification (no id) returns null — no response', () => {
-    const res = server.handleRequest({
+  it('24.6 notification (no id) returns null — no response', async () => {
+    const res = await server.handleRequest({
       jsonrpc: '2.0',
       method: 'notifications/initialized',
     })
     expect(res).toBeNull()
   })
 
-  it('24.7 notification with id=null returns null', () => {
-    const res = server.handleRequest({
+  it('24.7 notification with id=null returns null', async () => {
+    const res = await server.handleRequest({
       jsonrpc: '2.0',
       id: null,
       method: 'notifications/initialized',
@@ -116,23 +116,23 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     expect(res).toBeNull()
   })
 
-  it('24.8 response id matches request id', () => {
-    const stringId = server.handleRequest({ jsonrpc: '2.0', id: 'abc-123', method: 'initialize' })
+  it('24.8 response id matches request id', async () => {
+    const stringId = await server.handleRequest({ jsonrpc: '2.0', id: 'abc-123', method: 'initialize' })
     expect(stringId!.id).toBe('abc-123')
 
-    const numId = server.handleRequest({ jsonrpc: '2.0', id: 42, method: 'initialize' })
+    const numId = await server.handleRequest({ jsonrpc: '2.0', id: 42, method: 'initialize' })
     expect(numId!.id).toBe(42)
   })
 
   it('24.9 tools/list tool count matches TOOL_DEFINITIONS', async () => {
     const { TOOL_DEFINITIONS } = await import('../src/tools.js')
-    const res = server.handleRequest({ jsonrpc: '2.0', id: 9, method: 'tools/list' })
+    const res = await server.handleRequest({ jsonrpc: '2.0', id: 9, method: 'tools/list' })
     const result = res!.result as { tools: unknown[] }
     expect(result.tools.length).toBe(TOOL_DEFINITIONS.length)
   })
 
-  it('24.10 tools/call with missing name returns error content', () => {
-    const res = server.handleRequest({
+  it('24.10 tools/call with missing name returns error content', async () => {
+    const res = await server.handleRequest({
       jsonrpc: '2.0',
       id: 10,
       method: 'tools/call',
@@ -143,8 +143,8 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     expect(result.isError).toBe(true)
   })
 
-  it('24.11 tools/call list_directory on cwd succeeds', () => {
-    const res = server.handleRequest({
+  it('24.11 tools/call list_directory on cwd succeeds', async () => {
+    const res = await server.handleRequest({
       jsonrpc: '2.0',
       id: 11,
       method: 'tools/call',
@@ -158,14 +158,14 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     expect(result.content[0].text).toContain('src')
   })
 
-  it('24.12 response always has jsonrpc 2.0', () => {
-    const res = server.handleRequest({ jsonrpc: '2.0', id: 12, method: 'initialize' })
+  it('24.12 response always has jsonrpc 2.0', async () => {
+    const res = await server.handleRequest({ jsonrpc: '2.0', id: 12, method: 'initialize' })
     expect(res!.jsonrpc).toBe('2.0')
   })
 
-  it('24.13 constructor accepts cwd and tools/call respects it', () => {
+  it('24.13 constructor accepts cwd and tools/call respects it', async () => {
     const tmpServer = new MCPServer('/tmp')
-    const res = tmpServer.handleRequest({
+    const res = await tmpServer.handleRequest({
       jsonrpc: '2.0',
       id: 13,
       method: 'tools/call',
@@ -186,8 +186,8 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     }).not.toThrow()
   })
 
-  it('24.16 handleRequest with no params field on tools/call', () => {
-    const res = server.handleRequest({
+  it('24.16 handleRequest with no params field on tools/call', async () => {
+    const res = await server.handleRequest({
       jsonrpc: '2.0',
       id: 16,
       method: 'tools/call',
@@ -195,6 +195,130 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     expect(res).not.toBeNull()
     const result = res!.result as { isError: boolean }
     expect(result.isError).toBe(true)
+  })
+
+  it('24.17 fails closed for dangerous tools when approval would be required', async () => {
+    const res = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 17,
+      method: 'tools/call',
+      params: {
+        name: 'run_command',
+        arguments: { command: 'echo hello' },
+      },
+    })
+    expect(res).not.toBeNull()
+    const result = res!.result as { content: Array<{ text: string }>; isError: boolean }
+    expect(result.isError).toBe(true)
+    expect(result.content[0].text).toContain('Approval required')
+  })
+
+  it('24.18 enforces allowedTools policy in MCP mode', async () => {
+    const restricted = new MCPServer(process.cwd(), {
+      allowedTools: ['read_file'],
+    })
+    const res = await restricted.handleRequest({
+      jsonrpc: '2.0',
+      id: 18,
+      method: 'tools/call',
+      params: {
+        name: 'list_directory',
+        arguments: { path: '.' },
+      },
+    })
+    expect(res).not.toBeNull()
+    const result = res!.result as { content: Array<{ text: string }>; isError: boolean }
+    expect(result.isError).toBe(true)
+    expect(result.content[0].text).toContain('not allowed in the current policy')
+  })
+
+  it('24.19 tools/list only advertises allowed tools', async () => {
+    const restricted = new MCPServer(process.cwd(), {
+      allowedTools: ['read_file', 'list_directory'],
+    })
+    const res = await restricted.handleRequest({
+      jsonrpc: '2.0',
+      id: 19,
+      method: 'tools/list',
+    })
+    expect(res).not.toBeNull()
+    const result = res!.result as { tools: Array<{ name: string }> }
+    expect(result.tools).toHaveLength(2)
+    expect(result.tools.map(tool => tool.name)).toEqual(expect.arrayContaining(['read_file', 'list_directory']))
+    expect(result.tools.every(tool => ['read_file', 'list_directory'].includes(tool.name))).toBe(true)
+  })
+
+  it('24.20 empty allowedTools fails closed for calls and advertisements', async () => {
+    const restricted = new MCPServer(process.cwd(), {
+      allowedTools: [],
+    })
+
+    const listRes = await restricted.handleRequest({
+      jsonrpc: '2.0',
+      id: 20,
+      method: 'tools/list',
+    })
+    expect(listRes).not.toBeNull()
+    const listResult = listRes!.result as { tools: Array<{ name: string }> }
+    expect(listResult.tools).toHaveLength(0)
+
+    const callRes = await restricted.handleRequest({
+      jsonrpc: '2.0',
+      id: 21,
+      method: 'tools/call',
+      params: {
+        name: 'read_file',
+        arguments: { path: 'package.json' },
+      },
+    })
+    expect(callRes).not.toBeNull()
+    const callResult = callRes!.result as { content: Array<{ text: string }>; isError: boolean }
+    expect(callResult.isError).toBe(true)
+    expect(callResult.content[0].text).toContain('not allowed in the current policy')
+  })
+
+  it('24.21 emits hook system messages to stderr instead of stdout', async () => {
+    const fixtureRoot = join(tmpdir(), `orca-hook-system-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    const projectDir = join(fixtureRoot, 'project')
+    const homeDir = join(fixtureRoot, 'home')
+    mkdirSync(join(projectDir, '.orca'), { recursive: true })
+    mkdirSync(homeDir, { recursive: true })
+    writeFileSync(join(projectDir, '.orca', 'hooks.json'), JSON.stringify({
+      PreToolUse: [{
+        command: `printf '%s' '${JSON.stringify({ continue: true, systemMessage: 'watch stderr' })}'`,
+        matcher: 'read_file',
+      }],
+    }))
+
+    const previousHome = process.env.HOME
+    const previousTrust = process.env.ORCA_TRUST_PROJECT_HOOKS
+    const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+    try {
+      process.env.HOME = homeDir
+      process.env.ORCA_TRUST_PROJECT_HOOKS = '1'
+      vi.resetModules()
+      const { hooks } = await import('../src/hooks.js')
+      const { runPreToolHook } = await import('../src/policy-executor.js')
+
+      hooks.load(projectDir)
+      await runPreToolHook('read_file', { path: 'package.json' }, projectDir)
+
+      expect(stdoutSpy).not.toHaveBeenCalled()
+      expect(stderrSpy).toHaveBeenCalled()
+      const stderrText = stderrSpy.mock.calls.map(call => String(call[0])).join('')
+      expect(stderrText).toContain('watch stderr')
+    } finally {
+      stdoutSpy.mockRestore()
+      stderrSpy.mockRestore()
+      if (previousHome === undefined) delete process.env.HOME
+      else process.env.HOME = previousHome
+      if (previousTrust === undefined) delete process.env.ORCA_TRUST_PROJECT_HOOKS
+      else process.env.ORCA_TRUST_PROJECT_HOOKS = previousTrust
+      vi.resetModules()
+      rmSync(fixtureRoot, { recursive: true, force: true })
+    }
   })
 })
 

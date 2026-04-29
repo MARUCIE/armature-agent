@@ -9,7 +9,7 @@ describe('HookManager - Claude Code Compatibility', () => {
   let origHome: string | undefined
 
   beforeEach(() => {
-    manager = new HookManager()
+    manager = new HookManager({ trustProjectHooks: true })
     origHome = process.env.HOME
   })
 

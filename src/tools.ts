@@ -12,6 +12,7 @@ import { basename } from 'node:path'
 import { homedir } from 'node:os'
 import { createHash } from 'node:crypto'
 import { execFileSync, execSync } from 'node:child_process'
+import { isIP } from 'node:net'
 import { startBackgroundJob } from './background-jobs.js'
 import { executeSandboxed } from './sandbox/index.js'
 import type { SandboxPolicy } from './sandbox/index.js'
@@ -216,6 +217,7 @@ export interface ToolResult {
 export const DANGEROUS_TOOLS = new Set([
   'write_file', 'edit_file', 'multi_edit', 'patch_file',
   'delete_file', 'move_file', 'run_command', 'run_background', 'git_commit',
+  'fetch_url', 'web_search',
 ])
 
 const TOOL_SCHEMA_BY_NAME = new Map(
@@ -859,8 +861,11 @@ function executeFetchUrl(args: Record<string, unknown>): ToolResult {
   if (!url) return { success: false, output: 'url is required.' }
 
   try {
+    const validation = validatePublicHttpUrl(url)
+    if (!validation.success) return validation
+
     const format = String(args.format || 'text')
-    const output = execFileSync('curl', format === 'headers' ? ['-sI', url] : ['-sL', url], {
+    const output = execFileSync('curl', format === 'headers' ? ['-sI', validation.url] : ['-sL', validation.url], {
       encoding: 'utf-8',
       timeout: 15_000,
       maxBuffer: 2 * 1024 * 1024,
@@ -871,6 +876,67 @@ function executeFetchUrl(args: Record<string, unknown>): ToolResult {
   } catch (err) {
     return { success: false, output: err instanceof Error ? err.message : String(err) }
   }
+}
+
+function validatePublicHttpUrl(rawUrl: string): ToolResult & { success: false } | { success: true; url: string } {
+  let parsed: URL
+  try {
+    parsed = new URL(rawUrl)
+  } catch {
+    return { success: false, output: 'fetch_url only accepts valid absolute HTTP(S) URLs.' }
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return { success: false, output: 'fetch_url only supports http:// and https:// URLs.' }
+  }
+
+  if (isBlockedNetworkHost(parsed.hostname)) {
+    return { success: false, output: `fetch_url blocks loopback, private, and link-local hosts by default: ${parsed.hostname}` }
+  }
+
+  return { success: true, url: parsed.toString() }
+}
+
+function isBlockedNetworkHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  if (!host || host === 'localhost' || host.endsWith('.localhost')) return true
+
+  if (host.startsWith('::ffff:')) {
+    return isBlockedIpv4(host.slice('::ffff:'.length))
+  }
+
+  const ipVersion = isIP(host)
+  if (ipVersion === 4) return isBlockedIpv4(host)
+  if (ipVersion === 6) return isBlockedIpv6(host)
+  return false
+}
+
+function isBlockedIpv4(ip: string): boolean {
+  const parts = ip.split('.').map((part) => Number(part))
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return true
+  const [a, b] = parts as [number, number, number, number]
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    a >= 224
+  )
+}
+
+function isBlockedIpv6(ip: string): boolean {
+  const normalized = ip.toLowerCase()
+  return (
+    normalized === '::' ||
+    normalized === '::1' ||
+    normalized.startsWith('fc') ||
+    normalized.startsWith('fd') ||
+    normalized.startsWith('fe80:')
+  )
 }
 
 function executeMultiEdit(args: Record<string, unknown>, cwd: string): ToolResult {

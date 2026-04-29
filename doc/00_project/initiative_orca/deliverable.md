@@ -1,5 +1,415 @@
 # Deliverable
 
+## 2026-04-29 - SOTA Swarm Audit and PDCA Tranche 1
+
+### Scope
+
+Audit Orca with a multi-lane SOTA swarm, publish the routed report, convert findings into a milestone plan and atomic queue, then execute the first PDCA tranche against the highest-risk trust and queue gaps.
+
+### Delivered
+
+- SOTA swarm audit report:
+  - `doc/00_project/initiative_orca/SOTA_GAP_SWARM_AUDIT.md`
+  - `doc/00_project/initiative_orca/SOTA_GAP_SWARM_AUDIT.html`
+- Trust hardening:
+  - repo-local hooks require explicit project trust via `HookManager({ trustProjectHooks: true })` or `ORCA_TRUST_PROJECT_HOOKS=1`
+  - hook subprocess env no longer inherits provider API keys by default
+  - `fetch_url` and `web_search` require approval in `auto` mode
+  - `fetch_url` rejects non-HTTP(S), loopback, private, link-local, CGNAT, benchmark, multicast, and common local IPv6 targets
+- Queue visibility:
+  - `orca queue`
+  - `orca queue list --status <status> --work-session <id> --limit <n>`
+  - `orca queue show <task-run-id>`
+
+### Changed Files
+
+- `src/hooks.ts`
+- `src/tools.ts`
+- `src/doctor.ts`
+- `src/commands/queue.ts`
+- `src/program.ts`
+- `tests/hooks.test.ts`
+- `tests/hooks-compat.test.ts`
+- `tests/tools.test.ts`
+- `tests/chat-proxy-tool-call.test.ts`
+- `tests/queue-command.test.ts`
+- `tests/program.test.ts`
+- `tests/command-contracts.test.ts`
+- `tests/v030-harness.test.ts`
+- `tests/v050-modules.test.ts`
+- `doc/00_project/initiative_orca/SOTA_GAP_SWARM_AUDIT.md`
+- `doc/00_project/initiative_orca/SOTA_GAP_SWARM_AUDIT.html`
+
+### Simplifications Made
+
+- Startup hook loading now has a clear split: global hooks are startup-safe; repo-local hooks require explicit project trust.
+- Hook subprocess environment is allowlisted instead of inheriting the full parent process.
+- Network-capable tools now use the existing dangerous-tool approval lane instead of a separate policy path.
+- Queue inspection reuses existing `TaskRun` storage; no scheduler abstraction was introduced in this tranche.
+
+### Verification
+
+- `npm run lint`
+- `npm test -- tests/hooks.test.ts tests/hooks-compat.test.ts tests/tools.test.ts tests/chat-proxy-tool-call.test.ts tests/v030-harness.test.ts tests/v050-modules.test.ts` -> `153/153`
+- `npm test -- tests/queue-command.test.ts tests/program.test.ts tests/command-contracts.test.ts tests/work-session-store.test.ts` -> `37/37`
+- `npm test -- tests/hooks.test.ts tests/hooks-compat.test.ts tests/tools.test.ts tests/chat-proxy-tool-call.test.ts tests/queue-command.test.ts tests/program.test.ts tests/command-contracts.test.ts tests/v030-harness.test.ts tests/v050-modules.test.ts tests/work-session-store.test.ts` -> `190/190`
+- `npm run build`
+- `npm test` -> `1593/1593` across `86` files
+- `node dist/bin/orca.js --help` -> `queue` command visible
+- `node dist/bin/orca.js queue list --limit 3` -> renders TaskRun Queue empty-state successfully
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| `fetch_url` blocks literal private hosts but does not yet resolve DNS names before curl | Runtime/security | Add DNS resolution and block resolved private addresses before execution |
+| Project hook trust has an env/programmatic switch but no first-class CLI UX | Runtime/security | Add `orca hooks trust/status` or equivalent approval surface |
+| `orca queue` is read-only and does not implement leases, follow, or takeover | Runtime/architecture | Execute ORCA-SWARM-006 and ORCA-SWARM-007 |
+| CI still under-enforces documented matrix/security/performance/eval gates | Verification | Execute ORCA-SWARM-012 |
+
+## 2026-04-26 — Provider-grouped model picker（完成）
+
+### Scope
+
+Fix `/model` selection when multiple providers expose the same model name, and make the model picker readable for large provider catalogs.
+
+### Delivered
+
+- `/model` in Ink now picks provider first, then model within that provider.
+- Model choices now carry provider+model identity, so selecting `poe/gpt-5.4` no longer resolves to the first `gpt-5.4` entry from another provider.
+- `/model set <name>` now prefers the current provider when names are duplicated.
+- `/models` legacy output is grouped by provider while preserving numeric selection.
+- Shared `OptionPicker` now windows long lists and splits descriptions onto their own row.
+
+### Verification
+
+- `npm test -- tests/model-catalog.test.ts tests/ink-ui.test.tsx tests/chat-slash-mutations.test.ts tests/chat-slash-readonly.test.ts` -> `158/158`
+- `npm run lint`
+- `npm run build`
+- `npm test` -> `1583/1583`
+- `node dist/bin/orca.js --version` -> `0.8.0`
+
+## 2026-04-22 — One-click full delivery（完成）
+
+### Scope
+
+Execute a Harness-grade full-delivery pass on the current trust-policy + eval tranche: establish explicit phase boundaries, absorb review/security findings into the release gate, fix the scoped blockers, rerun the full verification chain, and emit stage artifacts plus an executable rollback path.
+
+### Change Summary
+
+- Runtime/security hardening:
+  - `src/mcp-client.ts`
+  - `src/commands/chat.ts`
+  - `src/policy-executor.ts`
+  - `src/mcp-server.ts`
+  - `src/commands/serve.ts`
+- Regression coverage:
+  - `tests/mcp-client.test.ts`
+  - `tests/chat-one-shot-mcp-cleanup.test.ts`
+  - `tests/v050-modules.test.ts`
+  - `tests/serve-command.test.ts`
+  - `tests/config.test.ts`
+- Documentation / delivery surfaces:
+  - `README.md`
+  - `AGENT_EVAL_PLAN.md`
+  - `doc/00_project/initiative_orca/{PRD.md,SYSTEM_ARCHITECTURE.md,USER_EXPERIENCE_MAP.md,task_plan.md,notes.md,PDCA_ITERATION_CHECKLIST.md}`
+- Stage artifacts:
+  - `outputs/spec/2026-04-22-one-click-full-delivery-spec.md`
+  - `outputs/build/2026-04-22-build-scope.md`
+  - `outputs/test/2026-04-22-test-evidence.md`
+  - `outputs/security/2026-04-22-security-readiness.md`
+  - `outputs/release/2026-04-22-release-readiness.md`
+  - `outputs/observe/2026-04-22-observe-verdict.md`
+  - `outputs/learn/2026-04-22-dna-capsule-candidates.md`
+
+### Simplifications Made
+
+- Repo-local MCP configs are no longer silently auto-spawned on startup; only home/global-scoped MCP remains startup-safe.
+- `allowedTools: []` now means deny-all instead of “no policy”.
+- MCP `tools/list` and `tools/call` now speak the same allowlist contract.
+- Hook system notices no longer pollute MCP stdout framing.
+- `/chat` request parsing now has a hard body-size ceiling instead of unbounded accumulation.
+
+### Verification
+
+- `npm run lint`
+- `npm test` → `1553/1553`
+- `npm run build`
+- `npm run test:matrix:sync` → `ok`
+- `npm run test:matrix` → `outputs/test-matrix/run-20260422-061719/matrix.md`
+- `npm run eval:fast` → `agent-eval/runs/20260422-063053-333719/summary.json`
+- `npm run eval:nightly` → `agent-eval/runs/20260422-061814-339289/summary.json`
+- `npm run eval:release` → `agent-eval/runs/20260422-061914-913077/summary.json`
+- `npm audit --omit=dev --json` → `outputs/security/2026-04-22-npm-audit.json`
+- `npm pack --json --dry-run` → `outputs/release/2026-04-22-pack-dry-run.json`
+- `node dist/bin/orca.js bench --json` → `outputs/test/2026-04-22-bench.json`
+
+### Release Readiness
+
+- Functional closure: pass
+- Tests all green: pass
+- Security no critical/high unresolved in this delivery scope: pass
+- Performance budget: pass (`bench` score `100`)
+- Docs updated: pass
+- Rollback path executable: pass
+
+### Remaining Risks
+
+| Risk | Owner | Deadline | Mitigation |
+| --- | --- | --- | --- |
+| `AGENT_EVAL_PLAN.md` long-range inventory still has open `T-012` expansion work | Maurice | 2026-04-29 | extend nightly/release task families toward the `36` / `72` target matrix and refresh quotas after the next tranche |
+| Matrix `static` / `security` / `performance` rows remain `partial-pass` by manifest design rather than deeper specialized gates | Maurice | 2026-05-06 | add dedicated SAST/DAST/IaC/ASVS and performance-budget layers, then tighten matrix status semantics if desired |
+| Wave 4 continuity / evidence-console product work is still roadmap, not shipped in this pass | Maurice | 2026-05-06 | start the next tranche from `outputs/spec/2026-04-22-one-click-full-delivery-spec.md` and land `WorkSession` / `TaskRun` object model first |
+
+### Rollback
+
+- Scoped rollback artifact: `outputs/release/2026-04-22-scoped-rollback.patch`
+- Validation command:
+  - `git apply --check -R outputs/release/2026-04-22-scoped-rollback.patch`
+- Scope:
+  - current delivery pass repo-impacting files only (runtime/test/doc changes), without touching unrelated dirty worktree files
+
+### DNA Capsule Candidates
+
+- Startup-safe MCP provenance pattern: load project/home MCP configs, but auto-connect only trusted home/global scope and require explicit connect for repo-local scope.
+- Shared policy fail-closed rule: any defined allowlist, including `[]`, is authoritative.
+- MCP transport rule: never print human-readable hook notices to stdout on a JSON-RPC stdio channel; use stderr or structured payloads.
+- Harness review rule: green tests are not enough to ship if attacker review finds a trust-policy contract mismatch.
+
+## 2026-04-22 — Harness Verification Refresh（完成）
+
+### Scope
+
+Repair the stale verification blocker introduced by Cloudflare's routed-provider-key aggregator path, then refresh the canonical fast / nightly / release / matrix evidence so the trust-policy tranche is back on a green, auditable baseline.
+
+### Delivered
+
+- Fixed the stale aggregator smoke assumption in:
+  - `tests/config.test.ts`
+- Added a structured verification artifact:
+  - `outputs/verification/2026-04-22-gate-refresh.md`
+- Updated continuation / evidence docs:
+  - `doc/00_project/initiative_orca/task_plan.md`
+  - `doc/00_project/initiative_orca/notes.md`
+  - `doc/00_project/initiative_orca/ROLLING_REQUIREMENTS_AND_PROMPTS.md`
+  - `HANDOFF.md`
+
+### Verification
+
+- `npm run lint`
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/hooks.test.ts tests/agent-eval-manifests.test.ts tests/test-matrix-runner.test.ts tests/test-matrix-sync.test.ts`
+- `npm run build`
+- `npm test` → `1546/1546`
+- `npm run test:matrix:sync` → `ok`
+- `npm run eval:fast` → `agent-eval/runs/20260422-054119-735043/summary.json`
+- `npm run eval:nightly` → `agent-eval/runs/20260422-054727-090885/summary.json`
+- `npm run eval:release` → `agent-eval/runs/20260422-054415-886673/summary.json`
+- `npm run test:matrix` → `outputs/test-matrix/run-20260422-054827/matrix.md`
+
+### Result
+
+- Harness drift is closed: fast / nightly / release are now green at `62/62`, `65/65`, and `68/68`.
+- Direct suite evidence is refreshed at `1546/1546`.
+- The matrix lane is green again; `static`, `security`, and `performance` remain `partial-pass` by design, not by failure.
+- The root cause is preserved in the rolling ledger so future aggregator tests do not silently depend on whichever provider keys happen to exist on the operator machine.
+
+## 2026-04-22 — Global Orca Hook Surface（完成）
+
+### Scope
+
+Allow Orca to load a global native hook file from `~/.orca/hooks.json` so operator-level automations can apply across projects without copying `.orca/hooks.json` into every workspace.
+
+### Delivered
+
+- Added global Orca hook loading in:
+  - `src/hooks.ts`
+- Added regression coverage:
+  - `tests/hooks.test.ts`
+- Updated docs:
+  - `README.md`
+  - `doc/00_project/initiative_orca/PRD.md`
+  - `doc/00_project/initiative_orca/SYSTEM_ARCHITECTURE.md`
+  - `doc/00_project/initiative_orca/USER_EXPERIENCE_MAP.md`
+  - `doc/00_project/initiative_orca/PLATFORM_OPTIMIZATION_PLAN.md`
+
+### Verification
+
+- `npm run lint`
+- `npm test -- tests/hooks.test.ts`
+- `npm run build`
+
+### Result
+
+- Orca now loads project-local and operator-global native hook config together.
+- This enables AI-Fleet to install a shared Terminal-title `UserPromptSubmit` hook once at `~/.orca/hooks.json` and have direct `orca` sessions inherit it automatically.
+- No compatibility layer or alternate hook system was introduced.
+
+## 2026-04-21 — Cloudflare AI Gateway provider（完成）
+
+### Scope
+
+Add Cloudflare AI Gateway as a first-class Orca aggregator so provider-prefixed SOTA models can run through one OpenAI-compatible endpoint without forking the runtime.
+
+### Delivered
+
+- Added a well-known `cloudflare` provider in:
+  - `src/config.ts`
+- Added env-based base URL resolution for Cloudflare:
+  - `CLOUDFLARE_AI_GATEWAY_API_KEY`
+  - `CLOUDFLARE_AI_GATEWAY_BASE_URL`
+- Added computed gateway URL fallback:
+  - `CLOUDFLARE_ACCOUNT_ID`
+  - `CLOUDFLARE_AI_GATEWAY_ID`
+- Added compatibility alias:
+  - `claudeflare`
+- Added dual auth handling:
+  - explicit Cloudflare gateway token when available
+  - request-based provider key inferred from the model prefix when not
+- Added Cloudflare model fallback selection so the provider can auto-pick a locally usable model
+- Added Cloudflare to the known aggregator set so cross-vendor model routing can target it.
+- Updated public docs:
+  - `README.md`
+- Added regression coverage:
+  - `tests/config.test.ts`
+  - `tests/model-catalog.test.ts`
+
+### Verification
+
+- `npm run lint`
+- `npm test`
+- `npm run build`
+- `orca providers` => `cloudflare` now reports `ready` on this machine
+
+### Result
+
+- Orca now has a second serious aggregator lane alongside Poe/OpenRouter.
+- Cloudflare can be used as the default provider or as the multi-model aggregator for council/race/pipeline flows.
+- Local Cloudflare default is now aligned to `openai/gpt-5.4`, matching AI-Fleet `1c`.
+- Multi-model auto-routing now prefers `GitHub Copilot -> Cloudflare`, with Poe/OpenRouter only after those preferred aggregators.
+- `council` / `race` / `pipeline` startup banners now surface that priority and show the next fallback aggregator explicitly.
+- Those startup banners now also surface billing path: `copilot subscription` first, `cloudflare credits` as fallback.
+
+## 2026-04-20 — SOTA picker parity follow-up
+
+### Scope
+
+Push Orca's Ink/TUI finite-choice interactions closer to frontier coding CLIs by replacing ad hoc numbered prompts and divergent picker visuals with one shared picker architecture.
+
+### Delivered
+
+- Shared picker event + type layer:
+  - `src/ui/types.ts`
+  - `src/ui/session.ts`
+  - `src/ui/components/App.tsx`
+- Shared picker components:
+  - `src/ui/components/PickerFrame.tsx`
+  - `src/ui/components/OptionPicker.tsx`
+- Ink-mode finite-choice flows upgraded:
+  - `/model`, `/models`
+  - `/mode`
+  - `/effort`
+  - `/load`
+  - `/thread load`, `/thread delete`
+  - `/mcp enable`, `/mcp disable`, `/mcp connect`
+  - `ask_user(options)`
+- Ink-mode search/discovery flows upgraded with filterable picker mode:
+  - `/thread search`
+  - `/notes search`
+  - `/prompts find`
+  - `/postmortem search`
+- Searchable picker capability added:
+  - initial query seeding from typed slash-command arguments
+  - in-panel filtering
+  - empty-state handling for no matches
+- Wave 1 portability actions landed:
+  - `orca session fork`
+  - `orca session export`
+  - `orca session import`
+  - `/thread export`
+  - `/thread import`
+  - `/thread handoff`
+- Search-to-inspect detail flow landed:
+  - `detail_panel` UI event
+  - `src/ui/components/DetailPanel.tsx`
+  - Ink-mode detail rendering for:
+    - `/thread search`
+    - `/notes search`
+    - `/prompts find`
+    - `/postmortem search`
+- Shareable artifact flow landed:
+  - `orca session markdown`
+  - `orca session share`
+  - `/thread markdown`
+  - `/thread share`
+- Collaboration-bundle hardening landed:
+  - session share now emits Markdown + metadata sidecar
+  - session handoff now emits a dedicated handoff artifact bundle
+  - thread share now emits Markdown + metadata sidecar
+  - thread handoff now emits a dedicated handoff artifact bundle
+- Wave 2 approval/trust flow landed:
+  - top-level `orca permissions`
+  - `/permissions` slash surface
+  - persisted permission-mode config helpers
+  - real `plan` semantics (approve every tool)
+  - permission source visibility in status/footer
+  - Ink `/permissions` detail panel + picker
+  - permission prompts with once/session/project persistence scopes
+  - inspectable `permissions rules` surfaces for session/project/global approvals
+  - `permissions revoke` / `permissions clear` rule-management surfaces
+  - filter-and-pick revoke flow when exact rule keys are not supplied
+  - stable canonical permission rule descriptors instead of preview-text keys
+  - `permissions normalize` surface for legacy rule cleanup
+  - effective runtime allowlist now merges project + global scopes
+  - rule inspection annotated with canonical / legacy / unrecognized state
+  - legacy `::` permission rules now normalize into canonical descriptors
+  - state-based filtering for rules audit view
+  - top-level workflow preset commands:
+    - `orca review`
+    - `orca debug`
+    - `orca architect`
+  - `/mode` picker descriptions summarize workflow changes per profile
+  - workflow preset command metadata resolved from a single registry
+  - workflow preset registry carries structured default policy fields
+  - preset-backed mode switches apply default effort / permission policy
+  - startup and `/mode` switching share one preset-policy application helper
+  - status surfaces expose the active workflow policy combination
+  - workflow preset registry now carries tool/output policy surfaced via `/mode` and `/status`
+  - model policy surfaced via `/status` and the live status bar
+  - startup prompt now composes `mode + preset + effort` from the shared workflow policy contract
+  - proxy tool runtime now enforces the active mode whitelist
+  - session effort / preset default effort now maps into proxy `reasoning_effort` (`max` → `xhigh`)
+  - provider-returned tool calls now hard-fail unless the tool was explicitly advertised
+  - non-interactive permission prompts now fail closed instead of silently auto-approving
+  - SDK-backed REPL turns now consume the composed session prompt + mapped permission mode
+  - env-sensitive cloudflare / aggregator tests were stabilized against local config drift
+- Visual shell unification:
+  - `src/ui/components/CommandPicker.tsx`
+  - `src/ui/components/PermissionPrompt.tsx`
+  - `src/ui/components/ThemePicker.tsx`
+- Docs rolled forward:
+  - `README.md`
+  - `USER_EXPERIENCE_MAP.md`
+  - `USER_EXPERIENCE_MAP.html`
+- Competitive strategy artifacts rolled forward:
+  - `SOTA_EXPERIENCE_GAP_REPORT.md`
+  - `SOTA_EXPERIENCE_GAP_REPORT.html`
+  - `PDCA_EXECUTION_PLAN.md`
+  - `PDCA_ITERATION_CHECKLIST.md`
+  - `PLATFORM_OPTIMIZATION_PLAN.md`
+
+### Verification
+
+- `npm run lint`
+- `npm test`
+- `npm run build`
+
+### Result
+
+- Finite-choice Ink/TUI flows now share one interaction grammar instead of mixing static lists, typed follow-up answers, and visually unrelated panels.
+- Legacy mode still retains text/number fallback behavior, so the UX upgrade stays low-risk outside the Ink path.
+- Latest verification evidence after this tranche:
+  - `npm test` => `1450/1450`
+
 ## 2026-04-18 — reflect mode
 
 ### Scope
@@ -92,6 +502,177 @@ Read the current SOTA gap / difference docs, then turn Orca's existing seeded `a
 
 - Orca now has a real tiered SOTA evaluation system instead of a plan plus one hard-coded fast runner.
 - Fast gate is executable at `61/61` local black-box tasks and nightly/release bundles are now codified as first-class manifests.
+
+## 2026-04-21 — SOTA gap swarm audit + PDCA refresh
+
+### Scope
+
+Run a multi-lane read-only swarm audit after the benchmark and turn it into a real PDCA closeout with current evidence, not historical artifacts.
+
+### Delivered
+
+- Added a canonical swarm-audit report:
+  - `doc/00_project/initiative_orca/SOTA_GAP_SWARM_AUDIT.md`
+  - `doc/00_project/initiative_orca/SOTA_GAP_SWARM_AUDIT.html`
+- Rolled the audit conclusions into:
+  - `PRD.md`
+  - `USER_EXPERIENCE_MAP.md`
+  - `PLATFORM_OPTIMIZATION_PLAN.md`
+  - `PDCA_EXECUTION_PLAN.md`
+  - `PDCA_ITERATION_CHECKLIST.md`
+  - `task_plan.md`
+  - `notes.md`
+  - `ROLLING_REQUIREMENTS_AND_PROMPTS.md`
+- Refreshed current-slice evidence:
+  - nightly gate: `agent-eval/runs/20260421-074245-714923/`
+  - release gate: `agent-eval/runs/20260421-074333-249714/`
+  - manual CLI smoke: `outputs/manual-cli-smoke/run-20260421-154536/`
+- Closed the gate-runner compatibility regression discovered during PDCA check:
+  - `agent-eval/scripts/run-gate.py`
+  - `agent-eval/scripts/run-test-matrix.py`
+  - both now use `timezone.utc` instead of `datetime.UTC`
+
+### Outcome
+
+- Orca’s next tranche is now constrained more tightly than “do Wave 4 continuity”:
+  1. trust hardening
+  2. canonical `WorkSession` / `TaskRun` objects
+  3. async queue + take-over
+  4. evidence console
+- PDCA evidence for this slice is now current instead of relying on older nightly/release artifacts.
+- The audit also made one architectural risk explicit: continuity, queueing, and evidence cannot be shipped credibly if approval/runtime policy remains fragmented across REPL, MCP, and serve.
+
+## 2026-04-21 — trust hardening tranche 1
+
+### Scope
+
+Start with the two highest-yield trust fixes from the audit: safer default REPL approval posture and authentication requirements for non-loopback `serve`.
+
+### Delivered
+
+- `src/config.ts`
+  - legacy config `default` now resolves to REPL `auto` instead of `yolo`
+- `src/commands/serve.ts`
+  - exported `resolveServeAuthToken()`
+  - non-loopback `serve` now requires `ORCA_SERVE_TOKEN`
+  - authenticated `serve` requests now require `Authorization: Bearer <token>`
+- regression coverage:
+  - `tests/config.test.ts`
+  - `tests/serve-command.test.ts`
+
+### Verification
+
+- targeted:
+  - `vitest run tests/config.test.ts tests/serve-command.test.ts`
+- repo-level:
+  - `npm run lint`
+  - `npm test`
+  - `npm run build`
+- manual:
+  - `outputs/manual-cli-smoke/run-20260421-160704/cli-smoke.txt`
+  - `outputs/manual-cli-smoke/run-20260421-160704/serve-smoke.txt`
+
+### Outcome
+
+- a fresh REPL session no longer defaults into fail-open `yolo`
+- remote/headless `serve` exposure now has a hard authentication gate instead of relying only on operator caution
+
+## 2026-04-21 — trust hardening tranche 2
+
+### Scope
+
+Start the shared policy executor so REPL and MCP no longer have separate normal-tool policy logic.
+
+### Delivered
+
+- added `src/policy-executor.ts`
+- moved shared policy concerns into one module:
+  - pre-hook handling
+  - tool allowlist enforcement
+  - approval checks
+  - sandbox posture wrapping
+- `src/commands/chat-proxy-tool-call.ts`
+  - normal tool execution now uses the shared policy executor
+- `src/mcp-server.ts`
+  - tool calls now use the same shared policy executor
+- `src/commands/serve.ts`
+  - MCP stdio startup now passes permission mode + allowlist + persisted grants into the shared executor
+- regression coverage:
+  - `tests/chat-proxy-tool-call.test.ts`
+  - `tests/v050-modules.test.ts`
+
+### Verification
+
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/config.test.ts tests/serve-command.test.ts tests/chat-proxy-tool-call.test.ts tests/v050-modules.test.ts`
+- `npm run lint`
+- `npm test`
+- `npm run build`
+
+### Outcome
+
+- normal tool policy is no longer duplicated between chat and MCP
+- dangerous MCP tool calls now fail closed unless a grant already exists
+- the remaining trust gap is now narrower and more explicit:
+  - special tools still have path-specific handling
+  - serve HTTP auth still lives at the transport edge
+
+## 2026-04-21 — Ink entry / home-state UX optimization
+
+### Scope
+
+Improve the primary TUI entry experience so a user can understand the main action, current trust posture, recovery paths, and failure help from the first screen without memorizing slash commands.
+
+### Delivered
+
+- added `src/ui/components/HomePanel.tsx`
+- `src/ui/components/App.tsx`
+  - empty state now renders a structured home panel instead of the old flat command list
+- `tests/ink-ui.test.tsx`
+  - home-panel render coverage
+  - empty-state integration coverage
+- docs rolled forward:
+  - `USER_EXPERIENCE_MAP.md`
+  - `PRD.md`
+- text snapshot evidence:
+  - `outputs/ui-smoke/run-20260421-165711/home-panel.txt`
+
+### Validation
+
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/ink-ui.test.tsx`
+- `npm run lint`
+- `npm test`
+- `npm run build`
+
+Browser-specific validation status for this slice:
+- browser console: `N/A`
+- network leak inspection: `N/A`
+- Lighthouse/performance budget: `N/A`
+- responsive screenshots: `N/A`
+- reason: this optimization targets Orca's Ink TUI, not a browser frontend
+
+### Outcome
+
+- the entry screen now has one clear primary action: type a concrete task and press Enter
+- trust posture is visible before the user starts delegating work
+- quick recovery and failure paths are explicit from the first frame
+- `Tab` now opens a quick-action picker so the empty state is actionable rather than only descriptive
+
+Context-aware follow-up:
+
+- quick actions now adapt to current trust posture and saved-session availability
+- the home panel now surfaces `/sessions` when saved sessions exist
+- updated text snapshot evidence:
+  - `outputs/ui-smoke/run-20260421-171338/home-panel-dynamic.txt`
+
+### Verification
+
+- `python3 -m py_compile agent-eval/scripts/run-gate.py agent-eval/scripts/run-test-matrix.py agent-eval/scripts/run-secret-scan.py agent-eval/scripts/collect-license-inventory.py agent-eval/scripts/sync-test-matrix.py`
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/test-matrix-runner.test.ts tests/agent-eval-manifests.test.ts tests/test-matrix-sync.test.ts`
+- `npm run eval:nightly`
+- `npm run eval:release`
+- manual CLI smoke:
+  - `outputs/manual-cli-smoke/run-20260421-154536/cli-smoke.txt`
+  - `outputs/manual-cli-smoke/run-20260421-154536/serve-smoke.txt`
 - Release verification now has a defined artifact shape rather than relying on operator memory or ad hoc shell history.
 - Latest verification evidence:
   - `npm test` => `1280/1280`
@@ -539,3 +1120,155 @@ Internalize the first Hermes-inspired runtime capability bundle into Orca CLI an
 - `npm test` => `1371/1371`
 - `npm run build`
 - `npm run bench` => `10/10`, `100%`
+
+## 2026-04-21 · SOTA SOP Benchmark (Completed)
+
+### Delivered
+
+- benchmark matrix for:
+  - Claude Code
+  - OpenAI Codex
+  - Amp
+  - OpenCode
+  - Cursor
+  - GitHub Copilot coding agent
+- canonical doc updates:
+  - `PRD.md`
+  - `USER_EXPERIENCE_MAP.md`
+  - `PLATFORM_OPTIMIZATION_PLAN.md`
+  - companion `.html` files where required
+
+### Outcome
+
+- Orca’s largest remaining SOTA gap is no longer workflow labeling or basic trust UX; it is continuity across terminal / web / IDE plus detached execution with visible evidence.
+- Benchmark conclusion now sets the next priority order as:
+  1. Wave 4 continuity surfaces
+  2. async execution queue + resumable take-over
+  3. inspect-and-act evidence console
+- The benchmark also confirmed that the dominant SOTA SOP is:
+  - durable session/thread object
+  - explicit approval / review gate
+  - detached or remote execution surface
+  - human review before merge/apply
+  - visible evidence/log/timeline surface
+
+### Verification
+
+- Source review completed against official docs / release notes within the 12-month evidence window where available
+- Canonical docs rolled forward for benchmark conclusions:
+  - `PRD.md`
+  - `USER_EXPERIENCE_MAP.md`
+  - `PLATFORM_OPTIMIZATION_PLAN.md`
+
+## 2026-04-21 · Wave 4a Continuity Foothold (Completed)
+
+### Delivered
+
+- stable REPL `sessionId`
+- `/status` and live status visibility for the current session id
+- `orca -c <id>` for exact session resume
+- headless continuity discovery endpoints:
+  - `GET /sessions`
+  - `GET /sessions/latest`
+  - `GET /sessions/:id`
+
+### Outcome
+
+- Orca now has a first durable session-object continuity surface rather than only local autosave files.
+- The current session id is visible to the operator in-session.
+- The CLI can now target a specific saved session instead of only “latest”.
+- Headless/web/IDE clients now have a read-only discovery API for saved sessions.
+- That continuity API is now explicitly local/trusted-only:
+  - `/health` no longer exposes session metadata
+  - no wildcard CORS for arbitrary origins
+  - `GET /sessions` and `GET /sessions/latest` are loopback-only
+
+### Verification
+
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/serve-command.test.ts tests/session-command.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx tests/chat-repl-turn.test.ts`
+
+## 2026-04-21 · Layered Test Matrix (Completed)
+
+### Delivered
+
+- executed test-evidence bundle under:
+  - `outputs/test-matrix/run-20260421-134924/`
+- matrix artifact:
+  - `outputs/test-matrix/run-20260421-134924/matrix.md`
+- repo-native layer scripts:
+  - `test:static`
+  - `test:unit`
+  - `test:contract`
+  - `test:integration`
+  - `test:e2e`
+  - `test:security`
+  - `test:resilience`
+  - `test:performance`
+  - `test:ai-eval-fast`
+  - `test:matrix`
+  - `test:matrix:sync`
+- helper scripts:
+  - `agent-eval/scripts/run-test-matrix.py`
+  - `agent-eval/scripts/run-secret-scan.py`
+  - `agent-eval/scripts/collect-license-inventory.py`
+  - `agent-eval/scripts/sync-test-matrix.py`
+- single-source manifest:
+  - `agent-eval/manifests/test-matrix.json`
+- generated snippet:
+  - `agent-eval/generated/test-matrix-entrypoints.md`
+- latest runner-produced evidence:
+  - `outputs/test-matrix/run-20260421-065329/`
+  - `outputs/test-matrix/run-20260421-065329/matrix.md`
+- execution hardening follow-up:
+  - `agent-eval/manifests/test-matrix.json` now stores typed `steps[].argv` arrays instead of shell command strings
+  - `run-test-matrix.py` now executes steps directly without `shell=True`
+  - runner now rejects unknown `--layers` selections instead of silently succeeding with an empty row set
+  - fresh runner-produced evidence:
+    - `outputs/test-matrix/run-20260421-072634/`
+    - `outputs/test-matrix/run-20260421-072634/matrix.md`
+
+### Outcome
+
+- Orca now has an explicit layered test matrix with real commands and real evidence, not just an informal “run lint/test/build” habit.
+- The matrix is now runnable from repo-native scripts instead of depending on hand-curated shell snippets.
+- The matrix metadata is now sourced from one manifest instead of hardcoded Python constants.
+- The manifest is now a typed command-spec surface instead of a repo-owned shell-string surface.
+- The matrix makes the current boundary clear:
+  - unit/contract/integration/e2e/resilience/AI-eval are real and runnable
+  - static/security/performance are only partially institutionalized
+- The matrix also makes release strategy explicit:
+  - PR: incremental relevant suites + required static gates
+  - main/nightly: full regression + security/perf follow-through
+  - release: `eval:release` + real smoke/observability evidence
+- Attacker-review fixes are included in the runner path:
+  - `run-test-matrix.py` no longer allows path-traversal `run-id`
+  - `run-secret-scan.py` no longer follows symlinks out of repo root
+  - `..` is now explicitly rejected as a run id because dot characters are disallowed entirely
+  - `run-test-matrix.py` no longer shells manifest layer commands through `shell=True`
+
+### Verification
+
+- static:
+  - `npm run lint`
+  - `npm run build`
+  - `npm ls --depth=0`
+  - heuristic secret scan
+  - license inventory
+- unit:
+  - `vitest run tests/config.test.ts tests/model-catalog.test.ts tests/output.test.ts tests/command-picker.test.ts`
+- contract:
+  - `vitest run tests/protocol.test.ts tests/command-contracts.test.ts tests/agent-eval-manifests.test.ts tests/serve-command.test.ts`
+- integration:
+  - `vitest run tests/integration.test.ts tests/session-command.test.ts tests/providers-command.test.ts tests/mcp-client.test.ts`
+- e2e:
+  - `vitest run tests/e2e-workflow.test.ts tests/complex-scenarios.test.ts tests/mission.test.ts`
+- security:
+  - `vitest run tests/adversarial.test.ts tests/context-protection.test.ts tests/chat-proxy-tool-call.test.ts tests/permissions-command.test.ts`
+  - `npm audit --omit=dev --json`
+- performance:
+  - `node dist/bin/orca.js bench --json`
+  - `vitest run tests/bench.test.ts`
+- resilience:
+  - `vitest run tests/provider-stream-resilience.test.ts tests/agent-loop.test.ts tests/hermes-runtime.test.ts tests/chat-repl-turn.test.ts`
+- ai eval:
+  - `npm run eval:fast`

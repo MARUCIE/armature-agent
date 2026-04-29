@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { execFileSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { addStoredPermissionRule, readStoredPermissionAllowlist } from '../src/config.js'
 import { RetryTracker } from '../src/retry-intelligence.js'
 import { ChatSessionEmitter } from '../src/ui/session.js'
 
@@ -58,6 +60,7 @@ vi.mock('node:readline', () => ({
 }))
 
 import { handleProxyToolCall, ResetSensitiveWaitCanceledError } from '../src/commands/chat-proxy-tool-call.js'
+import { buildPermissionRuleKey } from '../src/policy-executor.js'
 
 const baseParams = {
   history: [] as Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
@@ -68,9 +71,23 @@ const baseParams = {
   },
 }
 
+function initGitRepo(cwd: string) {
+  execFileSync('git', ['init'], { cwd, stdio: 'ignore' })
+  execFileSync('git', ['config', 'user.name', 'Test User'], { cwd, stdio: 'ignore' })
+  execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd, stdio: 'ignore' })
+}
+
+function getRepoRoot(cwd: string): string {
+  return execFileSync('git', ['rev-parse', '--show-toplevel'], {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  }).trim()
+}
+
 beforeEach(() => {
   mockState.askPermission.mockReset()
-  mockState.askPermission.mockResolvedValue(true)
+  mockState.askPermission.mockResolvedValue({ allowed: true, scope: 'once' })
   mockState.printDiffPreview.mockReset()
   mockState.hasHooks.mockReset()
   mockState.hasHooks.mockReturnValue(false)
@@ -98,8 +115,8 @@ afterEach(() => {
 })
 
 describe('chat proxy tool helper', () => {
-  it('blocks dangerous tools when safe mode permission is denied', async () => {
-    mockState.askPermission.mockResolvedValue(false)
+  it('blocks dangerous tools when auto permission mode is denied', async () => {
+    mockState.askPermission.mockResolvedValue({ allowed: false, scope: 'once' })
 
     const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
     const result = await handleProxyToolCall({
@@ -107,15 +124,47 @@ describe('chat proxy tool helper', () => {
       cwd,
       name: 'run_command',
       args: { command: 'echo hello' },
-      safeMode: true,
+      permissionMode: 'auto',
     })
 
     expect(result).toEqual({ success: false, output: 'User denied permission.' })
     expect(mockState.askPermission).toHaveBeenCalledWith('run_command', 'run: echo hello')
   })
 
-  it('does not update undo state when a safe-mode write is denied', async () => {
-    mockState.askPermission.mockResolvedValue(false)
+  it('requires approval for fetch_url in auto permission mode', async () => {
+    mockState.askPermission.mockResolvedValue({ allowed: false, scope: 'once' })
+
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const result = await handleProxyToolCall({
+      ...baseParams,
+      cwd,
+      name: 'fetch_url',
+      args: { url: 'https://example.com/' },
+      permissionMode: 'auto',
+    })
+
+    expect(result).toEqual({ success: false, output: 'User denied permission.' })
+    expect(mockState.askPermission).toHaveBeenCalledWith('fetch_url', expect.stringContaining('https://example.com/'))
+  })
+
+  it('requires approval for web_search in auto permission mode', async () => {
+    mockState.askPermission.mockResolvedValue({ allowed: false, scope: 'once' })
+
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const result = await handleProxyToolCall({
+      ...baseParams,
+      cwd,
+      name: 'web_search',
+      args: { query: 'orca cli' },
+      permissionMode: 'auto',
+    })
+
+    expect(result).toEqual({ success: false, output: 'User denied permission.' })
+    expect(mockState.askPermission).toHaveBeenCalledWith('web_search', expect.stringContaining('orca cli'))
+  })
+
+  it('does not update undo state when auto-mode write is denied', async () => {
+    mockState.askPermission.mockResolvedValue({ allowed: false, scope: 'once' })
 
     const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
     const onFileWrite = vi.fn()
@@ -124,7 +173,7 @@ describe('chat proxy tool helper', () => {
       cwd,
       name: 'write_file',
       args: { path: 'src/generated.ts', content: 'export const blocked = true\n' },
-      safeMode: true,
+      permissionMode: 'auto',
       onFileWrite,
     })
 
@@ -132,10 +181,138 @@ describe('chat proxy tool helper', () => {
     expect(onFileWrite).not.toHaveBeenCalled()
   })
 
+  it('remembers approved tools for the current session after a successful execution', async () => {
+    mockState.askPermission.mockResolvedValueOnce({ allowed: true, scope: 'session' })
+
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    writeFileSync(join(cwd, 'note.txt'), 'hello session permissions\n')
+    const sessionRules = new Set<string>()
+    const params = {
+      ...baseParams,
+      cwd,
+      name: 'read_file',
+      args: { path: 'note.txt' },
+      permissionMode: 'plan' as const,
+      isPermissionGranted: (ruleKey: string) => sessionRules.has(ruleKey),
+      recordPermissionGrant: (ruleKey: string, scope: 'session' | 'project') => {
+        if (scope === 'session') sessionRules.add(ruleKey)
+      },
+    }
+
+    await handleProxyToolCall(params)
+    await handleProxyToolCall(params)
+
+    expect(mockState.askPermission).toHaveBeenCalledTimes(1)
+    expect(sessionRules.size).toBe(1)
+  })
+
+  it('persists approved tools into the project allowlist', async () => {
+    mockState.askPermission.mockResolvedValueOnce({ allowed: true, scope: 'project' })
+
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    writeFileSync(join(cwd, 'note.txt'), 'hello project permissions\n')
+    const params = {
+      ...baseParams,
+      cwd,
+      name: 'read_file',
+      args: { path: 'note.txt' },
+      permissionMode: 'plan' as const,
+      isPermissionGranted: (ruleKey: string) => readStoredPermissionAllowlist('project', cwd).includes(ruleKey),
+      recordPermissionGrant: (ruleKey: string, scope: 'session' | 'project') => {
+        if (scope === 'project') addStoredPermissionRule('project', cwd, ruleKey)
+      },
+    }
+
+    await handleProxyToolCall(params)
+    await handleProxyToolCall(params)
+
+    expect(mockState.askPermission).toHaveBeenCalledTimes(1)
+    expect(readStoredPermissionAllowlist('project', cwd)).toHaveLength(1)
+  })
+
+  it('does not persist approved project grants when the tool execution fails', async () => {
+    mockState.askPermission.mockResolvedValueOnce({ allowed: true, scope: 'project' })
+
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const params = {
+      ...baseParams,
+      cwd,
+      name: 'read_file',
+      args: { path: 'missing.txt' },
+      permissionMode: 'plan' as const,
+      isPermissionGranted: (ruleKey: string) => readStoredPermissionAllowlist('project', cwd).includes(ruleKey),
+      recordPermissionGrant: (ruleKey: string, scope: 'session' | 'project') => {
+        if (scope === 'project') addStoredPermissionRule('project', cwd, ruleKey)
+      },
+    }
+
+    const result = await handleProxyToolCall(params)
+
+    expect(result.success).toBe(false)
+    expect(mockState.askPermission).toHaveBeenCalledTimes(1)
+    expect(readStoredPermissionAllowlist('project', cwd)).toHaveLength(0)
+  })
+
+  it('uses stable path-based permission keys for file writes', async () => {
+    mockState.askPermission.mockResolvedValueOnce({ allowed: true, scope: 'session' })
+
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const sessionRules = new Set<string>()
+
+    await handleProxyToolCall({
+      ...baseParams,
+      cwd,
+      name: 'write_file',
+      args: { path: 'src/generated.ts', content: 'export const first = true\n' },
+      permissionMode: 'plan',
+      isPermissionGranted: (ruleKey: string) => sessionRules.has(ruleKey),
+      recordPermissionGrant: (ruleKey: string, scope: 'session' | 'project') => {
+        if (scope === 'session') sessionRules.add(ruleKey)
+      },
+    })
+
+    await handleProxyToolCall({
+      ...baseParams,
+      cwd,
+      name: 'write_file',
+      args: { path: 'src/generated.ts', content: 'export const second = true\n' },
+      permissionMode: 'plan',
+      isPermissionGranted: (ruleKey: string) => sessionRules.has(ruleKey),
+      recordPermissionGrant: (ruleKey: string, scope: 'session' | 'project') => {
+        if (scope === 'session') sessionRules.add(ruleKey)
+      },
+    })
+
+    expect(mockState.askPermission).toHaveBeenCalledTimes(1)
+    expect([...sessionRules]).toEqual(['write_file|path=src/generated.ts'])
+  })
+
+  it('uses stable repo-based permission keys for git commits', () => {
+    const firstRepo = mkdtempSync(join(tmpdir(), 'orca-git-commit-a-'))
+    const secondRepo = mkdtempSync(join(tmpdir(), 'orca-git-commit-b-'))
+    initGitRepo(firstRepo)
+    initGitRepo(secondRepo)
+    const firstRepoRoot = getRepoRoot(firstRepo)
+    const secondRepoRoot = getRepoRoot(secondRepo)
+
+    expect(buildPermissionRuleKey('git_commit', { message: 'chore: first commit' }, firstRepo))
+      .toBe(`git_commit|repo=${firstRepoRoot}`)
+    expect(buildPermissionRuleKey('git_commit', { message: 'fix: second commit' }, firstRepo))
+      .toBe(`git_commit|repo=${firstRepoRoot}`)
+    expect(buildPermissionRuleKey('git_commit', { message: 'fix: second commit' }, secondRepo))
+      .toBe(`git_commit|repo=${secondRepoRoot}`)
+  })
+
   it('returns ask_user answers through the ink session emitter', async () => {
     const session = new ChatSessionEmitter()
-    const messages: string[] = []
-    session.on('system_message', (event) => { messages.push(event.text) })
+    const requests: Array<{ title: string; options: string[] }> = []
+    session.on('option_picker_request', (event) => {
+      requests.push({
+        title: event.request.title,
+        options: event.request.options.map((option) => option.label),
+      })
+      event.request.resolve('Yes')
+    })
 
     const pending = handleProxyToolCall({
       ...baseParams,
@@ -148,17 +325,17 @@ describe('chat proxy tool helper', () => {
       session,
     })
 
-    session.submitInput('Yes')
     const result = await pending
 
     expect(result).toEqual({ success: true, output: 'Yes' })
-    expect(messages.join('\n')).toContain('? Continue?')
-    expect(messages.join('\n')).toContain('1. Yes')
-    expect(messages.join('\n')).toContain('2. No')
+    expect(requests).toEqual([{ title: 'Continue?', options: ['Yes', 'No'] }])
   })
 
   it('maps numeric ask_user selections to option text', async () => {
     const session = new ChatSessionEmitter()
+    session.on('option_picker_request', (event) => {
+      event.request.resolve('1')
+    })
 
     const pending = handleProxyToolCall({
       ...baseParams,
@@ -171,12 +348,14 @@ describe('chat proxy tool helper', () => {
       session,
     })
 
-    session.submitInput('1')
     await expect(pending).resolves.toEqual({ success: true, output: 'Yes' })
   })
 
   it('rejects invalid ask_user selections for session-backed prompts', async () => {
     const session = new ChatSessionEmitter()
+    session.on('option_picker_request', (event) => {
+      event.request.resolve('maybe')
+    })
 
     const pending = handleProxyToolCall({
       ...baseParams,
@@ -189,7 +368,6 @@ describe('chat proxy tool helper', () => {
       session,
     })
 
-    session.submitInput('maybe')
     await expect(pending).resolves.toMatchObject({
       success: false,
     })
@@ -213,10 +391,36 @@ describe('chat proxy tool helper', () => {
     })
 
     await Promise.resolve()
+    await Promise.resolve()
     session.submitInput('Yes')
     await pending
 
     expect(promptReadyCount).toBe(1)
+  })
+
+  it('emits option_picker_request for ask_user options instead of prompt_ready', async () => {
+    const session = new ChatSessionEmitter()
+    let promptReadyCount = 0
+    let pickerCount = 0
+    session.on('prompt_ready', () => { promptReadyCount += 1 })
+    session.on('option_picker_request', (event) => {
+      pickerCount += 1
+      event.request.resolve('No')
+    })
+
+    await expect(handleProxyToolCall({
+      ...baseParams,
+      cwd: process.cwd(),
+      name: 'ask_user',
+      args: {
+        question: 'Continue?',
+        options: ['Yes', 'No'],
+      },
+      session,
+    })).resolves.toEqual({ success: true, output: 'No' })
+
+    expect(promptReadyCount).toBe(0)
+    expect(pickerCount).toBe(1)
   })
 
   it('tolerates malformed ask_user options', async () => {
@@ -279,6 +483,7 @@ describe('chat proxy tool helper', () => {
       session,
     })
 
+    await Promise.resolve()
     await Promise.resolve()
     expect(promptReadyCount).toBe(1)
     session.emitClear()
@@ -370,7 +575,7 @@ describe('chat proxy tool helper', () => {
         path: 'original.ts',
         content: 'export const original = true\n',
       },
-      safeMode: true,
+      permissionMode: 'auto',
       onFileWrite,
     })
 
@@ -380,7 +585,7 @@ describe('chat proxy tool helper', () => {
     expect(onFileWrite).toHaveBeenCalledWith(join(cwd, 'rewritten.ts'), null)
   })
 
-  it('blocks delegate_task in safe mode', async () => {
+  it('blocks delegate_task outside yolo mode', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
     const result = await handleProxyToolCall({
       ...baseParams,
@@ -389,12 +594,45 @@ describe('chat proxy tool helper', () => {
       args: {
         task: 'modify files',
       },
-      safeMode: true,
+      permissionMode: 'auto',
     })
 
     expect(result.success).toBe(false)
     expect(result.output).toContain('delegate_task is disabled in safe mode.')
     expect(mockState.spawnSubAgent).not.toHaveBeenCalled()
+  })
+
+  it('prompts for non-dangerous tools in plan mode', async () => {
+    mockState.askPermission.mockResolvedValue({ allowed: false, scope: 'once' })
+
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const result = await handleProxyToolCall({
+      ...baseParams,
+      cwd,
+      name: 'read_file',
+      args: { path: 'missing.ts' },
+      permissionMode: 'plan',
+    })
+
+    expect(result).toEqual({ success: false, output: 'User denied permission.' })
+    expect(mockState.askPermission).toHaveBeenCalledWith('read_file', expect.stringContaining('read_file'))
+  })
+
+  it('enforces allowedTools before executing the tool', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    writeFileSync(join(cwd, 'note.txt'), 'hello\n', 'utf-8')
+
+    const result = await handleProxyToolCall({
+      ...baseParams,
+      cwd,
+      name: 'read_file',
+      args: { path: 'note.txt' },
+      permissionMode: 'yolo',
+      allowedTools: ['list_directory'],
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.output).toContain('not allowed in the current policy')
   })
 
   it('fires PostToolUse for delegate_task', async () => {
@@ -408,6 +646,7 @@ describe('chat proxy tool helper', () => {
       args: {
         task: 'summarize the failure',
       },
+      permissionMode: 'yolo',
     })
 
     expect(result.success).toBe(true)

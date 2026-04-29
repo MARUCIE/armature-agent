@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { createProgram } from '../src/program.js'
+import { listWorkflowPresets } from '../src/modes/index.js'
+import { getWorkflowPreset } from '../src/modes/index.js'
+import { resolveChatPresetRuntimeOptions } from '../src/commands/chat.js'
 
 describe('program', () => {
   it('creates a program with orca name', () => {
@@ -30,10 +33,40 @@ describe('program', () => {
     expect(commands).toContain('reflect')
   })
 
+  it('registers review command', () => {
+    const program = createProgram()
+    const commands = program.commands.map(c => c.name())
+    expect(commands).toContain('review')
+  })
+
+  it('registers debug command', () => {
+    const program = createProgram()
+    const commands = program.commands.map(c => c.name())
+    expect(commands).toContain('debug')
+  })
+
+  it('registers architect command', () => {
+    const program = createProgram()
+    const commands = program.commands.map(c => c.name())
+    expect(commands).toContain('architect')
+  })
+
   it('registers doctor command', () => {
     const program = createProgram()
     const commands = program.commands.map(c => c.name())
     expect(commands).toContain('doctor')
+  })
+
+  it('registers permissions command', () => {
+    const program = createProgram()
+    const commands = program.commands.map(c => c.name())
+    expect(commands).toContain('permissions')
+  })
+
+  it('registers queue command', () => {
+    const program = createProgram()
+    const commands = program.commands.map(c => c.name())
+    expect(commands).toContain('queue')
   })
 
   it('registers run command', () => {
@@ -63,6 +96,57 @@ describe('program', () => {
     const reflect = program.commands.find(c => c.name() === 'reflect')!
     const options = reflect.options.map(o => o.long)
     expect(options).toEqual(expect.arrayContaining(['--model', '--provider', '--api-key', '--json']))
+  })
+
+  it('workflow preset commands mirror chat runtime options', () => {
+    const program = createProgram()
+    for (const preset of listWorkflowPresets().filter((entry) => entry.commandName !== 'reflect')) {
+      const command = program.commands.find(c => c.name() === preset.commandName)!
+      const options = command.options.map(o => o.long)
+      expect(options).toEqual(expect.arrayContaining(['--model', '--provider', '--api-key', '--json']))
+    }
+  })
+
+  it('preset-generated commands inherit the full chat runtime surface', () => {
+    const program = createProgram()
+    const chat = program.commands.find(c => c.name() === 'chat')!
+    const chatOptions = chat.options.map(o => o.long).sort()
+
+    for (const preset of listWorkflowPresets()) {
+      const command = program.commands.find(c => c.name() === preset.commandName)!
+      const options = command.options.map(o => o.long).sort()
+      expect(options).toEqual(chatOptions)
+    }
+  })
+
+  it('registers every workflow preset command from the registry', () => {
+    const program = createProgram()
+    const commands = program.commands.map(c => c.name())
+    expect(commands).toEqual(expect.arrayContaining(listWorkflowPresets().map((preset) => preset.commandName)))
+  })
+
+  it('keeps root continue option as an optional session id argument', () => {
+    const program = createProgram()
+    const continueOption = program.options.find((option) => option.long === '--continue')
+    expect(continueOption?.optional).toBe(true)
+  })
+
+  it('resolves preset startup runtime options from the preset registry', () => {
+    const reviewPreset = getWorkflowPreset('review')!
+    const debugPreset = getWorkflowPreset('debug')!
+
+    expect(resolveChatPresetRuntimeOptions(reviewPreset, {})).toEqual({
+      effort: 'high',
+      forceReflect: undefined,
+      initialModeId: 'code-review',
+      initialPermissionMode: 'plan',
+    })
+    expect(resolveChatPresetRuntimeOptions(debugPreset, { effort: 'low' })).toEqual({
+      effort: 'low',
+      forceReflect: undefined,
+      initialModeId: 'debug',
+      initialPermissionMode: 'auto',
+    })
   })
 
   it('run command has dangerously option', () => {

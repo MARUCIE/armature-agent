@@ -1,5 +1,15 @@
 # Orca CLI PRD
 
+## 2026-04-29 Update - SOTA Swarm Audit Tranche
+
+New product requirements from the SOTA swarm audit:
+
+- Repo-local hooks must not load or execute on startup unless project trust is explicit.
+- Network-capable tools (`fetch_url`, `web_search`) must pass through approval policy in `auto` mode.
+- `fetch_url` must reject non-HTTP(S), loopback, private, and link-local literal targets by default.
+- Operators need a top-level queue inspection surface for current `TaskRun` records: `orca queue list/show`.
+- Next tranche must expand queue inspection into `follow`, `takeover`, evidence bundles, and a unified execution contract across `run`, `serve`, mission, and planner surfaces.
+
 ## Product Snapshot
 
 - Product: Orca CLI
@@ -18,6 +28,7 @@ Single-vendor coding CLIs force users into one model family per session. Orca CL
 2. Support multi-model collaboration modes that no single-vendor CLI can offer.
 3. Preserve strong developer ergonomics: REPL, one-shot execution, saved sessions, PR review, stats, headless serving, and explicit debugging/reflection flows.
 4. Keep runtime behavior testable and inspectable through a large automated suite.
+5. Support global operator hooks such as terminal-title automation without forcing every project to vendor a local `.orca/hooks.json`.
 
 ## Non-Goals
 
@@ -47,8 +58,49 @@ Single-vendor coding CLIs force users into one model family per session. Orca CL
 - Agent tool loop and runtime orchestration
 - Multi-model council, race, and pipeline execution
 - Reflect mode for Socratic debugging and root-cause investigation
+- Top-level workflow preset commands for review/debug/architect entry
+- Mode picker now exposes per-profile workflow-change summaries
+- Workflow preset command metadata now resolves from one registry instead of scattered command-local strings
+- Workflow presets now carry structured default policy fields (`effort`, `permission mode`)
+- Preset-backed mode switches now apply those default policy fields at runtime
+- `/mode` picker now surfaces preset policy defaults directly in the description layer
+- Startup and `/mode` switching now share one preset-policy application path
+- The shared startup path now also composes the initial system prompt from mode + preset + effort, so preset-backed one-shot and REPL entry behave the same way
+- Status surfaces now expose the current workflow policy combination
+- Workflow presets now also carry structured `tool policy` and `output style`
+- `/status` now exposes those additional policy dimensions
+- Live status surfaces now show compact tool/output summaries when available
+- Model policy is now exposed in `/status` and summarized in live status surfaces
+- Active mode tool restrictions are now enforced in the proxy tool runtime instead of remaining prompt-only guidance
+- Session effort and preset default effort now also map into proxy `reasoning_effort` requests
+- Provider-returned tool calls are now rejected unless the tool was explicitly advertised for that request
+- Non-interactive permission prompts now fail closed instead of silently auto-approving
+- SDK-backed REPL turns now receive the composed session system prompt and mapped permission mode
 - Hook loading and lifecycle execution
 - Session persistence and usage tracking
+- Session portability via fork / export / import
+- Session shareable markdown artifacts
+- Session handoff artifact bundles
+- Thread portability and handoff-oriented cloning
+- Thread shareable markdown artifacts with metadata sidecars
+- Explicit approval / trust control surface for session and persisted config modes
+- Ink approval detail/picker surface for live policy changes and persistence
+- In-session visibility of permission mode source
+- Inline permission promotion from one-off approval to session/project policy
+- Inspectable permission-rule surfaces for session/project/global scopes
+- Rule-management surfaces for revoke/clear without hand-editing config
+- Revoke flow supports filter-and-pick rule selection instead of exact-key-only deletion
+- Permission rules now persist as stable canonical descriptors instead of volatile preview text
+- Explicit normalize surface for legacy rule cleanup
+- Effective permission allowlist now merges project + global scopes at runtime
+- Permission rule inspection now exposes canonical / legacy / unrecognized state
+- Legacy `::` rule format is supported by explicit normalization
+- Rule audit surfaces now support state-based filtering
+- Startup MCP auto-connect now trusts only home/global configs by default; repo-local MCP requires explicit `/mcp connect` instead of silent repo-driven process spawn
+- Run continuity now has a first-class foothold:
+  - default `orca run` creates a durable `WorkSession`
+  - the same execution creates a persisted `TaskRun`
+  - `serve` can inspect both through read-only continuity endpoints
 - CLI output rendering and markdown streaming
 - Slash-command autocomplete that yields to full command submission once the user starts typing arguments
 - Theme preference persistence that suppresses first-launch onboarding once `ORCA_THEME` or `~/.orca/theme` is already set
@@ -57,6 +109,7 @@ Single-vendor coding CLIs force users into one model family per session. Orca CL
 - Background job tracking with completion notifications
 - Provider-aware model catalog with context/pricing/caution metadata
 - Provider command and startup surfaces that expose the same model metadata before a session begins
+- Entry-state home panel that emphasizes one primary action, current trust posture, recovery shortcuts, and failure help
 - Conservative reflect auto-triggering for clear debugging/explanation prompts in standard chat flows
 - Centralized local runtime logging with a CLI log viewer
 - A doctor-style diagnostics surface for config/runtime/provider health
@@ -71,6 +124,56 @@ Single-vendor coding CLIs force users into one model family per session. Orca CL
 - `README.md` matches actual command surface and provider/model claims
 - Project docs under `doc/00_project/initiative_orca/` remain current with source layout
 - Future feature work lands without reintroducing single-provider coupling
+
+## Benchmark-Derived Priorities (2026-04-21)
+
+Representative benchmark set:
+
+- Claude Code
+- OpenAI Codex
+- Amp
+- OpenCode
+- Cursor
+- GitHub Copilot coding agent
+
+Shared SOTA SOP shape across that set:
+
+1. durable session / thread object
+2. explicit approval or review gate
+3. detached or remote execution surface
+4. resumable handoff back into IDE / PR / terminal
+5. visible evidence surface: logs, queue status, timeline, share link, or usage analytics
+
+Implication for Orca:
+
+- Wave 3 is no longer the main gap; workflow packaging and trust UX are now materially stronger.
+- The highest-value remaining product gap is Wave 4 continuity:
+  - terminal ↔ web ↔ IDE session continuity
+  - detached execution with visible queue / status / take-over
+  - reviewable evidence timeline for async work
+- The next operator-shell gap after continuity is not “more preset names”; it is a stronger inspect-and-act evidence console.
+- The 2026-04-21 swarm audit tightened that broad conclusion into four concrete missing layers:
+  - leaseable `WorkSession` / `TaskRun` objects
+  - operator-grade async queue / take-over flows
+  - review-before-apply evidence console
+  - safer shared trust enforcement across REPL / MCP / serve
+
+Priority order after this benchmark:
+
+1. Wave 4 continuity surfaces
+2. async execution queue + resumable take-over
+3. inspect-and-act evidence console
+4. only then additional preset/model-policy refinement
+
+Current Wave 4a foothold already landed:
+
+- stable REPL `sessionId`
+- continuity visibility in `/status`
+- headless session-discovery endpoints via `orca serve`
+- CLI continuity now supports both `orca -c` and `orca -c <session-id>`
+- continuity metadata over HTTP is now intentionally scoped to local/trusted deployments:
+  - no wildcard CORS
+  - session endpoints are loopback-only
 
 ## Large-Scale Test Expansion Initiative (2026-04-14)
 

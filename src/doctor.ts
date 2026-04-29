@@ -68,7 +68,7 @@ export function gatherDoctorReport(cwdInput: string): DoctorReport {
   const cwd = resolve(cwdInput)
   const config = resolveConfig({ cwd })
   const ctx = loadProjectContext(cwd)
-  const hookManager = new HookManager()
+  const hookManager = new HookManager({ trustProjectHooks: true })
   hookManager.load(cwd)
   const mcpClient = new MCPClient()
   mcpClient.loadConfigs(cwd)

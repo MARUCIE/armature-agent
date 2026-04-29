@@ -1,5 +1,24 @@
 # Orca CLI System Architecture
 
+## 2026-04-29 Architecture Delta - Trust and Queue
+
+The SOTA swarm audit adds two immediate architectural constraints:
+
+1. Hook loading is now split by trust boundary:
+   - home/global hooks remain startup-safe
+   - repo-local `.orca` / `.claude` hooks require explicit project trust
+   - hook subprocess env is allowlisted instead of inheriting the full parent process
+2. `TaskRun` is now visible through a first-class CLI queue surface:
+   - `orca queue`
+   - `orca queue list --status <status> --work-session <id> --limit <n>`
+   - `orca queue show <task-run-id>`
+
+Open architecture work:
+
+- Promote `WorkSession` / `TaskRun` into the canonical execution contract for `chat`, `run`, `serve`, mission, and planner surfaces.
+- Add queue follow/takeover semantics after the read-only queue surface is stable.
+- Attach evidence bundles to TaskRun so TUI and CLI review surfaces read from one source.
+
 <!-- AI-FLEET:PROJECT_DIR:START -->
 - `PROJECT_DIR`: `/Users/mauricewen/Projects/orca-cli`
 <!-- AI-FLEET:PROJECT_DIR:END -->
@@ -7,6 +26,15 @@
 ## Architecture Summary
 
 Orca CLI is a TypeScript ESM CLI product composed of a terminal entry layer, command layer, runtime/config layer, provider bridge, and test/verification layer. It is a CLI runtime, so the primary surface is command invocation and streaming terminal output rather than browser routes.
+
+Hook configuration now resolves from both project-local and operator-global Orca surfaces:
+- project: `.orca/hooks.json`, `.orca.json`
+- global: `~/.orca/hooks.json`
+- compatibility imports: `.claude/hooks.json`, `.claude/settings.json`, `.codex/hooks.json`
+
+MCP configuration now carries source provenance:
+- startup-safe auto-connect: home/global-scoped MCP only
+- project-scoped MCP: explicit opt-in through `/mcp connect` or equivalent operator action
 
 ## High-Level Diagram
 
@@ -27,6 +55,7 @@ flowchart TD
   Logger[src/logger.ts]
   Hooks[src/hooks.ts]
   Usage[src/usage-db.ts]
+  WorkSessions[src/work-session-store.ts]
   Output[src/output.ts<br/>src/markdown.ts]
   Tests[tests/*.test.ts]
   EvalPlan[AGENT_EVAL_PLAN.md]
@@ -48,6 +77,7 @@ flowchart TD
   Runtime --> Logger
   Runtime --> Hooks
   Runtime --> Usage
+  Runtime --> WorkSessions
   Runtime --> Output
   Tests --> Commands
   Tests --> Multi
@@ -96,7 +126,8 @@ flowchart TD
 | Runtime/config | `src/config.ts`, `src/context.ts`, `src/system-prompt.ts`, `src/token-budget.ts`, `src/model-catalog.ts`, `src/doctor.ts`, `src/commands/reflect-mode.ts`, `src/modes/registry.ts` | Resolve providers, model metadata, runtime diagnostics, context, prompts, runtime limits, and reflect/debugging behavior |
 | Provider bridge | `src/providers/openai-compat.ts` | Provider-neutral transport and model interaction |
   Note: proxy path now supports multimodal one-shot prompt content (`text` + `image_url` parts) for local image attachments.
-| Agent runtime | `src/tools.ts`, `src/background-jobs.ts`, `src/logger.ts`, `src/hooks.ts`, `src/mcp-client.ts`, `src/retry-intelligence.ts`, `src/auto-verify.ts` | Tool execution, detached job tracking, local runtime logging, hooks, MCP, retry behavior, verification helpers |
+| Agent runtime | `src/tools.ts`, `src/background-jobs.ts`, `src/logger.ts`, `src/hooks.ts`, `src/mcp-client.ts`, `src/retry-intelligence.ts`, `src/auto-verify.ts` | Tool execution, detached job tracking, local runtime logging, hooks, provenance-aware MCP loading, retry behavior, verification helpers |
+| Continuity objects | `src/work-session-store.ts` | File-backed `WorkSession` / `TaskRun` persistence for the run-first continuity slice |
 | ink UI | `src/ui/` (18 files) | React terminal UI: App, ScrollBox, InputArea, StatusBar, Banner, Footer, ThinkingSpinner, ToolCallBlock, DiffPreview, MarkdownText, FileLink, PermissionPrompt, MultiModelProgress, CommandPicker, TurnSummary, AlternateScreen + hooks (useTerminalSize, useMouseWheel, usePasteHandler) + modules (cursor, theme, session, types, utils) |
 | IDE integration | `integrations/vscode-orca/` | VS Code extension skeleton that launches `orca` terminal workflows and MCP server directly |
 | Presentation (legacy) | `src/output.ts`, `src/markdown.ts`, `src/command-picker.ts` | Legacy terminal rendering (pre-ink fallback) |
@@ -132,6 +163,7 @@ flowchart TD
 - Quality gate surfaces: `npm test`, `AGENT_EVAL_PLAN.md`, and future `agent-eval/{tasks,graders,runs}`
 - Quality gate surfaces: `npm run eval:fast`, `npm run eval:nightly`, `npm run eval:release`, plus `agent-eval/{tasks,graders,manifests,runs}`
 - Serve diagnostics: `/health`, `/providers`, `/doctor`
+- Serve continuity discovery: `/sessions`, `/sessions/latest`, `/sessions/:id`, `/work-sessions`, `/work-sessions/latest`, `/work-sessions/:id`, `/work-sessions/:id/task-runs`, `/task-runs`, `/task-runs/:id`
 
 ## Legacy Documentation Cross-References
 

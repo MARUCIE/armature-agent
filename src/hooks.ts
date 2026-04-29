@@ -18,11 +18,13 @@
  *  10. SubagentStop     — when a sub-agent finishes (Claude Code compat)
  *  11. MultiModelStart  — before council/race/pipeline (built-in: force file preprocessing)
  *
- * Loads hooks from (priority order, all merged):
- *   1. .orca/hooks.json (native format)
- *   2. .claude/hooks.json (native JSON hook map)
- *   3. .claude/settings.json → hooks key (Claude Code format, auto-converted)
- *   4. .codex/hooks.json (Codex format)
+ * Loads startup-safe global hooks by default:
+ *   1. ~/.orca/hooks.json (global native format)
+ *   2. ~/.claude/settings.json → hooks key (Claude Code format, auto-converted)
+ *   3. ~/.codex/hooks.json (Codex format)
+ *
+ * Repo-local hooks from .orca / .claude files execute only when project hook trust
+ * is explicit via HookManager({ trustProjectHooks: true }) or ORCA_TRUST_PROJECT_HOOKS=1.
  *
  * Claude Code format auto-detection:
  *   { matcher, hooks: [{ type, command, timeout }] } → flattened
@@ -32,7 +34,7 @@
 
 import { execSync, spawn as spawnChild } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -60,6 +62,11 @@ export interface HookDefinition {
   async?: boolean
 }
 
+interface LoadedHookDefinition extends HookDefinition {
+  /** Internal execution base resolved from the directory containing the hook config file. */
+  baseDir: string
+}
+
 export interface HookInput {
   event: HookEvent
   toolName?: string
@@ -67,6 +74,7 @@ export interface HookInput {
   toolOutput?: string
   toolSuccess?: boolean
   prompt?: string
+  /** Target project context exposed via env vars, not the subprocess execution directory. */
   cwd?: string
   model?: string
 }
@@ -81,6 +89,15 @@ export interface HookResult {
 }
 
 export type HookConfig = Record<HookEvent, HookDefinition[]>
+
+export interface HookStatusSummary {
+  totalHooks: number
+  eventCount: number
+}
+
+export interface HookManagerOptions {
+  trustProjectHooks?: boolean
+}
 
 // ── Tool Name Mapping (Claude Code ↔ Orca) ─────────────────────
 
@@ -110,8 +127,13 @@ function claudeToolName(orcaName: string): string {
 // ── Hook Manager ─────────────────────────────────────────────────
 
 export class HookManager {
-  private hooks: Partial<HookConfig> = {}
+  private hooks: Partial<Record<HookEvent, LoadedHookDefinition[]>> = {}
   private loaded = false
+  private readonly trustProjectHooks: boolean
+
+  constructor(options: HookManagerOptions = {}) {
+    this.trustProjectHooks = options.trustProjectHooks === true || process.env.ORCA_TRUST_PROJECT_HOOKS === '1'
+  }
 
   /**
    * Load hooks from all config sources (native + Claude Code + Codex).
@@ -123,22 +145,27 @@ export class HookManager {
 
     const home = process.env.HOME || '/tmp'
 
-    // 1. Native Orca format
-    this.loadNativeHooks([
-      join(cwd, '.orca', 'hooks.json'),
-      join(cwd, '.orca.json'),
-      join(cwd, '.claude', 'hooks.json'),
-    ])
+    // Relative hook commands resolve from the directory that defines them.
+    // That keeps project/global hooks isolated and makes file-location semantics explicit.
 
-    // 2. Claude Code format (.claude/settings.json — project then global)
-    this.loadClaudeCodeHooks([
-      join(cwd, '.claude', 'settings.json'),
-      join(home, '.claude', 'settings.json'),
-    ])
+    if (this.trustProjectHooks) {
+      this.loadNativeHooks([
+        join(cwd, '.orca', 'hooks.json'),
+        join(cwd, '.orca.json'),
+        join(cwd, '.claude', 'hooks.json'),
+      ])
+      this.loadClaudeCodeHooks([
+        join(cwd, '.claude', 'settings.json'),
+      ])
+    }
 
-    // 3. Codex format (.codex/hooks.json)
     this.loadNativeHooks([
+      join(home, '.orca', 'hooks.json'),
       join(home, '.codex', 'hooks.json'),
+    ])
+
+    this.loadClaudeCodeHooks([
+      join(home, '.claude', 'settings.json'),
     ])
   }
 
@@ -149,10 +176,11 @@ export class HookManager {
       try {
         const raw = JSON.parse(readFileSync(configPath, 'utf-8'))
         const hookConfig = raw.hooks || raw
+        const resolvedBaseDir = dirname(configPath)
         if (typeof hookConfig === 'object' && !Array.isArray(hookConfig)) {
           for (const [event, defs] of Object.entries(hookConfig)) {
             if (isHookEvent(event) && Array.isArray(defs)) {
-              this.addHooks(event, defs as HookDefinition[])
+              this.addHooks(event, defs as HookDefinition[], resolvedBaseDir)
             }
           }
         }
@@ -175,6 +203,7 @@ export class HookManager {
       try {
         const raw = JSON.parse(readFileSync(settingsPath, 'utf-8'))
         const hookConfig = raw.hooks
+        const resolvedBaseDir = dirname(settingsPath)
         if (!hookConfig || typeof hookConfig !== 'object') continue
 
         for (const [event, entries] of Object.entries(hookConfig)) {
@@ -202,7 +231,7 @@ export class HookManager {
                 timeout: ih.timeout ? Math.ceil(Number(ih.timeout) / 1000) : undefined,
                 async: ih.async === true ? true : undefined,
               }
-              this.addHooks(forgeEvent, [def])
+              this.addHooks(forgeEvent, [def], resolvedBaseDir)
             }
           }
         }
@@ -210,11 +239,11 @@ export class HookManager {
     }
   }
 
-  private addHooks(event: HookEvent, defs: HookDefinition[]): void {
+  private addHooks(event: HookEvent, defs: HookDefinition[], baseDir: string): void {
     if (!this.hooks[event]) {
       this.hooks[event] = []
     }
-    this.hooks[event]!.push(...defs)
+    this.hooks[event]!.push(...defs.map((def) => ({ ...def, baseDir })))
   }
 
   hasHooks(event: HookEvent): boolean {
@@ -283,12 +312,19 @@ export class HookManager {
     return aggregated
   }
 
-  printStatus(): void {
-    const total = this.totalHooks
-    if (total === 0) return
+  getStatusSummary(): HookStatusSummary | null {
+    const totalHooks = this.totalHooks
+    if (totalHooks === 0) return null
 
-    const events = Object.entries(this.hooks).filter(([, defs]) => defs && defs.length > 0).length
-    console.log(`\x1b[90m  hooks: ${total} across ${events} events\x1b[0m`)
+    const eventCount = Object.entries(this.hooks).filter(([, defs]) => defs && defs.length > 0).length
+    return { totalHooks, eventCount }
+  }
+
+  printStatus(): void {
+    const summary = this.getStatusSummary()
+    if (!summary) return
+
+    console.log(`\x1b[90m  hooks: ${summary.totalHooks} across ${summary.eventCount} events\x1b[0m`)
   }
 }
 
@@ -333,7 +369,11 @@ function convertMatcher(ccMatcher: string): string {
 
 /** Build environment variables compatible with both Claude Code and Orca */
 function buildHookEnv(input: HookInput): Record<string, string> {
-  const env: Record<string, string> = { ...process.env as Record<string, string> }
+  const env: Record<string, string> = {}
+  for (const key of ['PATH', 'HOME', 'SHELL', 'LANG', 'LC_ALL', 'TMPDIR']) {
+    const value = process.env[key]
+    if (value) env[key] = value
+  }
 
   // Orca native env vars
   env.ORCA_HOOK_EVENT = input.event
@@ -368,13 +408,16 @@ function buildHookEnv(input: HookInput): Record<string, string> {
   return env
 }
 
-function executeHook(def: HookDefinition, input: HookInput): HookResult {
+function executeHook(def: LoadedHookDefinition, input: HookInput): HookResult {
   const timeout = (def.timeout || 10) * 1000
   const inputJson = JSON.stringify(input)
+  const cwd = def.baseDir
   const env = buildHookEnv(input)
+  env.PWD = cwd
 
   try {
     const output = execSync(def.command, {
+      cwd,
       input: inputJson,
       encoding: 'utf-8',
       timeout,
@@ -409,9 +452,12 @@ function executeHook(def: HookDefinition, input: HookInput): HookResult {
 }
 
 /** Fire-and-forget hook execution (for async: true hooks) */
-function executeHookAsync(def: HookDefinition, input: HookInput): void {
+function executeHookAsync(def: LoadedHookDefinition, input: HookInput): void {
+  const cwd = def.baseDir
   const env = buildHookEnv(input)
+  env.PWD = cwd
   const proc = spawnChild('bash', ['-c', def.command], {
+    cwd,
     env,
     stdio: 'ignore',
     detached: true,
