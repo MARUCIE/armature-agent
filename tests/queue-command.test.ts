@@ -120,6 +120,90 @@ describe('queue command', () => {
     expect(output).toContain('test-log: outputs/test/queue.log')
   })
 
+  it('takes over a running task-run with an operator lease', async () => {
+    vi.resetModules()
+    const {
+      createTaskRun,
+      createWorkSession,
+      getTaskRunById,
+    } = await import('../src/work-session-store.js')
+    const { createQueueCommand } = await import('../src/commands/queue.js')
+
+    const session = createWorkSession({
+      sourceSurface: 'run',
+      cwd: '/tmp/project',
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    const taskRun = createTaskRun({
+      workSessionId: session.id,
+      kind: 'run',
+      title: 'Takeover task',
+      surface: 'cli',
+      cwd: '/tmp/project',
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+
+    const logs: string[] = []
+    vi.spyOn(console, 'log').mockImplementation((...args) => { logs.push(args.join(' ')) })
+
+    const command = createQueueCommand()
+    await command.parseAsync(['node', 'queue', 'takeover', taskRun.id, '--holder', 'operator-a', '--ttl', '30s'])
+
+    const output = logs.join('\n')
+    expect(output).toContain(`TaskRun ${taskRun.id} takeover lease acquired`)
+    expect(output).toContain('takeover: new')
+    expect(output).toContain('holder=operator-a')
+
+    const persisted = getTaskRunById(taskRun.id)
+    expect(persisted?.taskRun.lease?.holder).toBe('operator-a')
+  })
+
+  it('refuses an active takeover lease without force', async () => {
+    vi.resetModules()
+    const {
+      claimTaskRunLease,
+      createTaskRun,
+      createWorkSession,
+    } = await import('../src/work-session-store.js')
+    const { createQueueCommand } = await import('../src/commands/queue.js')
+
+    const session = createWorkSession({
+      sourceSurface: 'run',
+      cwd: '/tmp/project',
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    const taskRun = createTaskRun({
+      workSessionId: session.id,
+      kind: 'run',
+      title: 'Already leased task',
+      surface: 'cli',
+      cwd: '/tmp/project',
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    claimTaskRunLease(taskRun.id, {
+      holder: 'operator-a',
+      ttlMs: 60_000,
+    })
+
+    const errors: string[] = []
+    vi.spyOn(console, 'error').mockImplementation((...args) => { errors.push(args.join(' ')) })
+    vi.spyOn(process, 'exit').mockImplementation(((code?: string | number | null) => {
+      throw new Error(`exit:${code}`)
+    }) as never)
+
+    const command = createQueueCommand()
+    await expect(command.parseAsync(['node', 'queue', 'takeover', taskRun.id, '--holder', 'operator-b'])).rejects.toThrow('exit:1')
+
+    const output = errors.join('\n')
+    expect(output).toContain('already has an active lease')
+    expect(output).toContain('holder=operator-a')
+    expect(output).toContain('--force')
+  })
+
   it('follows a task-run evidence snapshot once', async () => {
     vi.resetModules()
     const {

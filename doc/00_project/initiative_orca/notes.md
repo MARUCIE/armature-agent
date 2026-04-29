@@ -1,5 +1,25 @@
 # Notes
 
+## 2026-04-29 - Queue takeover PDCA continuation
+
+Context:
+
+- User said `继续` after the `queue follow` tranche, so execution continued with ORCA-SWARM-007.
+- The current boundary is lease metadata and operator ownership. It is not a scheduler, process migration, or resume engine.
+
+PDCA executed:
+
+- Plan: add a minimal TaskRun lease model with bounded TTL, active-lease refusal, expired-lease replacement, and explicit `--force`.
+- Do: add `TaskRunLease`, `claimTaskRunLease()`, and `orca queue takeover <task-run-id> --holder <name> --ttl <duration>`.
+- Do: show lease metadata in `queue list` and `queue show` so the operator can see who currently owns a TaskRun.
+- Check:
+  - `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `9` tests passed.
+  - `npm run build` -> pass.
+  - Full `npm test` -> `86` files / `1598` tests passed.
+  - `node dist/bin/orca.js --version` -> `0.8.3`.
+  - `node dist/bin/orca.js queue takeover <fixture-task-run> --holder smoke --ttl 30s` -> acquired the fixture lease.
+- Act: next queue item is ORCA-SWARM-008, converting `serve /chat` into a canonical run endpoint.
+
 ## 2026-04-29 - Queue follow PDCA continuation
 
 Context:

@@ -25,6 +25,15 @@ export interface TaskRunEvidence {
   path: string
 }
 
+export interface TaskRunLease {
+  id: string
+  holder: string
+  acquiredAt: string
+  expiresAt: string
+  previousHolder?: string
+  forced?: boolean
+}
+
 export interface WorkSession {
   id: string
   sourceSurface: WorkSessionSurface
@@ -62,6 +71,7 @@ export interface TaskRun {
   usage?: TaskRunUsageSummary
   evidence: TaskRunEvidence[]
   backgroundJobId?: string
+  lease?: TaskRunLease
 }
 
 interface WorkSessionFile {
@@ -116,6 +126,8 @@ export interface TaskRunSummary {
   startedAt: string
   completedAt?: string
   updatedAt: string
+  leaseHolder?: string
+  leaseExpiresAt?: string
 }
 
 export interface TaskRunDetail {
@@ -123,6 +135,22 @@ export interface TaskRunDetail {
   updatedAt: string
   taskRun: TaskRun
 }
+
+export type TaskRunLeaseClaimResult =
+  | {
+    ok: true
+    taskRun: TaskRun
+    lease: TaskRunLease
+    takeover: 'new' | 'expired' | 'forced'
+  }
+  | {
+    ok: false
+    reason: 'not_found' | 'terminal' | 'active_lease'
+    taskRun?: TaskRun
+    lease?: TaskRunLease
+  }
+
+const TERMINAL_TASK_RUN_STATUSES = new Set<TaskRunStatus>(['completed', 'failed', 'aborted'])
 
 export function getWorkSessionsRootDir(): string {
   return join(getOrcaHome(), 'work-sessions')
@@ -364,6 +392,8 @@ export function listTaskRunSummaries(workSessionId?: string): TaskRunSummary[] {
     startedAt: file.taskRun.startedAt,
     completedAt: file.taskRun.completedAt,
     updatedAt: file.taskRun.updatedAt,
+    leaseHolder: file.taskRun.lease?.holder,
+    leaseExpiresAt: file.taskRun.lease?.expiresAt,
   }))
 }
 
@@ -391,6 +421,61 @@ export function updateTaskRun(
   next.updatedAt = new Date().toISOString()
   writeJsonFile(buildTaskRunPath(id), next)
   return next
+}
+
+export function isTerminalTaskRunStatus(status: TaskRunStatus): boolean {
+  return TERMINAL_TASK_RUN_STATUSES.has(status)
+}
+
+export function claimTaskRunLease(
+  id: string,
+  input: {
+    holder: string
+    ttlMs: number
+    force?: boolean
+    now?: Date
+  },
+): TaskRunLeaseClaimResult {
+  const current = getTaskRunById(id)
+  if (!current) return { ok: false, reason: 'not_found' }
+
+  if (isTerminalTaskRunStatus(current.taskRun.status)) {
+    return { ok: false, reason: 'terminal', taskRun: current.taskRun, lease: current.taskRun.lease }
+  }
+
+  const now = input.now || new Date()
+  const nowMs = now.getTime()
+  const existingLease = current.taskRun.lease
+  const existingExpiresAtMs = existingLease ? Date.parse(existingLease.expiresAt) : Number.NaN
+  const existingLeaseActive = existingLease && Number.isFinite(existingExpiresAtMs) && existingExpiresAtMs > nowMs
+
+  if (existingLeaseActive && !input.force) {
+    return { ok: false, reason: 'active_lease', taskRun: current.taskRun, lease: existingLease }
+  }
+
+  const ttlMs = Math.max(1000, Math.floor(input.ttlMs))
+  const holder = input.holder.trim() || 'operator'
+  const takeover: 'new' | 'expired' | 'forced' = existingLeaseActive
+    ? 'forced'
+    : existingLease
+      ? 'expired'
+      : 'new'
+  const lease: TaskRunLease = {
+    id: `lease-${randomUUID().slice(0, 8)}`,
+    holder,
+    acquiredAt: now.toISOString(),
+    expiresAt: new Date(nowMs + ttlMs).toISOString(),
+    previousHolder: existingLease?.holder,
+    forced: takeover === 'forced' || undefined,
+  }
+
+  const taskRun = updateTaskRun(id, (taskRun) => ({
+    ...taskRun,
+    lease,
+  }))
+
+  if (!taskRun) return { ok: false, reason: 'not_found' }
+  return { ok: true, taskRun, lease, takeover }
 }
 
 export function finishTaskRun(

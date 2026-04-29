@@ -9,13 +9,12 @@
   - hook env allowlist
   - `fetch_url` / `web_search` approval gating
   - private/loopback `fetch_url` guard
-  - `orca queue list/show/follow`
+  - `orca queue list/show/follow/takeover`
 - Check evidence:
   - `npm run lint`
   - `npm run build`
-  - `npm test` -> `86` files / `1595` tests
+  - `npm test` -> `86` files / `1598` tests
 - Act queue:
-  - `queue takeover`
   - unified execution contract
   - evidence console
   - CI gate integrity

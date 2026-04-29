@@ -14,8 +14,10 @@ import { isAbsolute, resolve } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { getBackgroundJobById } from '../background-jobs.js'
 import {
+  claimTaskRunLease,
   getTaskRunDetailById,
   listTaskRunSummaries,
+  type TaskRunLease,
   type TaskRun,
   type TaskRunEvidence,
   type TaskRunStatus,
@@ -37,6 +39,12 @@ interface QueueFollowOptions {
   once?: boolean
 }
 
+interface QueueTakeoverOptions {
+  force?: boolean
+  holder?: string
+  ttl?: string
+}
+
 function parseLimit(value: string | undefined): number {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return 20
@@ -55,19 +63,58 @@ function parseLineCount(value: string | undefined): number {
   return Math.min(500, Math.max(1, Math.floor(parsed)))
 }
 
+function parseDurationMs(value: string | undefined): number {
+  const raw = (value || '15m').trim().toLowerCase()
+  const match = raw.match(/^(\d+(?:\.\d+)?)(ms|s|m|h)?$/)
+  if (!match) return 15 * 60_000
+  const amount = Number(match[1])
+  if (!Number.isFinite(amount) || amount <= 0) return 15 * 60_000
+  const unit = match[2] || 's'
+  const multiplier = unit === 'ms'
+    ? 1
+    : unit === 's'
+      ? 1000
+      : unit === 'm'
+        ? 60_000
+        : 60 * 60_000
+  return Math.min(24 * 60 * 60_000, Math.max(1000, Math.floor(amount * multiplier)))
+}
+
+function resolveLeaseHolder(value: string | undefined): string {
+  return value?.trim() || process.env.ORCA_OPERATOR || process.env.USER || process.env.LOGNAME || 'operator'
+}
+
+function formatDateTime(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
+function formatLeaseSummary(summary: TaskRunSummary): string {
+  if (!summary.leaseHolder || !summary.leaseExpiresAt) return '-'
+  return `${summary.leaseHolder}@${formatDateTime(summary.leaseExpiresAt)}`.slice(0, 28)
+}
+
+function formatLeaseDetail(lease: TaskRunLease): string {
+  const forced = lease.forced ? ' forced' : ''
+  const previous = lease.previousHolder ? ` previous=${lease.previousHolder}` : ''
+  return `${lease.id} holder=${lease.holder} expires=${lease.expiresAt}${forced}${previous}`
+}
+
 function formatTaskRunRow(summary: TaskRunSummary): string {
   const status = summary.status.padEnd(9)
   const id = summary.id.padEnd(14)
   const kind = summary.kind.padEnd(11)
   const surface = summary.surface.padEnd(7)
   const model = (summary.model || '?').slice(0, 20).padEnd(20)
-  const updated = new Date(summary.updatedAt).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-  return `  ${status} ${id} ${kind} ${surface} ${model} ${updated}  ${summary.title}`
+  const updated = formatDateTime(summary.updatedAt)
+  const lease = formatLeaseSummary(summary).padEnd(28)
+  return `  ${status} ${id} ${kind} ${surface} ${model} ${updated}  ${lease}  ${summary.title}`
 }
 
 function filterTaskRuns(
@@ -97,8 +144,8 @@ function renderTaskRunList(options: QueueListOptions): void {
     return
   }
 
-  console.log(`  ${'Status'.padEnd(9)} ${'ID'.padEnd(14)} ${'Kind'.padEnd(11)} ${'Surface'.padEnd(7)} ${'Model'.padEnd(20)} Updated       Title`)
-  console.log(`  ${'-'.repeat(9)} ${'-'.repeat(14)} ${'-'.repeat(11)} ${'-'.repeat(7)} ${'-'.repeat(20)} ${'-'.repeat(12)}  ${'-'.repeat(20)}`)
+  console.log(`  ${'Status'.padEnd(9)} ${'ID'.padEnd(14)} ${'Kind'.padEnd(11)} ${'Surface'.padEnd(7)} ${'Model'.padEnd(20)} Updated       ${'Lease'.padEnd(28)}  Title`)
+  console.log(`  ${'-'.repeat(9)} ${'-'.repeat(14)} ${'-'.repeat(11)} ${'-'.repeat(7)} ${'-'.repeat(20)} ${'-'.repeat(12)}  ${'-'.repeat(28)}  ${'-'.repeat(20)}`)
   for (const summary of summaries) {
     console.log(formatTaskRunRow(summary))
   }
@@ -127,6 +174,7 @@ function renderTaskRunDetail(id: string): void {
   console.log(`  started: ${taskRun.startedAt}`)
   if (taskRun.completedAt) console.log(`  completed: ${taskRun.completedAt}`)
   if (taskRun.summary) console.log(`  summary: ${taskRun.summary}`)
+  if (taskRun.lease) console.log(`  lease: ${formatLeaseDetail(taskRun.lease)}`)
   if (taskRun.usage) {
     console.log(`  usage: ${taskRun.usage.inputTokens} in / ${taskRun.usage.outputTokens} out / $${taskRun.usage.costUsd.toFixed(6)}`)
   }
@@ -136,6 +184,35 @@ function renderTaskRunDetail(id: string): void {
       console.log(`    - ${item.label}: ${item.path}`)
     }
   }
+  console.log()
+}
+
+function renderTaskRunTakeover(id: string, options: QueueTakeoverOptions): void {
+  const holder = resolveLeaseHolder(options.holder)
+  const result = claimTaskRunLease(id, {
+    holder,
+    ttlMs: parseDurationMs(options.ttl),
+    force: options.force,
+  })
+
+  if (!result.ok) {
+    if (result.reason === 'not_found') {
+      console.error(`\x1b[31m  error: task run "${id}" not found\x1b[0m`)
+    } else if (result.reason === 'terminal') {
+      console.error(`\x1b[31m  error: task run "${id}" is terminal (${result.taskRun?.status})\x1b[0m`)
+    } else {
+      console.error(`\x1b[31m  error: task run "${id}" already has an active lease\x1b[0m`)
+      if (result.lease) console.error(`  ${formatLeaseDetail(result.lease)}`)
+      console.error('  rerun with --force to replace it')
+    }
+    process.exit(1)
+  }
+
+  console.log()
+  console.log(`  \x1b[1mTaskRun ${result.taskRun.id} takeover lease acquired\x1b[0m`)
+  console.log(`  takeover: ${result.takeover}`)
+  console.log(`  status: ${result.taskRun.status}`)
+  console.log(`  lease: ${formatLeaseDetail(result.lease)}`)
   console.log()
 }
 
@@ -307,6 +384,14 @@ export function createQueueCommand(): Command {
     .argument('<id>', 'TaskRun ID')
     .description('Show task-run detail')
     .action(renderTaskRunDetail)
+
+  cmd.command('takeover')
+    .argument('<id>', 'TaskRun ID')
+    .description('Acquire an operator lease for a non-terminal TaskRun')
+    .option('--holder <name>', 'Operator identity for the lease')
+    .option('--ttl <duration>', 'Lease duration: 30s, 15m, 1h, or bare seconds', '15m')
+    .option('--force', 'Replace an active unexpired lease')
+    .action(renderTaskRunTakeover)
 
   cmd.command('follow')
     .argument('<id>', 'TaskRun ID')

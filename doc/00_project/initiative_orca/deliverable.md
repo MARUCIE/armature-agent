@@ -1,5 +1,56 @@
 # Deliverable
 
+## 2026-04-29 - Queue Takeover PDCA Tranche
+
+### Scope
+
+Complete ORCA-SWARM-007 by making non-terminal TaskRun records leaseable from the CLI. This is an operator-control marker, not a scheduler or process-resume implementation.
+
+### Delivered
+
+- `orca queue takeover <task-run-id>`
+- `--holder <name>` for explicit operator identity
+- `--ttl <duration>` with `ms` / `s` / `m` / `h` parsing and a bounded max
+- `--force` for intentional replacement of an active lease
+- Store-level lease behavior:
+  - reject terminal TaskRuns
+  - reject active unexpired leases unless forced
+  - replace expired leases automatically
+  - preserve previous holder metadata on replacement
+- `queue list` and `queue show` now surface lease holder / expiry metadata
+- Version bumped to `0.8.3`
+
+### Changed Files
+
+- `src/work-session-store.ts`
+- `src/commands/queue.ts`
+- `tests/work-session-store.test.ts`
+- `tests/queue-command.test.ts`
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `doc/00_project/initiative_orca/*`
+
+### Simplifications Made
+
+- Lease state stays on the existing TaskRun JSON record; no new daemon, scheduler table, or lock directory.
+- `takeover` is explicit about claiming an operator lease and does not pretend to resume or migrate a running process.
+
+### Verification
+
+- `npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts` -> `9/9`
+- `npm run build`
+- `npm test` -> `1598/1598` across `86` files
+- `node dist/bin/orca.js --version` -> `0.8.3`
+- `node dist/bin/orca.js queue takeover <fixture-task-run> --holder smoke --ttl 30s` -> acquired the fixture lease
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| `queue takeover` is a lease marker, not real execution resume | Runtime/architecture | Execute ORCA-SWARM-008 unified execution contract before scheduler semantics |
+| Lease conflict handling is local-file based only | Runtime | Revisit atomic write / lock semantics before using it as a multi-process scheduler |
+
 ## 2026-04-29 - Queue Follow PDCA Tranche
 
 ### Scope
@@ -50,7 +101,7 @@ Continue the SOTA swarm atomic queue by completing ORCA-SWARM-006: make TaskRun 
 
 | Risk | Owner | Follow-up |
 | --- | --- | --- |
-| `queue follow` is still read-only and cannot claim or resume work | Runtime/architecture | Execute ORCA-SWARM-007 `queue takeover` lease model |
+| `queue follow` was read-only and could not claim work | Runtime/architecture | Closed by ORCA-SWARM-007 `queue takeover`; real resume remains ORCA-SWARM-008+ |
 | Evidence paths are tailed from local files only | Runtime/UX | Attach richer structured evidence bundles before TUI evidence drawer |
 
 ## 2026-04-29 - SOTA Swarm Audit and PDCA Tranche 1

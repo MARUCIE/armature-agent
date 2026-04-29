@@ -7,8 +7,8 @@ New product requirements from the SOTA swarm audit:
 - Repo-local hooks must not load or execute on startup unless project trust is explicit.
 - Network-capable tools (`fetch_url`, `web_search`) must pass through approval policy in `auto` mode.
 - `fetch_url` must reject non-HTTP(S), loopback, private, and link-local literal targets by default.
-- Operators need a top-level queue inspection surface for current `TaskRun` records: `orca queue list/show/follow`.
-- Next tranche must expand queue inspection into `takeover`, evidence bundles, and a unified execution contract across `run`, `serve`, mission, and planner surfaces.
+- Operators need a top-level queue inspection surface for current `TaskRun` records: `orca queue list/show/follow/takeover`.
+- Next tranche must expand queue inspection into richer evidence bundles and a unified execution contract across `run`, `serve`, mission, and planner surfaces.
 
 ## Product Snapshot
 
@@ -101,6 +101,7 @@ Single-vendor coding CLIs force users into one model family per session. Orca CL
   - default `orca run` creates a durable `WorkSession`
   - the same execution creates a persisted `TaskRun`
   - `serve` can inspect both through read-only continuity endpoints
+  - `orca queue takeover` can claim a TTL operator lease on non-terminal `TaskRun` records
 - CLI output rendering and markdown streaming
 - Slash-command autocomplete that yields to full command submission once the user starts typing arguments
 - Theme preference persistence that suppresses first-launch onboarding once `ORCA_THEME` or `~/.orca/theme` is already set

@@ -120,4 +120,68 @@ describe('work-session store', () => {
       workSessionId: session.id,
     })
   })
+
+  it('claims and replaces task-run leases by TTL and force', async () => {
+    const {
+      claimTaskRunLease,
+      createTaskRun,
+      createWorkSession,
+    } = await import('../src/work-session-store.js')
+
+    const session = createWorkSession({
+      sourceSurface: 'run',
+      cwd: '/tmp/project-c',
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+    const taskRun = createTaskRun({
+      workSessionId: session.id,
+      kind: 'run',
+      title: 'Leaseable task',
+      surface: 'cli',
+      cwd: '/tmp/project-c',
+      provider: 'openai',
+      model: 'gpt-5.4',
+    })
+
+    const now = new Date('2026-04-29T00:00:00.000Z')
+    const first = claimTaskRunLease(taskRun.id, {
+      holder: 'operator-a',
+      ttlMs: 60_000,
+      now,
+    })
+    expect(first.ok).toBe(true)
+    if (!first.ok) throw new Error('expected lease claim to succeed')
+    expect(first.takeover).toBe('new')
+    expect(first.lease.holder).toBe('operator-a')
+
+    const blocked = claimTaskRunLease(taskRun.id, {
+      holder: 'operator-b',
+      ttlMs: 60_000,
+      now: new Date('2026-04-29T00:00:30.000Z'),
+    })
+    expect(blocked).toMatchObject({ ok: false, reason: 'active_lease' })
+
+    const expired = claimTaskRunLease(taskRun.id, {
+      holder: 'operator-b',
+      ttlMs: 60_000,
+      now: new Date('2026-04-29T00:01:01.000Z'),
+    })
+    expect(expired.ok).toBe(true)
+    if (!expired.ok) throw new Error('expected expired lease replacement to succeed')
+    expect(expired.takeover).toBe('expired')
+    expect(expired.lease.previousHolder).toBe('operator-a')
+
+    const forced = claimTaskRunLease(taskRun.id, {
+      holder: 'operator-c',
+      ttlMs: 60_000,
+      force: true,
+      now: new Date('2026-04-29T00:01:30.000Z'),
+    })
+    expect(forced.ok).toBe(true)
+    if (!forced.ok) throw new Error('expected forced lease replacement to succeed')
+    expect(forced.takeover).toBe('forced')
+    expect(forced.lease.forced).toBe(true)
+    expect(forced.lease.previousHolder).toBe('operator-b')
+  })
 })

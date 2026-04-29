@@ -8,16 +8,17 @@ The SOTA swarm audit adds two immediate architectural constraints:
    - home/global hooks remain startup-safe
    - repo-local `.orca` / `.claude` hooks require explicit project trust
    - hook subprocess env is allowlisted instead of inheriting the full parent process
-2. `TaskRun` is now visible through a first-class CLI queue surface:
+2. `TaskRun` is now visible and leaseable through a first-class CLI queue surface:
    - `orca queue`
    - `orca queue list --status <status> --work-session <id> --limit <n>`
    - `orca queue show <task-run-id>`
    - `orca queue follow <task-run-id>`
+   - `orca queue takeover <task-run-id> --holder <name> --ttl <duration>`
 
 Open architecture work:
 
 - Promote `WorkSession` / `TaskRun` into the canonical execution contract for `chat`, `run`, `serve`, mission, and planner surfaces.
-- Add queue takeover semantics and lease state after the follow surface is stable.
+- Promote queue lease semantics from CLI metadata into future scheduler / resume control after the execution contract is unified.
 - Attach evidence bundles to TaskRun so TUI and CLI review surfaces read from one source.
 
 <!-- AI-FLEET:PROJECT_DIR:START -->

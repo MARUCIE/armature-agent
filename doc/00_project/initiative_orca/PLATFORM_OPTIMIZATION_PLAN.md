@@ -10,8 +10,8 @@ The next platform wave is now explicitly ordered:
    - approval-gated network tools
    - private/loopback `fetch_url` guard
 2. Queue visibility:
-   - ship `orca queue list/show/follow`
-   - then add `takeover` and lease state
+   - ship `orca queue list/show/follow/takeover`
+   - keep lease state as the handoff point for future scheduler / resume semantics
 3. Unified execution contract:
    - make `WorkSession` / `TaskRun` the shared record for `run`, `serve`, mission, planner, and future background agents
 4. Evidence console:

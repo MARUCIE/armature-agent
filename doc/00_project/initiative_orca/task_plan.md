@@ -11,7 +11,7 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 | Milestone | Goal | Status | Exit Criteria |
 | --- | --- | --- | --- |
 | M0 Trust hardening | Close repo-local hook and network-tool trust gaps | Done | Explicit project hook trust, network tools approval-gated, targeted tests green |
-| M1 Queue visibility | Expose current TaskRun state to operators | Done | `orca queue list/show/follow` shipped with tests |
+| M1 Queue visibility | Expose current TaskRun state to operators | Done | `orca queue list/show/follow/takeover` shipped with tests |
 | M2 Unified execution contract | Align `chat`, `run`, `serve`, mission, and planner on one run object | Pending | Every execution surface writes canonical run records |
 | M3 Evidence console | Make review-before-apply inspectable | Pending | Diffs, logs, approvals, and artifacts visible by TaskRun |
 | M4 Gate integrity | Make CI enforce documented gates | Pending | Matrix/security/performance/eval checks run in CI |
@@ -27,7 +27,7 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 | ORCA-SWARM-004 | P0 | Block loopback/private/link-local `fetch_url` targets | Done |
 | ORCA-SWARM-005 | P1 | Add `orca queue list/show` over TaskRun records | Done |
 | ORCA-SWARM-006 | P1 | Add `queue follow` for live logs and evidence | Done |
-| ORCA-SWARM-007 | P1 | Add `queue takeover` lease model | Pending |
+| ORCA-SWARM-007 | P1 | Add `queue takeover` lease model | Done |
 | ORCA-SWARM-008 | P1 | Convert `serve /chat` into a canonical run endpoint | Pending |
 | ORCA-SWARM-009 | P1 | Add TaskRun evidence drawer in TUI | Pending |
 | ORCA-SWARM-010 | P1 | Centralize slash-command registry | Pending |
@@ -41,7 +41,10 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 - Combined targeted pack -> `190` tests passed.
 - `npm run lint` -> pass.
 - `npm run build` -> pass.
-- Final `npm test` -> `1595` tests passed across `86` files.
+- `queue takeover` targeted regression -> `9` tests passed across `2` files.
+- Final `npm test` -> `1598` tests passed across `86` files.
+- `node dist/bin/orca.js --version` -> `0.8.3`.
+- `node dist/bin/orca.js queue takeover <fixture-task-run> --holder smoke --ttl 30s` -> acquired a TaskRun lease.
 
 ### Report
 

@@ -277,5 +277,5 @@
 <ul>
 <li>image attachments are only promoted on the proxy-provider path; SDK/native path remains text-only</li>
 </ul>
-<section><h2>2026-04-29 架构增量：信任边界与队列</h2><p>Hook 加载按信任边界拆分：home/global hooks 仍可安全启动，repo-local <code>.orca</code> / <code>.claude</code> hooks 需要显式项目信任；hook 子进程环境改为 allowlist。<code>TaskRun</code> 现在通过 <code>orca queue list/show/follow</code> 成为一等只读检查与证据跟随入口。后续架构任务是把 <code>WorkSession</code> / <code>TaskRun</code> 提升为 <code>chat</code>、<code>run</code>、<code>serve</code>、mission、planner 共用执行契约，并补上 takeover lease。</p></section>
+<section><h2>2026-04-29 架构增量：信任边界与队列</h2><p>Hook 加载按信任边界拆分：home/global hooks 仍可安全启动，repo-local <code>.orca</code> / <code>.claude</code> hooks 需要显式项目信任；hook 子进程环境改为 allowlist。<code>TaskRun</code> 现在通过 <code>orca queue list/show/follow/takeover</code> 成为一等检查、证据跟随与操作员 lease 入口。后续架构任务是把 <code>WorkSession</code> / <code>TaskRun</code> 提升为 <code>chat</code>、<code>run</code>、<code>serve</code>、mission、planner 共用执行契约，再把 lease 接入真实 scheduler / resume 语义。</p></section>
 </article></main></body></html>
