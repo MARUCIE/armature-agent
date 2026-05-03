@@ -3,7 +3,9 @@ import { tmpdir } from 'node:os'
 import { rmSync, writeFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
+  buildLocalFileEnforcementNotice,
   buildPostModelSaveRepairPlan,
+  buildPostModelRequiredFileWritePlan,
   buildPreModelLocalFilePlan,
   extractLocalFilePaths,
 } from '../src/commands/local-file-intent.js'
@@ -144,5 +146,89 @@ describe('local file intent guard', () => {
     })
 
     expect(plan).toBeNull()
+  })
+
+  it('writes generated markdown content when the prompt names a target file but the model only returns the artifact', () => {
+    const path = tempPath('generated-artifact.md')
+    rmSync(path, { force: true })
+
+    const plan = buildPostModelRequiredFileWritePlan({
+      prompt: `生成一个 md 文件并保存到 \`${path}\``,
+      responseText: '# Generated\n\n- Body\n',
+      history: [{ role: 'system', content: 'system' }],
+      cwd: process.cwd(),
+      executedToolNames: [],
+    })
+
+    expect(plan?.reason).toBe('write-generated-artifact')
+    expect(plan?.toolCalls).toEqual([
+      {
+        name: 'write_file',
+        args: {
+          path,
+          content: '# Generated\n\n- Body\n',
+        },
+      },
+    ])
+  })
+
+  it('opens the generated local file when the prompt asks for save and open', () => {
+    const path = tempPath('generated-open.md')
+    rmSync(path, { force: true })
+
+    const plan = buildPostModelRequiredFileWritePlan({
+      prompt: `生成一个 md 文件，保存并打开 \`${path}\``,
+      responseText: '# Generated\n\n- Body\n',
+      history: [{ role: 'system', content: 'system' }],
+      cwd: process.cwd(),
+      executedToolNames: [],
+    })
+
+    expect(plan?.toolCalls.map((call) => call.name)).toEqual(['write_file', 'open_file'])
+    expect(plan?.summary).toContain('opened it')
+  })
+
+  it('reports an incomplete local file request instead of accepting a refusal as completion', () => {
+    const path = tempPath('required-refusal.md')
+    const plan = buildPostModelRequiredFileWritePlan({
+      prompt: `请生成并保存到 \`${path}\``,
+      responseText: `无法在你的本地创建文件。你可以复制内容自己保存。`,
+      history: [{ role: 'system', content: 'system' }],
+      cwd: process.cwd(),
+      executedToolNames: [],
+    })
+
+    const notice = buildLocalFileEnforcementNotice({
+      prompt: `请生成并保存到 \`${path}\``,
+      history: [{ role: 'system', content: 'system' }],
+      cwd: process.cwd(),
+      executedToolNames: [],
+    })
+
+    expect(plan).toBeNull()
+    expect(notice).toContain('Local file enforcement')
+    expect(notice).toContain('missing write_file')
+  })
+
+  it('does not report local file enforcement once the required tool ran', () => {
+    const path = tempPath('written.md')
+
+    expect(buildLocalFileEnforcementNotice({
+      prompt: `请生成并保存到 \`${path}\``,
+      history: [{ role: 'system', content: 'system' }],
+      cwd: process.cwd(),
+      executedToolNames: ['write_file'],
+    })).toBeNull()
+  })
+
+  it('treats opening a requested file as enough evidence for open-and-verify wording', () => {
+    const path = tempPath('open-verify.md')
+
+    expect(buildLocalFileEnforcementNotice({
+      prompt: `请打开验证 \`${path}\``,
+      history: [{ role: 'system', content: 'system' }],
+      cwd: process.cwd(),
+      executedToolNames: ['open_file'],
+    })).toBeNull()
   })
 })

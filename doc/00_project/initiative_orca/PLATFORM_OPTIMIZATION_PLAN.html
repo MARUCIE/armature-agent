@@ -875,4 +875,22 @@ That manifest now uses typed <code>steps[].argv</code> entries, so <code>run-tes
 <li>No manual edits in <code>dist/</code></li>
 <li>No new dependency added without explicit request</li>
 </ul>
+<h2>2026-05-03 Runtime Trust Follow-Up</h2>
+<ul>
+<li>Close the gap between model wording and runtime evidence for local file work:<ul>
+<li>explicit local save/create/generate requests now get post-model <code>write_file</code> repair when artifact content is present</li>
+<li>missing local file evidence now produces an incomplete notice</li>
+</ul>
+</li>
+<li>Close the TUI history discoverability gap:<ul>
+<li>prompt input no longer disables non-text history scroll keys</li>
+<li>text shortcuts stay scoped away from focused input</li>
+</ul>
+</li>
+<li>Verification lane:<ul>
+<li>targeted regressions in <code>tests/local-file-intent.test.ts</code>, <code>tests/chat-internals.test.ts</code>, and <code>tests/ink-ui.test.tsx</code></li>
+<li><code>npm run lint</code>, <code>npm run build</code>, and full <code>npm test</code> passed on 2026-05-03</li>
+</ul>
+</li>
+</ul>
 </article></main></body></html>

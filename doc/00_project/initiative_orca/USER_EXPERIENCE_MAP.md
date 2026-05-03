@@ -544,3 +544,12 @@ Hooks and modules:
 | CT-2 | User submits a normal prompt | Orca creates a `kind: "chat"` `TaskRun` titled from the prompt | `src/work-session-store.ts` |
 | CT-3 | Provider turn completes, fails, or aborts | Orca finishes the `TaskRun` with status, token usage, cost, duration, and runtime observation evidence | `src/commands/chat-repl-turn.ts` |
 | CT-4 | Operator inspects queue state later | The chat turn is visible through the same queue/work-session store used by `run` and `serve /chat` | `tests/work-session-store.test.ts` |
+
+## REPL History And Local Document Journey (2026-05-03)
+
+| Step | User Action | System Response | Evidence |
+| --- | --- | --- | --- |
+| HD-1 | User reads a long Orca response while the prompt input is focused | PageUp/PageDown and shifted arrow history scrolling remain available | `getHistoryScrollActivationState()` in `src/ui/components/App.tsx` |
+| HD-2 | User types ordinary text such as `g` or `G` into the prompt | Text-key scroll shortcuts remain disabled while input is focused | `ScrollBox.vimKeysActive` |
+| HD-3 | User asks Orca to generate/save a Markdown file at a local path | If the model returns generated Markdown body content, runtime writes it with `write_file` | `buildPostModelRequiredFileWritePlan()` |
+| HD-4 | Model refuses or omits required file-tool evidence | Orca emits a local-file enforcement notice and does not treat the request as completed | `buildLocalFileEnforcementNotice()` |

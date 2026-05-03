@@ -11,7 +11,13 @@ export interface LocalFileToolRequest {
 }
 
 export interface LocalFilePlan {
-  reason: 'direct-open' | 'direct-read' | 'direct-write' | 'repair-missing-claimed-file' | 'repair-false-save-claim'
+  reason:
+    | 'direct-open'
+    | 'direct-read'
+    | 'direct-write'
+    | 'repair-missing-claimed-file'
+    | 'repair-false-save-claim'
+    | 'write-generated-artifact'
   path: string
   toolCalls: LocalFileToolRequest[]
   summary: string
@@ -59,6 +65,9 @@ const MISSING_RE = /(?:没有|不存在|找不到|not found|missing|does not exi
 const FALSE_SAVE_RE = /(?:已保存|保存到|文件路径|created|saved|written|wrote)/i
 const REFERS_TO_PRIOR_RE = /(?:上面|前面|上一条|刚才|这个文件|该文件|聊天记录|对话|previous|above|that file|this file)/i
 const REFUSAL_RE = /(?:无法在你的本地|无法.*(?:创建|写入|打开)|不能.*(?:创建|写入|打开)|technical limitation|cannot.*(?:create|write|open))/i
+const WRITE_EVIDENCE_TOOLS = new Set(['write_file', 'edit_file', 'multi_edit', 'patch_file'])
+const OPEN_EVIDENCE_TOOLS = new Set(['open_file'])
+const READ_EVIDENCE_TOOLS = new Set(['file_info', 'read_file'])
 
 export function promptContentToPlainText(prompt: PromptContent): string {
   return messageContentToText(prompt).trim()
@@ -177,6 +186,72 @@ export function buildPostModelSaveRepairPlan(options: {
   }
 }
 
+export function buildPostModelRequiredFileWritePlan(options: {
+  prompt: PromptContent
+  responseText: string
+  history: ChatMessage[]
+  cwd: string
+  executedToolNames: string[]
+}): LocalFilePlan | null {
+  if (hasAnyExecutedTool(options.executedToolNames, WRITE_EVIDENCE_TOOLS)) return null
+
+  const promptText = promptContentToPlainText(options.prompt)
+  if (!SAVE_RE.test(promptText)) return null
+  if (REFUSAL_RE.test(options.responseText)) return null
+  const wantsOpen = OPEN_RE.test(promptText)
+
+  const promptPaths = extractLocalFilePaths(promptText, options.cwd)
+  const path = promptPaths[0] || findLatestPathInHistory(options.history, options.cwd)
+  if (!path) return null
+
+  const content = selectAssistantContentForFile(options.responseText)
+  if (!content) return null
+
+  return {
+    reason: 'write-generated-artifact',
+    path,
+    toolCalls: [
+      { name: 'write_file', args: { path, content } },
+      ...(wantsOpen ? [{ name: 'open_file' as const, args: { path } }] : []),
+    ],
+    summary: `Local file guard wrote the requested generated file: ${path}${wantsOpen ? ' and opened it' : ''}.`,
+  }
+}
+
+export function buildLocalFileEnforcementNotice(options: {
+  prompt: PromptContent
+  history: ChatMessage[]
+  cwd: string
+  executedToolNames: string[]
+}): string | null {
+  const promptText = promptContentToPlainText(options.prompt)
+  if (!promptText) return null
+
+  const promptPaths = extractLocalFilePaths(promptText, options.cwd)
+  const path = promptPaths[0] || findLatestPathInHistory(options.history, options.cwd)
+  if (!path) return null
+
+  const missing: string[] = []
+  if (SAVE_RE.test(promptText) && !hasAnyExecutedTool(options.executedToolNames, WRITE_EVIDENCE_TOOLS)) {
+    missing.push(`write_file for ${path}`)
+  }
+  if (OPEN_RE.test(promptText) && !hasAnyExecutedTool(options.executedToolNames, OPEN_EVIDENCE_TOOLS)) {
+    missing.push(`open_file for ${path}`)
+  }
+  const hasReadEvidence = hasAnyExecutedTool(options.executedToolNames, READ_EVIDENCE_TOOLS)
+    || hasAnyExecutedTool(options.executedToolNames, OPEN_EVIDENCE_TOOLS)
+  if (READ_RE.test(promptText) && !hasReadEvidence) {
+    missing.push(`file_info/read_file for ${path}`)
+  }
+  if (missing.length === 0) return null
+
+  return [
+    'Local file enforcement: requested local file operation did not run.',
+    ...missing.map((item) => `- missing ${item}`),
+    'Treat the file request as incomplete; the response is not evidence that the local file exists, was written, or was opened.',
+  ].join('\n')
+}
+
 export function formatLocalFilePlanResult(plan: LocalFilePlan, results: LocalFileToolResult[]): string {
   const failed = results.filter((result) => !result.success)
   const lines = [
@@ -185,6 +260,10 @@ export function formatLocalFilePlanResult(plan: LocalFilePlan, results: LocalFil
     ...results.map((result) => `- ${result.name}: ${result.success ? 'OK' : 'ERROR'} - ${result.output}`),
   ]
   return lines.join('\n')
+}
+
+function hasAnyExecutedTool(executedToolNames: string[], expected: Set<string>): boolean {
+  return executedToolNames.some((name) => expected.has(name))
 }
 
 function stripPathPunctuation(path: string): string {

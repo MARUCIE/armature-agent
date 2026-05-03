@@ -117,7 +117,9 @@ import { prepareReflectPromptContent } from './reflect-mode.js'
 import { emitCommandMessage, formatMarkdownCodeBlock } from '../ui/command-output.js'
 import { listSlashCommandCompletions } from '../slash-commands.js'
 import {
+  buildLocalFileEnforcementNotice,
   buildPostModelSaveRepairPlan,
+  buildPostModelRequiredFileWritePlan,
   formatLocalFilePlanResult,
   type LocalFilePlan,
   type LocalFileToolResult,
@@ -2221,6 +2223,12 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
     history,
     cwd,
     executedToolNames,
+  }) ?? buildPostModelRequiredFileWritePlan({
+    prompt,
+    responseText,
+    history,
+    cwd,
+    executedToolNames,
   })
   if (repairPlan) {
     const repairResults = await executeLocalFilePlan(repairPlan)
@@ -2231,6 +2239,22 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
     } else {
       ensureNewline()
       process.stdout.write(`${theme.dim}${repairSummary}\x1b[0m\n`)
+    }
+  }
+
+  const localFileEnforcementNotice = buildLocalFileEnforcementNotice({
+    prompt,
+    history,
+    cwd,
+    executedToolNames,
+  })
+  if (localFileEnforcementNotice) {
+    responseText = responseText ? `${responseText}\n\n${localFileEnforcementNotice}` : localFileEnforcementNotice
+    if (emitterOpt) {
+      emitterOpt.emitSystemMessage(localFileEnforcementNotice, 'error')
+    } else {
+      ensureNewline()
+      process.stderr.write(`\x1b[31m  ${localFileEnforcementNotice}\x1b[0m\n`)
     }
   }
 

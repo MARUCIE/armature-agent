@@ -1547,3 +1547,33 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 - `npm run build` ✅
 - `npm test` ✅ (`91` files / `1670` tests)
 - Hook smoke ✅ (`39` hooks / `9` events loaded; lifecycle smoke returned `continue:true`)
+
+## Current Task
+
+- Task: Repair REPL history scrolling and required local document writes
+- Status: completed
+- Started: 2026-05-03
+- Completed: 2026-05-03
+
+## Plan
+
+1. Verify the TUI scroll path and local file intent path against the user's screenshots.
+2. Keep history PageUp/PageDown style keys active during normal prompt input without stealing text shortcuts.
+3. Convert local Markdown generation/save requests from prompt-only compliance into runtime-enforced `write_file` evidence.
+4. Mark missing local file operations incomplete instead of allowing simulated completion.
+5. Run focused tests first, then lint/build/full regression before closeout.
+
+## Exit Criteria
+
+- Output history can be scrolled with non-text keys while the prompt is focused.
+- `g/G` shortcuts do not interfere with normal prompt typing.
+- Explicit save/create/generate-to-path prompts produce a real `write_file` call when the model returns generated Markdown content.
+- Refusal or missing file-tool evidence is surfaced as incomplete, not treated as successful completion.
+- Focused and full verification passes.
+
+## Verification Summary
+
+- `npm test -- tests/local-file-intent.test.ts tests/chat-internals.test.ts tests/ink-ui.test.tsx` ✅ (`106` tests)
+- `npm run lint` ✅
+- `npm run build` ✅
+- `npm test` ✅ (`91` files / `1679` tests)

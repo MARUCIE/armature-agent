@@ -2854,3 +2854,21 @@ Internalize the first Hermes-inspired runtime capability bundle into Orca CLI an
 - `npm run lint` => passed
 - `npm run build` => passed
 - `npm test` => passed (`91` files / `1671` tests)
+
+## History Scroll And Local File Enforcement Follow-Up (2026-05-03)
+
+### Outcome
+
+- Normal REPL input no longer disables non-text history scroll keys.
+- PageUp/PageDown and shifted arrow history scrolling remain active while the prompt input is focused.
+- `g/G` text shortcuts stay disabled while the prompt input is focused so ordinary typing is not stolen by scroll navigation.
+- Explicit local file save/create/generate prompts now get runtime enforcement:
+  - if the model returns Markdown artifact content for a named target file, Orca writes it with `write_file`
+  - if the model refuses or no required file tool runs, Orca marks the file request incomplete instead of accepting the response as completion
+
+### Verification
+
+- `npm test -- tests/local-file-intent.test.ts tests/chat-internals.test.ts tests/ink-ui.test.tsx` => passed (`106` tests)
+- `npm run lint` => passed
+- `npm run build` => passed
+- `npm test` => passed (`91` files / `1679` tests)

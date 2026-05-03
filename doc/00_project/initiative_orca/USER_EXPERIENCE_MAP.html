@@ -1437,4 +1437,39 @@ The 2026-04-21 swarm audit adds one sharper constraint to these journeys: they d
 <td><code>tests/work-session-store.test.ts</code></td>
 </tr>
 </tbody></table>
+<h2>REPL History And Local Document Journey (2026-05-03)</h2>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>User Action</th>
+<th>System Response</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>HD-1</td>
+<td>User reads a long Orca response while the prompt input is focused</td>
+<td>PageUp/PageDown and shifted arrow history scrolling remain available</td>
+<td><code>getHistoryScrollActivationState()</code> in <code>src/ui/components/App.tsx</code></td>
+</tr>
+<tr>
+<td>HD-2</td>
+<td>User types ordinary text such as <code>g</code> or <code>G</code> into the prompt</td>
+<td>Text-key scroll shortcuts remain disabled while input is focused</td>
+<td><code>ScrollBox.vimKeysActive</code></td>
+</tr>
+<tr>
+<td>HD-3</td>
+<td>User asks Orca to generate/save a Markdown file at a local path</td>
+<td>If the model returns generated Markdown body content, runtime writes it with <code>write_file</code></td>
+<td><code>buildPostModelRequiredFileWritePlan()</code></td>
+</tr>
+<tr>
+<td>HD-4</td>
+<td>Model refuses or omits required file-tool evidence</td>
+<td>Orca emits a local-file enforcement notice and does not treat the request as completed</td>
+<td><code>buildLocalFileEnforcementNotice()</code></td>
+</tr>
+</tbody></table>
 </article></main></body></html>

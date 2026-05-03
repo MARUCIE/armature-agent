@@ -846,4 +846,28 @@
 <ul>
 <li>image attachments are only promoted on the proxy-provider path; SDK/native path remains text-only</li>
 </ul>
+<h2>History Scroll And Local File Enforcement (2026-05-03)</h2>
+<ul>
+<li><code>src/ui/components/App.tsx</code><ul>
+<li>computes separate history-scroll activation for non-text keys and vim-style text shortcuts</li>
+<li>keeps non-text history scroll active during prompt input</li>
+</ul>
+</li>
+<li><code>src/ui/components/ScrollBox.tsx</code><ul>
+<li>accepts <code>keyboardActive</code> for non-text scroll controls</li>
+<li>accepts <code>vimKeysActive</code> for <code>g/G</code> text shortcut navigation</li>
+</ul>
+</li>
+<li><code>src/commands/local-file-intent.ts</code><ul>
+<li>keeps pre-model direct local-file plans for explicit content, existing-file open/read, and missing claimed-file repair</li>
+<li>adds post-model generated-artifact write planning for explicit local save/create/generate prompts</li>
+<li>adds enforcement notices for requested local file operations that lack matching tool evidence</li>
+</ul>
+</li>
+<li><code>src/commands/chat.ts</code><ul>
+<li>executes post-model local file repair/generated-write plans before claim-evidence guarding</li>
+<li>records enforcement notices into the assistant history so later turns do not treat incomplete local file operations as successful evidence</li>
+</ul>
+</li>
+</ul>
 </article></main></body></html>

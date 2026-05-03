@@ -35,14 +35,16 @@ export interface ScrollBoxHandle {
 
 interface Props {
   children: React.ReactNode
-  /** Whether keyboard scroll is active (disable during text input) */
+  /** Whether non-text keyboard scroll controls are active. */
   keyboardActive?: boolean
+  /** Whether text-key shortcuts such as g/G are active. Disable while input is focused. */
+  vimKeysActive?: boolean
   /** Available height for viewport (if not provided, uses flexGrow) */
   height?: number
 }
 
 export const ScrollBox = forwardRef<ScrollBoxHandle, Props>(function ScrollBox(
-  { children, keyboardActive = false, height },
+  { children, keyboardActive = false, vimKeysActive = keyboardActive, height },
   ref,
 ): React.ReactElement {
   const { rows } = useTerminalSize()
@@ -131,8 +133,8 @@ export const ScrollBox = forwardRef<ScrollBoxHandle, Props>(function ScrollBox(
 
       const pageSize = Math.max(1, viewportHeight - 2)
 
-      // PageUp / Shift+Up
-      if (key.pageUp || (key.upArrow && key.shift)) {
+      // PageUp / Shift+Up. Some test and terminal adapters pass raw CSI.
+      if (key.pageUp || input === '\x1b[5~' || (key.upArrow && key.shift)) {
         setScrollTop(prev => {
           const next = Math.max(0, prev - pageSize)
           if (next < maxScroll) setSticky(false)
@@ -141,8 +143,8 @@ export const ScrollBox = forwardRef<ScrollBoxHandle, Props>(function ScrollBox(
         return
       }
 
-      // PageDown / Shift+Down
-      if (key.pageDown || (key.downArrow && key.shift)) {
+      // PageDown / Shift+Down. Some test and terminal adapters pass raw CSI.
+      if (key.pageDown || input === '\x1b[6~' || (key.downArrow && key.shift)) {
         setScrollTop(prev => {
           const next = Math.min(maxScroll, prev + pageSize)
           if (next >= maxScroll) setSticky(true)
@@ -151,15 +153,15 @@ export const ScrollBox = forwardRef<ScrollBoxHandle, Props>(function ScrollBox(
         return
       }
 
-      // g: scroll to top (vim-style)
-      if (input === 'g' && !key.ctrl && !key.meta) {
+      // g: scroll to top (vim-style). Keep disabled while text input is focused.
+      if (vimKeysActive && input === 'g' && !key.ctrl && !key.meta) {
         setScrollTop(0)
         setSticky(false)
         return
       }
 
-      // G: scroll to bottom (vim-style)
-      if (input === 'G' && !key.ctrl && !key.meta) {
+      // G: scroll to bottom (vim-style). Keep disabled while text input is focused.
+      if (vimKeysActive && input === 'G' && !key.ctrl && !key.meta) {
         setScrollTop(maxScroll)
         setSticky(true)
         return

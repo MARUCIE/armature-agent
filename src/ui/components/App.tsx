@@ -79,6 +79,23 @@ export function buildHomeActions(status: StatusInfo, savedSessionCount = 0): Arr
   return actions
 }
 
+export function getHistoryScrollActivationState(options: {
+  inputActive: boolean
+  permissionBlocked: boolean
+  themePickerOpen: boolean
+  optionPickerOpen: boolean
+  commandPickerOpen: boolean
+}): { keyboardActive: boolean; vimKeysActive: boolean } {
+  const keyboardActive = !options.permissionBlocked
+    && !options.themePickerOpen
+    && !options.optionPickerOpen
+    && !options.commandPickerOpen
+  return {
+    keyboardActive,
+    vimKeysActive: keyboardActive && !options.inputActive,
+  }
+}
+
 export interface BannerInfo {
   version: string
   cwd: string
@@ -499,6 +516,13 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
     && !optionPickerRequest
     && !showPicker
     && inputValue.length === 0
+  const historyScrollActivation = getHistoryScrollActivationState({
+    inputActive,
+    permissionBlocked: Boolean(permRequest),
+    themePickerOpen: showThemePicker,
+    optionPickerOpen: Boolean(optionPickerRequest),
+    commandPickerOpen: showPicker,
+  })
 
   const openHomeActions = useCallback(() => {
     setOptionPickerRequest({
@@ -532,7 +556,8 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
       {/* Content area: scrollable, fills space above fixed bottom */}
       <ScrollBox
         ref={scrollRef}
-        keyboardActive={!inputActive && !permRequest && !showThemePicker}
+        keyboardActive={historyScrollActivation.keyboardActive}
+        vimKeysActive={historyScrollActivation.vimKeysActive}
       >
         {/* Theme picker (first launch only) */}
         {showThemePicker && (

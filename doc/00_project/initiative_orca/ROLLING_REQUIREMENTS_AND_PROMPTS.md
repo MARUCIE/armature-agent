@@ -441,6 +441,7 @@
 | PROMPT-012 | Refresh the harness baseline after a late-stage provider-routing change | Reproduce the failing gate, fix the smallest stale assumption, then rerun fast / nightly / release / matrix before closing docs | Do not treat lock conflicts or stale machine env as product regressions until they are proven to be runtime bugs |
 | PROMPT-013 | Execute one-click full delivery on the current tranche | Freeze the delivery boundary, treat review findings as blocking gates, fix only the scoped blockers, rerun the full release chain, and emit stage artifacts plus rollback evidence | Do not drift into future roadmap implementation when the user asked for delivery closure on the current tranche |
 | PROMPT-014 | Fix false completion claims and verify Copilot-style self-review hooks | Treat unsupported claims as a runtime safety defect, not just a model behavior issue; hook lifecycle must fire consistently and claim evidence must be checked against actual tool traces | One-shot launches must not bypass hooks; Stop hooks need response evidence; do not trust "done/passed/published" wording without matching tool calls |
+| PROMPT-015 | Fix history scrollback and required local file generation | Treat the user's evidence as runtime defects: input-focused Ink scrollback must still accept non-text scroll keys, and local file save/create requests must result in real `write_file`/`open_file`/`file_info` evidence or a hard incomplete notice | Do not rely on model prompt compliance for local file side effects; runtime must repair artifact output or mark the task incomplete |
 
 ## Anti-Regression Q&A
 
@@ -504,6 +505,8 @@
 | Why could Orca say something was done when it was not? | The model could emit unsupported completion wording, and Orca previously lacked a generic evidence guard plus had lifecycle gaps: one-shot did not load hooks, `Stop` did not fire after responses, and `SubagentStop` did not fire after delegation. |
 | What now prevents unsupported completion claims? | `claim-evidence-guard` checks assistant text against the current turn's executed tool names and appends a pending warning when file/test/git/deploy/MCP claims lack matching tool evidence. |
 | Are Copilot-style self-review hooks now usable in Orca? | Yes for the fixed lifecycle: one-shot and REPL run `UserPromptSubmit`, `Stop` fires after model output with `ORCA_RESPONSE` / `CLAUDE_RESPONSE`, and `SubagentStop` fires after delegated work. |
+| Why could history output not scroll upward while typing? | `App` disabled `ScrollBox.keyboardActive` whenever the prompt input was active, so PageUp/PageDown and shifted arrow scrolling were blocked during normal REPL use. Non-text scroll keys now stay active while text shortcuts `g/G` remain disabled during input. |
+| Why could Orca still fail to create/open requested Markdown files? | Local file handling was prompt-driven plus best-effort false-save repair. Refusal responses or plain generated Markdown without a false save claim did not force a tool call. `buildPostModelRequiredFileWritePlan()` now writes generated artifacts for explicit save targets, and `buildLocalFileEnforcementNotice()` marks missing file operations incomplete. |
 
 ## References
 

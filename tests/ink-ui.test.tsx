@@ -15,7 +15,7 @@ import { InputArea } from '../src/ui/components/InputArea.js'
 import { TerminalSizeProvider } from '../src/ui/useTerminalSize.js'
 import { ChatSessionEmitter } from '../src/ui/session.js'
 import type { StatusInfo } from '../src/ui/types.js'
-import { App, buildHomeActions, resolveHomeActionSelection } from '../src/ui/components/App.js'
+import { App, buildHomeActions, getHistoryScrollActivationState, resolveHomeActionSelection } from '../src/ui/components/App.js'
 import { getHomeLayout } from '../src/ui/components/homeLayout.js'
 import { shouldUseAlternateScreen, shouldUseNoFlickerRenderer } from '../src/ui/render.js'
 import { withEnv } from './helpers/env-snapshot.js'
@@ -604,6 +604,7 @@ describe('ScrollBox', () => {
     expect(lastFrame()).toContain('line-1')
     expect(lastFrame()).not.toContain('line-5')
   })
+
 })
 
 describe('Banner', () => {
@@ -806,6 +807,30 @@ describe('App empty state', () => {
     expect(resolveHomeActionSelection('prompt:review the changed files')).toBe('review the changed files')
     expect(resolveHomeActionSelection('command:/doctor')).toBe('/doctor')
     expect(resolveHomeActionSelection('unknown')).toBeNull()
+  })
+
+  it('keeps non-text history scroll keys active while the prompt input is focused', () => {
+    expect(getHistoryScrollActivationState({
+      inputActive: true,
+      permissionBlocked: false,
+      themePickerOpen: false,
+      optionPickerOpen: false,
+      commandPickerOpen: false,
+    })).toEqual({
+      keyboardActive: true,
+      vimKeysActive: false,
+    })
+
+    expect(getHistoryScrollActivationState({
+      inputActive: false,
+      permissionBlocked: false,
+      themePickerOpen: false,
+      optionPickerOpen: false,
+      commandPickerOpen: false,
+    })).toEqual({
+      keyboardActive: true,
+      vimKeysActive: true,
+    })
   })
 
   it('keeps submitted user prompts visible in a highlighted transcript block', async () => {

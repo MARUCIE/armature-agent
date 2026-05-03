@@ -449,3 +449,23 @@ Current Wave 4a foothold already landed:
 - Multiple image paths in one turn are attached together.
 - Text file expansion skips image paths that were promoted to attachments.
 - Full verification passes (`lint`, `test`, `build`, `bench`).
+
+## History Scroll And Local File Enforcement (2026-05-03)
+
+### User Problem
+
+- Long REPL output history could not be scrolled upward during normal prompt input.
+- Explicit requests to generate/save/open Markdown files could still produce model-only responses without real local file writes.
+
+### Requirements
+
+- Keep non-text history scroll controls active while the prompt input is focused.
+- Do not let scroll text shortcuts steal normal typed input.
+- Treat local file save/create/generate/open/read requests as runtime side effects that require matching tool evidence.
+- If a model returns the requested Markdown artifact body for a named target file, write that artifact through `write_file`.
+- If the required file tool does not run, mark the local file request incomplete.
+
+### Acceptance
+
+- Focused UI tests prove input-focused history scroll activation no longer disables non-text scroll keys.
+- Focused local-file tests prove generated Markdown artifacts are written and refusal/no-tool paths are marked incomplete.

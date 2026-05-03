@@ -2330,3 +2330,22 @@ Artifacts:
 - References:
   - `https://code.claude.com/docs/en/fullscreen`
   - `https://code.claude.com/docs/en/terminal-config`
+
+## 2026-05-03 History Scroll And Local File Enforcement Follow-Up
+
+- User evidence:
+  - output history could not be scrolled upward while the prompt input was active
+  - requested Markdown files were still not written/opened; model responses could refuse or simulate local file limitations
+- Root cause:
+  - `src/ui/components/App.tsx` disabled `ScrollBox.keyboardActive` whenever `inputActive` was true, blocking PageUp/PageDown and shifted-arrow scroll during normal REPL use
+  - `src/commands/local-file-intent.ts` only repaired false save claims when the model explicitly claimed a save and exposed extractable artifact content; refusal responses and plain generated Markdown did not force a file tool call
+- Fix:
+  - `ScrollBox` now separates non-text keyboard scrolling from `g/G` vim-style text shortcuts
+  - `App` keeps non-text history scroll active while input is focused, but disables `g/G` until input is not focused
+  - local file runtime now writes generated Markdown artifacts for explicit save targets even when the model only returns file body content
+  - local file runtime now emits a hard incomplete notice when requested file write/open/read operations have no matching tool evidence
+- Focused verification:
+  - `npm test -- tests/local-file-intent.test.ts tests/chat-internals.test.ts tests/ink-ui.test.tsx` => passed (`106` tests)
+  - `npm run lint` => passed
+  - `npm run build` => passed
+  - `npm test` => passed (`91` files / `1679` tests)

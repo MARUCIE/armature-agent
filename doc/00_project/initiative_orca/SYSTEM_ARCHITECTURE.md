@@ -588,3 +588,19 @@ flowchart TD
 Architectural invariant:
 
 - image attachments are only promoted on the proxy-provider path; SDK/native path remains text-only
+
+## History Scroll And Local File Enforcement (2026-05-03)
+
+- `src/ui/components/App.tsx`
+  - computes separate history-scroll activation for non-text keys and vim-style text shortcuts
+  - keeps non-text history scroll active during prompt input
+- `src/ui/components/ScrollBox.tsx`
+  - accepts `keyboardActive` for non-text scroll controls
+  - accepts `vimKeysActive` for `g/G` text shortcut navigation
+- `src/commands/local-file-intent.ts`
+  - keeps pre-model direct local-file plans for explicit content, existing-file open/read, and missing claimed-file repair
+  - adds post-model generated-artifact write planning for explicit local save/create/generate prompts
+  - adds enforcement notices for requested local file operations that lack matching tool evidence
+- `src/commands/chat.ts`
+  - executes post-model local file repair/generated-write plans before claim-evidence guarding
+  - records enforcement notices into the assistant history so later turns do not treat incomplete local file operations as successful evidence

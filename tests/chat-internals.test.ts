@@ -243,6 +243,80 @@ describe('chat internal regressions', () => {
     expect(history[2]?.content).toContain('Local file guard wrote the file')
   })
 
+  it('writes a requested local markdown artifact when the model returns content without a file tool call', async () => {
+    const path = join(tmpdir(), `orca-chat-generated-artifact-${process.pid}-${Date.now()}.md`)
+    const history = [{ role: 'system' as const, content: 'system prompt' }]
+    chatMocks.handleProxyToolCall.mockResolvedValueOnce({ success: true, output: `Created ${path}` })
+    chatMocks.streamChat.mockImplementation(async function* () {
+      yield { type: 'text', text: '# Generated\n\n- Body\n' }
+      yield { type: 'usage', inputTokens: 8, outputTokens: 9 }
+      yield { type: 'done' }
+    })
+
+    const result = await runProxyTurn({
+      prompt: `请生成一个 md 文件并保存到 \`${path}\``,
+      resolved: {
+        provider: 'openai',
+        model: 'gpt-5.4',
+        apiKey: 'key',
+        baseURL: 'https://example.invalid/v1',
+      } as never,
+      config: { systemPrompt: 'system prompt' } as never,
+      outputMode: 'streaming',
+      history,
+      cwd: process.cwd(),
+      permissionMode: 'yolo',
+      retryTracker: new RetryTracker(),
+      loopDetector: new LoopDetector(),
+      tokenBudget: new TokenBudgetManager('gpt-5.4'),
+      contextMonitor: new ContextMonitor(200_000),
+    })
+
+    expect(result).toEqual({ inputTokens: 8, outputTokens: 9 })
+    expect(chatMocks.handleProxyToolCall).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'write_file',
+      args: {
+        path,
+        content: '# Generated\n\n- Body\n',
+      },
+    }))
+    expect(history[2]?.content).toContain('Local file guard wrote the requested generated file')
+    expect(history[2]?.content).not.toContain('Local file enforcement')
+  })
+
+  it('marks a local file request incomplete when the model refuses instead of using file tools', async () => {
+    const path = join(tmpdir(), `orca-chat-refused-artifact-${process.pid}-${Date.now()}.md`)
+    const history = [{ role: 'system' as const, content: 'system prompt' }]
+    chatMocks.streamChat.mockImplementation(async function* () {
+      yield { type: 'text', text: `无法在你的本地创建文件。你可以自己保存到 \`${path}\`。` }
+      yield { type: 'usage', inputTokens: 8, outputTokens: 9 }
+      yield { type: 'done' }
+    })
+
+    await runProxyTurn({
+      prompt: `请生成一个 md 文件并保存到 \`${path}\``,
+      resolved: {
+        provider: 'openai',
+        model: 'gpt-5.4',
+        apiKey: 'key',
+        baseURL: 'https://example.invalid/v1',
+      } as never,
+      config: { systemPrompt: 'system prompt' } as never,
+      outputMode: 'streaming',
+      history,
+      cwd: process.cwd(),
+      permissionMode: 'yolo',
+      retryTracker: new RetryTracker(),
+      loopDetector: new LoopDetector(),
+      tokenBudget: new TokenBudgetManager('gpt-5.4'),
+      contextMonitor: new ContextMonitor(200_000),
+    })
+
+    expect(chatMocks.handleProxyToolCall).not.toHaveBeenCalled()
+    expect(history[2]?.content).toContain('Local file enforcement')
+    expect(history[2]?.content).toContain('missing write_file')
+  })
+
   it('appends a claim evidence guard when completion claims lack supporting tools', async () => {
     const history = [{ role: 'system' as const, content: 'system prompt' }]
     chatMocks.streamChat.mockImplementation(async function* () {

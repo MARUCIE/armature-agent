@@ -594,3 +594,15 @@ Still-missing institutional gates:
 - No mock-only validation
 - No manual edits in `dist/`
 - No new dependency added without explicit request
+
+## 2026-05-03 Runtime Trust Follow-Up
+
+- Close the gap between model wording and runtime evidence for local file work:
+  - explicit local save/create/generate requests now get post-model `write_file` repair when artifact content is present
+  - missing local file evidence now produces an incomplete notice
+- Close the TUI history discoverability gap:
+  - prompt input no longer disables non-text history scroll keys
+  - text shortcuts stay scoped away from focused input
+- Verification lane:
+  - targeted regressions in `tests/local-file-intent.test.ts`, `tests/chat-internals.test.ts`, and `tests/ink-ui.test.tsx`
+  - `npm run lint`, `npm run build`, and full `npm test` passed on 2026-05-03
