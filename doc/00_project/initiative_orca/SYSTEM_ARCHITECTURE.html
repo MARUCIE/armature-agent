@@ -1,11 +1,568 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Orca CLI System Architecture</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } }</style></head><body><header><h1>Orca CLI System Architecture</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#architecture-summary">Architecture Summary</a><a href="#high-level-diagram">High-Level Diagram</a><a href="#layer-breakdown">Layer Breakdown</a><a href="#command-surface-map">Command Surface Map</a><a href="#route-page-map">Route / Page Map</a><a href="#legacy-documentation-cross-references">Legacy Documentation Cross-References</a><a href="#repl-multimodal-prompt-assembly-2026-04-20">REPL Multimodal Prompt Assembly (2026-04-20)</a></aside><article class="content markdown-body"><h1>Orca CLI System Architecture</h1>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Orca CLI System Architecture</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; max-height:calc(100vh - 32px); overflow:auto; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } .content { padding:22px; } }</style></head><body><header><h1>Orca CLI System Architecture</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#2026-05-03-architecture-delta-markdown-artifact-write-integrity">2026-05-03 Architecture Delta - Markdown Artifact Write Integrity</a><a href="#2026-05-02-architecture-delta-tool-call-continuity-and-blackfin-mark">2026-05-02 Architecture Delta - Tool-Call Continuity and Blackfin Mark</a><a href="#2026-05-02-architecture-delta-model-catalog-ssot">2026-05-02 Architecture Delta - Model Catalog SSoT</a><a href="#2026-05-02-architecture-delta-terminal-operability-hardening">2026-05-02 Architecture Delta - Terminal Operability Hardening</a><a href="#2026-05-02-architecture-delta-critique-quality-gate">2026-05-02 Architecture Delta - Critique Quality Gate</a><a href="#2026-05-01-architecture-delta-pod-helm-footer-ui-ux">2026-05-01 Architecture Delta - Pod Helm Footer UI/UX</a><a href="#2026-05-01-architecture-delta-pod-council-runway-ui-ux">2026-05-01 Architecture Delta - Pod Council Runway UI/UX</a><a href="#2026-05-01-architecture-delta-pod-evidence-drawer-ui-ux">2026-05-01 Architecture Delta - Pod Evidence Drawer UI/UX</a><a href="#2026-05-01-architecture-delta-pod-trust-gate-ui-ux">2026-05-01 Architecture Delta - Pod Trust Gate UI/UX</a><a href="#2026-05-01-architecture-delta-pod-proof-wake-ui-ux">2026-05-01 Architecture Delta - Pod Proof Wake UI/UX</a><a href="#2026-05-01-architecture-delta-pod-status-rail-ui-ux">2026-05-01 Architecture Delta - Pod Status Rail UI/UX</a><a href="#2026-05-01-architecture-delta-pod-transcript-flow-ui-ux">2026-05-01 Architecture Delta - Pod Transcript Flow UI/UX</a><a href="#2026-05-01-architecture-delta-pod-command-surface-ui-ux">2026-05-01 Architecture Delta - Pod Command Surface UI/UX</a><a href="#2026-05-01-architecture-delta-mascot-ui-ux">2026-05-01 Architecture Delta - Mascot UI/UX</a><a href="#2026-04-30-architecture-delta-visual-system">2026-04-30 Architecture Delta - Visual System</a><a href="#2026-04-29-architecture-delta-trust-and-queue">2026-04-29 Architecture Delta - Trust and Queue</a><a href="#architecture-summary">Architecture Summary</a><a href="#high-level-diagram">High-Level Diagram</a><a href="#layer-breakdown">Layer Breakdown</a><a href="#command-surface-map">Command Surface Map</a><a href="#route-page-map">Route / Page Map</a><a href="#legacy-documentation-cross-references">Legacy Documentation Cross-References</a><a href="#repl-multimodal-prompt-assembly-2026-04-20">REPL Multimodal Prompt Assembly (2026-04-20)</a></aside><article class="content markdown-body"><h1>Orca CLI System Architecture</h1>
+<h2>2026-05-03 Architecture Delta - Markdown Artifact Write Integrity</h2>
+<p>This tranche fixes a tool-orchestration guard bug rather than the underlying file tools:</p>
+<ol>
+<li>Artifact extraction:<ul>
+<li><code>src/commands/local-file-intent.ts</code></li>
+<li><code>selectAssistantContentForFile()</code> no longer returns the full assistant response.</li>
+<li>It now extracts fenced Markdown/text blocks, explicit content markers, or the first Markdown artifact structure such as headings, frontmatter, lists, tables, or blockquotes.</li>
+</ul>
+</li>
+<li>False-save repair safety:<ul>
+<li><code>buildPostModelSaveRepairPlan()</code> still repairs provider false-save claims, but only when a real artifact body is extractable.</li>
+<li>Conversational save confirmations without artifact content return <code>null</code>, so Orca does not create a polluted <code>.md</code> file.</li>
+</ul>
+</li>
+<li>Prompt contract:<ul>
+<li><code>src/system-prompt.ts</code></li>
+<li>The system prompt now tells providers that <code>write_file.content</code> must be the final requested file body only.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/local-file-intent.test.ts</code></li>
+<li><code>tests/chat-internals.test.ts</code></li>
+<li><code>tests/e2e-workflow.test.ts</code></li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-02 Architecture Delta - Tool-Call Continuity and Blackfin Mark</h2>
+<p>This tranche closes the remaining local-file/tool-call and startup-identity gaps exposed by the launcher screenshots:</p>
+<ol>
+<li>Long-session provider prompt assembly:<ul>
+<li><code>src/providers/openai-compat.ts</code></li>
+<li><code>streamChat()</code> now builds messages through a single helper that always prepends the current system prompt before history and the new user message.</li>
+<li>If history already contains the same leading system prompt, the helper skips the duplicate so long REPL sessions keep tool instructions without double-injecting them.</li>
+</ul>
+</li>
+<li>Local-file tool contract:<ul>
+<li><code>src/system-prompt.ts</code></li>
+<li>The generated system prompt now explicitly requires local file creation/opening requests to use <code>write_file</code>, <code>read_file</code>, <code>file_info</code>, or <code>open_file</code> before reporting failure.</li>
+</ul>
+</li>
+<li>Local-file intent guard:<ul>
+<li><code>src/commands/local-file-intent.ts</code></li>
+<li><code>src/commands/chat-repl-turn.ts</code></li>
+<li><code>src/commands/chat.ts</code></li>
+<li>Obvious REPL read/write/open requests are converted into local tool plans before the provider call.</li>
+<li>If a provider response claims a file was saved but no <code>write_file</code> / <code>open_file</code> call happened, the proxy runtime writes the claimed file from the response transcript and records the repair in conversation history.</li>
+<li>If a later prompt says the previously claimed file is missing and asks to open it, the REPL guard reconstructs the file from assistant history and calls <code>open_file</code>.</li>
+</ul>
+</li>
+<li>Large-scale tool-call matrix:<ul>
+<li><code>agent-eval/manifests/test-matrix.json</code></li>
+<li>Adds a <code>tool-calls</code> layer spanning <code>tests/tools.test.ts</code>, <code>tests/tools-full.test.ts</code>, <code>tests/local-file-intent.test.ts</code>, <code>tests/chat-proxy-tool-call.test.ts</code>, <code>tests/mcp-client.test.ts</code>, <code>tests/chat-one-shot-mcp-cleanup.test.ts</code>, <code>tests/openai-compat-multimodal.test.ts</code>, and <code>tests/e2e-workflow.test.ts</code>.</li>
+<li><code>package.json</code> exposes the generated <code>npm run test:tool-calls</code> entrypoint.</li>
+</ul>
+</li>
+<li>Startup wordmark and clean Blackfin deck:<ul>
+<li><code>src/ui/components/Banner.tsx</code></li>
+<li>The startup deck now uses a dominant <code>ORCA-AGENT</code> wordmark instead of the old compact <code>ORCA</code> mark.</li>
+<li>The rejected independent Orca hero/icon art has been removed from the deck.</li>
+<li>The deck mirrors Hermes&#39; large-wordmark hierarchy and themed status panel while staying inside Orca&#39;s active Ink theme tokens.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/local-file-intent.test.ts</code></li>
+<li><code>tests/chat-internals.test.ts</code></li>
+<li><code>tests/chat-repl-turn.test.ts</code></li>
+<li><code>tests/openai-compat-multimodal.test.ts</code></li>
+<li><code>tests/e2e-workflow.test.ts</code></li>
+<li><code>tests/ink-ui.test.tsx</code></li>
+<li><code>agent-eval/generated/test-matrix-entrypoints.md</code></li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-02 Architecture Delta - Model Catalog SSoT</h2>
+<p>The model-catalog tranche tightens the boundary between model metadata, runtime budgeting, provider requests, and operator-facing output:</p>
+<ol>
+<li>Canonical metadata:<ul>
+<li><code>src/model-metadata.ts</code></li>
+<li>Owns context windows, max output defaults, pricing tiers, and capacity/pricing formatting helpers.</li>
+<li>Provides conservative defaults for unknown runtime models without preserving old duplicate tables.</li>
+</ul>
+</li>
+<li>Provider-aware catalog:<ul>
+<li><code>src/model-catalog.ts</code></li>
+<li>Re-exports metadata helpers and keeps the provider-aware <code>ModelChoice</code> construction, provider grouping, duplicate-model keys, and agentic caution rules.</li>
+</ul>
+</li>
+<li>Runtime budget:<ul>
+<li><code>src/token-budget.ts</code></li>
+<li>Reads context windows and max output values from the canonical metadata helpers.</li>
+</ul>
+</li>
+<li>Provider request defaults:<ul>
+<li><code>src/providers/openai-compat.ts</code></li>
+<li>Uses the same context window helper for context hard-stop thresholds and the same max-output helper for <code>max_tokens</code> / <code>max_completion_tokens</code>.</li>
+</ul>
+</li>
+<li>Operator output:<ul>
+<li><code>src/output.ts</code></li>
+<li>Uses the canonical capacity formatter for startup provider info and the canonical pricing helper for usage/session cost estimates.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/model-catalog.test.ts</code></li>
+<li>Verifies shared metadata behavior and scans runtime consumers for reintroduced metadata tables.</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-02 Architecture Delta - Terminal Operability Hardening</h2>
+<p>The terminal-operability tranche tightens the boundary between UI rendering, project cwd resolution, built-in tools, and MCP routing:</p>
+<ol>
+<li>Terminal rendering:<ul>
+<li><code>src/ui/render.tsx</code></li>
+<li>Default Ink rendering now stays in the primary terminal buffer.</li>
+<li><code>AlternateScreen</code> is preserved behind <code>ORCA_ALT_SCREEN=1</code> for operators who explicitly want fullscreen behavior.</li>
+</ul>
+</li>
+<li>Mouse input:<ul>
+<li><code>src/ui/components/App.tsx</code></li>
+<li><code>useMouseWheel</code> is inactive by default so ordinary terminal selection remains copyable.</li>
+<li>Mouse tracking can be restored with <code>ORCA_MOUSE=1</code>.</li>
+</ul>
+</li>
+<li>Workspace cwd resolution:<ul>
+<li><code>src/commands/chat-support.ts</code></li>
+<li><code>src/commands/chat.ts</code></li>
+<li>Explicit <code>--cwd</code>, <code>ORCA_CWD</code>, and <code>ORCA_PROJECT_DIR</code> are highest priority.</li>
+<li>Ambient project directories win over remembered state.</li>
+<li>Non-workspace launch directories fall back to <code>~/.orca/last-cwd</code> when available.</li>
+</ul>
+</li>
+<li>Launcher/root command surface:<ul>
+<li><code>src/program.ts</code></li>
+<li>Root <code>orca --cwd &lt;dir&gt;</code> forwards into the delegated <code>orca chat</code> command.</li>
+</ul>
+</li>
+<li>MCP routing:<ul>
+<li><code>src/mcp-client.ts</code></li>
+<li><code>parseMcpToolName()</code> splits on the last <code>__</code>, allowing server names with underscores.</li>
+<li>Codex TOML parsing accepts hyphenated server names.</li>
+</ul>
+</li>
+<li>Built-in local file opening:<ul>
+<li><code>src/tools.ts</code></li>
+<li><code>open_file</code> opens existing files with the OS default app.</li>
+<li>The tool is included in <code>DANGEROUS_TOOLS</code> because it launches an external process.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/ink-ui.test.tsx</code></li>
+<li><code>tests/chat-support.test.ts</code></li>
+<li><code>tests/program.test.ts</code></li>
+<li><code>tests/mcp-client.test.ts</code></li>
+<li><code>tests/tools.test.ts</code></li>
+<li><code>tests/tools-full.test.ts</code></li>
+<li><code>tests/hooks.test.ts</code></li>
+<li><code>tests/e2e-workflow.test.ts</code></li>
+<li><code>tests/adversarial.test.ts</code></li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-02 Architecture Delta - Critique Quality Gate</h2>
+<p>The critique-gate tranche adds a bounded quality layer beside the existing workflow and multi-model layers:</p>
+<ol>
+<li>Critique core:<ul>
+<li><code>src/critique.ts</code></li>
+<li>Defines critique checkpoints, weighted risk scoring, complementary reviewer selection, changed-diff-line counting, prompt assembly, and structured result parsing.</li>
+<li>Keeps the report-derived risk formula centralized for tests and future automatic checkpoint integration.</li>
+</ul>
+</li>
+<li>Workspace inspection adapter:<ul>
+<li><code>src/critique-workspace.ts</code></li>
+<li>Reads current diff, changed files, optional plan/log/diff files, project rules, and risk flags.</li>
+<li>Produces one reusable inspection object for standalone CLI dry-runs, live critique calls, and chat slash rendering.</li>
+</ul>
+</li>
+<li>Command surface:<ul>
+<li><code>src/commands/critique.ts</code></li>
+<li>Adds <code>orca critique [goal...]</code> with checkpoint, plan, log, diff, risk, reviewer, provider, dry-run, and JSON flags.</li>
+<li>Reads current <code>git diff</code> and changed files by default; <code>--diff-file</code> supports deterministic local tests and offline review packets.</li>
+</ul>
+</li>
+<li>Chat slash surface:<ul>
+<li><code>src/commands/chat-slash-readonly.ts</code></li>
+<li>Adds <code>/critique</code> as a read-only local inspection inside <code>orca chat</code>.</li>
+<li>Legacy output uses command messages; Ink output uses a <code>Critique Gate</code> detail panel.</li>
+</ul>
+</li>
+<li>Automatic chat hint:<ul>
+<li><code>src/critique-auto.ts</code></li>
+<li><code>src/commands/chat.ts</code></li>
+<li><code>src/commands/chat-repl-turn.ts</code></li>
+<li>Keeps one suppression state per REPL session, inspects the dirty diff before provider send, and emits a local warning when the diff crosses the auto hint threshold.</li>
+<li>One-shot <code>orca chat &quot;prompt&quot;</code> uses <code>emitOneShotAutoCritiqueNotice</code> before <code>executeOneShot</code>; streaming mode writes the hint to stderr, while JSON mode stays silent.</li>
+<li>Uses <code>includePrompt: false</code> workspace inspection so automatic hints do not build reviewer prompts, call providers, or mutate the outgoing user prompt.</li>
+<li><code>orca chat --no-auto-critique</code> and <code>orca chat --auto-critique-threshold &lt;score&gt;</code> override the session behavior; env vars remain the lower-level default path.</li>
+</ul>
+</li>
+<li>Provider boundary:<ul>
+<li>Reuses <code>resolveConfig</code>, <code>findAggregator</code>, <code>resolveModelEndpoint</code>, and <code>chatOnce</code>.</li>
+<li>Live critique routes through existing provider configuration; dry-run never requires a provider key.</li>
+</ul>
+</li>
+<li>Safety contract:<ul>
+<li>The prompt explicitly frames the reviewer as read-only.</li>
+<li>The command and slash surface do not execute suggested fixes; the main agent must validate findings before editing.</li>
+<li>Automatic chat hints are advisory only and can be disabled with <code>ORCA_AUTO_CRITIQUE=0</code>.</li>
+</ul>
+</li>
+<li>Hook trust stability:<ul>
+<li><code>src/hooks.ts</code></li>
+<li><code>HookManager.load()</code> re-checks <code>ORCA_TRUST_PROJECT_HOOKS</code> so project hook trust is evaluated at hook-loading time, not only singleton construction time.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/critique.test.ts</code></li>
+<li><code>tests/chat-repl-turn.test.ts</code></li>
+<li><code>tests/chat-slash-readonly.test.ts</code></li>
+<li><code>tests/v050-modules.test.ts</code></li>
+<li><code>tests/program.test.ts</code></li>
+<li><code>tests/command-contracts.test.ts</code></li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Architecture Delta - Pod Helm Footer UI/UX</h2>
+<p>The helm-footer tranche stays inside the existing Ink footer rendering boundary:</p>
+<ol>
+<li>Footer rail identity:<ul>
+<li><code>src/ui/components/Footer.tsx</code></li>
+<li>The footer now starts with <code>POD HELM</code>.</li>
+<li>Identity, shortcut keys, and labels resolve through active theme semantic tokens.</li>
+</ul>
+</li>
+<li>Context-aware copy:<ul>
+<li>Generating state keeps <code>esc</code> and changes the label to <code>interrupt echo</code>.</li>
+<li>Active input state keeps <code>enter</code>, <code>ctrl+j</code>, <code>/help</code>, and <code>shift+tab</code>, with pod-oriented labels such as <code>send brief</code> and <code>pod commands</code>.</li>
+<li>Idle state keeps the core brief, command, and permission-mode hints.</li>
+</ul>
+</li>
+<li>Width-aware rendering:<ul>
+<li>The footer uses <code>cols</code> from <code>useTerminalSize()</code>.</li>
+<li>Lower-priority active hints (<code>ctrl+z</code>, <code>ctrl+l</code>) render only on wider terminals.</li>
+<li>Shortcut groups use non-shrinking boxes so <code>POD HELM</code> and core labels do not split into incoherent columns.</li>
+</ul>
+</li>
+<li>Data and behavior contract:<ul>
+<li>Shortcut handling remains in the existing input/runtime layers.</li>
+<li><code>permMode</code> and <code>permSource</code> data flow is unchanged.</li>
+<li>The tranche only changes rendering copy, responsive inclusion, and tone token resolution.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/ink-ui.test.tsx</code></li>
+<li>Tests assert <code>POD HELM</code>, <code>interrupt echo</code>, <code>send brief</code>, <code>pod commands</code>, permission-mode visibility, and idle/generating state behavior.</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Architecture Delta - Pod Council Runway UI/UX</h2>
+<p>The council-runway tranche stays inside the existing Ink multi-model progress rendering boundary:</p>
+<ol>
+<li>Multi-model progress frame:<ul>
+<li><code>src/ui/components/MultiModelProgress.tsx</code></li>
+<li>The header now starts with <code>POD COUNCIL</code> and preserves the <code>command</code> value.</li>
+<li>Model count now renders as coordinated <code>voices</code>.</li>
+</ul>
+</li>
+<li>Model row states:<ul>
+<li>Completed rows now render <code>surfaced</code>.</li>
+<li>Active rows now render <code>sonar</code> next to the existing spinner.</li>
+<li>Model names and elapsed seconds remain visible.</li>
+</ul>
+</li>
+<li>Theme token resolution:<ul>
+<li><code>src/ui/components/MultiModelProgress.tsx</code></li>
+<li>Header, active, completed, and model-name color roles now resolve through active theme semantic tokens.</li>
+<li>Hard-coded <code>cyan</code> and <code>green</code> are no longer used in this component.</li>
+</ul>
+</li>
+<li>Data contract:<ul>
+<li><code>src/ui/types.ts</code></li>
+<li><code>ModelProgress</code> is unchanged; the tranche only changes rendering copy and tone token resolution.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/ink-ui.test.tsx</code></li>
+<li>Tests assert <code>POD COUNCIL</code>, command name, voice count, model names, <code>surfaced</code>, <code>sonar</code>, and elapsed time.</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Architecture Delta - Pod Evidence Drawer UI/UX</h2>
+<p>The evidence-drawer tranche stays inside the existing Ink detail panel rendering boundary:</p>
+<ol>
+<li>Detail panel frame:<ul>
+<li><code>src/ui/components/DetailPanel.tsx</code></li>
+<li>The rendered title now starts with <code>EVIDENCE DRAWER</code> and preserves the source <code>info.title</code>.</li>
+<li>The rendered subtitle now starts with <code>pod scan</code> and preserves the source <code>info.subtitle</code> when present.</li>
+</ul>
+</li>
+<li>Tone resolution:<ul>
+<li><code>src/ui/components/DetailPanel.tsx</code></li>
+<li><code>info</code>, <code>warn</code>, and <code>error</code> panel borders now resolve through active theme semantic tokens.</li>
+<li>Hard-coded <code>cyan</code>, <code>yellow</code>, and <code>red</code> colors are no longer used in this component.</li>
+</ul>
+</li>
+<li>Data contract:<ul>
+<li><code>src/ui/types.ts</code></li>
+<li><code>DetailPanelInfo</code> is unchanged; the tranche only changes rendering copy and tone token resolution.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/ink-ui.test.tsx</code></li>
+<li>Tests assert <code>EVIDENCE DRAWER</code>, original title, <code>pod scan</code>, original subtitle, and markdown body content.</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Architecture Delta - Pod Trust Gate UI/UX</h2>
+<p>The trust-gate tranche stays inside the existing Ink approval and diff rendering boundaries:</p>
+<ol>
+<li>Permission prompt:<ul>
+<li><code>src/ui/components/PermissionPrompt.tsx</code></li>
+<li>The prompt title now starts with <code>TRUST GATE</code> and keeps the tool name visible.</li>
+<li>The preview is grouped under <code>SCAN</code>.</li>
+<li>Choice descriptions now clarify once/session/project trust scope and deny posture without changing the decision payload shape.</li>
+<li>Existing <code>y</code>, <code>n</code>, <code>1-4</code>, arrows, Enter, and Esc handling is unchanged.</li>
+</ul>
+</li>
+<li>Diff preview:<ul>
+<li><code>src/ui/components/DiffPreview.tsx</code></li>
+<li>The preview header now starts with <code>ECHO DIFF</code>.</li>
+<li>File path, add/remove counts, line numbers, truncation, and line-color semantics are preserved.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/ink-ui.test.tsx</code></li>
+<li>Tests assert <code>TRUST GATE</code>, <code>SCAN</code>, trust-scope choice copy, keyboard footer hints, and <code>ECHO DIFF</code>.</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Architecture Delta - Pod Proof Wake UI/UX</h2>
+<p>The proof-wake tranche stays inside the existing post-turn summary rendering boundary:</p>
+<ol>
+<li>Post-turn summary:<ul>
+<li><code>src/ui/components/TurnSummary.tsx</code></li>
+<li>The compact summary now starts with <code>PROOF WAKE</code>.</li>
+<li>Internal shorthand (<code>r</code>, <code>d</code>, <code>u</code>) is replaced with explicit <code>time</code>, <code>in</code>, <code>out</code>, <code>tools</code>, cost, and <code>tok/s</code> labels.</li>
+</ul>
+</li>
+<li>Data contract:<ul>
+<li><code>src/ui/types.ts</code></li>
+<li><code>TurnSummaryInfo</code> is unchanged; the tranche only changes rendering copy and hierarchy.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/ink-ui.test.tsx</code></li>
+<li>Tests assert <code>PROOF WAKE</code>, elapsed time, input/output tokens, tool count, cost, and throughput.</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Architecture Delta - Pod Status Rail UI/UX</h2>
+<p>The status-rail tranche stays inside the existing Ink status rendering boundary:</p>
+<ol>
+<li>Status identity:<ul>
+<li><code>src/ui/components/StatusBar.tsx</code></li>
+<li>Line 1 keeps <code>ORCA POD</code>, model, context bar / percentage, and branch, and adds a compact <code>sonar</code> label for context load on ordinary-width terminals.</li>
+</ul>
+</li>
+<li>Signal stats:<ul>
+<li><code>src/ui/components/StatusBar.tsx</code></li>
+<li>Line 2 now prefixes available metrics with <code>signal:</code> while preserving cost, token cadence, turns, session id, model policy, tool policy, output style, and sparkline output.</li>
+</ul>
+</li>
+<li>Trust state:<ul>
+<li><code>src/ui/components/StatusBar.tsx</code></li>
+<li>Line 3 now prefixes permission posture with <code>trust:</code> and keeps permission source, behavior mode, effort, and shift-tab cycling guidance visible.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/ink-ui.test.tsx</code></li>
+<li>Tests assert sonar context copy, signal rail copy, trust rail copy, and trust-cycle guidance while preserving existing field visibility.</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Architecture Delta - Pod Transcript Flow UI/UX</h2>
+<p>The transcript-flow tranche stays inside the existing Ink rendering boundary:</p>
+<ol>
+<li>Transcript roles:<ul>
+<li><code>src/ui/components/App.tsx</code></li>
+<li>User transcript blocks now label submitted prompts as <code>POD BRIEF</code>.</li>
+<li>Assistant response blocks now label completed and streaming responses as <code>ORCA POD</code>; streaming state copy reads <code>echoing</code>.</li>
+</ul>
+</li>
+<li>Tool-call rails:<ul>
+<li><code>src/ui/components/App.tsx</code></li>
+<li><code>src/ui/components/ToolCallBlock.tsx</code></li>
+<li>Active and completed tool rails now include the <code>ECHO TOOL</code> label while preserving tool name, argument/path display, result state, duration, and error output.</li>
+</ul>
+</li>
+<li>Thinking state:<ul>
+<li><code>src/ui/components/ThinkingSpinner.tsx</code></li>
+<li>The random status verb pool is now a compact Orca-oriented set for listening, echoing, routing, verifying, and surfacing evidence.</li>
+<li>The rendered state begins with <code>POD</code> to keep generation feedback aligned with the transcript identity.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/ink-ui.test.tsx</code></li>
+<li>Tests assert <code>POD BRIEF</code>, <code>ORCA POD</code>, <code>ECHO TOOL</code>, and <code>POD</code> thinking state while preserving markdown and tool visibility.</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Architecture Delta - Pod Command Surface UI/UX</h2>
+<p>The command-surface tranche stays inside the existing Ink UI component boundary:</p>
+<ol>
+<li>Shared picker frame:<ul>
+<li><code>src/ui/components/PickerFrame.tsx</code></li>
+<li>The frame now reads <code>useTheme()</code> directly and resolves border/title/subtitle/footer colors from semantic Orca tokens unless a caller overrides the border.</li>
+<li>Picker titles receive a compact diamond signal prefix while preserving existing width and margin behavior.</li>
+</ul>
+</li>
+<li>Slash command discovery:<ul>
+<li><code>src/ui/components/CommandPicker.tsx</code></li>
+<li>The panel title is now <code>POD COMMANDS</code>.</li>
+<li>Filter feedback reads <code>echo filter: /&lt;query&gt;</code>.</li>
+<li>No-match filters keep the picker visible with <code>no matching command</code>, and <code>Esc</code> still cancels even with zero results.</li>
+</ul>
+</li>
+<li>Option selection and input:<ul>
+<li><code>src/ui/components/OptionPicker.tsx</code></li>
+<li><code>src/ui/components/InputArea.tsx</code></li>
+<li>Option rows, descriptions, filter labels, and scroll affordances now use theme semantic tokens.</li>
+<li>The input empty state now reads <code>Brief the pod... (/help for commands)</code> and multiline help reads <code>pod input</code>.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/ink-ui.test.tsx</code></li>
+<li>Tests assert the pod command title, echo-filter copy, no-match state, and pod-brief placeholder.</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Architecture Delta - Mascot UI/UX</h2>
+<p>Superseded on 2026-05-02 for <code>Banner.tsx</code>: the independent mascot/icon block has been removed. The remaining architecture value from this tranche is the HomePanel pod-brief language.</p>
+<p>The mascot tranche stays inside the existing Ink UI and test boundary:</p>
+<ol>
+<li>Startup logo structure:<ul>
+<li><code>src/ui/components/Banner.tsx</code></li>
+<li><code>ORCA_WORDMARK_LINES</code> has been replaced by the current <code>ORCA-AGENT</code> display wordmark.</li>
+<li>The former mascot/hero block is deleted; startup keeps the themed status rows only.</li>
+</ul>
+</li>
+<li>First-screen UX:<ul>
+<li><code>src/ui/components/HomePanel.tsx</code></li>
+<li>The primary entry panel is now <code>POD BRIEF</code>, with copy that tells the operator to give Orca one outcome while the pod handles plan, tools, and evidence.</li>
+<li><code>POD SIGNAL</code>, <code>RECOVER</code>, and <code>GUARDRAILS</code> keep trust, state, recovery, and safety visible.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/ink-ui.test.tsx</code></li>
+<li>Tests assert the clean Banner deck, <code>POD BRIEF</code>, and the friendly briefing copy.</li>
+</ul>
+</li>
+</ol>
+<h2>2026-04-30 Architecture Delta - Visual System</h2>
+<p>The visual system tranche stays inside the existing Ink UI boundary:</p>
+<ol>
+<li>Theme source of truth:<ul>
+<li><code>src/ui/theme.tsx</code></li>
+<li><code>orcaTheme()</code> defines the <code>Blackfin Signal</code> semantic palette.</li>
+<li><code>resolveInitialTheme()</code> now returns <code>orca</code> as the default dark theme while preserving light mode and alternate themes.</li>
+</ul>
+</li>
+<li>Startup identity:<ul>
+<li><code>src/ui/components/Banner.tsx</code></li>
+<li>Static <code>ORCA-AGENT</code> block wordmark replaces the low-recognition swimming art and later compact <code>ORCA</code> lockup.</li>
+<li>No separate mascot/icon renders; compact terminals keep state rows coherent.</li>
+</ul>
+</li>
+<li>Entry control deck:<ul>
+<li><code>src/ui/components/HomePanel.tsx</code></li>
+<li>Empty state is organized as <code>POD BRIEF</code>, <code>POD SIGNAL</code>, <code>RECOVER</code>, and <code>GUARDRAILS</code>.</li>
+</ul>
+</li>
+<li>Identity selection and status:<ul>
+<li><code>src/ui/components/ThemePicker.tsx</code></li>
+<li><code>src/ui/components/StatusBar.tsx</code></li>
+<li><code>Blackfin Signal</code> is listed first and the status line uses <code>ORCA POD</code> language.</li>
+</ul>
+</li>
+<li>Regression coverage:<ul>
+<li><code>tests/ink-ui.test.tsx</code></li>
+<li>Verifies banner, HomePanel, ThemePicker, and theme behavior after the visual refresh.</li>
+</ul>
+</li>
+</ol>
+<h2>2026-04-29 Architecture Delta - Trust and Queue</h2>
+<p>The SOTA swarm audit adds two immediate architectural constraints:</p>
+<ol>
+<li>Hook loading is now split by trust boundary:<ul>
+<li>home/global hooks remain startup-safe</li>
+<li>repo-local <code>.orca</code> / <code>.claude</code> hooks require explicit project trust</li>
+<li>hook subprocess env is allowlisted instead of inheriting the full parent process</li>
+</ul>
+</li>
+<li><code>TaskRun</code> is now visible and leaseable through a first-class CLI queue surface:<ul>
+<li><code>orca queue</code></li>
+<li><code>orca queue list --status &lt;status&gt; --work-session &lt;id&gt; --limit &lt;n&gt;</code></li>
+<li><code>orca queue show &lt;task-run-id&gt;</code></li>
+<li><code>orca queue follow &lt;task-run-id&gt;</code></li>
+<li><code>orca queue takeover &lt;task-run-id&gt; --holder &lt;name&gt; --ttl &lt;duration&gt;</code></li>
+<li><code>orca queue evidence &lt;task-run-id&gt;</code></li>
+<li><code>orca queue resume &lt;task-run-id&gt; --holder &lt;name&gt;</code></li>
+<li><code>orca queue schedule --holder &lt;name&gt;</code></li>
+</ul>
+</li>
+<li>Slash-command discovery now has a shared metadata registry:<ul>
+<li><code>src/slash-commands.ts</code></li>
+<li>REPL completion</li>
+<li>Ink command picker</li>
+<li><code>/help</code> rendering</li>
+<li>HomePanel command metadata prepared for the pending UI-baseline split</li>
+</ul>
+</li>
+<li>Release evidence now has a checked snapshot:<ul>
+<li><code>doc/00_project/initiative_orca/verification_snapshot.json</code></li>
+<li><code>tests/release-evidence.test.ts</code></li>
+<li>README release badge, package version, filesystem test-file count, and active PDCA evidence rows must stay aligned</li>
+</ul>
+</li>
+<li>CI gate integrity is now manifest-driven:<ul>
+<li><code>.github/workflows/ci.yml</code></li>
+<li><code>agent-eval/manifests/test-matrix.json</code></li>
+<li><code>agent-eval/scripts/run-test-matrix.py</code></li>
+<li><code>agent-eval/scripts/sync-test-matrix.py</code></li>
+<li><code>agent-eval/generated/test-matrix-entrypoints.md</code></li>
+<li>CI runs matrix sync, static, security, performance, and fast agent-eval gates after the Node matrix</li>
+</ul>
+</li>
+<li>Ink transcript rendering is role-aware:<ul>
+<li><code>ChatSessionEmitter.emitUserMessage()</code> exposes submitted prompt text to the UI event stream</li>
+<li><code>App.tsx</code> renders user turns as highlighted <code>You</code> blocks and assistant turns as structured <code>ORCA</code> panels</li>
+<li><code>MarkdownText.tsx</code> handles headings, bullets, inline emphasis, links, blockquotes, and highlighted code blocks without exposing raw markdown syntax as the primary structure</li>
+</ul>
+</li>
+<li>Review-before-apply approval history is part of the TaskRun contract:<ul>
+<li><code>policy-executor</code> emits prompt, allowlist, policy, and hook decision events</li>
+<li><code>chat</code> appends those events to <code>TaskRun.approvals</code></li>
+<li>CLI <code>queue evidence</code> and Ink <code>/evidence</code> render the approval timeline before file evidence</li>
+</ul>
+</li>
+</ol>
+<p>Open architecture work:</p>
+<ul>
+<li>Keep <code>WorkSession</code> / <code>TaskRun</code> as the canonical execution contract across <code>chat</code>, <code>run</code>, mission, planner, and <code>serve /chat</code> surfaces.</li>
+<li>Keep scheduler / resume semantics honest: chat TaskRuns with saved-session metadata can print concrete <code>orca chat --continue</code> recovery commands; non-chat replay remains unsupported until replay-safe argv/prompt metadata is persisted.</li>
+<li>Keep <code>formatTaskRunEvidenceDrawerMarkdown</code> as the shared rendering contract for CLI <code>queue evidence</code> and Ink <code>/evidence</code> detail panels.</li>
+<li>Keep execution handlers separate until the unified execution contract is ready; the registry currently owns discovery metadata, not command behavior.</li>
+<li>Split the existing HomePanel UI baseline before wiring its command hints to the registry.</li>
+<li>Keep matrix layer definitions in the manifest; do not add package scripts or CI rows by hand without updating <code>sync-test-matrix.py</code> expectations.</li>
+</ul>
 <!-- AI-FLEET:PROJECT_DIR:START -->
 <ul>
 <li><code>PROJECT_DIR</code>: <code>/Users/mauricewen/Projects/orca-cli</code></li>
 </ul>
 <!-- AI-FLEET:PROJECT_DIR:END -->
 
-<h2 id="architecture-summary">Architecture Summary</h2>
+<h2>Architecture Summary</h2>
 <p>Orca CLI is a TypeScript ESM CLI product composed of a terminal entry layer, command layer, runtime/config layer, provider bridge, and test/verification layer. It is a CLI runtime, so the primary surface is command invocation and streaming terminal output rather than browser routes.</p>
 <p>Hook configuration now resolves from both project-local and operator-global Orca surfaces:</p>
 <ul>
@@ -18,7 +575,7 @@
 <li>startup-safe auto-connect: home/global-scoped MCP only</li>
 <li>project-scoped MCP: explicit opt-in through <code>/mcp connect</code> or equivalent operator action</li>
 </ul>
-<h2 id="high-level-diagram">High-Level Diagram</h2>
+<h2>High-Level Diagram</h2>
 <pre><code class="language-mermaid">flowchart TD
   User[Developer in Terminal]
   Bin[src/bin/orca.ts]
@@ -35,6 +592,7 @@
   Logger[src/logger.ts]
   Hooks[src/hooks.ts]
   Usage[src/usage-db.ts]
+  WorkSessions[src/work-session-store.ts]
   Output[src/output.ts&lt;br/&gt;src/markdown.ts]
   Tests[tests/*.test.ts]
   EvalPlan[AGENT_EVAL_PLAN.md]
@@ -56,6 +614,7 @@
   Runtime --&gt; Logger
   Runtime --&gt; Hooks
   Runtime --&gt; Usage
+  Runtime --&gt; WorkSessions
   Runtime --&gt; Output
   Tests --&gt; Commands
   Tests --&gt; Multi
@@ -93,7 +652,7 @@
   Render --&gt; TermSize
   Render --&gt; Theme
 </code></pre>
-<h2 id="layer-breakdown">Layer Breakdown</h2>
+<h2>Layer Breakdown</h2>
 <table>
 <thead>
 <tr>
@@ -138,6 +697,11 @@
 <td>Tool execution, detached job tracking, local runtime logging, hooks, provenance-aware MCP loading, retry behavior, verification helpers</td>
 </tr>
 <tr>
+<td>Continuity objects</td>
+<td><code>src/work-session-store.ts</code></td>
+<td>File-backed <code>WorkSession</code> / <code>TaskRun</code> persistence for <code>run</code> default/goal-loop/mission/plan, <code>serve /chat</code>, queue inspection, takeover leases, lease-state classification, and resume/schedule plans</td>
+</tr>
+<tr>
 <td>ink UI</td>
 <td><code>src/ui/</code> (18 files)</td>
 <td>React terminal UI: App, ScrollBox, InputArea, StatusBar, Banner, Footer, ThinkingSpinner, ToolCallBlock, DiffPreview, MarkdownText, FileLink, PermissionPrompt, MultiModelProgress, CommandPicker, TurnSummary, AlternateScreen + hooks (useTerminalSize, useMouseWheel, usePasteHandler) + modules (cursor, theme, session, types, utils)</td>
@@ -163,7 +727,7 @@
 <td>Deterministic regression coverage plus manifest-driven black-box gate execution for release-grade CLI evaluation</td>
 </tr>
 </tbody></table>
-<h2 id="command-surface-map">Command Surface Map</h2>
+<h2>Command Surface Map</h2>
 <table>
 <thead>
 <tr>
@@ -238,7 +802,7 @@
 <td>Local configuration bootstrap</td>
 </tr>
 </tbody></table>
-<h2 id="route-page-map">Route / Page Map</h2>
+<h2>Route / Page Map</h2>
 <ul>
 <li>Web routes: <code>N/A</code></li>
 <li>Primary interaction surface: terminal commands and REPL slash-style workflows</li>
@@ -249,14 +813,19 @@
 <li>Quality gate surfaces: <code>npm test</code>, <code>AGENT_EVAL_PLAN.md</code>, and future <code>agent-eval/{tasks,graders,runs}</code></li>
 <li>Quality gate surfaces: <code>npm run eval:fast</code>, <code>npm run eval:nightly</code>, <code>npm run eval:release</code>, plus <code>agent-eval/{tasks,graders,manifests,runs}</code></li>
 <li>Serve diagnostics: <code>/health</code>, <code>/providers</code>, <code>/doctor</code></li>
+<li>Serve continuity discovery: <code>/sessions</code>, <code>/sessions/latest</code>, <code>/sessions/:id</code>, <code>/work-sessions</code>, <code>/work-sessions/latest</code>, <code>/work-sessions/:id</code>, <code>/work-sessions/:id/task-runs</code>, <code>/task-runs</code>, <code>/task-runs/:id</code></li>
+<li>Serve canonical run entry: <code>POST /chat</code> returns <code>workSessionId</code> / <code>taskRunId</code> for non-streaming requests and emits the same ids in an SSE <code>metadata</code> event for streaming requests.</li>
+<li>Run canonical task entry: <code>orca run</code> writes <code>TaskRun</code> records for default, goal-loop, mission, and plan branches and stores usage plus mission-state evidence when available.</li>
+<li>Chat canonical task entry: interactive <code>orca chat</code> REPL turns write per-prompt <code>TaskRun</code> records under the active chat <code>WorkSession</code>, including status, usage, duration, and runtime observation ids.</li>
+<li>Queue recovery entry: <code>orca queue resume</code> and <code>orca queue schedule</code> reuse the same lease path, then render a resume plan. Chat saved sessions become <code>orca chat --cwd ... --continue &lt;saved-session-id&gt;</code> commands; running background jobs become <code>orca queue follow &lt;task-run-id&gt;</code> monitor commands.</li>
 </ul>
-<h2 id="legacy-documentation-cross-references">Legacy Documentation Cross-References</h2>
+<h2>Legacy Documentation Cross-References</h2>
 <ul>
 <li><code>doc/THREE_TIER_ARCHITECTURE.md</code>: historical broader ecosystem architecture</li>
 <li><code>doc/MULTI_MODEL_COLLABORATION.md</code>: early collaboration-mode design</li>
 <li><code>doc/SOTA_TEST_PLAN.md</code>: historical hardening plan</li>
 </ul>
-<h2 id="repl-multimodal-prompt-assembly-2026-04-20">REPL Multimodal Prompt Assembly (2026-04-20)</h2>
+<h2>REPL Multimodal Prompt Assembly (2026-04-20)</h2>
 <ul>
 <li><code>src/commands/chat-input.ts</code><ul>
 <li>now extracts embedded local image references from prompt text</li>
@@ -277,5 +846,4 @@
 <ul>
 <li>image attachments are only promoted on the proxy-provider path; SDK/native path remains text-only</li>
 </ul>
-<section><h2>2026-04-29 架构增量：信任边界与队列</h2><p>Hook 加载按信任边界拆分：home/global hooks 仍可安全启动，repo-local <code>.orca</code> / <code>.claude</code> hooks 需要显式项目信任；hook 子进程环境改为 allowlist。<code>TaskRun</code> 现在通过 <code>orca queue list/show/follow/takeover/evidence/resume/schedule</code> 成为一等检查、证据跟随、操作员 lease 与恢复计划入口。<code>chat</code> REPL、<code>run</code> default / goal-loop / mission / plan 与 <code>serve /chat</code> 已写入 canonical <code>WorkSession</code> / <code>TaskRun</code>。CLI <code>queue evidence</code> 与 Ink <code>/evidence</code> 共享 <code>formatTaskRunEvidenceDrawerMarkdown</code> 作为证据 detail panel 渲染契约，并读取 <code>TaskRun.approvals</code> 展示审批时间线。<code>queue resume</code> 和 <code>queue schedule</code> 复用 lease path，将 chat saved-session metadata 渲染为 <code>orca chat --continue</code> 命令，将 running background job 渲染为 <code>queue follow</code> 监控命令；非 chat replay 仍保持 unsupported，直到持久化 replay-safe argv/prompt metadata。Ink transcript 现在通过 <code>emitUserMessage()</code>、<code>App.tsx</code> role panels 和 <code>MarkdownText.tsx</code> structured renderer 区分用户输入与 assistant 输出。Slash command discovery 现在由 <code>src/slash-commands.ts</code> 统一供给 REPL completion、Ink picker 和 <code>/help</code>，并保留 HomePanel metadata 给待拆分的 UI baseline。Release evidence 现在由 <code>verification_snapshot.json</code> 与 <code>tests/release-evidence.test.ts</code> 守住 README、package version、test-file count 与 active PDCA evidence。CI gate integrity 现在由 <code>agent-eval/manifests/test-matrix.json</code>、<code>run-test-matrix.py</code>、<code>sync-test-matrix.py</code> 与 GitHub Actions <code>gate-integrity</code> job 共同守住，CI 会执行 matrix sync、static、security、performance 与 fast agent-eval gates。后续架构任务是模型 catalog SSoT 与非 chat replay metadata。</p></section>
 </article></main></body></html>

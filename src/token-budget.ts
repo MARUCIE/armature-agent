@@ -11,6 +11,7 @@
  */
 
 import { messageContentToText, type ChatMessage, type PromptContent } from './providers/openai-compat.js'
+import { getContextWindowForModelOrDefault, getMaxOutputForModel } from './model-metadata.js'
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -113,29 +114,6 @@ function estimateHistoryTokens(history: ChatMessage[]): number {
   return history.reduce((sum, m) => sum + estimatePromptContentTokens(m.content), 0)
 }
 
-// ── Model Context Windows ───────────────────────────────────────
-
-const MODEL_CONTEXT: Array<[string, number]> = [
-  ['claude-opus-4', 200_000],
-  ['claude-sonnet-4', 200_000],
-  ['gpt-5', 256_000],
-  ['gemini-3', 2_000_000],
-  ['gemma-4', 128_000],
-  ['glm-5', 128_000],
-  ['grok-4', 256_000],
-  ['qwen3', 128_000],
-  ['kimi-k2', 256_000],
-  ['minimax-m2', 128_000],
-]
-
-function getContextWindow(model: string): number {
-  const lower = model.toLowerCase()
-  for (const [prefix, window] of MODEL_CONTEXT) {
-    if (lower.includes(prefix)) return window
-  }
-  return 128_000 // safe default
-}
-
 // ── CJK-Aware Token Estimation ─────────────────────────────────
 
 /**
@@ -197,8 +175,8 @@ export class TokenBudgetManager {
 
   /** Get current budget status */
   getBudget(history: ChatMessage[]): TokenBudget {
-    const contextWindow = getContextWindow(this.model)
-    const maxOutput = Math.min(contextWindow / 4, 64_000)
+    const contextWindow = getContextWindowForModelOrDefault(this.model)
+    const maxOutput = getMaxOutputForModel(this.model) ?? Math.min(contextWindow / 4, 64_000)
 
     // Prefer API-reported inputTokens (exact), fall back to CJK-aware estimate
     // CRITICAL: fallback MUST cap at contextWindow — conversation history includes
@@ -260,7 +238,7 @@ export class TokenBudgetManager {
    * @returns Summary of what was compacted
    */
   smartCompact(history: ChatMessage[], keepTurns = 2): CompactionResult {
-    const contextWindow = getContextWindow(this.model)
+    const contextWindow = getContextWindowForModelOrDefault(this.model)
     const totalTokens = estimateHistoryTokens(history)
     const estimatedPct = Math.round((totalTokens / contextWindow) * 100)
 

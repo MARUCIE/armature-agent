@@ -73,6 +73,17 @@ interface MCPConnection {
   initialized: boolean
 }
 
+export function parseMcpToolName(fullName: string): { serverName: string; toolName: string } | null {
+  const prefix = 'mcp__'
+  if (!fullName.startsWith(prefix)) return null
+  const delimiter = fullName.lastIndexOf('__')
+  if (delimiter <= prefix.length) return null
+  const serverName = fullName.slice(prefix.length, delimiter)
+  const toolName = fullName.slice(delimiter + 2)
+  if (!serverName || !toolName) return null
+  return { serverName, toolName }
+}
+
 // ── MCP Client ───────────────────────────────────────────────────
 
 export class MCPClient {
@@ -150,7 +161,7 @@ export class MCPClient {
       try {
         const toml = readFileSync(codexConfigPath, 'utf-8')
         // Simple TOML parser for [mcp_servers.name] sections
-        const serverRegex = /\[mcp_servers\.(\w+)\]\s*\n((?:[^\[]*\n)*)/g
+        const serverRegex = /\[mcp_servers\.([^\]]+)\]\s*\n((?:[^\[]*\n)*)/g
         let match
         while ((match = serverRegex.exec(toml)) !== null) {
           const name = match[1]!
@@ -447,11 +458,9 @@ export class MCPClient {
    * Returns null if the name doesn't match MCP format.
    */
   async routeToolCall(fullName: string, args: Record<string, unknown>): Promise<{ success: boolean; output: string } | null> {
-    const match = fullName.match(/^mcp__([^_]+)__(.+)$/)
-    if (!match) return null
-
-    const [, serverName, toolName] = match
-    if (!serverName || !toolName) return null
+    const parsed = parseMcpToolName(fullName)
+    if (!parsed) return null
+    const { serverName, toolName } = parsed
     if (!this.connections.has(serverName)) {
       return { success: false, output: `MCP server "${serverName}" not connected` }
     }

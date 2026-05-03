@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
+import { rmSync } from 'node:fs'
 import type { OrcaConfig } from '../src/config.js'
 import { executeReplTurn } from '../src/commands/chat-repl-turn.js'
 import { ResetSensitiveWaitCanceledError } from '../src/commands/chat-proxy-tool-call.js'
@@ -32,6 +35,14 @@ const cognitiveMocks = vi.hoisted(() => ({
 
 const plannerMocks = vi.hoisted(() => ({
   isMultiTaskPrompt: vi.fn(),
+}))
+
+const autoCritiqueMocks = vi.hoisted(() => ({
+  maybeBuildAutoCritiqueNotice: vi.fn(),
+}))
+
+const proxyToolMocks = vi.hoisted(() => ({
+  handleProxyToolCall: vi.fn(),
 }))
 
 const providerMocks = vi.hoisted(() => ({
@@ -92,6 +103,22 @@ vi.mock('../src/planner/index.js', async (importOriginal) => {
   }
 })
 
+vi.mock('../src/critique-auto.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/critique-auto.js')>()
+  return {
+    ...actual,
+    maybeBuildAutoCritiqueNotice: autoCritiqueMocks.maybeBuildAutoCritiqueNotice,
+  }
+})
+
+vi.mock('../src/commands/chat-proxy-tool-call.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/commands/chat-proxy-tool-call.js')>()
+  return {
+    ...actual,
+    handleProxyToolCall: proxyToolMocks.handleProxyToolCall,
+  }
+})
+
 vi.mock('../src/providers/openai-compat.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/providers/openai-compat.js')>()
   return {
@@ -140,6 +167,8 @@ describe('executeReplTurn', () => {
     cognitiveMocks.matchCognitive.mockReturnValue(null)
     cognitiveMocks.formatCognitiveContext.mockReturnValue('cognitive context')
     plannerMocks.isMultiTaskPrompt.mockReturnValue(false)
+    autoCritiqueMocks.maybeBuildAutoCritiqueNotice.mockReturnValue(null)
+    proxyToolMocks.handleProxyToolCall.mockResolvedValue({ success: true, output: 'OK' })
     providerMocks.chatOnce.mockResolvedValue({
       text: 'retry answer',
       inputTokens: 111,
@@ -355,6 +384,67 @@ describe('executeReplTurn', () => {
     expect(call?.prompt).toContain('Create the parser command.')
     expect(call?.prompt).not.toContain('Reflect workflow')
     expect(options.emitInlineNotice).not.toHaveBeenCalled()
+  })
+
+  it('emits automatic critique checkpoint notices before provider turns', async () => {
+    const critiqueAutoState = {}
+    autoCritiqueMocks.maybeBuildAutoCritiqueNotice.mockReturnValue({
+      checkpoint: 'after_complex_implementation',
+      reviewerModel: 'claude-sonnet-4-20250514',
+      riskScore: 0.3,
+      diffLineCount: 900,
+      changedFileCount: 1,
+      message: 'critique checkpoint recommended: after_complex_implementation',
+    })
+    const options = createOptions({
+      critiqueAutoState,
+      autoCritiqueEnabled: true,
+      autoCritiqueThreshold: 0.4,
+      emitInlineNotice: vi.fn(),
+    })
+
+    await executeReplTurn(options)
+
+    expect(autoCritiqueMocks.maybeBuildAutoCritiqueNotice).toHaveBeenCalledWith({
+      cwd: '/tmp/project',
+      activeModel: 'gpt-5.4',
+      state: critiqueAutoState,
+      enabled: true,
+      threshold: 0.4,
+    })
+    expect(options.emitInlineNotice).toHaveBeenCalledWith(
+      'critique checkpoint recommended: after_complex_implementation',
+      'warn',
+    )
+    expect(options.runProxyTurn).toHaveBeenCalledOnce()
+  })
+
+  it('repairs and opens a missing claimed local file before calling the provider', async () => {
+    const path = join(tmpdir(), `orca-repl-missing-claim-${process.pid}-${Date.now()}.md`)
+    rmSync(path, { force: true })
+    const history = [
+      { role: 'system' as const, content: 'system prompt' },
+      { role: 'assistant' as const, content: `已保存到 \`${path}\`\n\n# Draft\nContent\n` },
+    ]
+    const options = createOptions({
+      messageToSend: '本地没有这个文件，给我打开',
+      currentPermMode: 'yolo',
+      history,
+    })
+
+    const result = await executeReplTurn(options)
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      inputTokens: 0,
+      outputTokens: 0,
+      summary: 'local file request handled',
+    })
+    expect(options.runProxyTurn).not.toHaveBeenCalled()
+    expect(proxyToolMocks.handleProxyToolCall.mock.calls.map((call) => call[0].name)).toEqual(['write_file', 'open_file'])
+    expect(proxyToolMocks.handleProxyToolCall.mock.calls[0]?.[0].args).toMatchObject({ path })
+    expect(String(proxyToolMocks.handleProxyToolCall.mock.calls[0]?.[0].args.content)).toContain('# Draft')
+    expect(history.at(-1)?.content).toContain('Local file guard repaired the missing claimed file')
   })
 
   it('updates history and token stats for SDK-backed turns', async () => {

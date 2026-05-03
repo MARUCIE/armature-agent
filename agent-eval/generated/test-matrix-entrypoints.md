@@ -7,6 +7,7 @@ npm run test:static
 npm run test:unit
 npm run test:contract
 npm run test:integration
+npm run test:tool-calls
 npm run test:e2e
 npm run test:security
 npm run test:performance
@@ -22,6 +23,7 @@ npm run test:matrix:sync
 | `test:unit` | Unit | 0 failed tests | Core runtime |
 | `test:contract` | Contract | 0 failed tests | CLI / public surface |
 | `test:integration` | Integration | 0 failed tests | Runtime + storage |
+| `test:tool-calls` | Tool Calls | built-in, proxy, MCP, cleanup, and long-session tool prompt regressions pass | Agent runtime / tool loop |
 | `test:e2e` | E2E | 0 failed tests | Operator workflow |
 | `test:security` | Security | 0 failed tests and 0 prod audit vulnerabilities | Security gate |
 | `test:performance` | Performance | bench score=100 and 0 failed tests | Bench / release gate |

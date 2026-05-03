@@ -1,5 +1,5 @@
 /**
- * Round 1: Full tool coverage — all 41 tools exercised.
+ * Round 1: Full tool coverage — all 42 tools exercised.
  * Simulates real coding scenarios with actual file operations.
  */
 
@@ -76,8 +76,8 @@ afterAll(() => {
 // ── Registry Tests ───────────────────────────────────────────────
 
 describe('Round 1: Tool Registry', () => {
-  it('has exactly 41 tools', () => {
-    expect(TOOL_DEFINITIONS.length).toBe(41)
+  it('has exactly 42 tools', () => {
+    expect(TOOL_DEFINITIONS.length).toBe(42)
   })
 
   it('all tools have valid function calling schema', () => {
@@ -102,10 +102,11 @@ describe('Round 1: Tool Registry', () => {
     }
   })
 
-  it('has exactly 11 dangerous tools', () => {
-    expect(DANGEROUS_TOOLS.size).toBe(11)
+  it('has exactly 12 dangerous tools', () => {
+    expect(DANGEROUS_TOOLS.size).toBe(12)
     expect(DANGEROUS_TOOLS.has('fetch_url')).toBe(true)
     expect(DANGEROUS_TOOLS.has('web_search')).toBe(true)
+    expect(DANGEROUS_TOOLS.has('open_file')).toBe(true)
   })
 })
 

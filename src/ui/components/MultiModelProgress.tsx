@@ -8,6 +8,7 @@ import React from 'react'
 import { Box, Text } from 'ink'
 import Spinner from 'ink-spinner'
 import type { ModelProgress } from '../types.js'
+import { useTheme } from '../theme.js'
 
 interface Props {
   command: string
@@ -15,23 +16,26 @@ interface Props {
 }
 
 export function MultiModelProgress({ command, models }: Props): React.ReactElement {
+  const theme = useTheme()
+
   return (
     <Box flexDirection="column" marginLeft={2}>
       <Box>
-        <Text color="cyan" bold>  {command}</Text>
-        <Text dimColor> — {models.length} models</Text>
+        <Text color={theme.accentDim} bold>  POD COUNCIL </Text>
+        <Text color={theme.accent} bold>{command}</Text>
+        <Text dimColor> · {models.length} voices</Text>
       </Box>
       {models.map((m) => (
         <Box key={m.model} marginLeft={2}>
           {m.done ? (
-            <Text color="green">  ok </Text>
+            <Text color={theme.success}>  surfaced </Text>
           ) : (
-            <Text color="cyan">
-              <Spinner type="dots" />{' '}
+            <Text color={theme.accent}>
+              <Spinner type="dots" /> sonar{' '}
             </Text>
           )}
-          <Text>{m.model.length > 20 ? m.model.slice(0, 18) + '..' : m.model}</Text>
-          <Text dimColor> {(m.elapsedMs / 1000).toFixed(1)}s</Text>
+          <Text color={m.done ? theme.text : theme.model}>{m.model.length > 20 ? m.model.slice(0, 18) + '..' : m.model}</Text>
+          <Text dimColor> · {(m.elapsedMs / 1000).toFixed(1)}s</Text>
         </Box>
       ))}
     </Box>

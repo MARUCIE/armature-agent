@@ -120,6 +120,30 @@ describe('Hook config loading', () => {
     expect(manager.hasHooks('UserPromptSubmit')).toBe(true)
     expect(manager.totalHooks).toBe(1)
   })
+
+  it('5.3c loads trusted project hooks per cwd without leaking hooks across projects', async () => {
+    const projectA = join(testDir, 'trusted-project-a')
+    const projectB = join(testDir, 'trusted-project-b')
+    mkdirSync(join(projectA, '.orca'), { recursive: true })
+    mkdirSync(join(projectB, '.orca'), { recursive: true })
+    writeFileSync(join(projectA, '.orca', 'hooks.json'), JSON.stringify({
+      SessionStart: [{ command: 'echo project-a' }],
+    }))
+    writeFileSync(join(projectB, '.orca', 'hooks.json'), JSON.stringify({
+      SessionStart: [{ command: 'echo project-b' }],
+    }))
+
+    const manager = trustedProjectHooks()
+    manager.load(projectA)
+    const first = await manager.run('SessionStart', { event: 'SessionStart', cwd: projectA })
+    manager.load(projectB)
+    const second = await manager.run('SessionStart', { event: 'SessionStart', cwd: projectB })
+    const firstAgain = await manager.run('SessionStart', { event: 'SessionStart', cwd: projectA })
+
+    expect(first.additionalContext?.trim()).toBe('project-a')
+    expect(second.additionalContext?.trim()).toBe('project-b')
+    expect(firstAgain.additionalContext?.trim()).toBe('project-a')
+  })
 })
 
 // ── Hook Execution ──────────────────────────────────────────────
@@ -482,6 +506,26 @@ describe('Hook matching and env vars', () => {
     expect(result.additionalContext).toContain('PreToolUse:edit_file')
   })
 
+  it('5.17c Stop hooks receive the assistant response via env vars', async () => {
+    const dir = join(testDir, 'stop-response-env')
+    mkdirSync(join(dir, '.orca'), { recursive: true })
+    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify({
+      Stop: [{
+        command: 'python3 -c "import os; print(os.environ.get(\'ORCA_RESPONSE\', \'\'))"',
+      }],
+    }))
+
+    const manager = trustedProjectHooks()
+    manager.load(dir)
+    const result = await manager.run('Stop', {
+      event: 'Stop',
+      prompt: 'do the work',
+      response: 'claimed completion',
+      cwd: dir,
+    })
+    expect(result.additionalContext).toContain('claimed completion')
+  })
+
   it('5.17b Hook env does not inherit provider API keys by default', async () => {
     const dir = join(testDir, 'env-key-redaction')
     const previousOpenAiKey = process.env.OPENAI_API_KEY
@@ -562,14 +606,14 @@ describe('Hook matching and env vars', () => {
 // ── Safety & Permission ─────────────────────────────────────────
 
 describe('Safety system', () => {
-  it('5.20 DANGEROUS_TOOLS has exactly 11 members', () => {
-    expect(DANGEROUS_TOOLS.size).toBe(11)
+  it('5.20 DANGEROUS_TOOLS has exactly 12 members', () => {
+    expect(DANGEROUS_TOOLS.size).toBe(12)
   })
 
   it('5.21 DANGEROUS_TOOLS contains expected dangerous operations', () => {
     const expected = ['write_file', 'edit_file', 'delete_file', 'move_file',
       'run_command', 'run_background', 'git_commit', 'multi_edit', 'patch_file',
-      'fetch_url', 'web_search']
+      'open_file', 'fetch_url', 'web_search']
     for (const tool of expected) {
       expect(DANGEROUS_TOOLS.has(tool)).toBe(true)
     }

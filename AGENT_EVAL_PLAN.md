@@ -5,13 +5,13 @@
 ## Meta
 
 - Owner: Maurice
-- LastUpdated: 2026-04-16
+- LastUpdated: 2026-04-22 (continuity slice)
 - Product: Orca CLI (`orca-cli`)
 - Version: `0.8.0`
-- GitBaseline: `6631a17`
-- DeterministicBaseline: `npm test` => `1280/1280`
+- GitBaseline: `4e642c1`
+- DeterministicBaseline: `npm test` => `1558/1558`
 - ModuleDir: `agent-eval`
-- PlanningMode: `release-system-landed`; `agent-eval/` now has fast / nightly / release manifests, a shared manifest runner, and a recorded release-journey artifact path
+- PlanningMode: `run-first-continuity-slice`; `agent-eval/` now has fresh fast / nightly / release evidence after the 2026-04-22 WorkSession / TaskRun slice
 
 ## Evaluation Target
 
@@ -24,9 +24,9 @@
 
 ## Program Goal
 
-1. Keep the verified baseline anchored at `1280/1280` while shifting future growth from ad hoc test-file expansion to an owned matrix plan.
+1. Keep the verified baseline anchored at `1558/1558` while shifting future growth from ad hoc test-file expansion to an owned matrix plan.
 2. Expand the deterministic regression suite in tiers: fast gate `550-650` selected cases, nightly `~1700` total cases, release `~2210` total cases.
-3. Add a task-based evaluation layer that measures real agent delivery quality, not only isolated helper correctness: the current system now executes `14` fast tasks plus deterministic gate commands, with nightly / release bundles codified for continued expansion toward the `36` / `72` targets.
+3. Add a task-based evaluation layer that measures real agent delivery quality, not only isolated helper correctness: the current system now executes `63` fast-gate tasks, `66` nightly tasks, and `69` release tasks with fresh 2026-04-22 evidence, while continued expansion still targets the longer-term `36` / `72` task-family matrix.
 4. Make public CLI contracts first-class so test count growth does not hide gaps in shipped operator surfaces.
 
 ## Current Coverage Snapshot

@@ -31,7 +31,7 @@ export function createInitCommand(): Command {
       printInfo('     export ANTHROPIC_API_KEY=sk-... # or direct Anthropic')
       printInfo('')
       printInfo('  2. Start chatting:')
-      printInfo('     orca chat                      # interactive REPL (41 tools)')
+      printInfo('     orca chat                      # interactive REPL (42 tools)')
       printInfo('     orca chat "explain this code"  # one-shot query')
       printInfo('')
       printInfo('  3. Run an agent task:')

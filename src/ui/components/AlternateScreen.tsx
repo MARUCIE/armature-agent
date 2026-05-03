@@ -21,8 +21,18 @@ const CURSOR_HOME = '\x1b[H'
 const HIDE_CURSOR = '\x1b[?25l'
 const SHOW_CURSOR = '\x1b[?25h'
 
+export function enterAlternateScreen(): void {
+  process.stdout.write(ENTER_ALT_SCREEN + ERASE_SCREEN + CURSOR_HOME + HIDE_CURSOR)
+}
+
+export function exitAlternateScreen(): void {
+  process.stdout.write(SHOW_CURSOR + EXIT_ALT_SCREEN)
+}
+
 interface Props {
   children: React.ReactNode
+  /** renderInkApp can pre-enter before Ink paints the first frame. */
+  enterOnMount?: boolean
 }
 
 // Enter the alternate screen before Ink paints the first frame.
@@ -30,23 +40,22 @@ const usePrePaintEffect = typeof useInsertionEffect === 'function'
   ? useInsertionEffect
   : useLayoutEffect
 
-export function AlternateScreen({ children }: Props): React.ReactElement {
+export function AlternateScreen({ children, enterOnMount = true }: Props): React.ReactElement {
   const { rows } = useTerminalSize()
 
   usePrePaintEffect(() => {
-    // Enter alternate screen buffer on mount
-    process.stdout.write(ENTER_ALT_SCREEN + ERASE_SCREEN + CURSOR_HOME + HIDE_CURSOR)
+    if (enterOnMount) enterAlternateScreen()
 
     return () => {
       // Exit alternate screen buffer on unmount (restores main buffer)
-      process.stdout.write(SHOW_CURSOR + EXIT_ALT_SCREEN)
+      exitAlternateScreen()
     }
-  }, [])
+  }, [enterOnMount])
 
   // Handle SIGCONT (resume from background) — re-enter alt screen
   useEffect(() => {
     const handler = () => {
-      process.stdout.write(ENTER_ALT_SCREEN + ERASE_SCREEN + CURSOR_HOME + HIDE_CURSOR)
+      enterAlternateScreen()
     }
     process.on('SIGCONT', handler)
     return () => { process.removeListener('SIGCONT', handler) }

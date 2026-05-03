@@ -34,7 +34,7 @@ const ProviderConfigSchema = z.object({
   disabled: z.boolean().default(false),
   /** True for aggregators (Poe, OpenRouter, Zenmux) that route to multiple vendors via one endpoint */
   aggregator: z.boolean().default(false),
-  /** Extra HTTP headers sent with every request (e.g. Copilot-Integration-Id for GitHub Copilot API) */
+  /** Extra HTTP headers sent with every request */
   headers: z.record(z.string()).optional(),
   /** Default reasoning effort for models that support it (e.g. 'xhigh' for GPT-5.x) */
   defaultEffort: z.string().optional(),
@@ -187,7 +187,7 @@ const WELL_KNOWN_PROVIDERS: Record<string, ProviderDefaults> = {
   poe: {
     baseURL: 'https://api.poe.com/v1/',
     envKey: 'POE_API_KEY',
-    defaultModel: 'claude-sonnet-4.6',
+    defaultModel: 'claude-opus-4.6',
   },
   anthropic: {
     baseURL: 'https://api.anthropic.com/v1/',
@@ -240,11 +240,6 @@ const WELL_KNOWN_PROVIDERS: Record<string, ProviderDefaults> = {
     baseURL: 'http://localhost:11434/v1',
     envKey: 'LOCAL_API_KEY',
     defaultModel: 'qwen3:32b',
-  },
-  copilot: {
-    baseURL: 'https://api.githubcopilot.com',
-    envKey: 'GH_TOKEN',
-    defaultModel: 'claude-sonnet-4.6',
   },
 }
 
@@ -768,11 +763,6 @@ export function resolveProvider(config: OrcaConfig): {
     }
   }
 
-  // Auto-inject required headers for well-known providers
-  if (providerId === 'copilot') {
-    headers = { 'Copilot-Integration-Id': 'vscode-chat', ...headers }
-  }
-
   return { provider: providerId, apiKey, model, baseURL, sdkProvider, headers, reasoningEffort: providerConfig.defaultEffort }
 }
 
@@ -892,19 +882,19 @@ export interface ModelEndpoint {
 /**
  * Model prefix → candidate providers (ordered by preference).
  * First candidate with a valid API key wins.
- * This enables e.g. 'claude' to route to 'copilot' when 'anthropic' has no key.
+ * This enables e.g. 'claude' to route to 'poe' when 'anthropic' has no key.
  */
 const MODEL_PREFIX_TO_PROVIDERS: Array<[string, string[]]> = [
-  ['claude', ['poe', 'copilot', 'anthropic']],
-  ['anthropic', ['poe', 'copilot', 'anthropic']],
-  ['gpt', ['copilot', 'poe', 'openai']],
+  ['claude', ['poe', 'anthropic']],
+  ['anthropic', ['poe', 'anthropic']],
+  ['gpt', ['poe', 'openai']],
   ['o1', ['openai']],
   ['o3', ['openai']],
   ['o4', ['openai']],
   ['gemini', ['google']],
   ['gemma', ['google']],
   ['deepseek', ['deepseek']],
-  ['grok', ['copilot', 'xai']],
+  ['grok', ['xai']],
   ['qwen', ['poe', 'local']],
   ['llama', ['local']],
   ['kimi', ['local']],
@@ -957,16 +947,13 @@ export function resolveModelEndpoint(
         (isCloudflareAggregator(aggregatorId) ? inferRequestKeyForModel(model) : undefined)
       const baseURL = resolveEnvTemplate(agg.baseURL) || getWellKnownBaseURL(wk)
       if (apiKey && baseURL) {
-        // Resolve headers for aggregator (e.g. copilot needs Copilot-Integration-Id)
+        // Resolve headers for aggregator-specific auth.
         let headers: Record<string, string> | undefined
         if (agg.headers) {
           headers = {}
           for (const [k, v] of Object.entries(agg.headers)) {
             headers[k] = resolveEnvTemplate(v) || v
           }
-        }
-        if (aggregatorId === 'copilot') {
-          headers = { 'Copilot-Integration-Id': 'vscode-chat', ...headers }
         }
         return { model, apiKey, baseURL, provider: aggregatorId, headers, reasoningEffort: agg.defaultEffort }
       }
@@ -991,9 +978,6 @@ export function resolveModelEndpoint(
           headers[k] = resolveEnvTemplate(v) || v
         }
       }
-      if (detectedProvider === 'copilot') {
-        headers = { 'Copilot-Integration-Id': 'vscode-chat', ...headers }
-      }
       return { model, apiKey, baseURL, provider: detectedProvider, headers, reasoningEffort: pc?.defaultEffort }
     }
   }
@@ -1012,8 +996,8 @@ export function resolveModelEndpoint(
 }
 
 /** Known aggregator provider IDs (route any model via a single endpoint) */
-const KNOWN_AGGREGATORS = new Set(['poe', 'openrouter', 'cloudflare', 'claudeflare', 'zenmux', 'copilot'])
-const PREFERRED_AGGREGATOR_ORDER = ['copilot', 'cloudflare', 'claudeflare', 'poe', 'openrouter', 'zenmux'] as const
+const KNOWN_AGGREGATORS = new Set(['poe', 'openrouter', 'cloudflare', 'claudeflare', 'zenmux'])
+const PREFERRED_AGGREGATOR_ORDER = ['poe', 'cloudflare', 'claudeflare', 'openrouter', 'zenmux'] as const
 
 /**
  * Find the best aggregator provider from config, or undefined if none available.

@@ -20,8 +20,10 @@ describe('slash command registry', () => {
     const pickerNames = listSlashCommandPickerItems().map((command) => command.name)
 
     expect(completions).toContain('/permissions')
+    expect(completions).toContain('/critique')
     expect(completions).toContain('/retry')
     expect(pickerNames).toContain('/permissions')
+    expect(pickerNames).toContain('/critique')
     expect(pickerNames).toContain('/doctor')
     expect(pickerNames).not.toContain('/exit')
   })
@@ -35,6 +37,7 @@ describe('slash command registry', () => {
     expect(helpNames).toContain('/status')
     expect(helpNames).toContain('/doctor')
     expect(helpNames).toContain('/permissions')
+    expect(helpNames).toContain('/critique')
     expect(helpNames).not.toContain('/retry')
   })
 

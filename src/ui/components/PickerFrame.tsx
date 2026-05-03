@@ -1,5 +1,6 @@
 import React from 'react'
 import { Box, Text } from 'ink'
+import { useTheme } from '../theme.js'
 import { useTerminalSize } from '../useTerminalSize.js'
 
 interface Props {
@@ -17,20 +18,22 @@ export function PickerFrame({
   title,
   subtitle,
   footer,
-  borderColor = 'cyan',
+  borderColor,
   widthLimit = 88,
   width,
   marginLeft = 2,
   children,
 }: Props): React.ReactElement {
   const { cols } = useTerminalSize()
+  const theme = useTheme()
+  const resolvedBorderColor = borderColor ?? theme.border
   const resolvedWidth = width ?? Math.min(Math.max(cols - 4, 40), widthLimit)
 
   return (
     <Box
       flexDirection="column"
       borderStyle="round"
-      borderColor={borderColor}
+      borderColor={resolvedBorderColor}
       width={resolvedWidth}
       marginLeft={marginLeft}
       paddingLeft={1}
@@ -38,11 +41,11 @@ export function PickerFrame({
       marginBottom={1}
     >
       <Box marginBottom={subtitle ? 0 : 1}>
-        <Text bold>{title}</Text>
+        <Text color={theme.accent} bold>{`◇ ${title}`}</Text>
       </Box>
       {subtitle ? (
         <Box marginBottom={1}>
-          <Text dimColor>{subtitle}</Text>
+          <Text color={theme.dim}>{subtitle}</Text>
         </Box>
       ) : null}
 
@@ -50,7 +53,7 @@ export function PickerFrame({
 
       {footer ? (
         <Box marginTop={1}>
-          <Text dimColor>{footer}</Text>
+          <Text color={theme.dim}>{footer}</Text>
         </Box>
       ) : null}
     </Box>

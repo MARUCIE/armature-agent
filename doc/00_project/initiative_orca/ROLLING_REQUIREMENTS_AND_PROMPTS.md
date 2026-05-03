@@ -1,5 +1,292 @@
 # Rolling Requirements And Prompts
 
+## 2026-05-03 - Markdown Artifact Write Integrity
+
+### Requirements
+
+| ID | Type | Requirement | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| REQ-20260503-001 | Reliability | False-save repair must write only the generated Markdown artifact body, not assistant conversation text | Done | `src/commands/local-file-intent.ts`, `tests/local-file-intent.test.ts` |
+| REQ-20260503-002 | Reliability | False-save repair must not create a file when the provider returned only save-confirmation chatter and no artifact body | Done | `tests/local-file-intent.test.ts` |
+| REQ-20260503-003 | Prompt | System prompt must state that `write_file.content` is the final requested file body only | Done | `src/system-prompt.ts`, `tests/e2e-workflow.test.ts` |
+
+### Prompt Ledger
+
+| ID | Prompt / Trigger | Routing | Output |
+| --- | --- | --- | --- |
+| PROMPT-20260503-001 | `每次都把对话内容打印到md文件，而不是按的要求生成一个md 文件，去生成内容` | local-file repair root cause | Fixed false-save repair to extract artifact content only and refuse no-artifact chat text |
+| PROMPT-20260503-002 | `为什么出现这种低级错误，是工具调用的问题吗` | root-cause explanation | Classified the bug as tool-orchestration repair content selection, not low-level file tool execution |
+
+### Anti-Regression Q&A
+
+| Question | Expected Answer | Guard |
+| --- | --- | --- |
+| Should false-save repair write the whole assistant response into a `.md` file? | No. It may write only extracted artifact body content. | `tests/local-file-intent.test.ts` |
+| Should Orca create a Markdown file from a response that only says it saved the file? | No. Without extractable artifact content, repair must return `null`. | `tests/local-file-intent.test.ts` |
+| Is this a low-level `write_file` tool execution failure? | No. The file tools work; the bug was in repair-layer content selection before calling `write_file`. | `tests/chat-internals.test.ts` |
+
+## 2026-05-02 - Tool-Call Continuity and Blackfin Mark
+
+### Requirements
+
+| ID | Type | Requirement | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| REQ-20260502-024 | Reliability | Streamed provider turns must include the current Orca system prompt even when chat history exists | Done | `src/providers/openai-compat.ts`, `tests/openai-compat-multimodal.test.ts` |
+| REQ-20260502-025 | Reliability | Local file create/open requests must use local file tools before claiming local access is impossible | Done | `src/system-prompt.ts`, `tests/e2e-workflow.test.ts` |
+| REQ-20260502-026 | Quality | Tool-call regressions must live in the canonical large-scale test matrix | Done | `agent-eval/manifests/test-matrix.json`, `agent-eval/generated/test-matrix-entrypoints.md`, `package.json` |
+| REQ-20260502-027 | UI | Startup identity must use a dominant `ORCA-AGENT` wordmark and clean Blackfin Signal deck with no independent mascot/icon/hero art | Done | `src/ui/components/Banner.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260502-028 | Reliability | Obvious REPL local-file read/write/open intents must execute deterministic local tool plans before calling the provider | Done | `src/commands/local-file-intent.ts`, `src/commands/chat-repl-turn.ts`, `tests/local-file-intent.test.ts`, `tests/chat-repl-turn.test.ts` |
+| REQ-20260502-029 | Reliability | A provider false-save claim must be repaired by writing the claimed path when no file tool ran | Done | `src/commands/chat.ts`, `tests/chat-internals.test.ts` |
+| REQ-20260502-030 | Reliability | Proxy default tool definitions must be both advertised and allowed by policy so tools are not blocked after being exposed to the model | Done | `src/commands/chat.ts`, `tests/chat-internals.test.ts` |
+| REQ-20260502-031 | UI | The startup Banner must explicitly delete the separate Orca icon/hero block after operator rejection | Done | `src/ui/components/Banner.tsx`, `tests/ink-ui.test.tsx` |
+
+### Prompt Ledger
+
+| ID | Prompt / Trigger | Routing | Output |
+| --- | --- | --- | --- |
+| PROMPT-20260502-008 | `还是不能自动打开文件，也没生成文件` | root-cause continuation | Fixed long-session system prompt decay and strengthened local-file tool contract |
+| PROMPT-20260502-009 | `同时把所有工具调用测试放到原来的大规模测试计划里...orca的图标还没改过来，要向hermes agent 学习` | test-matrix + UI identity continuation | Added `test:tool-calls` matrix layer and replaced the banner mascot with a clearer Blackfin mark |
+| PROMPT-20260502-010 | `orca 的logo 还是老得，要学习hermes agent` | UI identity correction | Replaced the old compact `ORCA` wordmark with a dominant `ORCA-AGENT` wordmark; the later hero panel is superseded by `PROMPT-20260502-012` |
+| PROMPT-20260502-011 | `文件还是不能读写和生成和打开？` | runtime repair continuation | Added pre-model local-file intent execution, post-response false-save repair, and local-file guard tests in the canonical tool-call matrix |
+| PROMPT-20260502-012 | `把orca 的图标删除把，太难看了` | UI correction | Removed the independent startup icon/hero art and kept a clean wordmark + state deck |
+
+### Anti-Regression Q&A
+
+| Question | Expected Answer | Guard |
+| --- | --- | --- |
+| Can later REPL turns omit the system prompt because the conversation already has history? | No. The current system prompt is prepended every streamed turn, with one duplicate leading history prompt skipped. | `tests/openai-compat-multimodal.test.ts` |
+| Can Orca answer that it cannot create/open local files before trying tools? | No. It must use the relevant local file tool first and only report a concrete tool failure. | `src/system-prompt.ts`, `tests/e2e-workflow.test.ts` |
+| Can the model claim a file was saved without a tool call and leave the filesystem unchanged? | No. The proxy runtime repairs false save claims by writing the claimed file and recording the guard result. | `tests/chat-internals.test.ts` |
+| If the user says a previously claimed file is missing and asks to open it, should Orca ask them to copy content manually? | No. The REPL guard reconstructs the claimed file from assistant history, writes it, and opens it when possible. | `tests/local-file-intent.test.ts`, `tests/chat-repl-turn.test.ts` |
+| Are tool-call tests allowed to stay as scattered ad hoc commands? | No. They are part of `agent-eval/manifests/test-matrix.json` through `npm run test:tool-calls`. | `npm run test:matrix:sync` |
+| Should Orca copy Hermes' caduceus/skin assets? | No. It should copy the brand structure only and keep a distinct Orca Blackfin mark. | `src/ui/components/Banner.tsx`, `tests/ink-ui.test.tsx` |
+| Should the startup Banner render a separate Orca icon, mascot, or hero block? | No. The rejected hero block is deleted; the first frame uses the `ORCA-AGENT` wordmark and clean state deck. | `tests/ink-ui.test.tsx` |
+
+## 2026-05-02 - Model Catalog SSoT Runtime Consolidation
+
+### Requirements
+
+| ID | Type | Requirement | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| REQ-20260502-020 | Architecture | Keep model context windows, max output defaults, pricing, and capacity labels in one canonical metadata source | Done | `src/model-metadata.ts`, `src/model-catalog.ts` |
+| REQ-20260502-021 | Runtime | Token budget and OpenAI-compatible provider guards must use the canonical model metadata instead of local duplicate tables | Done | `src/token-budget.ts`, `src/providers/openai-compat.ts`, `tests/model-catalog.test.ts` |
+| REQ-20260502-022 | UX | Startup provider capacity labels and usage/session cost estimates must use the same metadata as the model catalog | Done | `src/output.ts`, `src/model-metadata.ts` |
+| REQ-20260502-023 | Quality | Regression coverage must fail if runtime consumers reintroduce separate model metadata tables | Done | `tests/model-catalog.test.ts` |
+
+### Prompt Ledger
+
+| ID | Prompt / Trigger | Routing | Output |
+| --- | --- | --- | --- |
+| PROMPT-20260502-007 | `继续` | follow-on implementation | Closed ORCA-SWARM-021 by consolidating model metadata into a single runtime/catalog source and refreshing release evidence to `1663` tests |
+
+### Anti-Regression Q&A
+
+| Question | Expected Answer | Guard |
+| --- | --- | --- |
+| Can token budget, provider max-token defaults, output cost estimates, and `/models` each own their own model metadata tables? | No. `src/model-metadata.ts` is the canonical metadata source; consumers import helpers from it or through `src/model-catalog.ts`. | `tests/model-catalog.test.ts` |
+| What happens for unknown model names? | Runtime consumers use conservative fallback helpers without resurrecting old duplicated tables. | `src/model-metadata.ts` |
+
+## 2026-05-03 - Claude-Style No-Flicker TUI
+
+### Requirements
+
+| ID | Type | Requirement | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| REQ-20260503-001 | UX | Keep primary-buffer copyability as the default while providing explicit fullscreen/no-flicker opt-ins | Done | `src/ui/render.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260503-002 | UX | Support Claude-compatible `CLAUDE_CODE_NO_FLICKER=1` plus Orca-native `ORCA_TUI=fullscreen` / `ORCA_NO_FLICKER=1` | Done | `src/ui/render.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260503-003 | Reliability | Enter alternate screen before Ink's first frame and exit it if render fails before mount | Done | `src/ui/render.tsx`, `src/ui/components/AlternateScreen.tsx` |
+| REQ-20260503-004 | Performance | Reduce no-flicker repaint pressure by limiting the rendered completed-block tree | Done | `src/ui/components/App.tsx` |
+| REQ-20260503-005 | Reliability | Keep project hooks loadable when the active tool cwd changes, without leaking one project's hooks into another project | Done | `src/hooks.ts`, `src/policy-executor.ts`, `tests/hooks.test.ts`, `tests/v050-modules.test.ts` |
+
+### Prompt Ledger
+
+| ID | Prompt / Trigger | Routing | Output |
+| --- | --- | --- | --- |
+| PROMPT-20260503-001 | `还有屏幕闪动的问题，之前claude code 也出现了这个问题，后来官方给了解决方案，搜索调研下，然后参考修复这个问题` | official-doc research + TUI hardening | Added Claude-style no-flicker/fullscreen opt-in with pre-frame alternate-screen entry, bounded render tree, and focused regression coverage |
+
+### Anti-Regression Q&A
+
+| Question | Expected Answer | Guard |
+| --- | --- | --- |
+| Should Orca enable fullscreen/no-flicker by default? | No. Default remains copyable primary-buffer rendering; no-flicker is explicit opt-in. | `shouldUseNoFlickerRenderer()` |
+| Which envs enable no-flicker mode? | `ORCA_TUI=fullscreen`, `ORCA_NO_FLICKER=1`, `ORCA_ALT_SCREEN=1`, or `CLAUDE_CODE_NO_FLICKER=1`. | `tests/ink-ui.test.tsx` |
+| Which env disables no-flicker when aliases are also present? | `ORCA_TUI=default` and other disabled values (`0`, `false`, `no`, `off`, `scrollback`) win. | `tests/ink-ui.test.tsx` |
+| Does no-flicker mode re-enable mouse capture? | No. Mouse capture remains opt-in through `ORCA_MOUSE=1`. | `src/ui/components/App.tsx` |
+| Can hooks stay stuck on the first loaded project cwd? | No. Global hooks load once; trusted project hooks load per cwd and execute only for their owning cwd. | `tests/hooks.test.ts` |
+
+## 2026-05-02 - Terminal Operability Hardening
+
+### Requirements
+
+| ID | Type | Requirement | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| REQ-20260502-013 | UX | Keep Ink output copyable by default by avoiding alternate-screen rendering unless explicitly requested | Done | `src/ui/render.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260502-014 | UX | Keep terminal text selection working by disabling mouse tracking unless explicitly requested | Done | `src/ui/components/App.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260502-015 | DX | Resolve tool cwd from explicit cwd/env, ambient project cwd, or the last remembered project when launched elsewhere | Done | `src/commands/chat-support.ts`, `tests/chat-support.test.ts` |
+| REQ-20260502-016 | DX | Allow root `orca --cwd <dir>` launchers to forward the cwd into chat | Done | `src/program.ts`, `tests/program.test.ts` |
+| REQ-20260502-017 | Reliability | Route MCP tools for server names containing underscores or hyphens | Done | `src/mcp-client.ts`, `tests/mcp-client.test.ts` |
+| REQ-20260502-018 | DX | Add `open_file` for visual local file opening while keeping `read_file` for contents | Done | `src/tools.ts`, `tests/tools.test.ts` |
+| REQ-20260502-019 | Safety | Treat `open_file` as a dangerous tool because it launches an external application | Done | `src/tools.ts`, `tests/tools-full.test.ts`, `tests/hooks.test.ts` |
+
+### Prompt Ledger
+
+| ID | Prompt / Trigger | Routing | Output |
+| --- | --- | --- | --- |
+| PROMPT-20260502-006 | `claude code 也是ink，但是能复制？...不管哪里启动都能调用工具...还有闪屏的问题` | terminal-operability hardening | Made alternate screen and mouse tracking opt-in, added workspace cwd memory/root cwd forwarding, fixed MCP name parsing, added `open_file`, refreshed tests/docs/evidence |
+
+### Anti-Regression Q&A
+
+| Question | Expected Answer | Guard |
+| --- | --- | --- |
+| Should Orca default to alternate screen because it uses Ink? | No. Ink can render in the primary buffer; fullscreen/no-flicker alternate screen is opt-in through `ORCA_TUI=fullscreen`, `ORCA_NO_FLICKER=1`, `ORCA_ALT_SCREEN=1`, or `CLAUDE_CODE_NO_FLICKER=1`. | `src/ui/render.tsx`, `tests/ink-ui.test.tsx` |
+| Should Orca capture mouse events by default? | No. Mouse capture blocks normal terminal selection; it is opt-in through `ORCA_MOUSE=1`. | `src/ui/components/App.tsx` |
+| What cwd should tools use when Orca launches from a menu or home directory? | Explicit cwd/env wins; otherwise an ambient project cwd wins; otherwise Orca falls back to the last remembered project workspace. | `src/commands/chat-support.ts` |
+| Can MCP server names include `_` or `-`? | Yes. Route by splitting `mcp__server__tool` on the last delimiter and parse hyphenated Codex TOML sections. | `src/mcp-client.ts` |
+| Should opening a Markdown file use `read_file`? | Use `read_file` for contents and `open_file` when the user asks to visually open the file in the OS default app. | `src/tools.ts` |
+
+## 2026-05-02 - Rubber Duck Critique Quality Gate
+
+### Requirements
+
+| ID | Type | Requirement | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| REQ-20260502-001 | Quality | Add a first-class `orca critique` gate that is distinct from `reflect` and performs read-only reviewer challenge on plans, diffs, tests, and risk assumptions | Done | `src/commands/critique.ts`, `src/critique.ts`, `README.md` |
+| REQ-20260502-002 | Quality | Implement the research report risk formula using diff lines, changed files, critical path, repeated failure, security/data sensitivity, and user uncertainty | Done | `src/critique.ts`, `tests/critique.test.ts` |
+| REQ-20260502-003 | Quality | Support checkpoint routing for `after_plan`, `after_complex_implementation`, `before_test_execution`, `stuck_loop`, and `manual` | Done | `src/critique.ts`, `src/commands/critique.ts`, `tests/critique.test.ts` |
+| REQ-20260502-004 | DX | Provide deterministic `--dry-run --json` output that works without an API key | Done | `src/commands/critique.ts`, `tests/critique.test.ts` |
+| REQ-20260502-005 | Architecture | Choose a complementary reviewer model family by default instead of reusing the same family as the active model | Done | `src/critique.ts`, `tests/critique.test.ts` |
+| REQ-20260502-006 | DX | Expose the same critique risk inspection inside `orca chat` through `/critique` without leaving the active session | Done | `src/commands/chat-slash-readonly.ts`, `tests/chat-slash-readonly.test.ts` |
+| REQ-20260502-007 | Architecture | Share workspace diff/risk/prompt inspection between the standalone command and slash command instead of duplicating logic | Done | `src/critique-workspace.ts`, `src/commands/critique.ts` |
+| REQ-20260502-008 | Reliability | Keep project hook trust evaluation stable when the singleton is constructed before `ORCA_TRUST_PROJECT_HOOKS` is set | Done | `src/hooks.ts`, `tests/v050-modules.test.ts` |
+| REQ-20260502-009 | DX | Warn operators once per high-risk dirty diff signature before normal chat sends so they know to run a critique checkpoint | Done | `src/critique-auto.ts`, `src/commands/chat-repl-turn.ts`, `tests/chat-repl-turn.test.ts` |
+| REQ-20260502-010 | Safety | Keep automatic critique hints local, model-free, prompt-preserving, and configurable through env knobs | Done | `src/critique-auto.ts`, `tests/critique.test.ts` |
+| REQ-20260502-011 | DX | Expose per-session chat flags to disable or retune automatic local critique hints | Done | `src/commands/chat.ts`, `tests/command-contracts.test.ts` |
+| REQ-20260502-012 | DX | Apply automatic local critique hints to one-shot chat while preserving clean JSON output | Done | `src/commands/chat.ts`, `tests/chat-one-shot-mcp-cleanup.test.ts` |
+
+### Prompt Ledger
+
+| ID | Prompt / Trigger | Routing | Output |
+| --- | --- | --- | --- |
+| PROMPT-20260502-001 | `参考优化的本地的orca cli：file:///Users/mauricewen/Documents/ai_coding_cli_research_report.html` | `optimize` | Added the Rubber Duck Critique quality gate with risk scoring, command surface, tests, README, and PDCA docs |
+| PROMPT-20260502-002 | `继续` | follow-on implementation | Added in-session `/critique` read-only inspection and shared workspace critique context builder |
+| PROMPT-20260502-003 | `继续` | follow-on implementation | Added automatic chat pre-send local critique hints with repeat suppression and env tuning |
+| PROMPT-20260502-004 | `继续` | follow-on implementation | Surfaced `--no-auto-critique` and `--auto-critique-threshold` chat flags for session-scoped control |
+| PROMPT-20260502-005 | `继续` | follow-on implementation | Extended automatic local critique hints to one-shot `orca chat "prompt"` without polluting `--json` output |
+
+### Anti-Regression Q&A
+
+| Question | Expected Answer | Guard |
+| --- | --- | --- |
+| Should `reflect` and `critique` be the same workflow? | No. `reflect` is Socratic diagnosis by the main agent; `critique` is read-only reviewer challenge against a plan/diff/test context. | `README.md`, `src/commands/reflect-mode.ts`, `src/commands/critique.ts` |
+| Can a critique mutate the workspace or silently continue after critical findings? | No. The critique prompt is read-only and structured results expose `must_fix_before_continue` for main-agent validation before continuing. | `src/critique.ts`, `tests/critique.test.ts` |
+| Does local validation require live provider credentials? | No. `orca critique --dry-run --json` returns checkpoint, risk, reviewer, and diff signals without calling a model. | `src/commands/critique.ts`, `tests/critique.test.ts` |
+| Does `/critique` call a model during chat inspection? | No. The slash command is a local read-only inspection that surfaces the same risk decision and reviewer choice without a provider call. | `src/commands/chat-slash-readonly.ts`, `tests/chat-slash-readonly.test.ts` |
+| Does the automatic chat critique hint call a model or alter the outgoing prompt? | No. It only inspects the local dirty diff, emits a warning notice once per diff signature, and recommends the explicit `/critique` gate. | `src/critique-auto.ts`, `src/commands/chat-repl-turn.ts`, `tests/critique.test.ts`, `tests/chat-repl-turn.test.ts` |
+| Can automatic critique hints be controlled without env var changes? | Yes. `orca chat --no-auto-critique` disables them for a session, and `orca chat --auto-critique-threshold <score>` tunes the session threshold. | `src/commands/chat.ts`, `tests/command-contracts.test.ts` |
+| Does one-shot `orca chat --json` include automatic critique notices in JSON output? | No. The one-shot helper emits hints only for streaming output and stays silent for JSON output. | `src/commands/chat.ts`, `tests/chat-one-shot-mcp-cleanup.test.ts` |
+| Can project hook trust depend only on `HookManager` construction time? | No. `load()` must re-check `ORCA_TRUST_PROJECT_HOOKS` so test/runtime paths that set trust before loading hooks remain deterministic. | `src/hooks.ts`, `tests/v050-modules.test.ts` |
+
+## 2026-05-01 - Orca Brand Positioning Correction
+
+### Requirements
+
+| ID | Type | Requirement | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| REQ-20260501-001 | Brand | Treat Orca's visual identity as killer whale / tiger whale positioning, not generic deep-sea or abstract ocean branding | Done | `ORCA_VISUAL_SYSTEM_PLAN.md`, `src/ui/components/Banner.tsx`, `src/ui/components/ThemePicker.tsx` |
+| REQ-20260501-002 | Brand | Treat Orca as a killer-whale + ocean joint motif where killer whale is primary, ocean is the field, and pod intelligence is the product metaphor | Done | `ORCA_VISUAL_SYSTEM_PLAN.md`, `PDCA_EXECUTION_PLAN.md` |
+| REQ-20260501-003 | UI | Superseded for startup Banner: do not render a separate mascot/icon; preserve the Hermes-inspired wordmark + status-panel structure | Superseded | `src/ui/components/Banner.tsx`, `tests/ink-ui.test.tsx`, `REQ-20260502-031` |
+| REQ-20260501-004 | UX | Rename and retune the first entry panel as `POD BRIEF` so the operator briefs the pod with one clear outcome | Done | `src/ui/components/HomePanel.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-005 | UX | Extend Orca's pod identity into the input, slash-command picker, option picker, and shared picker frame | Done | `src/ui/components/InputArea.tsx`, `src/ui/components/CommandPicker.tsx`, `src/ui/components/OptionPicker.tsx`, `src/ui/components/PickerFrame.tsx` |
+| REQ-20260501-006 | UI | Replace hard-coded generic picker colors in changed picker surfaces with Orca semantic theme tokens | Done | `src/ui/components/PickerFrame.tsx`, `src/ui/components/CommandPicker.tsx`, `src/ui/components/OptionPicker.tsx` |
+| REQ-20260501-007 | UX | Keep command picker visible with no-match feedback when a slash-command filter returns zero matches | Done | `src/ui/components/CommandPicker.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-008 | UX | Retune input placeholder and multiline hint toward pod briefing language without changing input semantics | Done | `src/ui/components/InputArea.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-009 | UX | Render submitted user transcript blocks as `POD BRIEF` while preserving exact prompt text | Done | `src/ui/components/App.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-010 | UX | Render assistant transcript panels as `ORCA POD` while preserving markdown structure | Done | `src/ui/components/App.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-011 | UI | Add Orca scan identity to tool-call rails without hiding tool names, paths, status, or duration | Done | `src/ui/components/App.tsx`, `src/ui/components/ToolCallBlock.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-012 | UX | Replace generic thinking verbs with compact Orca / pod / proof-oriented status copy | Done | `src/ui/components/ThinkingSpinner.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-013 | UX | Reframe the fixed StatusBar as a pod status rail with `sonar`, `signal:`, and `trust:` language | Done | `src/ui/components/StatusBar.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-014 | UI | Preserve model, context bar, branch, metrics, policy summaries, permissions, mode, and effort while adding Orca status-rail identity | Done | `src/ui/components/StatusBar.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-015 | UX | Keep trust-cycle guidance visible as `shift+tab cycles trust` without changing shortcut behavior | Done | `src/ui/components/StatusBar.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-016 | UX | Reframe post-turn summaries as `PROOF WAKE` instead of internal `r/d/u` shorthand | Done | `src/ui/components/TurnSummary.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-017 | UI | Preserve elapsed time, input/output tokens, tool count, cost, and tok/s in the proof-wake summary | Done | `src/ui/components/TurnSummary.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-018 | UX | Reframe permission prompts as `TRUST GATE` with the tool name, scan preview, and trust-scope choices visible | Done | `src/ui/components/PermissionPrompt.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-019 | UI | Preserve approval semantics and keybindings while retuning approval copy to once/session/project/deny trust language | Done | `src/ui/components/PermissionPrompt.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-020 | UX | Reframe write diff previews as `ECHO DIFF` without changing path, counts, line numbers, truncation, or diff content | Done | `src/ui/components/DiffPreview.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-021 | UX | Reframe detail panels as `EVIDENCE DRAWER` while preserving the original title, subtitle, and markdown body | Done | `src/ui/components/DetailPanel.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-022 | UI | Use theme semantic tokens for detail panel info/warn/error tone borders instead of hard-coded terminal colors | Done | `src/ui/components/DetailPanel.tsx` |
+| REQ-20260501-023 | UX | Reframe multi-model progress as `POD COUNCIL` while preserving command, model count, model names, and elapsed time | Done | `src/ui/components/MultiModelProgress.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-024 | UX | Show completed multi-model rows as `surfaced` and active rows as `sonar` without changing runtime progress semantics | Done | `src/ui/components/MultiModelProgress.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-025 | UI | Use theme semantic tokens for multi-model progress instead of hard-coded terminal colors | Done | `src/ui/components/MultiModelProgress.tsx` |
+| REQ-20260501-026 | UX | Reframe the persistent shortcut footer as `POD HELM` while preserving context-aware key visibility | Done | `src/ui/components/Footer.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-027 | UX | Retune footer labels to `interrupt echo`, `send brief`, and `pod commands` without changing shortcut behavior | Done | `src/ui/components/Footer.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-028 | UI | Keep ordinary-width footer rendering coherent by hiding lower-priority active hints until width allows | Done | `src/ui/components/Footer.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260501-029 | UI | Use theme semantic tokens for footer identity, keys, and labels instead of dim-only terminal styling | Done | `src/ui/components/Footer.tsx` |
+
+### Prompt Ledger
+
+| ID | Prompt / Trigger | Routing | Output |
+| --- | --- | --- | --- |
+| PROMPT-20260501-001 | `注意，我的orca是虎鲸的意向定位，这个别搞错了；` | `frontend-design` correction pass | Renamed the identity language from `Abyssal Signal` to `Blackfin Signal`, updated pod / dorsal-fin / echolocation copy, and synced docs / tests |
+| PROMPT-20260501-002 | `虎鲸也是生活再海洋，是不是是虎鲸和海洋的联合意象` / `继续` | `frontend-design` hierarchy pass | Recorded brand hierarchy: killer whale primary, ocean field, pod intelligence metaphor; reran lint/build/full suite |
+| PROMPT-20260501-003 | `开始全面优化ui和ux，logo的要学习hermes agent实现可爱的虎鲸形象` | `frontend-design` mascot implementation pass | Implemented cute terminal orca mascot, `POD BRIEF` first-screen UX, docs, and verification |
+| PROMPT-20260501-004 | `继续` | `frontend-design` command-surface pass | Extended Orca pod identity into input, command picker, option picker, picker frame, docs, and verification |
+| PROMPT-20260501-005 | `继续` | `frontend-design` transcript-flow pass | Extended Orca pod identity into transcript roles, tool rails, thinking state, docs, and verification |
+| PROMPT-20260501-006 | `继续` | `frontend-design` status-rail pass | Extended Orca pod identity into the fixed StatusBar with sonar context, signal metrics, trust posture, docs, and verification |
+| PROMPT-20260501-007 | `继续` | `frontend-design` proof-wake pass | Extended Orca pod identity into post-turn summaries with `PROOF WAKE`, explicit metrics, docs, and verification |
+| PROMPT-20260501-008 | `继续` | `frontend-design` trust-gate pass | Extended Orca pod identity into permission prompts and write diff previews with `TRUST GATE`, `SCAN`, and `ECHO DIFF`, plus docs and verification |
+| PROMPT-20260501-009 | `继续` | `frontend-design` evidence-drawer pass | Extended Orca pod identity into detail panels with `EVIDENCE DRAWER`, `pod scan`, theme tone tokens, docs, and verification |
+| PROMPT-20260501-010 | `继续` | `frontend-design` council-runway pass | Extended Orca pod identity into multi-model progress with `POD COUNCIL`, `voices`, `surfaced`, `sonar`, theme tokens, docs, and verification |
+| PROMPT-20260501-011 | `继续` | `frontend-design` helm-footer pass | Extended Orca pod identity into the persistent footer with `POD HELM`, `interrupt echo`, `send brief`, `pod commands`, width-aware rendering, docs, and verification |
+
+### Anti-Regression Q&A
+
+| Question | Expected Answer | Guard |
+| --- | --- | --- |
+| Is Orca's brand a generic deep-sea console? | No. Orca is a killer-whale / tiger-whale identity with blackfin, pod, dorsal-fin silhouette, and echolocation cues. | `ORCA_VISUAL_SYSTEM_PLAN.md`, `tests/ink-ui.test.tsx` |
+| Does ocean imagery belong in the Orca system? | Yes, but as field/environment. The killer whale remains the primary motif and the product metaphor is pod intelligence. | `ORCA_VISUAL_SYSTEM_PLAN.md` |
+| Should the logo copy Hermes Agent's caduceus? | No. Copy only the large-wordmark and status-panel hierarchy; the startup Banner must not render a separate mascot/icon. | `src/ui/components/Banner.tsx`, `tests/ink-ui.test.tsx` |
+| Should command and option pickers keep generic cyan/yellow styling after the Orca refresh? | No. Changed picker surfaces should use Orca semantic theme tokens and pod-language labels. | `src/ui/components/PickerFrame.tsx`, `src/ui/components/CommandPicker.tsx`, `src/ui/components/OptionPicker.tsx` |
+| Can a command filter with no matches make the picker disappear? | No. The picker stays visible and reports `no matching command`, with `Esc` still available. | `src/ui/components/CommandPicker.tsx`, `tests/ink-ui.test.tsx` |
+| Should transcript roles remain generic `You` / `ORCA` after the Orca refresh? | No. User prompts are `POD BRIEF`; assistant responses are `ORCA POD`; tools are `ECHO TOOL`. | `src/ui/components/App.tsx`, `src/ui/components/ToolCallBlock.tsx`, `tests/ink-ui.test.tsx` |
+| Can transcript identity hide tool or markdown evidence? | No. Tool names, paths, result status, duration, and structured markdown output remain visible. | `src/ui/components/ToolCallBlock.tsx`, `src/ui/components/MarkdownText.tsx`, `tests/ink-ui.test.tsx` |
+| Should the fixed status bar read like a generic CLI footer after the Orca refresh? | No. It should keep `ORCA POD`, add sonar context language, use `signal:` for stats, and use `trust:` for permissions while preserving all operational fields. | `src/ui/components/StatusBar.tsx`, `tests/ink-ui.test.tsx` |
+| Should post-turn summaries use internal shorthand such as `r`, `d`, and `u` after the Orca refresh? | No. Completed turns should render a `PROOF WAKE` summary with explicit time, input, output, tools, cost, and throughput labels. | `src/ui/components/TurnSummary.tsx`, `tests/ink-ui.test.tsx` |
+| Should permission prompts remain generic approval panels after the Orca refresh? | No. They should render as `TRUST GATE`, show the tool under review, expose the impact preview under `SCAN`, and keep once/session/project/deny decisions clear. | `src/ui/components/PermissionPrompt.tsx`, `tests/ink-ui.test.tsx` |
+| Can trust-gate wording change permission or diff behavior? | No. Copy and hierarchy can change, but keybindings, approval decision payloads, diff computation, line numbers, truncation, and runtime events must remain stable. | `src/ui/components/PermissionPrompt.tsx`, `src/ui/components/DiffPreview.tsx`, `tests/ink-ui.test.tsx` |
+| Should detail panels render as generic boxes after the Orca refresh? | No. They should render as `EVIDENCE DRAWER` with `pod scan` subtitle context while preserving the source title, subtitle, and markdown body. | `src/ui/components/DetailPanel.tsx`, `tests/ink-ui.test.tsx` |
+| Can detail panel tone colors be hard-coded after the Orca refresh? | No. Detail panel info/warn/error borders should resolve through active theme semantic tokens. | `src/ui/components/DetailPanel.tsx` |
+| Should multi-model progress remain a generic model list after the Orca refresh? | No. Council, race, and pipeline progress should render as `POD COUNCIL`, with model count as `voices`, completed rows as `surfaced`, and active rows as `sonar`. | `src/ui/components/MultiModelProgress.tsx`, `tests/ink-ui.test.tsx` |
+| Can multi-model progress colors be hard-coded after the Orca refresh? | No. Progress header, active, completed, and model-name tones should resolve through active theme semantic tokens. | `src/ui/components/MultiModelProgress.tsx` |
+| Should the persistent footer stay as generic shortcut copy after the Orca refresh? | No. It should render as `POD HELM` and use pod-oriented labels while preserving the actual shortcut keys. | `src/ui/components/Footer.tsx`, `tests/ink-ui.test.tsx` |
+| Can footer branding make shortcut behavior ambiguous or cause broken wraps? | No. Labels can change, but keys, permission-mode visibility, and ordinary-width readability must remain stable. | `src/ui/components/Footer.tsx`, `tests/ink-ui.test.tsx` |
+
+## 2026-04-30 - Orca Visual System / Hermes-Inspired CLI Identity
+
+### Requirements
+
+| ID | Type | Requirement | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| REQ-20260430-001 | UX | Optimize local Orca CLI by studying Hermes Agent's high-recognition terminal experience | Done | `ORCA_VISUAL_SYSTEM_PLAN.md`, `src/ui/components/Banner.tsx` |
+| REQ-20260430-002 | Design | Define a distinctive killer-whale Orca visual system covering typography, color, UI, and UX before implementation | Done | `ORCA_VISUAL_SYSTEM_PLAN.md`, `ORCA_VISUAL_SYSTEM_PLAN.html` |
+| REQ-20260430-003 | UI | Implement a terminal-native startup identity with an ORCA wordmark, signal motif, and coherent narrow-terminal fallback | Done | `src/ui/components/Banner.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260430-004 | Theme | Replace generic default dark theme with semantic `Blackfin Signal` tokens while preserving existing theme options | Done | `src/ui/theme.tsx`, `src/ui/components/ThemePicker.tsx`, `tests/ink-ui.test.tsx` |
+| REQ-20260430-005 | UX | Reframe the empty-state HomePanel as a mission-control surface for task, trust, recovery, and guardrails | Done | `src/ui/components/HomePanel.tsx`, `src/ui/components/StatusBar.tsx`, `tests/ink-ui.test.tsx` |
+
+### Prompt Ledger
+
+| ID | Prompt / Trigger | Routing | Output |
+| --- | --- | --- | --- |
+| PROMPT-20260430-001 | `优化我本地的orca cli，学习hermes agent，打造高标识度的视觉系统，如字体，配色，ui和ux，先设计方案，再pdca执行` | `frontend-design` + project PDCA | Visual system design plan, then scoped Ink UI implementation |
+
+### Anti-Regression Q&A
+
+| Question | Expected Answer | Guard |
+| --- | --- | --- |
+| Should Orca copy Hermes's caduceus and exact gold-only palette? | No. Hermes is a reference for recognition mechanics; Orca uses its own killer-whale `Blackfin Signal` identity. | `ORCA_VISUAL_SYSTEM_PLAN.md` |
+| Can the visual refresh add new dependencies? | No. Use existing Ink / React / chalk surface only. | package diff review, build |
+| Can the first screen hide trust and recovery state behind decoration? | No. The banner and HomePanel must keep model, permission, session, tool, and recovery state visible. | `tests/ink-ui.test.tsx` |
+| Can `ai check` be claimed as passed for this tranche? | No. It was attempted but hung without output and was interrupted; use the recorded npm test/lint/build/CLI smoke evidence for this closeout. | `notes.md`, `deliverable.md` |
+
 ## 2026-04-29 - SOTA Swarm Audit / Queue / Trust PDCA
 
 ### Requirements
@@ -153,6 +440,7 @@
 | PROMPT-011 | Continue the home panel with dynamic recommendations | After quick actions exist, make them react to saved-session availability and trust posture rather than staying static | Prefer deterministic context signals over speculative AI recommendation |
 | PROMPT-012 | Refresh the harness baseline after a late-stage provider-routing change | Reproduce the failing gate, fix the smallest stale assumption, then rerun fast / nightly / release / matrix before closing docs | Do not treat lock conflicts or stale machine env as product regressions until they are proven to be runtime bugs |
 | PROMPT-013 | Execute one-click full delivery on the current tranche | Freeze the delivery boundary, treat review findings as blocking gates, fix only the scoped blockers, rerun the full release chain, and emit stage artifacts plus rollback evidence | Do not drift into future roadmap implementation when the user asked for delivery closure on the current tranche |
+| PROMPT-014 | Fix false completion claims and verify Copilot-style self-review hooks | Treat unsupported claims as a runtime safety defect, not just a model behavior issue; hook lifecycle must fire consistently and claim evidence must be checked against actual tool traces | One-shot launches must not bypass hooks; Stop hooks need response evidence; do not trust "done/passed/published" wording without matching tool calls |
 
 ## Anti-Regression Q&A
 
@@ -213,6 +501,9 @@
 | Why did `orca chat --image` fail on GitHub Copilot with `Invalid 'tools'`? | Copilot rejects requests with more than 128 tool definitions. Orca now trims the outgoing tool array to 128 for `api.githubcopilot.com` so multimodal requests keep working even when MCP expands the toolset. |
 | Why did `orca chat --image` still fail on `copilot/gpt-5.4` after tool trimming? | `gpt-5.x` on the OpenAI-compatible `/v1/chat/completions` path rejects `function tools + reasoning_effort`. Orca now suppresses `reasoning_effort` for that specific chat-completions combination while keeping effort on tool-free requests. |
 | Why could `orca chat --image` still feel hung in a MCP-heavy home directory? | One-shot image requests used to auto-connect all configured MCP servers before sending the screenshot. Orca now skips MCP auto-connect for `--image` one-shot requests so screenshot analysis returns without unrelated MCP startup delays. |
+| Why could Orca say something was done when it was not? | The model could emit unsupported completion wording, and Orca previously lacked a generic evidence guard plus had lifecycle gaps: one-shot did not load hooks, `Stop` did not fire after responses, and `SubagentStop` did not fire after delegation. |
+| What now prevents unsupported completion claims? | `claim-evidence-guard` checks assistant text against the current turn's executed tool names and appends a pending warning when file/test/git/deploy/MCP claims lack matching tool evidence. |
+| Are Copilot-style self-review hooks now usable in Orca? | Yes for the fixed lifecycle: one-shot and REPL run `UserPromptSubmit`, `Stop` fires after model output with `ORCA_RESPONSE` / `CLAUDE_RESPONSE`, and `SubagentStop` fires after delegated work. |
 
 ## References
 

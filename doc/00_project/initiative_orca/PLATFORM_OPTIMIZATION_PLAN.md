@@ -1,5 +1,299 @@
 # Orca CLI Platform Optimization Plan
 
+## 2026-05-03 Optimization Delta - Markdown Artifact Write Integrity
+
+The Markdown artifact write-integrity tranche is complete:
+
+1. Root cause:
+   - the built-in file tools were functional
+   - the bug lived in the post-model false-save repair layer, which previously used the full assistant response as repaired file content
+2. Runtime correction:
+   - false-save repair now extracts only fenced Markdown/text, explicit content markers, or Markdown-like artifact structure
+   - conversational save confirmations without artifact content are not written to disk
+3. Provider contract:
+   - the system prompt now states that `write_file.content` must be the final requested file body only
+4. Verification:
+   - focused local-file/proxy/e2e regression pack passed with `45` tests before full-suite validation
+   - `npm run lint`, `npm run build`, and full `npm test` passed with `91` files / `1665` tests
+
+## 2026-05-02 Optimization Delta - Tool-Call Closure and Orca Mark
+
+The local-file/tool-call and startup mark tranche is complete:
+
+1. Long-session tool continuity:
+   - changed OpenAI-compatible streamed chat assembly so every turn receives the current system prompt
+   - preserved history while de-duplicating an identical leading system prompt
+   - strengthened local-file instructions so create/open requests must use file tools before failure claims
+   - added a runtime local-file intent guard so obvious REPL read/write/open follow-ups execute tools before the provider call
+   - added post-response repair so false `saved to <path>` claims without a tool call are converted into an actual `write_file` operation
+   - added missing-claimed-file repair so a follow-up "本地没有这个文件，给我打开" reconstructs the claimed file from chat history and opens it
+2. Tool-call matrix closure:
+   - added the `tool-calls` layer to `agent-eval/manifests/test-matrix.json`
+   - generated `npm run test:tool-calls` and updated `agent-eval/generated/test-matrix-entrypoints.md`
+   - covered built-in tools, dangerous tool registry, local-file intent repair, proxy tool calls, MCP routing, one-shot MCP cleanup, prompt assembly, and system-prompt tool rules
+3. Blackfin startup cleanup:
+   - replaced the compact `ORCA` startup mark with a dominant `ORCA-AGENT` wordmark
+   - removed the rejected independent banner mascot/hero/icon art
+   - retained Hermes-inspired structure: large wordmark hierarchy, theme-aware deck, and operational state rows
+4. Verification:
+   - focused system prompt/provider pack passed with `22` tests
+   - `npm run test:tool-calls` passed
+   - focused Ink UI pack passed with `80` tests
+   - post-screenshot Banner render inspection shows `ORCA-AGENT`, `Orca Agent v0.8.16`, `Blackfin Signal`, clean state rows, and no independent hero art
+   - full `npm test` passed with `91` files / `1663` tests
+   - dist-level local `write_file` + `open_file` smoke passed with a fake `open` command to avoid launching desktop apps
+   - focused local-file guard pack passed with `31` tests
+   - live provider smoke remains externally blocked: Poe default timeout, Poe `qwen3.6-plus` no tool-call support, Anthropic credit exhaustion, Cloudflare unauthorized
+
+## 2026-05-02 Optimization Delta - Model Catalog SSoT
+
+The model-catalog SSoT tranche is complete:
+
+1. Metadata consolidation:
+   - added `src/model-metadata.ts` as the canonical owner for model context windows, max output defaults, pricing tiers, and capacity/pricing formatters
+   - kept `src/model-catalog.ts` as the provider-aware public catalog by re-exporting metadata helpers and preserving provider grouping / duplicate-model behavior
+2. Runtime alignment:
+   - changed `src/token-budget.ts` to use canonical context and max-output metadata
+   - changed `src/providers/openai-compat.ts` to use canonical context guard and max-token defaults
+   - changed `src/output.ts` to use canonical capacity labels and pricing for cost estimates
+3. Anti-drift guard:
+   - added model-catalog regression coverage that scans runtime consumers and fails if duplicated metadata tables return
+4. Verification:
+   - focused model/runtime/provider pack passed with `86` tests
+   - `npm run lint` passed
+   - `npm run build` passed
+   - full `npm test` passed with `91` files / `1663` tests
+
+## 2026-05-02 Optimization Delta - Terminal Operability Hardening
+
+The copyability / cwd / tool-opening tranche is complete:
+
+1. Terminal copyability:
+   - made alternate screen opt-in with `ORCA_ALT_SCREEN=1`
+   - added Claude-style no-flicker aliases: `ORCA_TUI=fullscreen`, `ORCA_NO_FLICKER=1`, and `CLAUDE_CODE_NO_FLICKER=1`
+   - pre-enters alternate screen before Ink's first frame in no-flicker mode and limits recent rendered blocks to reduce repaint pressure
+   - made mouse tracking opt-in with `ORCA_MOUSE=1`
+   - preserved Ink rendering while restoring normal terminal scrollback and selection by default
+2. Workspace reliability:
+   - added explicit/env/ambient/remembered workspace cwd resolution
+   - added last-workspace persistence under `~/.orca/last-cwd`
+   - forwarded root `orca --cwd <dir>` into chat for launcher/menu entrypoints
+3. Tool system:
+   - added `open_file` as the 42nd built-in tool
+   - marked `open_file` dangerous for approval policy
+   - refreshed README/tool-count tests and release evidence
+4. MCP reliability:
+   - fixed MCP tool routing for underscore/hyphen server names
+   - widened Codex TOML MCP parser to support hyphenated server sections
+5. Verification:
+   - targeted regression pack passed with `250` tests
+   - TypeScript build passed
+   - CLI help and doctor smokes passed
+   - live Poe one-shot `read_file` tool smoke passed
+   - full `npm test` passed with `90` files / `1651` tests
+
+## 2026-05-02 Optimization Delta - Critique Quality Gate
+
+The critique-gate optimization tranche is complete:
+
+1. Quality gateway:
+   - added `src/critique.ts` as the centralized Rubber Duck Critique model
+   - added `src/critique-workspace.ts` as the shared workspace inspection adapter
+   - added checkpoints, risk scoring, prompt generation, and structured JSON parsing
+2. Command surface:
+   - added `orca critique` as a first-class command
+   - supports plan/log/diff inputs, risk flags, `--force`, `--dry-run`, `--json`, and `--show-prompt`
+   - added `/critique` inside `orca chat` for local read-only risk inspection without a model call
+   - registered slash discovery through help/completion and command picker surfaces
+3. Automatic chat hint:
+   - added `src/critique-auto.ts` for pre-send dirty-diff risk notices
+   - added session-level repeat suppression so the same diff signature only prompts once
+   - extended the notice to one-shot `orca chat "prompt"` streaming runs while leaving `--json` output clean
+   - kept automatic hints model-free, prompt-preserving, and configurable through `--no-auto-critique`, `--auto-critique-threshold`, `ORCA_AUTO_CRITIQUE`, and `ORCA_AUTO_CRITIQUE_THRESHOLD`
+4. Reviewer routing:
+   - defaults to complementary model-family selection
+   - reuses existing provider and aggregator routing for live critique calls
+5. Contract boundary:
+   - `reflect` remains Socratic diagnosis
+   - `critique` remains read-only reviewer challenge
+   - no new dependency and no workspace mutation inside critique
+6. Reliability cleanup:
+   - fixed project hook trust evaluation so `ORCA_TRUST_PROJECT_HOOKS=1` is honored at hook load time even when the singleton already exists
+   - removed the full-suite stderr-hook gate flake exposed during this tranche
+7. Verification:
+   - focused command and contract tests passed
+   - focused slash and registry tests passed
+   - focused automatic hint tests passed
+   - focused command contract tests confirmed the chat option surface
+   - TypeScript lint and build passed
+   - release evidence snapshot was refreshed to `89` files / `1642` tests after adding automatic hint coverage
+   - full `npm test` passed with `89` files / `1642` tests
+   - built CLI dry-run smoke returned valid critique JSON
+   - scoped diff and new-file whitespace checks passed
+
+## 2026-05-01 Optimization Delta - Pod Helm Footer UI/UX
+
+The helm-footer optimization tranche is complete:
+
+1. Footer identity:
+   - changed `Footer.tsx` from generic shortcut-only rendering to a `POD HELM` rail
+   - changed key and label colors from dim-only styling to active theme semantic tokens
+2. Context-aware copy:
+   - changed generating hint from `interrupt` to `interrupt echo`
+   - changed active and idle send/help labels to `send brief` and `pod commands`
+   - preserved `enter`, `ctrl+j`, `/help`, `shift+tab`, permission-mode, and permission-source visibility
+3. Width discipline:
+   - used terminal `cols` to keep core hints compact on ordinary-width terminals
+   - rendered lower-priority active hints only on wider terminals
+   - prevented shortcut groups from shrinking into broken text columns
+4. Contract boundary:
+   - no shortcut behavior change
+   - no input submission, permission-mode, or dependency change
+5. Verification:
+   - focused Ink UI tests, lint, build, release-evidence test, real CLI version smoke, scoped diff check, and full suite passed
+
+## 2026-05-01 Optimization Delta - Pod Council Runway UI/UX
+
+The council-runway optimization tranche is complete:
+
+1. Multi-model identity:
+   - changed `MultiModelProgress.tsx` from command-only framing to `POD COUNCIL · <command>`
+   - changed model count copy from generic `models` to coordinated `voices`
+2. Progress states:
+   - changed completed row copy from `ok` to `surfaced`
+   - added `sonar` copy beside the existing active spinner
+   - preserved model names and elapsed seconds
+3. Tone system:
+   - replaced hard-coded `cyan` and `green` colors with active theme semantic tokens
+4. Contract boundary:
+   - no `ModelProgress` shape change
+   - no council/race/pipeline runtime, spinner dependency, or new dependency change
+5. Verification:
+   - focused Ink UI tests passed during implementation; final lint, build, release-evidence, full suite, CLI smoke, and scoped diff check are recorded in `deliverable.md`
+
+## 2026-05-01 Optimization Delta - Pod Evidence Drawer UI/UX
+
+The evidence-drawer optimization tranche is complete:
+
+1. Detail panel identity:
+   - changed `DetailPanel.tsx` from source-title-only framing to `EVIDENCE DRAWER · <title>`
+   - added `pod scan` subtitle context while preserving original subtitle metadata
+2. Tone system:
+   - replaced hard-coded `cyan`, `yellow`, and `red` border colors with active theme semantic tokens
+   - preserved info/warn/error meaning through `theme.border`, `theme.warning`, and `theme.error`
+3. Contract boundary:
+   - no `DetailPanelInfo` shape change
+   - no slash-command, evidence formatting, markdown parser, or dependency change
+4. Verification:
+   - focused Ink UI tests passed during implementation; final lint, build, release-evidence, full suite, CLI smoke, and scoped diff check are recorded in `deliverable.md`
+
+## 2026-05-01 Optimization Delta - Pod Trust Gate UI/UX
+
+The trust-gate optimization tranche is complete:
+
+1. Approval boundary:
+   - changed `PermissionPrompt.tsx` from a generic tool approval panel to `TRUST GATE`
+   - grouped the preview under `SCAN`
+   - retuned choices to explain once/session/project trust scope and deny posture
+2. Diff review:
+   - changed `DiffPreview.tsx` from a generic diff header to `ECHO DIFF`
+   - preserved file path, add/remove counts, line numbers, truncation, and diff content
+3. Contract boundary:
+   - no permission-policy changes
+   - no approval keybinding changes
+   - no diff algorithm, runtime event, or dependency changes
+4. Verification:
+   - focused Ink UI tests and lint passed during implementation; final build, release-evidence, full suite, CLI smoke, and scoped diff check are recorded in `deliverable.md`
+
+## 2026-05-01 Optimization Delta - Pod Proof Wake UI/UX
+
+The proof-wake optimization tranche is complete:
+
+1. Post-turn receipt:
+   - changed `TurnSummary.tsx` from internal `r/d/u` shorthand to `PROOF WAKE`
+   - preserved elapsed time, input tokens, output tokens, tool-call count, cost, and output throughput
+2. Contract boundary:
+   - no `TurnSummaryInfo` shape change
+   - no usage accounting, provider, or event-model behavior change
+3. Verification:
+   - focused Ink UI tests and lint passed during implementation; final build, release-evidence, full suite, CLI smoke, and scoped diff check are recorded in `deliverable.md`
+
+## 2026-05-01 Optimization Delta - Pod Status Rail UI/UX
+
+The status-rail optimization tranche is complete:
+
+1. Status identity:
+   - kept `ORCA POD`, model, context bar / percentage, and branch on the first status line
+   - added a compact `sonar` label for context load on ordinary-width terminals
+2. Signal and trust rails:
+   - prefixed available live metrics with `signal:`
+   - changed permission posture copy from `pod:` to `trust:` and retuned shift-tab guidance to `shift+tab cycles trust`
+3. Verification:
+   - focused Ink UI tests and lint passed during implementation; final build, release-evidence, full suite, CLI smoke, and scoped diff check are recorded in `deliverable.md`
+
+## 2026-05-01 Optimization Delta - Pod Transcript Flow UI/UX
+
+The transcript-flow optimization tranche is complete:
+
+1. Transcript roles:
+   - changed submitted user prompt panels from generic `You` to `POD BRIEF`
+   - changed assistant response panels from `ORCA` to `ORCA POD`
+   - changed streaming response copy from generic `streaming` to `echoing`
+2. Tool and thinking feedback:
+   - added `ECHO TOOL` to active and completed tool-call rails
+   - replaced the broad generic thinking verb set with compact Orca/pod/proof-oriented verbs
+3. Verification:
+   - focused Ink UI tests, lint, build, release-evidence test, real CLI version smoke, scoped diff check, and full suite passed
+
+## 2026-05-01 Optimization Delta - Pod Command Surface UI/UX
+
+The command-surface optimization tranche is complete:
+
+1. Shared UI system:
+   - made `PickerFrame.tsx` theme-aware so picker chrome uses Orca semantic tokens instead of a generic cyan default
+   - preserved existing sizing and caller override behavior
+2. Command discovery:
+   - reframed slash-command discovery as `POD COMMANDS`
+   - added echo-filter copy and a persistent no-match state
+3. Option and input UX:
+   - moved `OptionPicker.tsx` selected rows, filter labels, descriptions, and scroll affordances onto theme tokens
+   - retuned the input placeholder and multiline hint toward pod briefing language
+4. Verification:
+   - focused Ink UI tests, lint, build, release-evidence test, real CLI version smoke, scoped diff check, and full suite passed
+
+## 2026-05-01 Optimization Delta - Cute Mascot UI/UX
+
+Superseded on 2026-05-02 for startup Banner art: the independent mascot/icon block is removed. The pod-brief HomePanel language remains active.
+
+The mascot optimization tranche is complete:
+
+1. Logo system:
+   - kept the Hermes-inspired structure of large wordmark plus state panel
+   - removed the later independent mascot/icon block from `Banner.tsx` after operator feedback
+2. Entry UX:
+   - renamed the primary entry panel to `POD BRIEF`
+   - changed the copy toward friendly pod briefing while preserving one primary action, recovery, trust, and guardrail state
+3. Verification:
+   - focused Ink UI tests, lint, build, release-evidence test, real CLI version smoke, and full suite passed
+
+## 2026-04-30 Optimization Delta - Visual Identity
+
+The visual optimization tranche is now complete:
+
+1. Identity:
+   - shipped `Blackfin Signal` as the Orca default dark theme
+   - replaced generic startup art with an `ORCA-AGENT` block wordmark and clean startup deck
+2. UI hierarchy:
+   - turned the entry HomePanel into pod brief / pod signal / recover / guardrails sections
+   - preserved trust, session, model, tool, and recovery state as first-screen information
+3. UX guardrails:
+   - kept existing themes available
+   - avoided new dependencies and font bundling
+   - kept narrow-terminal rendering coherent
+4. Verification:
+   - focused Ink UI tests, lint, build, release-evidence test, real CLI version smoke, and full suite passed
+   - `ai check` remains a tooling follow-up because the local checker hung without output
+
 ## 2026-04-29 Optimization Delta - SOTA Swarm Audit
 
 The next platform wave is now explicitly ordered:

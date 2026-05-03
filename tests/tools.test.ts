@@ -19,8 +19,8 @@ afterAll(() => {
 })
 
 describe('TOOL_DEFINITIONS', () => {
-  it('has 41 tools registered', () => {
-    expect(TOOL_DEFINITIONS.length).toBe(41)
+  it('has 42 tools registered', () => {
+    expect(TOOL_DEFINITIONS.length).toBe(42)
   })
 
   it('every tool has name, description, and parameters', () => {
@@ -158,6 +158,14 @@ describe('file_info', () => {
     expect(result.success).toBe(true)
     expect(result.output).toContain('type: file')
     expect(result.output).toContain('lines:')
+  })
+})
+
+describe('open_file', () => {
+  it('fails before launching an app when the file is missing', () => {
+    const result = executeTool('open_file', { path: 'missing.md' }, testDir)
+    expect(result.success).toBe(false)
+    expect(result.output).toContain('File not found')
   })
 })
 

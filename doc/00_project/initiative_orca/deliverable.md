@@ -1,5 +1,838 @@
 # Deliverable
 
+## 2026-05-03 - Markdown Artifact Write Integrity
+
+### Scope
+
+Fix the low-level operator-visible regression where Orca wrote assistant conversation text into a requested Markdown file during false-save repair.
+
+### Delivered
+
+- Identified the issue as a tool-orchestration repair bug, not a broken `write_file` / `open_file` implementation.
+- Changed false-save repair to extract artifact body only from fenced Markdown/text, explicit content markers, or Markdown document structure.
+- Made false-save repair refuse to write when the model provides only conversational save text and no generated artifact body.
+- Updated the system prompt so providers know `write_file.content` must be the final requested file body only.
+- Added regressions for artifact extraction and no-artifact non-repair.
+
+### Changed Files
+
+- `src/commands/local-file-intent.ts`
+- `src/system-prompt.ts`
+- `tests/local-file-intent.test.ts`
+- `tests/chat-internals.test.ts`
+- `tests/e2e-workflow.test.ts`
+- `doc/00_project/initiative_orca/*` active PDCA / evidence updates
+
+### Verification
+
+- `npm test -- tests/local-file-intent.test.ts tests/chat-internals.test.ts tests/chat-repl-turn.test.ts tests/e2e-workflow.test.ts` -> `45/45`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test` -> `91` files / `1665` tests
+
+### Closeout
+
+| Item | Result |
+| --- | --- |
+| Skills | N/A. Orca-specific local-file repair behavior. |
+| PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan. |
+| Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
+| Rolling ledger | Updated with Markdown artifact write integrity requirement. |
+| Technical debt | Closed the in-scope false-save content pollution path. |
+| Three-end consistency | N/A. Local CLI code and docs only; no GitHub PR or VPS deployment requested. |
+
+## 2026-05-02 - Tool-Call Continuity and Blackfin Mark
+
+### Scope
+
+Fix the remaining long-session local file/tool-call failure mode, add the missing canonical tool-call test matrix lane, and settle the startup identity on a clear `ORCA-AGENT` wordmark plus state deck without separate icon art.
+
+### Delivered
+
+- Kept the current system prompt in every OpenAI-compatible streamed turn, including REPL turns with existing history.
+- De-duplicated one identical leading system prompt from history to avoid double-injection.
+- Strengthened the generated system prompt so local file create/open requests must use `write_file`, `read_file`, `file_info`, or `open_file` before failure claims.
+- Added a runtime local-file intent guard for obvious REPL read/write/open follow-ups before the model call.
+- Added false-save repair so streamed proxy turns write the claimed file when the model says it saved a path but no file tool ran.
+- Added missing-claimed-file repair so follow-ups can reconstruct and open a previously claimed file from chat history.
+- Fixed default proxy tool allow-list assembly so built-in tools are not advertised to the model while being blocked by policy.
+- Added `tool-calls` to the canonical test matrix and generated `npm run test:tool-calls`.
+- Replaced the old compact startup mark with a dominant `ORCA-AGENT` wordmark and removed the rejected independent Blackfin orca hero/icon block from the existing theme-aware Banner deck.
+
+### Changed Files
+
+- `src/providers/openai-compat.ts`
+- `src/system-prompt.ts`
+- `src/commands/local-file-intent.ts`
+- `src/commands/chat-repl-turn.ts`
+- `src/commands/chat.ts`
+- `src/ui/components/Banner.tsx`
+- `tests/local-file-intent.test.ts`
+- `tests/chat-internals.test.ts`
+- `tests/chat-repl-turn.test.ts`
+- `tests/openai-compat-multimodal.test.ts`
+- `tests/e2e-workflow.test.ts`
+- `tests/ink-ui.test.tsx`
+- `agent-eval/manifests/test-matrix.json`
+- `agent-eval/generated/test-matrix-entrypoints.md`
+- `package.json`
+- `doc/00_project/initiative_orca/*` active PDCA / evidence updates
+
+### Verification
+
+- `npm test -- tests/openai-compat-multimodal.test.ts tests/e2e-workflow.test.ts` -> `22/22`
+- `npm test -- tests/local-file-intent.test.ts tests/chat-internals.test.ts tests/chat-repl-turn.test.ts` -> `31/31`
+- `npm run test:matrix:sync` -> pass
+- `npm run test:tool-calls` -> pass
+- `npm test -- tests/ink-ui.test.tsx` -> `80/80`
+- Rendered Banner inspection -> `ORCA-AGENT`, `Orca Agent v0.8.16`, `Blackfin Signal`, clean state rows, and no independent hero art
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test` -> `91` files / `1663` tests
+- Dist-level local file guard smoke with fake `open` -> missing claimed file reconstructed, `write_file` succeeded, and `open_file` received the generated Markdown path
+
+### Closeout
+
+| Item | Result |
+| --- | --- |
+| Skills | N/A. This is Orca-specific runtime, test-matrix, and Banner identity work. |
+| PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan. |
+| Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
+| Rolling ledger | Updated with tool-call continuity, matrix, and Blackfin mark requirements. |
+| Technical debt | Closed the in-scope long-session prompt decay and missing tool-call matrix lane. |
+| Three-end consistency | N/A. Local CLI code and docs only; no GitHub PR or VPS deployment requested. |
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Already-running Orca sessions use the old built `dist` code until restarted | Operator | Rebuild and restart Orca after this change |
+| Live provider smoke is blocked by external provider/account state | Runtime | Poe default timed out, `qwen3.6-plus` does not support tool calling, Anthropic lacks credits, and Cloudflare returned unauthorized; keep deterministic `test:tool-calls` as release gate and rerun live smoke after provider config is fixed |
+
+## 2026-05-02 - Model Catalog SSoT Runtime Consolidation
+
+### Scope
+
+Close ORCA-SWARM-021 by eliminating duplicated model metadata tables from runtime consumers and making the provider-aware catalog, token budget, provider request defaults, and output summaries share one canonical source.
+
+### Delivered
+
+- Added `src/model-metadata.ts` for canonical model context windows, max output defaults, pricing tiers, and capacity/pricing formatters.
+- Kept `src/model-catalog.ts` as the public provider-aware catalog by re-exporting canonical metadata helpers and preserving provider grouping / duplicate-model resolution.
+- Updated token budget context windows and max-output reporting to use canonical metadata.
+- Updated OpenAI-compatible context hard-stop thresholds and request max-token defaults to use canonical metadata.
+- Updated startup provider capacity labels and usage/session cost estimates to use canonical metadata.
+- Added a regression guard that scans runtime consumers and fails if duplicate metadata tables are reintroduced.
+- Refreshed README, release evidence, and active project docs.
+
+### Changed Files
+
+- `src/model-metadata.ts`
+- `src/model-catalog.ts`
+- `src/token-budget.ts`
+- `src/providers/openai-compat.ts`
+- `src/output.ts`
+- `tests/model-catalog.test.ts`
+- `README.md`
+- `doc/00_project/initiative_orca/*` active PDCA / evidence updates
+
+### Verification
+
+- `npm test -- tests/model-catalog.test.ts tests/context-protection.test.ts tests/agent-intelligence.test.ts tests/openai-compat-multimodal.test.ts` -> `86/86`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test` -> `91` files / `1663` tests
+
+### Closeout
+
+| Item | Result |
+| --- | --- |
+| Skills | N/A. This is Orca-specific runtime/catalog consolidation, not a reusable cross-project skill. |
+| PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan. |
+| Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
+| Rolling ledger | Updated with model metadata SSoT requirements and anti-regression guards. |
+| Technical debt | In-scope metadata drift closed for token budget, provider max-token defaults, output labels, and usage cost estimates. |
+| Three-end consistency | N/A. Local CLI code and docs only; no GitHub PR or VPS deployment requested. |
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Metadata values still require manual updates as provider offerings change | Runtime | Keep `src/model-metadata.ts` as the only update point and add source-backed updates when model specs change |
+| Provider routing policy itself is still broader than metadata SSoT | Runtime | Future tranche can consolidate routing decisions if route fallback behavior drifts |
+
+## 2026-05-02 - Terminal Operability Hardening
+
+### Scope
+
+Fix Orca CLI's terminal copyability/flicker regression, launcher cwd drift, MCP server-name routing bug, and missing local file-opening tool.
+
+### Delivered
+
+- Made Ink alternate-screen rendering opt-in through `ORCA_ALT_SCREEN=1` so default output stays in normal terminal scrollback and is copyable.
+- Made mouse tracking opt-in through `ORCA_MOUSE=1` so default text selection is not captured by the app.
+- Added durable workspace cwd resolution with explicit `--cwd`/env priority, ambient project detection, and last-workspace fallback for non-workspace launches.
+- Added root `orca --cwd <dir>` forwarding into `orca chat` for launcher/menu entrypoints.
+- Fixed MCP tool routing for server names containing underscores or hyphens.
+- Widened Codex TOML MCP parser to support hyphenated `[mcp_servers.<name>]` sections.
+- Added `open_file` as the 42nd built-in tool for visual local file opening and included it in dangerous-tool approval policy.
+- Refreshed tool counts, tests, README, release evidence, and active project docs.
+
+### Changed Files
+
+- `src/ui/render.tsx`
+- `src/ui/components/App.tsx`
+- `src/commands/chat-support.ts`
+- `src/commands/chat.ts`
+- `src/program.ts`
+- `src/mcp-client.ts`
+- `src/tools.ts`
+- `tests/chat-support.test.ts`
+- `tests/ink-ui.test.tsx`
+- `tests/mcp-client.test.ts`
+- `tests/program.test.ts`
+- `tests/tools.test.ts`
+- `tests/tools-full.test.ts`
+- `tests/hooks.test.ts`
+- `tests/e2e-workflow.test.ts`
+- `tests/adversarial.test.ts`
+- `README.md`
+- `doc/00_project/initiative_orca/*` active PDCA / evidence updates
+
+### Verification
+
+- Targeted regression pack -> `250/250`
+- `npm run build` -> pass
+- `node dist/bin/orca.js --help` -> `42 tools`, `--cwd`, and `critique` visible
+- `node dist/bin/orca.js chat --help` -> `--cwd`, `--image`, and auto-critique flags visible
+- `node dist/bin/orca.js doctor` -> provider OK (`poe / claude-opus-4.6`), `14` MCP configs discovered
+- Live one-shot: `ORCA_NO_INK=1 node dist/bin/orca.js chat --json --cwd /Users/mauricewen/Projects/orca-cli -p poe --max-turns 4 ...` -> model called `read_file`, tool succeeded, final answer `Orca CLI`
+- `npm test` -> `90` files / `1651` tests
+
+### Closeout
+
+| Item | Result |
+| --- | --- |
+| Skills | N/A. This is Orca-specific runtime hardening, not a reusable cross-project skill. |
+| PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan. |
+| Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
+| Rolling ledger | Updated with terminal/cwd/MCP/open-file requirements and anti-regression guards. |
+| Technical debt | Release evidence snapshot drift was fixed after full-suite verification exposed it. Historical v0.3 report counts remain historical baselines. |
+| Three-end consistency | N/A. Local CLI code and docs only; no GitHub PR or VPS deployment requested. |
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| First launch from a non-workspace directory before any workspace is remembered still uses that directory | Runtime / Launcher | Pass `--cwd`, `ORCA_CWD`, or `ORCA_PROJECT_DIR` from launch wrappers for deterministic first-run behavior |
+| Project-local MCP servers are still explicit-connect by design | Runtime | Use MCP connection commands/policy when a project server should be live |
+
+## 2026-05-02 - Rubber Duck Critique Quality Gate
+
+### Scope
+
+Optimize Orca CLI against the local 2026-05-02 AI coding CLI research report by adding the missing read-only critique/checkpoint layer while preserving `reflect` as the Socratic debugging workflow.
+
+### Delivered
+
+- Added a critique core module with checkpoint validation, weighted risk scoring, complementary reviewer selection, prompt assembly, diff-line counting, and structured JSON result parsing.
+- Extracted workspace critique inspection into a reusable module shared by the standalone command and chat slash command.
+- Added `orca critique` as a first-class command with `--checkpoint`, plan/log/diff inputs, risk flags, `--force`, `--dry-run`, `--json`, and `--show-prompt`.
+- Added `/critique` inside `orca chat` as a read-only local inspection that renders reviewer choice, risk score, diff lines, and changed files in legacy output or an Ink detail panel.
+- Added automatic chat pre-send local critique hints for high-risk dirty diffs. The hint is read-only, model-free, suppresses repeats for the same diff signature, and points operators to `/critique --checkpoint after_complex_implementation`.
+- Exposed `orca chat --no-auto-critique` and `orca chat --auto-critique-threshold <score>` so automatic hints are discoverable and session-scoped, not env-only.
+- Extended the same automatic local hint to one-shot `orca chat "prompt"` streaming runs while keeping `--json` one-shot output clean.
+- Made dry-run mode deterministic and API-key-free so local CI and humans can inspect whether a checkpoint would run.
+- Registered the command in the public Orca command surface and slash discovery registries.
+- Added focused unit, slash, registry, and command contract coverage.
+- Fixed hook trust evaluation so project hooks are honored when `ORCA_TRUST_PROJECT_HOOKS=1` is set before `HookManager.load()`, even if the singleton was constructed earlier.
+- Updated README and active project docs to record the product/architecture/UX distinction between `reflect` and `critique`.
+
+### Changed Files
+
+- `src/critique.ts`
+- `src/critique-workspace.ts`
+- `src/critique-auto.ts`
+- `src/commands/critique.ts`
+- `src/commands/chat.ts`
+- `src/commands/chat-repl-turn.ts`
+- `src/commands/chat-slash-readonly.ts`
+- `src/program.ts`
+- `src/command-picker.ts`
+- `src/slash-commands.ts`
+- `src/hooks.ts`
+- `tests/critique.test.ts`
+- `tests/chat-one-shot-mcp-cleanup.test.ts`
+- `tests/chat-repl-turn.test.ts`
+- `tests/command-contracts.test.ts`
+- `tests/chat-slash-readonly.test.ts`
+- `tests/program.test.ts`
+- `tests/command-contracts.test.ts`
+- `tests/command-picker.test.ts`
+- `tests/slash-commands.test.ts`
+- `README.md`
+- `doc/00_project/initiative_orca/*` PDCA and project fact-source updates
+
+### Verification
+
+- `npm test -- tests/critique.test.ts tests/program.test.ts tests/command-contracts.test.ts` -> `42/42`
+- `npm test -- tests/critique.test.ts tests/chat-slash-readonly.test.ts tests/command-picker.test.ts tests/slash-commands.test.ts tests/program.test.ts tests/command-contracts.test.ts` -> `70/70`
+- `npm test -- tests/critique.test.ts tests/chat-repl-turn.test.ts` -> `25/25`
+- `npm test -- tests/chat-one-shot-mcp-cleanup.test.ts tests/chat-repl-turn.test.ts tests/command-contracts.test.ts` -> `33/33`
+- `npm test -- tests/v050-modules.test.ts` -> `47/47`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `npm test` -> `89` files / `1642` tests
+- `node dist/bin/orca.js critique --dry-run --json "review current diff"` -> valid JSON
+- `git diff --check -- <tracked critique tranche files>` -> pass
+- New-file trailing whitespace scan for `src/critique.ts`, `src/commands/critique.ts`, and `tests/critique.test.ts` -> pass
+
+### Closeout
+
+| Item | Result |
+| --- | --- |
+| Skills | N/A. This pass used the existing `optimize` workflow and produced project-specific Orca CLI code, not a reusable cross-project skill. |
+| PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan plus HTML companions. |
+| Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
+| Rolling ledger | Updated with critique-gate requirements, source prompt, and anti-regression guard. |
+| Technical debt | Release evidence snapshot drift, full-suite hook stderr gate drift, and the missing automatic local critique reminder were fixed in scope. Existing unrelated dirty worktree remains out of scope. |
+| Three-end consistency | N/A. Local CLI feature tranche only; no GitHub PR or VPS deployment requested. |
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Live model critique depends on configured provider credentials | Runtime | Use `--dry-run --json` in CI/local gates and configure provider/API key for live review |
+| Automatic critique hints are local reminders, not live reviewer calls | Product / Runtime | Keep live model critique behind explicit `orca critique` or `/critique` until automatic model calls have an approval and cost policy |
+| The worktree contains unrelated pre-existing changes outside this tranche | Repo hygiene | Review or split unrelated changes before preparing a focused commit |
+
+## 2026-05-01 - Pod Helm Footer UI/UX Tranche
+
+### Scope
+
+Continue the broader Orca UI/UX optimization by carrying the killer-whale pod identity into the persistent shortcut footer.
+
+### Delivered
+
+- Reframed the footer shortcut rail as `POD HELM`.
+- Changed generating hint copy to `interrupt echo`.
+- Changed active and idle labels to `send brief` and `pod commands`.
+- Preserved `enter`, `ctrl+j`, `/help`, `shift+tab`, permission mode, and permission source visibility.
+- Made active input footer rendering width-aware so ordinary terminals keep core hints coherent.
+- Used active theme semantic tokens for footer identity, keys, and labels.
+- Updated focused Ink UI regression coverage.
+- Synced active PDCA docs, visual plan, rolling ledger, notes, and deliverable.
+
+### Changed Files
+
+- `src/ui/components/Footer.tsx`
+- `tests/ink-ui.test.tsx`
+- `doc/00_project/initiative_orca/*` PDCA and project fact-source updates
+
+### Verification
+
+- `npm test -- tests/ink-ui.test.tsx` -> `79/79`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `npm test` -> `88` files / `1627` tests
+- `ORCA_THEME=orca node dist/bin/orca.js --version` -> `0.8.16`
+- `git diff --check -- <changed tranche files>` -> pass
+
+### Closeout
+
+| Item | Result |
+| --- | --- |
+| Skills | N/A. Used existing `frontend-design`; this is project-specific Ink UI polish, not a reusable cross-project skill. |
+| PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan plus HTML companions. |
+| Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
+| Rolling ledger | Updated `ROLLING_REQUIREMENTS_AND_PROMPTS.md` with requirements, prompt ledger, and anti-regression guard. |
+| Technical debt | Full `git diff --check` remains blocked by pre-existing root `AGENTS.md` trailing whitespace from unrelated work; scoped tranche diff check passes. Release evidence snapshot remains the existing governance baseline and is not expanded in this UI-only tranche. |
+| Three-end consistency | N/A. Local CLI UI/UX refresh only; no GitHub PR or VPS production deployment requested. |
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Full `git diff --check` is still blocked by pre-existing trailing whitespace in root `AGENTS.md` | Governance | Clean root guidance whitespace in a separate hygiene tranche |
+| Release evidence snapshot still records the historical `1623` baseline while current full-suite evidence is `1627` | Release governance | Refresh snapshot, README badges, and guarded release evidence as a dedicated release-evidence tranche |
+| This pass improves footer identity and width discipline, not a live terminal screenshot review across multiple actual terminal widths | UX | Continue with screenshot-based manual validation in a later UI smoke tranche |
+
+## 2026-05-01 - Pod Council Runway UI/UX Tranche
+
+### Scope
+
+Continue the broader Orca UI/UX optimization by carrying the killer-whale pod intelligence identity into live multi-model progress for council, race, and pipeline execution.
+
+### Delivered
+
+- Reframed multi-model progress as `POD COUNCIL · <command>`.
+- Changed model count copy from generic `models` to coordinated `voices`.
+- Changed completed row status from `ok` to `surfaced`.
+- Added `sonar` copy beside the active spinner.
+- Replaced hard-coded multi-model progress colors with theme semantic tokens.
+- Preserved `ModelProgress`, council/race/pipeline runtime behavior, spinner dependency behavior, model names, and elapsed time.
+- Updated focused Ink UI regression coverage.
+- Synced active PDCA docs, visual plan, rolling ledger, notes, and deliverable.
+
+### Changed Files
+
+- `src/ui/components/MultiModelProgress.tsx`
+- `tests/ink-ui.test.tsx`
+- `doc/00_project/initiative_orca/*` PDCA and project fact-source updates
+
+### Verification
+
+- `npm test -- tests/ink-ui.test.tsx` -> `79/79`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `npm test` -> `88` files / `1627` tests
+- `ORCA_THEME=orca node dist/bin/orca.js --version` -> `0.8.16`
+- `git diff --check -- <changed tranche files>` -> pass
+
+### Closeout
+
+| Item | Result |
+| --- | --- |
+| Skills | N/A. Used existing `frontend-design`; this is project-specific Ink UI polish, not a reusable cross-project skill. |
+| PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan plus HTML companions. |
+| Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
+| Rolling ledger | Updated `ROLLING_REQUIREMENTS_AND_PROMPTS.md` with requirements, prompt ledger, and anti-regression guard. |
+| Technical debt | Full `git diff --check` remains blocked by pre-existing root `AGENTS.md` trailing whitespace from unrelated work; scoped tranche diff check passes. Release evidence snapshot remains the existing governance baseline and is not expanded in this UI-only tranche. |
+| Three-end consistency | N/A. Local CLI UI/UX refresh only; no GitHub PR or VPS production deployment requested. |
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Full `git diff --check` is still blocked by pre-existing trailing whitespace in root `AGENTS.md` | Governance | Clean root guidance whitespace in a separate hygiene tranche |
+| Release evidence snapshot still records the historical `1623` baseline while current full-suite evidence is `1627` | Release governance | Refresh snapshot, README badges, and guarded release evidence as a dedicated release-evidence tranche |
+| This pass improves multi-model progress identity, not council/race/pipeline result synthesis layout | UX / Runtime | Continue with multi-model result layout after a live multi-model run capture |
+
+## 2026-05-01 - Pod Evidence Drawer UI/UX Tranche
+
+### Scope
+
+Continue the broader Orca UI/UX optimization by carrying the killer-whale pod identity into detail panels used by status, permission, notes, thread, and TaskRun evidence surfaces.
+
+### Delivered
+
+- Reframed detail panels as `EVIDENCE DRAWER · <title>`.
+- Added `pod scan` subtitle context while preserving the original subtitle metadata.
+- Replaced hard-coded detail panel tone colors with theme semantic tokens.
+- Preserved `DetailPanelInfo`, slash-command behavior, evidence body construction, and MarkdownText rendering.
+- Updated focused Ink UI regression coverage.
+- Synced active PDCA docs, visual plan, rolling ledger, notes, and deliverable.
+
+### Changed Files
+
+- `src/ui/components/DetailPanel.tsx`
+- `tests/ink-ui.test.tsx`
+- `doc/00_project/initiative_orca/*` PDCA and project fact-source updates
+
+### Verification
+
+- `npm test -- tests/ink-ui.test.tsx` -> `79/79`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `npm test` -> `88` files / `1627` tests
+- `ORCA_THEME=orca node dist/bin/orca.js --version` -> `0.8.16`
+- `git diff --check -- <changed tranche files>` -> pass
+
+### Closeout
+
+| Item | Result |
+| --- | --- |
+| Skills | N/A. Used existing `frontend-design`; this is project-specific Ink UI polish, not a reusable cross-project skill. |
+| PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan plus HTML companions. |
+| Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
+| Rolling ledger | Updated `ROLLING_REQUIREMENTS_AND_PROMPTS.md` with requirements, prompt ledger, and anti-regression guard. |
+| Technical debt | Full `git diff --check` remains blocked by pre-existing root `AGENTS.md` trailing whitespace from unrelated work; scoped tranche diff check passes. Release evidence snapshot remains the existing governance baseline and is not expanded in this UI-only tranche. |
+| Three-end consistency | N/A. Local CLI UI/UX refresh only; no GitHub PR or VPS production deployment requested. |
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Full `git diff --check` is still blocked by pre-existing trailing whitespace in root `AGENTS.md` | Governance | Clean root guidance whitespace in a separate hygiene tranche |
+| Release evidence snapshot still records the historical `1623` baseline while current full-suite evidence is `1627` | Release governance | Refresh snapshot, README badges, and guarded release evidence as a dedicated release-evidence tranche |
+| This pass improves detail-panel identity, not evidence drawer information architecture or live terminal screenshot validation | UX | Continue with evidence grouping / live screenshot validation in a later tranche |
+
+## 2026-05-01 - Pod Trust Gate UI/UX Tranche
+
+### Scope
+
+Continue the broader Orca UI/UX optimization by carrying the killer-whale pod identity into permission approval and write diff review boundaries.
+
+### Delivered
+
+- Reframed permission prompts as `TRUST GATE · <tool>`.
+- Added `SCAN` before the tool preview so the user sees impact before choosing scope.
+- Retuned approval choices to explain one-time clearance, session trust, project policy persistence, and deny posture.
+- Preserved existing approval semantics and keybindings for `y`, `n`, `1-4`, arrows, Enter, and Esc.
+- Reframed write diff preview as `ECHO DIFF`.
+- Preserved diff path, add/remove counts, line numbers, truncation, and diff content.
+- Updated focused Ink UI regression coverage.
+- Synced active PDCA docs, visual plan, rolling ledger, notes, and deliverable.
+
+### Changed Files
+
+- `src/ui/components/PermissionPrompt.tsx`
+- `src/ui/components/DiffPreview.tsx`
+- `tests/ink-ui.test.tsx`
+- `doc/00_project/initiative_orca/*` PDCA and project fact-source updates
+
+### Verification
+
+- `npm test -- tests/ink-ui.test.tsx` -> `79/79`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `npm test` -> `88` files / `1627` tests
+- `ORCA_THEME=orca node dist/bin/orca.js --version` -> `0.8.16`
+- `git diff --check -- <changed tranche files>` -> pass
+
+### Closeout
+
+| Item | Result |
+| --- | --- |
+| Skills | N/A. Used existing `frontend-design`; this is project-specific Ink UI polish, not a reusable cross-project skill. |
+| PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan plus HTML companions. |
+| Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
+| Rolling ledger | Updated `ROLLING_REQUIREMENTS_AND_PROMPTS.md` with requirements, prompt ledger, and anti-regression guard. |
+| Technical debt | Full `git diff --check` remains blocked by pre-existing root `AGENTS.md` trailing whitespace from unrelated work; scoped tranche diff check passes. Release evidence snapshot remains the existing governance baseline and is not expanded in this UI-only tranche. |
+| Three-end consistency | N/A. Local CLI UI/UX refresh only; no GitHub PR or VPS production deployment requested. |
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Full `git diff --check` is still blocked by pre-existing trailing whitespace in root `AGENTS.md` | Governance | Clean root guidance whitespace in a separate hygiene tranche |
+| Release evidence snapshot still records the historical `1623` baseline while current full-suite evidence is `1627` | Release governance | Refresh snapshot, README badges, and guarded release evidence as a dedicated release-evidence tranche |
+| This pass improves trust-gate scanability, not policy-rule management or live terminal screenshot validation | UX / Runtime | Continue with policy-rule information architecture or live screenshot validation in a later tranche |
+
+## 2026-05-01 - Pod Proof Wake UI/UX Tranche
+
+### Scope
+
+Continue the broader Orca UI/UX optimization by carrying the killer-whale pod identity into the compact post-turn summary.
+
+### Delivered
+
+- Reframed post-turn metrics as `PROOF WAKE`.
+- Replaced internal `r/d/u` shorthand with explicit `time`, `in`, `out`, `tools`, cost, and `tok/s` labels.
+- Preserved elapsed time, input tokens, output tokens, tool-call count, cost, and output throughput.
+- Kept `TurnSummaryInfo`, usage accounting, provider behavior, and UI event payloads unchanged.
+- Updated focused Ink UI regression coverage.
+- Synced active PDCA docs, visual plan, rolling ledger, notes, and deliverable.
+
+### Changed Files
+
+- `src/ui/components/TurnSummary.tsx`
+- `tests/ink-ui.test.tsx`
+- `doc/00_project/initiative_orca/*` PDCA and project fact-source updates
+
+### Verification
+
+- `npm test -- tests/ink-ui.test.tsx` -> `79/79`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `npm test` -> `88` files / `1627` tests
+- `ORCA_THEME=orca node dist/bin/orca.js --version` -> `0.8.16`
+- `git diff --check -- <changed tranche files>` -> pass
+
+### Closeout
+
+| Item | Result |
+| --- | --- |
+| Skills | N/A. Used existing `frontend-design`; this is project-specific Ink UI polish, not a reusable cross-project skill. |
+| PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan plus HTML companions. |
+| Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
+| Rolling ledger | Updated `ROLLING_REQUIREMENTS_AND_PROMPTS.md` with requirements, prompt ledger, and anti-regression guard. |
+| Technical debt | Full `git diff --check` remains blocked by pre-existing root `AGENTS.md` trailing whitespace from unrelated work; scoped tranche diff check passes. Release evidence snapshot remains the existing governance baseline and is not expanded in this UI-only tranche. |
+| Three-end consistency | N/A. Local CLI UI/UX refresh only; no GitHub PR or VPS production deployment requested. |
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Full `git diff --check` is still blocked by pre-existing trailing whitespace in root `AGENTS.md` | Governance | Clean root guidance whitespace in a separate hygiene tranche |
+| Release evidence snapshot still records the historical `1623` baseline while current full-suite evidence is `1627` | Release governance | Refresh snapshot, README badges, and guarded release evidence as a dedicated release-evidence tranche |
+| This pass improves post-turn scanability, not transcript folding or live visual screenshot validation | UX | Continue with transcript density / folding after a live terminal screenshot pass |
+
+## 2026-05-01 - Pod Status Rail UI/UX Tranche
+
+### Scope
+
+Continue the broader Orca UI/UX optimization by carrying the killer-whale pod identity into the persistent fixed status bar.
+
+### Delivered
+
+- Kept `ORCA POD`, model, context bar / percentage, and branch visible on the first status line.
+- Added `sonar` context-load language to make context pressure read as an operational Orca signal.
+- Prefixed live stats with `signal:` while preserving cost, throughput, turns, session id, policy summaries, output style, and sparkline.
+- Changed permission posture copy to `trust:` and retuned the shortcut hint to `shift+tab cycles trust`.
+- Updated focused Ink UI regression coverage.
+- Synced active PDCA docs, visual plan, rolling ledger, notes, and deliverable.
+
+### Changed Files
+
+- `src/ui/components/StatusBar.tsx`
+- `tests/ink-ui.test.tsx`
+- `doc/00_project/initiative_orca/*` PDCA and project fact-source updates
+
+### Verification
+
+- `npm test -- tests/ink-ui.test.tsx` -> `79/79`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `npm test` -> `88` files / `1627` tests
+- `ORCA_THEME=orca node dist/bin/orca.js --version` -> `0.8.16`
+- `git diff --check -- <changed tranche files>` -> pass
+
+### Closeout
+
+| Item | Result |
+| --- | --- |
+| Skills | N/A. Used existing `frontend-design`; this is project-specific Ink UI polish, not a reusable cross-project skill. |
+| PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan plus HTML companions. |
+| Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
+| Rolling ledger | Updated `ROLLING_REQUIREMENTS_AND_PROMPTS.md` with requirements, prompt ledger, and anti-regression guard. |
+| Technical debt | Full `git diff --check` remains blocked by pre-existing root `AGENTS.md` trailing whitespace from unrelated work; scoped tranche diff check passes. Release evidence snapshot remains the existing governance baseline and is not expanded in this UI-only tranche. |
+| Three-end consistency | N/A. Local CLI UI/UX refresh only; no GitHub PR or VPS production deployment requested. |
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Full `git diff --check` is still blocked by pre-existing trailing whitespace in root `AGENTS.md` | Governance | Clean root guidance whitespace in a separate hygiene tranche |
+| Release evidence snapshot still records the historical `1623` baseline while current full-suite evidence is `1627` | Release governance | Refresh snapshot, README badges, and guarded release evidence as a dedicated release-evidence tranche |
+| This pass improves persistent status readability, not transcript folding or live visual screenshot validation | UX | Continue with transcript density / folding after a live terminal screenshot pass |
+
+## 2026-05-01 - Pod Transcript Flow UI/UX Tranche
+
+### Scope
+
+Continue the broader Orca UI/UX optimization by carrying the killer-whale pod identity into the live transcript: user prompts, assistant panels, tool rails, and thinking state.
+
+### Delivered
+
+- Reframed submitted prompt transcript blocks from `You` to `POD BRIEF`.
+- Reframed assistant response panels from `ORCA` to `ORCA POD`.
+- Changed streaming assistant state copy to `echoing`.
+- Added `ECHO TOOL` identity to active and completed tool-call rails.
+- Replaced broad generic thinking verbs with compact Orca / pod / proof-oriented status copy.
+- Updated focused Ink UI regression coverage.
+- Synced active PDCA docs, visual plan, rolling ledger, notes, and deliverable.
+
+### Changed Files
+
+- `src/ui/components/App.tsx`
+- `src/ui/components/ToolCallBlock.tsx`
+- `src/ui/components/ThinkingSpinner.tsx`
+- `tests/ink-ui.test.tsx`
+- `doc/00_project/initiative_orca/*` PDCA and project fact-source updates
+
+### Verification
+
+- `npm test -- tests/ink-ui.test.tsx` -> `78/78`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `npm test` -> `88` files / `1626` tests
+- `ORCA_THEME=orca node dist/bin/orca.js --version` -> `0.8.16`
+- `git diff --check -- <changed tranche files>` -> pass
+
+### Closeout
+
+| Item | Result |
+| --- | --- |
+| Skills | N/A. Used existing `frontend-design`; this is project-specific Ink UI polish, not a reusable cross-project skill. |
+| PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan plus HTML companions. |
+| Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
+| Rolling ledger | Updated `ROLLING_REQUIREMENTS_AND_PROMPTS.md` with requirements, prompt ledger, and anti-regression guards. |
+| Technical debt | Full `git diff --check` remains blocked by pre-existing root `AGENTS.md` trailing whitespace from unrelated work; scoped tranche diff check passes. |
+| Three-end consistency | N/A. Local CLI UI/UX refresh only; no GitHub PR or VPS production deployment requested. |
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Full `git diff --check` is still blocked by pre-existing trailing whitespace in root `AGENTS.md` | Governance | Clean root guidance whitespace in a separate hygiene tranche |
+| This pass improves transcript identity, not density, folding, or visual screenshot validation | UX | Continue with transcript density / folding after a live terminal screenshot pass |
+
+## 2026-05-01 - Pod Command Surface UI/UX Tranche
+
+### Scope
+
+Continue the broader Orca UI/UX optimization by carrying the killer-whale pod identity into input, command discovery, option selection, and shared picker framing.
+
+### Delivered
+
+- Made `PickerFrame.tsx` theme-aware so picker chrome uses Orca semantic colors.
+- Reframed slash-command discovery as `POD COMMANDS` with `echo filter` and no-match feedback.
+- Kept the command picker visible when filters have zero matches and preserved `Esc` cancellation.
+- Updated `OptionPicker.tsx` to use Orca theme tokens for selection, labels, descriptions, and scroll affordances.
+- Retuned `InputArea.tsx` empty and multiline copy to pod briefing language.
+- Added focused Ink UI regression coverage.
+- Synced active PDCA docs, visual plan, rolling ledger, notes, and deliverable.
+
+### Changed Files
+
+- `src/ui/components/PickerFrame.tsx`
+- `src/ui/components/CommandPicker.tsx`
+- `src/ui/components/OptionPicker.tsx`
+- `src/ui/components/InputArea.tsx`
+- `tests/ink-ui.test.tsx`
+- `doc/00_project/initiative_orca/*` PDCA and project fact-source updates
+
+### Verification
+
+- `npm test -- tests/ink-ui.test.tsx` -> `78/78`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `npm test` -> `88` files / `1626` tests
+- `ORCA_THEME=orca node dist/bin/orca.js --version` -> `0.8.16`
+- `git diff --check -- <changed tranche files>` -> pass
+
+### Closeout
+
+| Item | Result |
+| --- | --- |
+| Skills | N/A. Used existing `frontend-design`; this is project-specific Ink UI polish, not a reusable cross-project skill. |
+| PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan plus HTML companions. |
+| Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
+| Rolling ledger | Updated `ROLLING_REQUIREMENTS_AND_PROMPTS.md` with requirements, prompt ledger, and anti-regression guards. |
+| Technical debt | Full `git diff --check` still reports pre-existing root `AGENTS.md` trailing whitespace; this is outside the UI/UX tranche and recorded below. |
+| Three-end consistency | N/A. Local CLI UI/UX refresh only; no GitHub PR or VPS production deployment requested. |
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| Full `git diff --check` is still blocked by pre-existing trailing whitespace in root `AGENTS.md` | Governance | Clean that root guidance file in a separate hygiene tranche; it is outside this UI/UX change set |
+| This pass improves picker/input identity; deeper transcript density, animation, and live screenshot polish remain separate | UX | Continue with a later tranche over transcript readability, density, and live visual inspection |
+
+## 2026-05-01 - Cute Orca Mascot UI/UX Tranche
+
+Superseded on 2026-05-02 for startup Banner art: the separate mascot/icon block was removed. The HomePanel pod-brief work remains active.
+
+### Scope
+
+Start the broader Orca UI/UX optimization by upgrading the terminal first frame: learn Hermes Agent's logo structure while implementing a friendlier pod-brief entry UX. The mascot part was later removed from startup.
+
+### Delivered
+
+- Replaced the abstract banner mark at the time; this separate startup mascot/icon was later removed from `src/ui/components/Banner.tsx`.
+- Preserved the Hermes-inspired identity structure that remains active: large wordmark and status-rich panel.
+- Updated HomePanel primary entry from `MISSION` to `POD BRIEF`.
+- Retuned first-screen copy toward friendly pod briefing while preserving trust, model, session, recovery, and guardrails.
+- Updated focused Ink UI regressions for the clean startup deck and new first-screen copy.
+- Synced active PDCA docs and rolling ledger.
+
+### Changed Files
+
+- `src/ui/components/Banner.tsx`
+- `src/ui/components/HomePanel.tsx`
+- `tests/ink-ui.test.tsx`
+- `doc/00_project/initiative_orca/*` PDCA and project fact-source updates
+
+### Verification
+
+- `npm test -- tests/ink-ui.test.tsx` -> `77/77`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `npm test` -> `88` files / `1625` tests
+- `ORCA_THEME=orca node dist/bin/orca.js --version` -> `0.8.16`
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| This pass optimizes the terminal first frame only; deeper transcript/picker motion and density work remains separate | UX | Continue with a later tranche over transcript, pickers, and command flow after reviewing live screenshots |
+
+## 2026-05-01 - Orca Killer-Whale Positioning Correction
+
+### Scope
+
+Correct the visual-system language so Orca is positioned as a killer whale / tiger whale identity rather than a generic deep-sea console.
+
+### Delivered
+
+- Renamed the active identity language from `Abyssal Signal` to `Blackfin Signal`.
+- Updated startup motif language to blackfin / pod / dorsal-fin / echolocation cues.
+- Updated Banner, HomePanel, ThemePicker, StatusBar copy and focused Ink UI expectations.
+- Synced PRD, architecture, UX map, optimization plan, task plan, notes, and rolling ledger.
+- Clarified the final motif hierarchy: killer whale primary, ocean field, pod intelligence product metaphor.
+
+### Verification
+
+- `npm test -- tests/ink-ui.test.tsx tests/release-evidence.test.ts` -> `80/80`.
+- `rg` drift scan for stale active `Abyssal` / generic deep-sea wording -> only historical correction notes remain.
+- `npm run lint` -> pass.
+- `npm run build` -> pass.
+- `npm test` -> `88` files / `1625` tests.
+
+## 2026-04-30 - Orca Visual System PDCA Tranche
+
+### Scope
+
+Optimize the local Orca CLI Ink experience by studying Hermes Agent's high-recognition terminal startup patterns, then shipping a distinct Orca visual system across typography, palette, UI hierarchy, and operator UX.
+
+### Delivered
+
+- Created the canonical visual system plan and Chinese HTML companion: `ORCA_VISUAL_SYSTEM_PLAN.md` and `ORCA_VISUAL_SYSTEM_PLAN.html`.
+- Added `Blackfin Signal` as Orca's semantic default dark theme without adding dependencies.
+- Replaced the startup banner impression with an `ORCA` block wordmark, dorsal-fin / pod-signal motif, uppercase state rows, and compact fallback behavior.
+- Reframed HomePanel as a mission-control surface: `MISSION`, `POD SIGNAL`, `RECOVER`, and `GUARDRAILS`.
+- Updated ThemePicker and StatusBar copy so the default identity is visible and consistent.
+
+### Changed Files
+
+- `src/ui/theme.tsx`
+- `src/ui/components/Banner.tsx`
+- `src/ui/components/HomePanel.tsx`
+- `src/ui/components/ThemePicker.tsx`
+- `src/ui/components/StatusBar.tsx`
+- `tests/ink-ui.test.tsx`
+- `doc/00_project/initiative_orca/ORCA_VISUAL_SYSTEM_PLAN.md`
+- `doc/00_project/initiative_orca/ORCA_VISUAL_SYSTEM_PLAN.html`
+- `doc/00_project/initiative_orca/*` PDCA and project fact-source updates
+
+### Verification
+
+- `npm test -- tests/ink-ui.test.tsx` -> `77/77`
+- `npm run lint` -> pass
+- `npm run build` -> pass
+- `ORCA_THEME=orca node dist/bin/orca.js --version` -> `0.8.16`
+- `npm test -- tests/release-evidence.test.ts` -> `3/3`
+- `npm test` -> `88` files / `1625` tests
+
+### Closeout
+
+| Item | Result |
+| --- | --- |
+| Skills | N/A. Used existing `frontend-design`; no reusable cross-project skill justified. |
+| PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan. |
+| Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
+| Rolling ledger | Updated `ROLLING_REQUIREMENTS_AND_PROMPTS.md` with requirement status and anti-regression guard. |
+| Technical debt | `ai check` hung without output in the local AI-Fleet checker; recorded as residual gate risk, outside the Ink UI code boundary. |
+| Three-end consistency | N/A. Local CLI visual refresh only; no GitHub / VPS production deployment requested. |
+
+### Remaining Risks
+
+| Risk | Owner | Follow-up |
+| --- | --- | --- |
+| `ai check` did not complete; it hung in the local AI-Fleet checker and was interrupted | Tooling | Inspect `runtime/control_plane/check_cli.py` / `tests/test_all.py` separately before treating `ai check` as a release gate |
+| The visual system is terminal-native; exact perceived font quality depends on the operator's terminal font | UX | Recommend Berkeley Mono, Commit Mono, JetBrains Mono, or SF Mono in the plan rather than bundling a font dependency |
+
 ## 2026-04-29 - TaskRun Scheduler/Resume PDCA Tranche
 
 ### Scope
@@ -1688,7 +2521,7 @@ Re-audit Orca's ink UI against CC reference sources, separate report drift from 
 - full test suite passed (`1246/1246`) after `chat-proxy-tool-call.ts` extraction
 - targeted mutating-slash extraction suite passed (`26/26`)
 - full test suite passed (`1250/1250`) after `chat-slash-mutations.ts` extraction
-- targeted async-REPL-slash extraction suite passed (`30/30`)
+- targeted async-REPL-slash extraction suite passed (`31/31`)
 - full test suite passed (`1254/1254`) after `chat-repl-async-slash.ts` extraction
 - targeted REPL-turn extraction suite passed (`6/6`)
 - full test suite passed (`1260/1260`) after `chat-repl-turn.ts` extraction
@@ -1975,3 +2808,49 @@ Internalize the first Hermes-inspired runtime capability bundle into Orca CLI an
   - `vitest run tests/provider-stream-resilience.test.ts tests/agent-loop.test.ts tests/hermes-runtime.test.ts tests/chat-repl-turn.test.ts`
 - ai eval:
   - `npm run eval:fast`
+
+## Hook Lifecycle And Unsupported Claim Guard (2026-05-03)
+
+### Outcome
+
+- Fixed one-shot hook loading so direct `orca chat "..."` invocations use the same global hook surface as interactive sessions.
+- Fixed lifecycle parity for `Stop` and `SubagentStop`.
+- `Stop` hooks now receive the assistant response via `ORCA_RESPONSE` / `CLAUDE_RESPONSE`, enabling Copilot-style self-review and pre-completion gates to inspect what the model actually said.
+- Added runtime claim/evidence guard:
+  - file created/saved/written/opened claims require matching file/open tools
+  - test/lint/build/typecheck claims require command tools
+  - git commit/push/publish/deploy claims require git/command tools
+  - MCP claims require MCP tool calls
+- Strengthened the system prompt so the model is explicitly told not to claim unsupported side effects.
+
+### Verification
+
+- `npm test -- tests/chat-internals.test.ts tests/chat-one-shot-mcp-cleanup.test.ts tests/chat-proxy-tool-call.test.ts tests/hooks.test.ts tests/hooks-compat.test.ts tests/e2e-workflow.test.ts` => passed (`94` tests)
+- `npm run lint` => passed
+- `npm run build` => passed
+- `npm test` => passed (`91` files / `1670` tests)
+- Local hook load smoke:
+  - total hooks: `39`
+  - event types: `9`
+  - lifecycle events present: `UserPromptSubmit`, `Stop`, `SessionStart`, `PreToolUse`, `PostToolUse`, `PreCompact`, `SubagentStart`, `SubagentStop`, `SessionEnd`
+
+## Claude-Style No-Flicker TUI (2026-05-03)
+
+### Outcome
+
+- Added explicit no-flicker/fullscreen opt-ins: `ORCA_TUI=fullscreen`, `ORCA_NO_FLICKER=1`, legacy `ORCA_ALT_SCREEN=1`, and Claude-compatible `CLAUDE_CODE_NO_FLICKER=1`.
+- Kept default Ink rendering in the primary terminal buffer so normal scrollback selection/copy remains available.
+- Pre-entered the alternate screen before Ink paints its first frame in no-flicker mode.
+- Added render-failure cleanup so Orca exits the alternate screen if Ink throws before the wrapper mounts.
+- Limited completed block rendering to the latest `80` blocks in no-flicker mode to reduce repaint work during long sessions.
+- Kept mouse capture opt-in through `ORCA_MOUSE=1`.
+
+### Verification
+
+- `npm test -- tests/ink-ui.test.tsx` => passed (`80` tests)
+- Dist-level no-flicker env smoke => `default=false`, `ORCA_TUI=fullscreen=true`, `CLAUDE_CODE_NO_FLICKER=1=true`, `ORCA_TUI=default` override=false
+- `npm test -- tests/hooks.test.ts tests/hooks-compat.test.ts` => passed (`40` tests)
+- `npm test -- tests/chat-proxy-tool-call.test.ts tests/v050-modules.test.ts -t "24.21|chat proxy tool helper"` => passed
+- `npm run lint` => passed
+- `npm run build` => passed
+- `npm test` => passed (`91` files / `1671` tests)

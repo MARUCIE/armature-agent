@@ -19,6 +19,7 @@ interface ThemeOption {
 }
 
 const THEMES: ThemeOption[] = [
+  { id: 'orca', label: 'Blackfin', accent: '#F6C945', mode: 'dark', description: 'Killer-whale posture with amber echolocation accents' },
   { id: 'default', label: 'Default', accent: 'cyan', mode: 'dark', description: 'Cyan accents on dark background' },
   { id: 'dark', label: 'Dark', accent: 'green', mode: 'dark', description: 'Matrix green on dark background' },
   { id: 'ocean', label: 'Ocean', accent: 'blue', mode: 'dark', description: 'Deep blue on dark background' },
@@ -50,7 +51,7 @@ export function ThemePicker({ onSelect, active }: Props): React.ReactElement {
         return
       }
       if (key.escape) {
-        onSelect('default')
+        onSelect('orca')
         return
       }
     },
@@ -62,7 +63,7 @@ export function ThemePicker({ onSelect, active }: Props): React.ReactElement {
   return (
     <PickerFrame
       title="Choose a theme"
-      subtitle="Browse with arrows, confirm with enter"
+      subtitle="Blackfin Signal is the Orca default. Browse with arrows, confirm with enter"
       borderColor={current.accent}
       widthLimit={56}
     >

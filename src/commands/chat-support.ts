@@ -1,5 +1,6 @@
-import { appendFileSync, existsSync, mkdirSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
 import type { OrcaConfig } from '../config.js'
 import type { ChatMessage } from '../providers/openai-compat.js'
 import { writeSavedSession } from '../session-store.js'
@@ -50,6 +51,70 @@ export function detectConfigFiles(cwd: string): string[] {
     }
   }
   return found
+}
+
+const PROJECT_MARKERS = [
+  '.git',
+  '.orca.json',
+  'AGENTS.md',
+  'CLAUDE.md',
+  'CODEX.md',
+  'package.json',
+  'pyproject.toml',
+  'go.mod',
+  'Cargo.toml',
+]
+
+function getOrcaHome(): string {
+  return join(process.env.HOME || homedir(), '.orca')
+}
+
+function getLastWorkspacePath(): string {
+  return join(getOrcaHome(), 'last-cwd')
+}
+
+function hasWorkspaceMarkers(path: string): boolean {
+  return PROJECT_MARKERS.some((marker) => existsSync(join(path, marker)))
+}
+
+function readableDirectory(path: string): boolean {
+  try {
+    return statSync(path).isDirectory()
+  } catch {
+    return false
+  }
+}
+
+function readLastWorkspaceCwd(): string | undefined {
+  try {
+    const value = readFileSync(getLastWorkspacePath(), 'utf-8').trim()
+    if (value && readableDirectory(value)) return resolve(value)
+  } catch {
+    // ignore missing or unreadable state
+  }
+  return undefined
+}
+
+export function rememberWorkspaceCwd(cwd: string): void {
+  const resolved = resolve(cwd)
+  if (!readableDirectory(resolved) || !hasWorkspaceMarkers(resolved)) return
+  try {
+    mkdirSync(getOrcaHome(), { recursive: true })
+    writeFileSync(getLastWorkspacePath(), resolved + '\n', 'utf-8')
+  } catch {
+    // ignore state write failures
+  }
+}
+
+export function resolveWorkspaceCwd(input?: string): string {
+  const explicit = input || process.env.ORCA_CWD || process.env.ORCA_PROJECT_DIR
+  if (explicit) return resolve(explicit)
+
+  const current = resolve(process.cwd())
+  if (!hasWorkspaceMarkers(current)) {
+    return readLastWorkspaceCwd() || current
+  }
+  return current
 }
 
 export function saveInputHistory(historyFile: string, entries: string[]): void {

@@ -5,6 +5,8 @@ import { getGlobalConfigPath, listProviders, resolveConfig } from '../config.js'
 import { listBackgroundJobs } from '../background-jobs.js'
 import { hooks } from '../hooks.js'
 import { mcpClient } from '../mcp-client.js'
+import { parseCritiqueCheckpoint, type CritiqueCheckpoint } from '../critique.js'
+import { inspectWorkspaceCritique, type WorkspaceCritiqueInspection } from '../critique-workspace.js'
 import {
   findModelChoice,
   formatContextWindow,
@@ -27,7 +29,7 @@ import {
   type CommandOutput,
 } from '../ui/command-output.js'
 import type { ChatSessionEmitter } from '../ui/session.js'
-import { buildSafeGitSlashArgs } from './chat-input.js'
+import { buildSafeGitSlashArgs, tokenizeCommandLine } from './chat-input.js'
 import {
   listSlashHelpCommands,
   SLASH_HELP_SECTION_PAIRS,
@@ -83,6 +85,17 @@ export interface ReadonlySlashCommandOptions {
   permissionSource?: string
   toolPolicyLabel?: string
   outputStyleLabel?: string
+}
+
+interface CritiqueSlashArgs {
+  checkpoint: CritiqueCheckpoint
+  goal: string
+  criticalPath: boolean
+  repeatedFailure: boolean
+  securityOrData: boolean
+  userUncertainty: boolean
+  force: boolean
+  showPrompt: boolean
 }
 
 function createSafeGitExecOptions(cwd: string): ExecFileSyncOptionsWithStringEncoding {
@@ -159,6 +172,131 @@ function renderHelp(session?: ChatSessionEmitter): void {
   console.log(row('Tab       Auto-complete', 'Ctrl+Z   Undo last write'))
   console.log(row('/         Command picker', 'Shift+Tab Mode cycle'))
   console.log(reset)
+}
+
+function parseCritiqueSlashArgs(arg: string): CritiqueSlashArgs {
+  let tokens: string[]
+  try {
+    tokens = tokenizeCommandLine(arg)
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Unterminated quote')) {
+      throw new Error('Unterminated quote in /critique command')
+    }
+    throw error
+  }
+  const goalParts: string[] = []
+  let checkpoint = 'manual'
+  let criticalPath = false
+  let repeatedFailure = false
+  let securityOrData = false
+  let userUncertainty = false
+  let force = false
+  let showPrompt = false
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index]!
+    if (token === '--checkpoint') {
+      const value = tokens[index + 1]
+      if (!value) throw new Error('Missing value for --checkpoint')
+      checkpoint = value
+      index += 1
+      continue
+    }
+    if (token.startsWith('--checkpoint=')) {
+      checkpoint = token.slice('--checkpoint='.length)
+      continue
+    }
+    if (token === '--critical-path') {
+      criticalPath = true
+      continue
+    }
+    if (token === '--repeated-failure') {
+      repeatedFailure = true
+      continue
+    }
+    if (token === '--security-or-data') {
+      securityOrData = true
+      continue
+    }
+    if (token === '--user-uncertainty') {
+      userUncertainty = true
+      continue
+    }
+    if (token === '--force') {
+      force = true
+      continue
+    }
+    if (token === '--show-prompt') {
+      showPrompt = true
+      continue
+    }
+    if (token.startsWith('--')) throw new Error(`Unsupported /critique option: ${token}`)
+    goalParts.push(token)
+  }
+
+  return {
+    checkpoint: parseCritiqueCheckpoint(checkpoint),
+    goal: goalParts.join(' ').trim(),
+    criticalPath,
+    repeatedFailure,
+    securityOrData,
+    userUncertainty,
+    force,
+    showPrompt,
+  }
+}
+
+function buildCritiqueInspectionBody(inspection: WorkspaceCritiqueInspection): string {
+  const fileLines = inspection.changedFiles.length > 0
+    ? inspection.changedFiles.slice(0, 20).map((file) => `- ${file}`)
+    : ['(none detected)']
+  const omitted = inspection.changedFiles.length > 20
+    ? [`- ... ${inspection.changedFiles.length - 20} more`]
+    : []
+  const body = [
+    `Checkpoint: \`${inspection.checkpoint}\``,
+    `Reviewer: \`${inspection.reviewerModel}\``,
+    `Risk: \`${inspection.riskScore}\` (${inspection.decision.reason})`,
+    `Decision: ${inspection.decision.shouldRun ? 'review recommended' : 'below live-review threshold'}`,
+    '',
+    `Changed files: ${inspection.riskSignals.changedFileCount}`,
+    `Diff lines: ${inspection.riskSignals.diffLineCount}`,
+    '',
+    'Files:',
+    ...fileLines,
+    ...omitted,
+  ]
+  if (inspection.dryRun.prompt) {
+    body.push('', 'Prompt:', '```text', inspection.dryRun.prompt, '```')
+  }
+  return body.join('\n')
+}
+
+function renderCritiqueInspection(
+  inspection: WorkspaceCritiqueInspection,
+  output: CommandOutput,
+  session?: ChatSessionEmitter,
+): void {
+  if (session) {
+    session.emitDetailPanel({
+      title: 'Critique Gate',
+      subtitle: `${inspection.checkpoint} · risk ${inspection.riskScore}`,
+      body: buildCritiqueInspectionBody(inspection),
+      tone: inspection.decision.shouldRun ? 'warn' : 'info',
+    })
+    return
+  }
+
+  output.info([
+    `critique: ${inspection.checkpoint}`,
+    `reviewer: ${inspection.reviewerModel}`,
+    `risk: ${inspection.riskScore} (${inspection.decision.reason})`,
+    `changed files: ${inspection.riskSignals.changedFileCount}`,
+    `diff lines: ${inspection.riskSignals.diffLineCount}`,
+    ...inspection.changedFiles.slice(0, 20).map((file) => `- ${file}`),
+    ...(inspection.changedFiles.length > 20 ? [`- ... ${inspection.changedFiles.length - 20} more`] : []),
+    ...(inspection.dryRun.prompt ? ['', '--- prompt ---', inspection.dryRun.prompt] : []),
+  ].join('\n'))
 }
 
 function renderModelInfo(
@@ -541,6 +679,28 @@ export function handleReadonlySlashCommand(options: ReadonlySlashCommandOptions)
     case '/diff':
       renderDiff(cwd, output, session)
       return 'handled'
+
+    case '/critique': {
+      try {
+        const parsed = parseCritiqueSlashArgs(arg)
+        const inspection = inspectWorkspaceCritique({
+          cwd,
+          checkpoint: parsed.checkpoint,
+          userGoal: parsed.goal || 'Review the current working tree before continuing.',
+          activeModel: mc.getModel(),
+          criticalPath: parsed.criticalPath,
+          repeatedFailure: parsed.repeatedFailure,
+          securityOrData: parsed.securityOrData,
+          userUncertainty: parsed.userUncertainty,
+          force: parsed.force,
+          showPrompt: parsed.showPrompt,
+        })
+        renderCritiqueInspection(inspection, output, session)
+      } catch (error) {
+        output.error(error instanceof Error ? error.message : String(error))
+      }
+      return 'handled'
+    }
 
     case '/git':
       renderGit(arg, cwd, output)

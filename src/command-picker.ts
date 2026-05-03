@@ -26,6 +26,7 @@ export const COMMANDS: CommandDef[] = [
   { name: '/compact', description: 'Keep last 2 turns' },
   { name: '/system', description: 'Set system prompt' },
   { name: '/diff', description: 'Show git diff' },
+  { name: '/critique', description: 'Inspect read-only critique gate' },
   { name: '/git', description: 'Run git command' },
   { name: '/save', description: 'Save session to disk' },
   { name: '/load', description: 'Load saved session' },

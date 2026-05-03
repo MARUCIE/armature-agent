@@ -278,12 +278,12 @@ export function InputArea({ onSubmit, onAbort, onClear, onModeCycle, onUndo, onC
             <Text>{line}</Text>
           )}
           {i === 0 && !value && (
-            <Text color={theme.muted}>Type a message... (/help for commands)</Text>
+            <Text color={theme.muted}>Brief the pod... (/help for commands)</Text>
           )}
         </Box>
       ))}
       {active && isMultiLine && (
-        <Text dimColor color="gray">  enter: send · ctrl+j: newline</Text>
+        <Text color={theme.dim}>  pod input · enter: send · ctrl+j: newline</Text>
       )}
     </Box>
   )

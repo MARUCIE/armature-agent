@@ -7,6 +7,7 @@ import {
   findAggregator,
   initProjectConfig,
   inspectPermissionRule,
+  listProviders,
   normalizeStoredPermissionRules,
   readEffectivePermissionAllowlist,
   removeStoredPermissionRule,
@@ -761,6 +762,74 @@ describe('config', () => {
           expect(ep!.provider).toBe('poe')
           expect(ep!.model).toBe(model)
         }
+      } finally {
+        for (const [k, v] of Object.entries(saved)) {
+          if (v) process.env[k] = v
+          else delete process.env[k]
+        }
+      }
+    })
+
+    it('29.5 ignores GH_TOKEN as a Copilot provider source', () => {
+      const saved = {
+        POE_API_KEY: process.env.POE_API_KEY,
+        OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+        GH_TOKEN: process.env.GH_TOKEN,
+        ZENMUX_API_KEY: process.env.ZENMUX_API_KEY,
+        CLOUDFLARE_AI_GATEWAY_API_KEY: process.env.CLOUDFLARE_AI_GATEWAY_API_KEY,
+        CLOUDFLARE_AI_GATEWAY_BASE_URL: process.env.CLOUDFLARE_AI_GATEWAY_BASE_URL,
+        CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+        CLOUDFLARE_AI_GATEWAY_ID: process.env.CLOUDFLARE_AI_GATEWAY_ID,
+        ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+        OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+        GOOGLE_API_KEY: process.env.GOOGLE_API_KEY,
+        GOOGLE_AI_STUDIO_KEY: process.env.GOOGLE_AI_STUDIO_KEY,
+        GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+        XAI_API_KEY: process.env.XAI_API_KEY,
+      }
+      delete process.env.POE_API_KEY
+      delete process.env.OPENROUTER_API_KEY
+      process.env.GH_TOKEN = 'test-github-token'
+      delete process.env.ZENMUX_API_KEY
+      delete process.env.CLOUDFLARE_AI_GATEWAY_API_KEY
+      delete process.env.CLOUDFLARE_AI_GATEWAY_BASE_URL
+      delete process.env.CLOUDFLARE_ACCOUNT_ID
+      delete process.env.CLOUDFLARE_AI_GATEWAY_ID
+      delete process.env.ANTHROPIC_API_KEY
+      delete process.env.OPENAI_API_KEY
+      delete process.env.GOOGLE_API_KEY
+      delete process.env.GOOGLE_AI_STUDIO_KEY
+      delete process.env.GEMINI_API_KEY
+      delete process.env.XAI_API_KEY
+      try {
+        const config = resolveConfig({ cwd: tempDir })
+        config.providers = {}
+
+        expect(findAggregator(config)).toBeUndefined()
+        expect(listProviders(config).map((provider) => provider.id)).not.toContain('copilot')
+      } finally {
+        for (const [k, v] of Object.entries(saved)) {
+          if (v) process.env[k] = v
+          else delete process.env[k]
+        }
+      }
+    })
+
+    it('29.6 defaults Poe to Claude Opus 4.6', () => {
+      const saved = {
+        POE_API_KEY: process.env.POE_API_KEY,
+        CLOUDFLARE_AI_GATEWAY_API_KEY: process.env.CLOUDFLARE_AI_GATEWAY_API_KEY,
+        CLOUDFLARE_AI_GATEWAY_BASE_URL: process.env.CLOUDFLARE_AI_GATEWAY_BASE_URL,
+      }
+      process.env.POE_API_KEY = 'test-poe-key'
+      delete process.env.CLOUDFLARE_AI_GATEWAY_API_KEY
+      delete process.env.CLOUDFLARE_AI_GATEWAY_BASE_URL
+      try {
+        const config = resolveConfig({ cwd: tempDir })
+        config.providers = {}
+
+        expect(findAggregator(config)).toBe('poe')
+        expect(listProviders(config).find((provider) => provider.id === 'poe')?.model).toBe('claude-opus-4.6')
       } finally {
         for (const [k, v] of Object.entries(saved)) {
           if (v) process.env[k] = v

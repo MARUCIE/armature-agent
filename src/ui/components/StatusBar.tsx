@@ -1,9 +1,9 @@
 /**
- * StatusBar — CC-style 3-line status, no background colors.
+ * StatusBar — Orca pod status rail, no background colors.
  *
- * Line 1: ◇ ORCA │ model │ ██░░ ctx% │ branch
- * Line 2: cost · tok/s · turns · sparkline
- * Line 3: ▸▸ permission mode (shift+tab to cycle)
+ * Line 1: ◇ ORCA POD │ model │ sonar ██░░ ctx% │ branch
+ * Line 2: signal: cost · tok/s · turns · sparkline
+ * Line 3: ▸▸ trust: permission mode · mode · effort
  *
  * Pure foreground text — no inverse, no backgroundColor.
  */
@@ -35,6 +35,7 @@ export function StatusBar({ status }: Props): React.ReactElement {
 
   const ctxPct = Math.min(100, status.contextPct)
   const ctxColor = ctxPct > 60 ? theme.ctxRed : ctxPct > 40 ? theme.ctxYellow : theme.ctxGreen
+  const contextLabel = cols >= 72 ? 'sonar ' : ''
 
   // Model name
   const modelShort = status.model.length > 20 ? status.model.slice(0, 18) + '..' : status.model
@@ -73,10 +74,11 @@ export function StatusBar({ status }: Props): React.ReactElement {
       {/* Line 1 */}
       <Box>
         <Text dimColor>{'\u25C7 '}</Text>
-        <Text color={theme.accent} bold>ORCA</Text>
+        <Text color={theme.accent} bold>ORCA POD</Text>
         <Text dimColor> {'\u2502'} </Text>
         <Text>{modelShort}</Text>
         <Text dimColor> {'\u2502'} </Text>
+        <Text dimColor>{contextLabel}</Text>
         <Text color={ctxColor}>{miniBar(ctxPct)}</Text>
         <Text dimColor> {ctxPct}%</Text>
         {status.gitBranch && <><Text dimColor> {'\u2502'} </Text><Text dimColor>{status.gitBranch}</Text></>}
@@ -84,6 +86,7 @@ export function StatusBar({ status }: Props): React.ReactElement {
       {/* Line 2 */}
       {stats.length > 0 && (
         <Box>
+          <Text color={theme.accentDim}>signal: </Text>
           <Text dimColor>{stats.join('  \u00B7  ')}</Text>
           {sparkline && <Text dimColor>  {sparkline}</Text>}
         </Box>
@@ -91,13 +94,13 @@ export function StatusBar({ status }: Props): React.ReactElement {
       {/* Line 3 */}
       <Box>
         <Text color={permColor} bold>{'\u25B8\u25B8'}</Text>
-        <Text color={permColor}> {permLabel}</Text>
+        <Text color={permColor}> trust: {permLabel}</Text>
         {status.permSource ? <Text dimColor>{` (${status.permSource})`}</Text> : null}
         <Text dimColor> {' \u00B7 '}</Text>
         <Text color={behaviorColor}>mode: {behaviorMode}</Text>
         <Text dimColor> {' \u00B7 '}</Text>
         <Text dimColor>effort: {effortLabel}</Text>
-        <Text dimColor> (shift+tab to cycle)</Text>
+        <Text dimColor> (shift+tab cycles trust)</Text>
       </Box>
     </Box>
   )

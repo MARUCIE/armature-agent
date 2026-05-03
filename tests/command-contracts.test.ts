@@ -14,6 +14,7 @@ describe('public command surface contracts', () => {
     const program = createProgram()
     const commands = program.commands.map((entry) => entry.name())
     const rootOptions = program.options.map((option) => option.long)
+    const chatOptions = getCommand('chat').options.map((option) => option.long)
 
     expect(commands).toEqual(expect.arrayContaining([
       'chat',
@@ -23,6 +24,7 @@ describe('public command surface contracts', () => {
       'evolve',
       'session',
       'queue',
+      'critique',
       'pr',
       'serve',
       'providers',
@@ -31,6 +33,10 @@ describe('public command surface contracts', () => {
       '--safe',
       '--effort',
       '--continue',
+    ]))
+    expect(chatOptions).toEqual(expect.arrayContaining([
+      '--no-auto-critique',
+      '--auto-critique-threshold',
     ]))
   })
 
@@ -104,6 +110,27 @@ describe('public command surface contracts', () => {
 
     expect(reflect.description()).toBe('Socratic debugging and root-cause investigation')
     expect(options).toEqual(expect.arrayContaining(['--model', '--provider', '--api-key', '--json']))
+  })
+
+  it('keeps critique surfaced as a read-only quality gate', () => {
+    const critique = getCommand('critique')
+    const args = critique.registeredArguments.map((arg) => ({
+      name: arg.name(),
+      required: arg.required,
+      variadic: arg.variadic,
+    }))
+    const options = critique.options.map((option) => option.long)
+
+    expect(critique.description()).toBe('Run a read-only Rubber Duck Critique quality gate')
+    expect(args).toEqual([{ name: 'goal', required: false, variadic: true }])
+    expect(options).toEqual(expect.arrayContaining([
+      '--checkpoint',
+      '--model',
+      '--provider',
+      '--api-key',
+      '--dry-run',
+      '--json',
+    ]))
   })
 
   it('keeps workflow presets surfaced as first-class commands', () => {

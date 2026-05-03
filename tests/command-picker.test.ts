@@ -6,5 +6,6 @@ describe('legacy command picker surface', () => {
     const names = COMMANDS.map((command) => command.name)
     expect(names).toContain('/mode')
     expect(names).toContain('/reflect')
+    expect(names).toContain('/critique')
   })
 })

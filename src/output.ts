@@ -9,6 +9,7 @@
 import chalk from 'chalk'
 import { logError, logWarning } from './logger.js'
 import { getFleetSummaryLine } from './fleet-env.js'
+import { formatModelCapacity, getPricingForModelOrDefault } from './model-metadata.js'
 import { ORCA_VERSION } from './version.js'
 
 export type OutputMode = 'streaming' | 'json'
@@ -58,28 +59,6 @@ const ORCA_ART = [
   '\x1b[36m                                         ▀████▄\x1b[0m',
   '\x1b[36m                                           ▀▀\x1b[0m',
 ]
-
-// Model context window sizes (for display)
-const MODEL_CONTEXT: Record<string, string> = {
-  'claude-opus-4':      '200K ctx · 32K out',
-  'claude-sonnet-4':    '200K ctx · 64K out',
-  'gpt-5':              '1M ctx · 64K out',
-  'gemini-3':           '2M ctx · 65K out',
-  'gemma-4':            '128K ctx · 8K out',
-  'glm-5':              '128K ctx · 8K out',
-  'grok-4':             '256K ctx · 32K out',
-  'qwen3':              '128K ctx · 32K out',
-  'kimi-k2':            '128K ctx · 32K out',
-  'minimax-m2':         '256K ctx · 16K out',
-}
-
-function getModelSpec(model: string): string {
-  const lower = model.toLowerCase()
-  for (const [key, spec] of Object.entries(MODEL_CONTEXT)) {
-    if (lower.includes(key)) return spec
-  }
-  return ''
-}
 
 function abbreviatePath(p: string): string {
   const home = process.env.HOME || process.env.USERPROFILE || ''
@@ -241,7 +220,7 @@ export function printBanner(toolCount?: number): void {
 }
 
 export function printProviderInfo(provider: string, model: string): void {
-  const spec = getModelSpec(model)
+  const spec = formatModelCapacity(model)
   console.log(
     chalk.gray('  ') +
     chalk.cyan('▸') +
@@ -977,41 +956,10 @@ export function printSessionSummary(session: SessionSummary): void {
   console.log()
 }
 
-// ── Cost Estimation ─────────────────────────────────────────────────
-
-// Approximate pricing per 1M tokens (input / output)
-const MODEL_PRICING: Record<string, [number, number]> = {
-  // Anthropic
-  'claude-opus':     [15, 75],
-  'claude-sonnet':   [3, 15],
-  'claude-haiku':    [0.25, 1.25],
-  // OpenAI
-  'gpt-4o':          [2.5, 10],
-  'gpt-4.1':         [2, 8],
-  'gpt-4.1-mini':    [0.4, 1.6],
-  'o3':              [10, 40],
-  'o4-mini':         [1.1, 4.4],
-  // Google
-  'gemini-2.5-pro':  [1.25, 10],
-  'gemini-2.5-flash': [0.15, 0.6],
-  // Poe (approximate, includes Poe margin)
-  'poe':             [3, 15],  // fallback for Poe models
-}
-
 function estimateCost(model: string, inputTokens: number, outputTokens: number): number {
-  const lower = model.toLowerCase()
-
-  // Find best matching pricing tier
-  let pricing: [number, number] | undefined
-  for (const [key, value] of Object.entries(MODEL_PRICING)) {
-    if (lower.includes(key)) {
-      pricing = value
-      break
-    }
-  }
-  if (!pricing) pricing = MODEL_PRICING['poe'] // default fallback
-
-  const [inputPer1M, outputPer1M] = pricing!
+  const pricing = getPricingForModelOrDefault(model)
+  if (!pricing) return 0
+  const [inputPer1M, outputPer1M] = pricing
   return (inputTokens * inputPer1M + outputTokens * outputPer1M) / 1_000_000
 }
 

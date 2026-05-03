@@ -140,6 +140,7 @@ export async function runPreToolHook(
     process.stderr.write(message)
   },
 ): Promise<ToolResult | undefined> {
+  hooks.load(cwd)
   if (!hooks.hasHooks('PreToolUse')) return undefined
   const hookResult = await hooks.run('PreToolUse', {
     event: 'PreToolUse',

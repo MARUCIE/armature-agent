@@ -162,6 +162,7 @@ export const TOOL_DEFINITIONS = [
   { type: 'function' as const, function: { name: 'copy_file', description: 'Copy a file.', parameters: { type: 'object', properties: { source: { type: 'string', description: 'Source file path' }, destination: { type: 'string', description: 'Destination file path' } }, required: ['source', 'destination'] } } },
   { type: 'function' as const, function: { name: 'create_directory', description: 'Create a directory (with parent directories).', parameters: { type: 'object', properties: { path: { type: 'string', description: 'Directory path to create' } }, required: ['path'] } } },
   { type: 'function' as const, function: { name: 'file_info', description: 'Get file metadata: size, modification time, permissions, type.', parameters: { type: 'object', properties: { path: { type: 'string', description: 'File or directory path' } }, required: ['path'] } } },
+  { type: 'function' as const, function: { name: 'open_file', description: 'Open a local file with the operating system default app. Use read_file when you need the file contents; use open_file when the user asks to visually open a Markdown, PDF, image, or other local file.', parameters: { type: 'object', properties: { path: { type: 'string', description: 'File path to open (absolute or relative to the working directory)' } }, required: ['path'] } } },
   // ── Search & Analysis ───────────────────────────────
   { type: 'function' as const, function: { name: 'find_definition', description: 'Find where a function, class, type, or variable is defined in the codebase.', parameters: { type: 'object', properties: { name: { type: 'string', description: 'Symbol name to find (function, class, type, variable)' }, path: { type: 'string', description: 'Directory to search in (default: working directory)' }, language: { type: 'string', description: 'Optional: language hint (ts, py, go, rust, etc.)' } }, required: ['name'] } } },
   { type: 'function' as const, function: { name: 'find_references', description: 'Find all references/usages of a symbol in the codebase.', parameters: { type: 'object', properties: { name: { type: 'string', description: 'Symbol name to search for' }, path: { type: 'string', description: 'Directory to search in' } }, required: ['name'] } } },
@@ -216,7 +217,7 @@ export interface ToolResult {
 
 export const DANGEROUS_TOOLS = new Set([
   'write_file', 'edit_file', 'multi_edit', 'patch_file',
-  'delete_file', 'move_file', 'run_command', 'run_background', 'git_commit',
+  'delete_file', 'move_file', 'open_file', 'run_command', 'run_background', 'git_commit',
   'fetch_url', 'web_search',
 ])
 
@@ -245,6 +246,7 @@ export function executeTool(name: string, args: Record<string, unknown>, cwd: st
       case 'copy_file': return execShellTool(`cp '${resolve(cwd, String(normalizedArgs.source || ''))}' '${resolve(cwd, String(normalizedArgs.destination || ''))}'`, cwd)
       case 'create_directory': return execShellTool(`mkdir -p '${resolve(cwd, String(normalizedArgs.path || ''))}'`, cwd)
       case 'file_info': return executeFileInfo(normalizedArgs, cwd)
+      case 'open_file': return executeOpenFile(normalizedArgs, cwd)
       case 'find_definition': return executeFindDefinition(normalizedArgs, cwd)
       case 'find_references': {
         const refName = String(normalizedArgs.name || '')
@@ -779,6 +781,25 @@ function executeFileInfo(args: Record<string, unknown>, cwd: string): ToolResult
       info.push(`lines: ${lines}`)
     }
     return { success: true, output: info.join('\n') }
+  } catch (err) {
+    return { success: false, output: err instanceof Error ? err.message : String(err) }
+  }
+}
+
+function executeOpenFile(args: Record<string, unknown>, cwd: string): ToolResult {
+  const filePath = resolve(cwd, String(args.path || ''))
+  if (!existsSync(filePath)) return { success: false, output: `File not found: ${filePath}` }
+  if (statSync(filePath).isDirectory()) return { success: false, output: `Path is a directory, not a file: ${filePath}` }
+
+  try {
+    if (process.platform === 'darwin') {
+      execFileSync('open', [filePath], { stdio: 'ignore', timeout: 5_000 })
+    } else if (process.platform === 'win32') {
+      execFileSync('cmd', ['/c', 'start', '', filePath], { stdio: 'ignore', timeout: 5_000 })
+    } else {
+      execFileSync('xdg-open', [filePath], { stdio: 'ignore', timeout: 5_000 })
+    }
+    return { success: true, output: `Opened ${filePath}` }
   } catch (err) {
     return { success: false, output: err instanceof Error ? err.message : String(err) }
   }

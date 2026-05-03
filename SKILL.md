@@ -84,6 +84,17 @@ Groups with `execution.mode: "loop"` in `configs/skill-groups.json` run their sk
 
 ---
 
+## 外部全局技能 (External Global Skills, ~/.claude/skills/)
+
+安装到用户主目录的 Claude Skills（通过 `npm exec -- skills add <user/repo> -a claude-code -g`），不在 `SKILL-MANIFEST.json` 整合审计范围内，但参与 runtime 路由：
+
+| Skill | Source | Trigger | Routing Note |
+|-------|--------|---------|--------------|
+| kami | tw93/kami v1.0.0 (2026-04-20, MIT) | resume / 简历 / letter / 信件 / portfolio / 作品集 / slides / 演示稿 / 一页纸 / 白皮书 + 羊皮纸衬线美学 | 补 `html-style-router` 正交轴：1 风格 × 6 模板。模板优先请求 → kami；风格优先请求 → html-style-router。详见 `outputs/reports/research-learning-swarm/2026-04-21-kami-learning-digest.md` |
+| cc-design | ZeroZ-lab/cc-design (2026-04-21) | brand clone (Apple/Stripe/Vercel/Notion/Linear/Tesla/Airbnb/OpenAI…) / landing page / React prototype / UI mockup / slide deck / tweaks variant / Playwright design-verify | 补三个正交轴：(1) 消费科技+开发者工具+汽车+fintech 的品牌克隆（`html-style-router` 只覆盖 editorial/consulting 12 风格，无 consumer tech）(2) React+Babel inline setup + Playwright 设计验证协议 (3) iOS/Android/macOS/browser frame 模板。68+ 品牌 via `getdesign.md` WebFetch on-demand（非 bundle）。比 `frontend-design`/`impeccable-design` 更具体（后两者仅哲学指引，无执行协议） |
+
+---
+
 ## 工作流与规划
 
 | Skill | 目录 | 触发场景 |

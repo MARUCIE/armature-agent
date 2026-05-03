@@ -95,6 +95,7 @@ interface Props {
   session: ChatSessionEmitter
   initialStatus: StatusInfo
   banner?: BannerInfo
+  noFlicker?: boolean
 }
 
 /** A completed output block (static, won't re-render) */
@@ -119,7 +120,7 @@ function UserPromptBlock({ content }: { content: string }): React.ReactElement {
       marginY={1}
       width="100%"
     >
-      <Text color={theme.prompt} bold>You</Text>
+      <Text color={theme.prompt} bold>POD BRIEF</Text>
       <Text>{content}</Text>
     </Box>
   )
@@ -137,8 +138,8 @@ function AssistantMessageBlock({ content, streaming = false }: { content: string
       width="100%"
     >
       <Box>
-        <Text color={theme.accent} bold>ORCA</Text>
-        {streaming ? <Text color={theme.dim}> streaming</Text> : null}
+        <Text color={theme.accent} bold>ORCA POD</Text>
+        {streaming ? <Text color={theme.dim}> echoing</Text> : null}
       </Box>
       <MarkdownText>{content}</MarkdownText>
     </Box>
@@ -170,6 +171,8 @@ function ActiveToolCall({ start, startTime }: { start: ToolStartInfo; startTime:
       marginLeft={1}
     >
       <Box>
+        <Text color={theme.accentDim} bold>ECHO TOOL</Text>
+        <Text color={theme.dim}> </Text>
         <Text color={theme.tool} bold>{start.name}</Text>
         {shortLabel ? <Text dimColor> {shortLabel}</Text> : null}
       </Box>
@@ -191,7 +194,7 @@ function summarizeToolArgs(args: Record<string, unknown>): string {
   return ''
 }
 
-export function App({ session, initialStatus, banner }: Props): React.ReactElement {
+export function App({ session, initialStatus, banner, noFlicker = false }: Props): React.ReactElement {
   const theme = useTheme()
   const { setThemeId } = useThemeController()
 
@@ -231,9 +234,10 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
   // ScrollBox ref for imperative scroll control
   const scrollRef = useRef<ScrollBoxHandle>(null)
 
-  // Mouse wheel → ScrollBox.scrollBy
+  // Mouse tracking prevents normal terminal text selection in many terminals.
+  // Keep it opt-in so the default Ink UI behaves like Claude Code's copyable scrollback.
   useMouseWheel({
-    isActive: true,
+    isActive: process.env.ORCA_MOUSE === '1',
     onWheel: useCallback((delta: number) => {
       scrollRef.current?.scrollBy(delta)
     }, []),
@@ -249,11 +253,11 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
         setStreamingText(prev => prev + textBuffer.current)
         textBuffer.current = ''
       }
-    }, 50) // 20fps
+    }, noFlicker ? 80 : 50)
     return () => {
       if (flushTimer.current) clearInterval(flushTimer.current)
     }
-  }, [])
+  }, [noFlicker])
 
   // Subscribe to session events
   useEffect(() => {
@@ -487,6 +491,7 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
   }, [setThemeId])
 
   const hasContent = blocks.length > 0 || streamingText || thinking || activeTool || multiModelState
+  const renderedBlocks = noFlicker && blocks.length > 80 ? blocks.slice(-80) : blocks
   const homeActionsAvailable = !hasContent
     && inputActive
     && !permRequest
@@ -559,7 +564,7 @@ export function App({ session, initialStatus, banner }: Props): React.ReactEleme
         )}
 
         {/* Output blocks (regular render — Static incompatible with fullscreen layout) */}
-        {blocks.map((block) => {
+        {renderedBlocks.map((block) => {
           if (block.type === 'tool' && block.toolStart) {
             return (
               <Box key={block.id}>

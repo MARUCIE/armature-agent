@@ -423,6 +423,58 @@ describe('chat readonly slash helpers', () => {
     }
   })
 
+  it('renders /critique workspace inspection in legacy mode without calling a model', () => {
+    const cwd = createDiffRepo('after\n')
+    const lines: string[] = []
+    vi.spyOn(console, 'log').mockImplementation((...args) => { lines.push(args.join(' ')) })
+
+    try {
+      const result = handleReadonlySlashCommand({
+        ...baseOptions,
+        cmd: '/critique',
+        arg: '--checkpoint after_plan review current diff',
+        cwd,
+      })
+
+      const rendered = normalizeRenderedText(lines.join('\n'))
+      expect(result).toBe('handled')
+      expect(rendered).toContain('critique: after_plan')
+      expect(rendered).toContain('reviewer: claude-sonnet-4-20250514')
+      expect(rendered).toContain('changed files: 1')
+      expect(rendered).toContain('diff lines: 2')
+      expect(rendered).toContain('fixture.txt')
+    } finally {
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('renders /critique as an Ink detail panel', () => {
+    const cwd = createDiffRepo('after\n')
+    try {
+      const session = new ChatSessionEmitter()
+      const panels: Array<{ title: string; subtitle?: string; body: string }> = []
+      session.on('detail_panel', (event) => { panels.push(event.info) })
+
+      const result = handleReadonlySlashCommand({
+        ...baseOptions,
+        cmd: '/critique',
+        arg: '--checkpoint=before_test_execution --security-or-data "review current diff"',
+        cwd,
+        session,
+      })
+
+      expect(result).toBe('handled')
+      expect(panels).toHaveLength(1)
+      expect(panels[0]?.title).toBe('Critique Gate')
+      expect(panels[0]?.subtitle).toContain('before_test_execution')
+      expect(panels[0]?.body).toContain('Reviewer: `claude-sonnet-4-20250514`')
+      expect(panels[0]?.body).toContain('Changed files: 1')
+      expect(panels[0]?.body).toContain('- fixture.txt')
+    } finally {
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
   it('routes unsafe /git arguments through ink error output', () => {
     const session = new ChatSessionEmitter()
     const messages: Array<{ text: string; level: string }> = []

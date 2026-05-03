@@ -17,6 +17,8 @@ import { ChatSessionEmitter } from '../src/ui/session.js'
 import type { StatusInfo } from '../src/ui/types.js'
 import { App, buildHomeActions, resolveHomeActionSelection } from '../src/ui/components/App.js'
 import { getHomeLayout } from '../src/ui/components/homeLayout.js'
+import { shouldUseAlternateScreen, shouldUseNoFlickerRenderer } from '../src/ui/render.js'
+import { withEnv } from './helpers/env-snapshot.js'
 
 function stripAnsi(text: string): string {
   return text.replace(/\x1b\[[0-9;]*m/g, '')
@@ -40,13 +42,14 @@ describe('StatusBar', () => {
   it('renders context bar with percentage', () => {
     const { lastFrame } = render(<TerminalSizeProvider><StatusBar status={baseStatus} /></TerminalSizeProvider>)
     // New format: unicode progress bar + percentage
+    expect(lastFrame()).toContain('sonar')
     expect(lastFrame()).toContain('12%')
     expect(lastFrame()).toContain('░') // empty bar segments
   })
 
   it('renders permission mode', () => {
     const { lastFrame } = render(<TerminalSizeProvider><StatusBar status={{ ...baseStatus, permSource: 'project' }} /></TerminalSizeProvider>)
-    // New 3-line StatusBar shows permission as "bypass permissions on"
+    expect(lastFrame()).toContain('trust:')
     expect(lastFrame()).toContain('bypass permissions on')
     expect(lastFrame()).toContain('(project)')
   })
@@ -81,7 +84,13 @@ describe('StatusBar', () => {
 
   it('renders cost', () => {
     const { lastFrame } = render(<TerminalSizeProvider><StatusBar status={baseStatus} /></TerminalSizeProvider>)
+    expect(lastFrame()).toContain('signal:')
     expect(lastFrame()).toContain('$0.0034')
+  })
+
+  it('renders trust-cycle guidance with Orca rail copy', () => {
+    const { lastFrame } = render(<TerminalSizeProvider><StatusBar status={baseStatus} /></TerminalSizeProvider>)
+    expect(lastFrame()).toContain('shift+tab cycles trust')
   })
 
   it('truncates long model names', () => {
@@ -97,6 +106,32 @@ describe('StatusBar', () => {
   })
 })
 
+describe('Ink terminal mode', () => {
+  it('keeps no-flicker fullscreen opt-in so terminal scrollback stays copyable by default', async () => {
+    await withEnv({
+      ORCA_ALT_SCREEN: undefined,
+      ORCA_NO_FLICKER: undefined,
+      ORCA_TUI: undefined,
+      CLAUDE_CODE_NO_FLICKER: undefined,
+    }, () => {
+      expect(shouldUseAlternateScreen()).toBe(false)
+      expect(shouldUseNoFlickerRenderer()).toBe(false)
+    })
+    await withEnv({ ORCA_ALT_SCREEN: '1' }, () => {
+      expect(shouldUseAlternateScreen()).toBe(true)
+    })
+    await withEnv({ CLAUDE_CODE_NO_FLICKER: '1' }, () => {
+      expect(shouldUseNoFlickerRenderer()).toBe(true)
+    })
+    await withEnv({ ORCA_TUI: 'fullscreen' }, () => {
+      expect(shouldUseNoFlickerRenderer()).toBe(true)
+    })
+    await withEnv({ ORCA_TUI: 'default', ORCA_NO_FLICKER: '1' }, () => {
+      expect(shouldUseNoFlickerRenderer()).toBe(false)
+    })
+  })
+})
+
 describe('ThinkingSpinner', () => {
   it('renders nothing when inactive', () => {
     const { lastFrame } = render(<ThinkingSpinner active={false} />)
@@ -105,7 +140,7 @@ describe('ThinkingSpinner', () => {
 
   it('renders spinner when active', () => {
     const { lastFrame } = render(<ThinkingSpinner active={true} />)
-    // Verb is randomly selected from 60 options, check for common pattern
+    expect(lastFrame()).toContain('POD')
     expect(lastFrame()).toContain('...')
     expect(lastFrame()).toContain('0s')
   })
@@ -116,6 +151,7 @@ describe('ToolCallBlock', () => {
     const { lastFrame } = render(
       <ToolCallBlock start={{ name: 'read_file', args: { path: '/tmp/test.ts' } }} />,
     )
+    expect(lastFrame()).toContain('ECHO TOOL')
     expect(lastFrame()).toContain('read_file')
   })
 
@@ -158,7 +194,7 @@ describe('InputArea', () => {
     const { lastFrame } = render(<TerminalSizeProvider><InputArea onSubmit={() => {}} active={true} /></TerminalSizeProvider>)
     // Block cursor renders as inverse space — check that prompt and placeholder are present
     expect(lastFrame()).toContain('>')
-    expect(lastFrame()).toContain('Type a message')
+    expect(lastFrame()).toContain('Brief the pod')
   })
 })
 
@@ -174,11 +210,16 @@ describe('PermissionPrompt', () => {
         active={true}
       />,
     )
+    expect(lastFrame()).toContain('TRUST GATE')
     expect(lastFrame()).toContain('write_file')
+    expect(lastFrame()).toContain('SCAN')
     expect(lastFrame()).toContain('write 500 bytes')
-    expect(lastFrame()).toContain('Allow')
+    expect(lastFrame()).toContain('Allow once')
+    expect(lastFrame()).toContain('trust this pattern for this session')
+    expect(lastFrame()).toContain('write this trust rule to project policy')
     expect(lastFrame()).toContain('Deny')
-    expect(lastFrame()).toContain('arrows move')
+    expect(lastFrame()).toContain('arrows')
+    expect(lastFrame()).toContain('esc deny')
   })
 
   it('renders nothing when inactive', async () => {
@@ -191,7 +232,7 @@ describe('PermissionPrompt', () => {
 })
 
 describe('TurnSummary', () => {
-  it('renders elapsed time and tokens', async () => {
+  it('renders proof-wake elapsed time, tokens, tools, cost, and throughput', async () => {
     const { TurnSummary } = await import('../src/ui/components/TurnSummary.js')
     const { lastFrame } = render(
       <TurnSummary info={{
@@ -203,9 +244,15 @@ describe('TurnSummary', () => {
         model: 'test-model',
       }} />,
     )
+    expect(lastFrame()).toContain('PROOF WAKE')
+    expect(lastFrame()).toContain('time 3.2s')
+    expect(lastFrame()).toContain('in 500')
+    expect(lastFrame()).toContain('out 1.5K')
+    expect(lastFrame()).toContain('tools 2')
     expect(lastFrame()).toContain('3.2s')
     expect(lastFrame()).toContain('1.5K')
     expect(lastFrame()).toContain('$0.0050')
+    expect(lastFrame()).toContain('469 tok/s')
   })
 })
 
@@ -221,10 +268,13 @@ describe('MultiModelProgress', () => {
         ]}
       />,
     )
+    expect(lastFrame()).toContain('POD COUNCIL')
     expect(lastFrame()).toContain('council')
+    expect(lastFrame()).toContain('2 voices')
     expect(lastFrame()).toContain('claude-sonnet')
     expect(lastFrame()).toContain('gpt-5')
-    expect(lastFrame()).toContain('ok')
+    expect(lastFrame()).toContain('surfaced')
+    expect(lastFrame()).toContain('sonar')
     expect(lastFrame()).toContain('5.0s')
   })
 })
@@ -242,7 +292,24 @@ describe('CommandPicker', () => {
     )
     expect(lastFrame()).toContain('/history')
     expect(lastFrame()).not.toContain('/model')
-    expect(lastFrame()).toContain('Commands')
+    expect(lastFrame()).toContain('POD COMMANDS')
+    expect(lastFrame()).toContain('echo filter: /hi')
+  })
+
+  it('keeps slash command picker visible when a filter has no matches', async () => {
+    const { CommandPicker } = await import('../src/ui/components/CommandPicker.js')
+    const { lastFrame } = render(
+      <CommandPicker
+        commands={[{ name: '/help', description: 'Show help' }]}
+        filter="zzz"
+        onSelect={() => {}}
+        onCancel={() => {}}
+        active={true}
+      />,
+    )
+
+    expect(lastFrame()).toContain('POD COMMANDS')
+    expect(lastFrame()).toContain('no matching command')
   })
 
   it('renders nothing when inactive', async () => {
@@ -296,6 +363,7 @@ describe('OptionPicker', () => {
     )
 
     expect(lastFrame()).toContain('search:')
+    expect(lastFrame()).toContain('echo search:')
     expect(lastFrame()).toContain('beta')
     expect(lastFrame()).toContain('Beta thread')
     expect(lastFrame()).not.toContain('Alpha thread')
@@ -359,7 +427,7 @@ describe('ThemePicker', () => {
     )
 
     expect(lastFrame()).toContain('Choose a theme')
-    expect(lastFrame()).toContain('Browse with arrows')
+    expect(lastFrame()).toContain('Blackfin Signal')
     expect(lastFrame()).toContain('Preview:')
   })
 })
@@ -377,7 +445,9 @@ describe('DetailPanel', () => {
       />,
     )
 
+    expect(lastFrame()).toContain('EVIDENCE DRAWER')
     expect(lastFrame()).toContain('Auth bug triage')
+    expect(lastFrame()).toContain('pod scan')
     expect(lastFrame()).toContain('thread-1')
     expect(lastFrame()).toContain('login fails')
   })
@@ -425,8 +495,9 @@ describe('Footer', () => {
     const { lastFrame } = render(
       <TerminalSizeProvider><Footer isGenerating={true} isInputActive={false} permMode="yolo" /></TerminalSizeProvider>,
     )
+    expect(lastFrame()).toContain('POD HELM')
     expect(lastFrame()).toContain('esc')
-    expect(lastFrame()).toContain('interrupt')
+    expect(lastFrame()).toContain('interrupt echo')
   })
 
   it('shows send/help hints when input is active', async () => {
@@ -434,9 +505,11 @@ describe('Footer', () => {
     const { lastFrame } = render(
       <TerminalSizeProvider><Footer isGenerating={false} isInputActive={true} permMode="auto" permSource="project" /></TerminalSizeProvider>,
     )
+    expect(lastFrame()).toContain('POD HELM')
     expect(lastFrame()).toContain('enter')
-    expect(lastFrame()).toContain('send')
+    expect(lastFrame()).toContain('send brief')
     expect(lastFrame()).toContain('/help')
+    expect(lastFrame()).toContain('pod commands')
     expect(lastFrame()).toContain('auto:project')
   })
 
@@ -446,8 +519,11 @@ describe('Footer', () => {
       <TerminalSizeProvider><Footer isGenerating={false} isInputActive={false} permMode="yolo" /></TerminalSizeProvider>,
     )
     // Shows basic hints even when idle (waiting for prompt_ready)
+    expect(lastFrame()).toContain('POD HELM')
     expect(lastFrame()).toContain('enter')
+    expect(lastFrame()).toContain('send brief')
     expect(lastFrame()).toContain('/help')
+    expect(lastFrame()).toContain('pod commands')
     expect(lastFrame()).toContain('yolo')
     expect(lastFrame()).not.toContain('esc') // no interrupt when not generating
   })
@@ -550,24 +626,32 @@ describe('Banner', () => {
     expect(lastFrame()).toContain('0.8.0')
   })
 
-  it('renders Codex-style info box', async () => {
+  it('renders Orca Agent wordmark and a clean signal deck without icon art', async () => {
     const { Banner } = await import('../src/ui/components/Banner.js')
     const { lastFrame } = render(
       <TerminalSizeProvider><Banner version="0.8.0" cwd="/tmp" model="claude-sonnet-4.6" permMode="auto" /></TerminalSizeProvider>,
     )
-    // Should contain Codex-style info fields
-    expect(lastFrame()).toContain('>_')
-    expect(lastFrame()).toContain('Orca CLI')
-    expect(lastFrame()).toContain('Directory:')
+    const frame = lastFrame() ?? ''
+    // Should contain the branded signal deck fields.
+    expect(frame).toContain('██████')
+    expect(frame).toContain('Orca Agent v0.8.0')
+    expect(frame).toContain('Blackfin Signal')
+    expect(frame).toContain('Available Surface')
+    expect(frame).toContain('MODEL')
+    expect(frame).toContain('TRUST')
+    expect(frame).toContain('DIRECTORY')
+    expect(frame).not.toContain('terminal-native coding pod')
+    expect(frame).not.toContain('BLACKFIN SIGNAL')
+    expect(frame).not.toContain('POD       ____')
   })
 
   it('renders config files when provided', async () => {
     const { Banner } = await import('../src/ui/components/Banner.js')
     const { lastFrame } = render(
-      <TerminalSizeProvider><Banner version="0.8.0" cwd="/tmp" configFiles={['CLAUDE.md', 'package.json']} toolCount={41} hookCount={37} /></TerminalSizeProvider>,
+      <TerminalSizeProvider><Banner version="0.8.0" cwd="/tmp" configFiles={['CLAUDE.md', 'package.json']} toolCount={42} hookCount={37} /></TerminalSizeProvider>,
     )
     expect(lastFrame()).toContain('CLAUDE.md')
-    expect(lastFrame()).toContain('41 tools')
+    expect(lastFrame()).toContain('42 tools')
     expect(lastFrame()).toContain('37 hooks')
   })
 })
@@ -609,14 +693,14 @@ describe('HomePanel', () => {
       effort: 'high',
     }
     const { lastFrame } = render(
-      <TerminalSizeProvider><HomePanel status={status} toolCount={41} hookCount={11} /></TerminalSizeProvider>,
+      <TerminalSizeProvider><HomePanel status={status} toolCount={42} hookCount={11} /></TerminalSizeProvider>,
     )
-    expect(lastFrame()).toContain('Start Here')
-    expect(lastFrame()).toContain('Primary action: type a task below and press Enter')
-    expect(lastFrame()).toContain('Trust & State')
-    expect(lastFrame()).toContain('Failure Help')
+    expect(lastFrame()).toContain('POD BRIEF')
+    expect(lastFrame()).toContain('Give the pod one clear outcome')
+    expect(lastFrame()).toContain('POD SIGNAL')
+    expect(lastFrame()).toContain('GUARDRAILS')
     expect(lastFrame()).toContain('prompt on dangerous tools')
-    expect(lastFrame()).toContain('Press Tab for quick actions')
+    expect(lastFrame()).toContain('Press Tab for pod actions')
   })
 
   it('surfaces saved-session recovery when summaries exist', async () => {
@@ -632,7 +716,7 @@ describe('HomePanel', () => {
       effort: 'high',
     }
     const { lastFrame } = render(
-      <TerminalSizeProvider><HomePanel status={status} toolCount={41} hookCount={11} savedSessionCount={3} /></TerminalSizeProvider>,
+      <TerminalSizeProvider><HomePanel status={status} toolCount={42} hookCount={11} savedSessionCount={3} /></TerminalSizeProvider>,
     )
     expect(lastFrame()).toContain('/sessions')
     expect(lastFrame()).toContain('3 saved sessions')
@@ -652,9 +736,9 @@ describe('HomePanel', () => {
       sessionId: 'auto-2026-04-22T23-43-40-extra-long',
     }
     const { lastFrame } = render(
-      <TerminalSizeProvider><HomePanel status={status} toolCount={41} hookCount={11} /></TerminalSizeProvider>,
+      <TerminalSizeProvider><HomePanel status={status} toolCount={42} hookCount={11} /></TerminalSizeProvider>,
     )
-    expect(lastFrame()).toContain('Session: auto-2026-04-22T23..')
+    expect(lastFrame()).toContain('SID   auto-2026-04-22T23..')
     expect(lastFrame()).not.toContain('auto-2026-04-22T23-43-40-extra-long')
   })
 })
@@ -683,8 +767,8 @@ describe('App empty state', () => {
     const { lastFrame } = render(
       <TerminalSizeProvider><App session={session} initialStatus={status} banner={banner} /></TerminalSizeProvider>,
     )
-    expect(lastFrame()).toContain('Start Here')
-    expect(lastFrame()).toContain('Quick Paths')
+    expect(lastFrame()).toContain('POD BRIEF')
+    expect(lastFrame()).toContain('RECOVER')
     expect(lastFrame()).not.toContain('Multi-Model Collaboration')
   })
 
@@ -744,7 +828,7 @@ describe('App empty state', () => {
     session.emitUserMessage('银行开户地址策略')
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(view.lastFrame()).toContain('You')
+    expect(view.lastFrame()).toContain('POD BRIEF')
     expect(view.lastFrame()).toContain('银行开户地址策略')
     view.unmount()
   })
@@ -776,7 +860,7 @@ describe('App empty state', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     const frame = stripAnsi(view.lastFrame())
-    expect(frame).toContain('ORCA')
+    expect(frame).toContain('ORCA POD')
     expect(frame).toContain('One reality check')
     expect(frame).toContain('• Do this first')
     expect(frame).not.toContain('### One reality check')
@@ -867,6 +951,7 @@ describe('DiffPreview', () => {
         filePath="/tmp/test.ts"
       />,
     )
+    expect(lastFrame()).toContain('ECHO DIFF')
     expect(lastFrame()).toContain('/tmp/test.ts')
     expect(lastFrame()).toContain('+')
     expect(lastFrame()).toContain('-')
@@ -927,7 +1012,7 @@ describe('Theme', () => {
     expect(theme.name).toBeTruthy()
     expect(theme.accent).toBeTruthy()
     expect(theme.prompt).toBeTruthy()
-    expect(theme.success).toBe('green')
+    expect(theme.success).toBeTruthy()
   })
 
   it('has all required color tokens', async () => {

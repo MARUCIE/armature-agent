@@ -6,7 +6,7 @@
 - Baseline: dirty working tree audit; existing user changes were preserved
 - Report route: `html-style-router` -> `html-economist-style`
 - Verification baseline before fixes: `npm run lint`, `npm test` (`85` files / `1583` tests), `npm run build`
-- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`88` files / `1623` tests)
+- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`91` files / `1663` tests)
 
 ## Scope
 
@@ -44,7 +44,7 @@ Orca has moved beyond basic CLI parity. The strongest areas are provider-neutral
 
 The remaining SOTA gap is now sharper:
 
-1. A single canonical execution contract is now in place for `chat`, `run`, mission, planner, and `serve /chat`; model-routing evidence remains the next drift risk.
+1. A single canonical execution contract is now in place for `chat`, `run`, mission, planner, and `serve /chat`; model-routing metadata drift is now closed through the model catalog SSoT tranche.
 2. Async work is visible and leaseable; queue resume/schedule now produces concrete chat continuation or monitor commands when replay metadata exists.
 3. Review-before-apply now has CLI and Ink TaskRun evidence entry points plus persisted approval timeline semantics.
 4. Trust boundaries were inconsistent around repo-local hooks and network-capable tools.
@@ -188,7 +188,7 @@ PDCA action executed:
 | M3c Release Evidence Snapshot | README/doc verification evidence cannot silently drift | Snapshot and release-evidence test guard README plus active PDCA docs |
 | M4 Gate Integrity | CI enforces documented gates | CI runs matrix sync, static, security, performance, and fast agent-eval gates |
 | M4e Scheduler / Resume Semantics | Queue leases become actionable recovery plans | `orca queue resume` and `orca queue schedule` claim leases and print chat continue or monitor commands |
-| M5 Model Catalog SSoT | Provider routing metadata stops drifting | One model catalog powers runtime, docs, picker, and tests |
+| M5 Model Catalog SSoT | Provider routing metadata stops drifting | Done: one metadata source powers runtime budget, provider defaults, output labels, catalog, docs, and tests |
 
 ## Atomic Task Queue
 
@@ -214,7 +214,7 @@ PDCA action executed:
 | ORCA-SWARM-018 | P1 | Add review-before-apply approval timeline over TaskRun evidence | UX | done |
 | ORCA-SWARM-019 | P1 | Make Ink submitted prompts visible and assistant markdown structurally rendered | UX | done |
 | ORCA-SWARM-020 | P1 | Extend TaskRun leases into true scheduler / resume semantics | runtime | done |
-| ORCA-SWARM-021 | P1 | Continue model-routing evidence and catalog SSoT | runtime | pending |
+| ORCA-SWARM-021 | P1 | Continue model-routing evidence and catalog SSoT | runtime | done |
 
 ## PDCA Execution Log
 
@@ -252,7 +252,7 @@ Verification executed:
 - Combined targeted regression pack -> `190` tests passed
 - `npm run lint` -> pass
 - `npm run build` -> pass
-- Final `npm test` -> `88` files / `1623` tests passed
+- Final `npm test` -> `89` files / `1642` tests passed
 - Gate integrity targeted tests cover manifest/script/sync behavior.
 - CI now executes `test:matrix:sync`, `test:static`, `test:security`, `test:performance`, and `test:ai-eval-fast`.
 - `node dist/bin/orca.js --version` -> `0.8.16`

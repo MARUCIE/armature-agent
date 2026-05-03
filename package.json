@@ -34,7 +34,8 @@
     "eval:fast": "python3 agent-eval/scripts/run-gate.py --manifest fast",
     "eval:nightly": "python3 agent-eval/scripts/run-gate.py --manifest nightly",
     "eval:release": "python3 agent-eval/scripts/run-gate.py --manifest release",
-    "prepublishOnly": "npm run build && npm test && npm run bench"
+    "prepublishOnly": "npm run build && npm test && npm run bench",
+    "test:tool-calls": "python3 agent-eval/scripts/run-test-matrix.py --layers tool-calls"
   },
   "dependencies": {
     "chalk": "^5.3.0",

@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { execFileSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 const mockState = vi.hoisted(() => ({
   streamChat: vi.fn(),
@@ -58,10 +62,31 @@ vi.mock('../src/output.js', async (importOriginal) => {
   }
 })
 
-import { executeOneShot, loadOneShotMcpTools } from '../src/commands/chat.js'
+import { emitOneShotAutoCritiqueNotice, executeOneShot, loadOneShotMcpTools } from '../src/commands/chat.js'
+import { hooks } from '../src/hooks.js'
+
+function runGit(cwd: string, args: string[]): void {
+  execFileSync('git', args, { cwd, stdio: 'ignore' })
+}
+
+function createDirtyWorkspace(): string {
+  const dir = mkdtempSync(join(tmpdir(), 'orca-one-shot-critique-'))
+  runGit(dir, ['init'])
+  runGit(dir, ['config', 'user.email', 'test@example.com'])
+  runGit(dir, ['config', 'user.name', 'Test User'])
+  writeFileSync(join(dir, 'large.txt'), 'baseline\n')
+  runGit(dir, ['add', 'large.txt'])
+  runGit(dir, ['commit', '-m', 'baseline'])
+  writeFileSync(join(dir, 'large.txt'), Array.from({ length: 900 }, (_, index) => `line ${index}`).join('\n'))
+  return dir
+}
 
 describe('chat one-shot MCP cleanup', () => {
+  const previousHome = process.env.HOME
+
   beforeEach(() => {
+    hooks.resetForTests()
+    process.env.HOME = previousHome
     vi.clearAllMocks()
     mockState.connectStartupSafe.mockResolvedValue(['demo'])
     mockState.getToolDefinitions.mockResolvedValue([
@@ -82,6 +107,9 @@ describe('chat one-shot MCP cleanup', () => {
   })
 
   afterEach(() => {
+    hooks.resetForTests()
+    if (previousHome === undefined) delete process.env.HOME
+    else process.env.HOME = previousHome
     vi.restoreAllMocks()
   })
 
@@ -160,5 +188,119 @@ describe('chat one-shot MCP cleanup', () => {
 
     expect(String(capturedBase?.systemPrompt)).toContain('Active provider: anthropic')
     expect(String(capturedBase?.systemPrompt)).toContain('Active model: claude-opus-4.6')
+  })
+
+  it('loads one-shot hooks and injects UserPromptSubmit context before the model call', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'orca-one-shot-hooks-home-'))
+    mkdirSync(join(home, '.orca'), { recursive: true })
+    writeFileSync(join(home, '.orca', 'hooks.json'), JSON.stringify({
+      UserPromptSubmit: [{
+        command: 'printf "%s" "review claims before answering"',
+      }],
+    }))
+    process.env.HOME = home
+    hooks.resetForTests()
+
+    let capturedPrompt: unknown
+    mockState.streamChat.mockImplementation(async function* (_base: unknown, prompt: unknown) {
+      capturedPrompt = prompt
+      yield { type: 'text', text: 'OK' }
+      yield { type: 'usage', inputTokens: 1, outputTokens: 1 }
+      yield { type: 'done' }
+    })
+
+    try {
+      await executeOneShot(
+        'Answer normally.',
+        {
+          provider: 'copilot',
+          apiKey: 'test-key',
+          model: 'gpt-5.4',
+          baseURL: 'https://api.githubcopilot.com',
+          sdkProvider: 'openai',
+          headers: {},
+          reasoningEffort: 'xhigh',
+        },
+        {
+          systemPrompt: 'system prompt',
+          maxTurns: 25,
+          permissionMode: 'bypassPermissions',
+        } as never,
+        'streaming',
+        process.cwd(),
+        [],
+      )
+
+      expect(String(capturedPrompt)).toContain('review claims before answering')
+      expect(String(capturedPrompt)).toContain('orca_hook_context')
+    } finally {
+      rmSync(home, { recursive: true, force: true })
+    }
+  })
+
+  it('fires Stop hooks for one-shot proxy responses with response evidence', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'orca-one-shot-stop-home-'))
+    const hookDir = join(home, '.orca')
+    mkdirSync(hookDir, { recursive: true })
+    writeFileSync(join(home, '.orca', 'hooks.json'), JSON.stringify({
+      Stop: [{
+        command: 'python3 -c "import os, pathlib; pathlib.Path(\'stop-response.txt\').write_text(os.environ.get(\'ORCA_RESPONSE\', \'\'))"',
+      }],
+    }))
+    process.env.HOME = home
+    hooks.resetForTests()
+
+    try {
+      await executeOneShot(
+        'Reply with OK.',
+        {
+          provider: 'copilot',
+          apiKey: 'test-key',
+          model: 'gpt-5.4',
+          baseURL: 'https://api.githubcopilot.com',
+          sdkProvider: 'openai',
+          headers: {},
+          reasoningEffort: 'xhigh',
+        },
+        {
+          systemPrompt: 'system prompt',
+          maxTurns: 25,
+          permissionMode: 'bypassPermissions',
+        } as never,
+        'streaming',
+        process.cwd(),
+        [],
+      )
+
+      expect(readFileSync(join(hookDir, 'stop-response.txt'), 'utf-8')).toContain('OK')
+    } finally {
+      rmSync(home, { recursive: true, force: true })
+    }
+  })
+
+  it('emits one-shot auto critique notices only for streaming output', () => {
+    const dir = createDirtyWorkspace()
+    const notices: string[] = []
+
+    try {
+      emitOneShotAutoCritiqueNotice({
+        cwd: dir,
+        activeModel: 'gpt-5.4',
+        outputMode: 'streaming',
+        writeNotice: (text) => notices.push(text),
+      })
+      emitOneShotAutoCritiqueNotice({
+        cwd: dir,
+        activeModel: 'gpt-5.4',
+        outputMode: 'json',
+        writeNotice: (text) => notices.push(text),
+      })
+
+      expect(notices).toHaveLength(1)
+      expect(notices[0]).toContain('critique checkpoint recommended')
+      expect(notices[0]).toContain('/critique --checkpoint after_complex_implementation')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

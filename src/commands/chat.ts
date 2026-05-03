@@ -100,9 +100,12 @@ import {
   buildAutoSessionId,
   buildChatFlags,
   detectConfigFiles,
+  rememberWorkspaceCwd,
+  resolveWorkspaceCwd,
   saveInputHistory,
 } from './chat-support.js'
 import { executeReplTurn } from './chat-repl-turn.js'
+import { createCritiqueAutoState, maybeBuildAutoCritiqueNotice } from '../critique-auto.js'
 import { buildPendingContinueRestore, getForcedModeRestoreWarning } from './chat-resume-state.js'
 import { handleMutatingSlashCommand } from './chat-slash-mutations.js'
 import { handleProxyToolCall, ResetSensitiveWaitCanceledError } from './chat-proxy-tool-call.js'
@@ -113,6 +116,14 @@ import { applyModeSystemPrompt } from './mode-system-prompt.js'
 import { prepareReflectPromptContent } from './reflect-mode.js'
 import { emitCommandMessage, formatMarkdownCodeBlock } from '../ui/command-output.js'
 import { listSlashCommandCompletions } from '../slash-commands.js'
+import {
+  buildPostModelSaveRepairPlan,
+  formatLocalFilePlanResult,
+  type LocalFilePlan,
+  type LocalFileToolResult,
+} from './local-file-intent.js'
+import { applyUserPromptSubmitHooks, runStopHooks } from './chat-hooks.js'
+import { buildUnsupportedClaimEvidenceNotice } from './claim-evidence-guard.js'
 
 // ── Chat Options ─────────────────────────────────────────────────
 
@@ -128,6 +139,8 @@ export interface ChatOptions {
   effort?: string
   continue?: string | boolean
   image?: string[]
+  autoCritique?: boolean
+  autoCritiqueThreshold?: string
 }
 
 export interface ChatCommandPreset {
@@ -190,6 +203,41 @@ function mapThinkingEffortToReasoningEffort(
   return effort
 }
 
+function parseAutoCritiqueThresholdOption(value?: string): number | undefined {
+  if (value === undefined) return undefined
+  const trimmed = value.trim()
+  if (!trimmed) throw new Error('--auto-critique-threshold must be a number from 0 to 1')
+  const threshold = Number(trimmed)
+  if (!Number.isFinite(threshold) || threshold < 0 || threshold > 1) {
+    throw new Error('--auto-critique-threshold must be a number from 0 to 1')
+  }
+  return threshold
+}
+
+export function emitOneShotAutoCritiqueNotice(options: {
+  cwd: string
+  activeModel: string
+  outputMode: OutputMode
+  enabled?: boolean
+  threshold?: number
+  writeNotice?: (text: string) => void
+}): void {
+  if (options.outputMode !== 'streaming') return
+  const critiqueNotice = maybeBuildAutoCritiqueNotice({
+    cwd: options.cwd,
+    activeModel: options.activeModel,
+    enabled: options.enabled,
+    threshold: options.threshold,
+  })
+  if (!critiqueNotice) return
+  const text = `\x1b[33m  ${critiqueNotice.message}\x1b[0m\n`
+  if (options.writeNotice) {
+    options.writeNotice(text)
+    return
+  }
+  process.stderr.write(text)
+}
+
 export function createChatCommand(preset: ChatCommandPreset = {}): Command {
   const commandName = preset.name || 'chat'
   const commandDescription = preset.description || 'Start an agent conversation'
@@ -208,11 +256,18 @@ export function createChatCommand(preset: ChatCommandPreset = {}): Command {
     .option('--effort <level>', 'Thinking effort: low, medium, high (default), max')
     .option('-c, --continue [id]', 'Resume the most recent saved session, or a specific session by id')
     .option('--image <paths...>', 'Attach one or more local image files (proxy one-shot path only)')
+    .option('--no-auto-critique', 'Disable automatic local critique hints')
+    .option('--auto-critique-threshold <score>', 'Risk score threshold for automatic local critique hints (0..1)')
     .action(async (promptParts: string[], opts: ChatOptions) => {
-      const parsedImageInput = splitImageArgsAndPrompt(promptParts, opts.image, opts.cwd || process.cwd())
+      const cwd = resolveWorkspaceCwd(opts.cwd)
+      opts.cwd = cwd
+      rememberWorkspaceCwd(cwd)
+
+      const parsedImageInput = splitImageArgsAndPrompt(promptParts, opts.image, cwd)
       let prompt = parsedImageInput.prompt
       opts.image = parsedImageInput.imagePaths
       const outputMode: OutputMode = opts.json ? 'json' : 'streaming'
+      const autoCritiqueThreshold = parseAutoCritiqueThresholdOption(opts.autoCritiqueThreshold)
 
       // Stdin pipe support: cat file | orca chat "prompt"
       // If stdin is piped (not TTY), read it as context
@@ -235,13 +290,12 @@ export function createChatCommand(preset: ChatCommandPreset = {}): Command {
 
       try {
         const config = resolveConfig({
-          cwd: opts.cwd || process.cwd(),
+          cwd,
           flags: buildChatFlags(opts),
         })
 
         const resolved = resolveProvider(config)
 
-        const cwd = opts.cwd || process.cwd()
         const presetRuntime = resolveChatPresetRuntimeOptions(preset, opts)
         const commandMode = presetRuntime.initialModeId
           ? new ModeRegistry().getMode(presetRuntime.initialModeId)
@@ -325,6 +379,13 @@ export function createChatCommand(preset: ChatCommandPreset = {}): Command {
           if (preparedPrompt.notice && outputMode === 'streaming') {
             console.log(`\x1b[90m  ${preparedPrompt.notice}\x1b[0m`)
           }
+          emitOneShotAutoCritiqueNotice({
+            cwd,
+            activeModel: resolved.model,
+            outputMode,
+            enabled: opts.autoCritique !== false,
+            threshold: autoCritiqueThreshold,
+          })
           await executeOneShot(
             preparedPrompt.prompt,
             resolved,
@@ -344,6 +405,8 @@ export function createChatCommand(preset: ChatCommandPreset = {}): Command {
             forceReflect: presetRuntime.forceReflect,
             initialModeId: presetRuntime.initialModeId,
             initialPermissionMode: presetRuntime.initialPermissionMode,
+            autoCritiqueEnabled: opts.autoCritique !== false,
+            autoCritiqueThreshold,
           })
         }
       } catch (err) {
@@ -464,6 +527,21 @@ export async function executeOneShot(
   toolDefs: Array<Record<string, unknown>> = [],
   reasoningEffort?: string,
 ): Promise<void> {
+  hooks.load(cwd)
+  const promptHook = await applyUserPromptSubmitHooks({
+    prompt,
+    cwd,
+    model: resolved.model,
+    writeSystemMessage: (message) => {
+      if (outputMode === 'streaming') {
+        process.stderr.write(`\x1b[33m  hook: ${message}\x1b[0m\n`)
+      }
+    },
+  })
+  if (promptHook.blockedReason) {
+    throw new Error(`Prompt blocked by UserPromptSubmit hook: ${promptHook.blockedReason}`)
+  }
+  const promptToSend = promptHook.prompt
   const runtimeConfig = {
     ...config,
     systemPrompt: upsertRuntimeIdentityPrompt(
@@ -474,9 +552,9 @@ export async function executeOneShot(
   }
   try {
     if (resolved.baseURL) {
-      await runProxyQuery({ prompt, resolved, config: runtimeConfig, outputMode, cwd, toolDefs, reasoningEffort })
+      await runProxyQuery({ prompt: promptToSend, resolved, config: runtimeConfig, outputMode, cwd, toolDefs, reasoningEffort })
     } else {
-      await runSDKQuery({ prompt, resolved, config: runtimeConfig, outputMode, cwd })
+      await runSDKQuery({ prompt: promptToSend, resolved, config: runtimeConfig, outputMode, cwd })
     }
   } finally {
     mcpClient.disconnectAll()
@@ -507,6 +585,8 @@ async function runREPL(
     forceReflect?: boolean
     initialModeId?: string
     initialPermissionMode?: ReplPermissionMode
+    autoCritiqueEnabled?: boolean
+    autoCritiqueThreshold?: number
   } = {},
 ): Promise<void> {
   const { createInterface } = await import('node:readline')
@@ -730,6 +810,7 @@ async function runREPL(
   const retryTracker = new RetryTracker(2)
   const contextMonitor = new ContextMonitor(getContextWindowForModel(currentModel) || 200_000)
   const loopDetector = new LoopDetector()
+  const critiqueAutoState = createCritiqueAutoState()
   const modeIdBeforeRestore = modeRegistry.getActive().id
   if (!opts.initialModeId && restoredModeId) {
     if (!modeRegistry.switchTo(restoredModeId)) {
@@ -1679,6 +1760,9 @@ async function runREPL(
         contextMonitor,
         retryTracker,
         loopDetector,
+        critiqueAutoState,
+        autoCritiqueEnabled: opts.autoCritiqueEnabled,
+        autoCritiqueThreshold: opts.autoCritiqueThreshold,
         session: useInk ? session : undefined,
         emitStatus,
         emitInlineNotice,
@@ -1920,10 +2004,32 @@ interface ProxyTurnOptions {
   reasoningEffort?: string
 }
 
+function toolDefinitionName(tool: Record<string, unknown>): string | undefined {
+  return (tool.function as { name?: string } | undefined)?.name
+}
+
+function mergeProxyToolDefinitions(
+  toolDefs?: Array<Record<string, unknown>>,
+  extraToolDefs?: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
+  if (toolDefs && (!extraToolDefs || extraToolDefs.length === 0)) return toolDefs
+  const base = toolDefs || (TOOL_DEFINITIONS as Array<Record<string, unknown>>)
+  const merged: Array<Record<string, unknown>> = []
+  const seen = new Set<string>()
+  for (const tool of [...base, ...(extraToolDefs || [])]) {
+    const name = toolDefinitionName(tool)
+    if (name && seen.has(name)) continue
+    if (name) seen.add(name)
+    merged.push(tool)
+  }
+  return merged
+}
+
 export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTokens: number; outputTokens: number }> {
   const { prompt, resolved, config, outputMode, history, cwd, abortSignal, onFirstToken, onStreamToken, onFileWrite, permissionMode, isPermissionGranted, recordPermissionGrant, recordApprovalEvent, retryTracker, loopDetector, tokenBudget, contextMonitor, toolDefs, extraToolDefs, injectedPaths, session: emitterOpt, onStreamingStatus, reasoningEffort } = options
-  const allowedTools = [...(toolDefs || []), ...(extraToolDefs || [])]
-    .map((tool) => (tool.function as { name?: string } | undefined)?.name)
+  const effectiveToolDefs = mergeProxyToolDefinitions(toolDefs, extraToolDefs)
+  const allowedTools = effectiveToolDefs
+    .map(toolDefinitionName)
     .filter((name): name is string => Boolean(name))
 
   const startTime = Date.now()
@@ -1932,6 +2038,60 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
   let responseText = ''
   let gotFirstToken = false
   const md = new StreamMarkdown()
+  const executedToolNames: string[] = []
+
+  const executeLocalFilePlan = async (plan: LocalFilePlan): Promise<LocalFileToolResult[]> => {
+    const results: LocalFileToolResult[] = []
+    for (const call of plan.toolCalls) {
+      const label = JSON.stringify(call.args)
+      if (emitterOpt) {
+        emitterOpt.emitToolStart({ name: call.name, args: call.args, label })
+      } else {
+        md.flush()
+        setLastNewline(md.endsWithNewline)
+        printToolUse(call.name, label)
+      }
+      executedToolNames.push(call.name)
+      const startedAt = Date.now()
+      try {
+        const result = await handleProxyToolCall({
+          name: call.name,
+          args: call.args,
+          cwd,
+          history,
+          resolved: {
+            model: resolved.model,
+            apiKey: resolved.apiKey,
+            baseURL: resolved.baseURL,
+          },
+          onFileWrite,
+          permissionMode,
+          allowedTools,
+          isPermissionGranted,
+          recordPermissionGrant,
+          recordApprovalEvent,
+          retryTracker,
+          loopDetector,
+          tokenBudget,
+          contextMonitor,
+          injectedPaths,
+          session: emitterOpt,
+        })
+        if (emitterOpt) {
+          emitterOpt.emitToolEnd({ name: call.name, success: result.success, output: result.output, durationMs: Date.now() - startedAt })
+        } else {
+          printToolResult(call.name, result.success, result.output)
+        }
+        results.push({ name: call.name, success: result.success, output: result.output })
+      } catch (error) {
+        if (emitterOpt) {
+          emitterOpt.emitToolEnd({ name: call.name, success: false, output: error instanceof Error ? error.message : String(error), durationMs: Date.now() - startedAt })
+        }
+        throw error
+      }
+    }
+    return results
+  }
 
   // Streaming tok/s tracking for real-time StatusBar updates
   let streamTokenCount = 0
@@ -1943,6 +2103,7 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
     history,
     {
       onToolCall: async (name, args) => {
+        executedToolNames.push(name)
         try {
           return await handleProxyToolCall({
             name,
@@ -1976,7 +2137,7 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
       },
       abortSignal,
     },
-    toolDefs || [...(TOOL_DEFINITIONS as Array<Record<string, unknown>>), ...(extraToolDefs || [])],
+    effectiveToolDefs,
   )) {
     if (outputMode === 'json') {
       emitJson(event as unknown as Record<string, unknown>)
@@ -2053,6 +2214,57 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
 
   // Flush remaining markdown buffer
   md.flush()
+
+  const repairPlan = buildPostModelSaveRepairPlan({
+    prompt,
+    responseText,
+    history,
+    cwd,
+    executedToolNames,
+  })
+  if (repairPlan) {
+    const repairResults = await executeLocalFilePlan(repairPlan)
+    const repairSummary = formatLocalFilePlanResult(repairPlan, repairResults)
+    responseText = responseText ? `${responseText}\n\n${repairSummary}` : repairSummary
+    if (emitterOpt) {
+      emitterOpt.emitSystemMessage(repairSummary, repairResults.every((result) => result.success) ? 'info' : 'error')
+    } else {
+      ensureNewline()
+      process.stdout.write(`${theme.dim}${repairSummary}\x1b[0m\n`)
+    }
+  }
+
+  const claimEvidenceNotice = buildUnsupportedClaimEvidenceNotice({
+    responseText,
+    executedToolNames,
+  })
+  if (claimEvidenceNotice) {
+    responseText = responseText ? `${responseText}\n\n${claimEvidenceNotice}` : claimEvidenceNotice
+    if (emitterOpt) {
+      emitterOpt.emitSystemMessage(claimEvidenceNotice, 'warn')
+    } else {
+      ensureNewline()
+      process.stderr.write(`\x1b[33m  ${claimEvidenceNotice}\x1b[0m\n`)
+    }
+  }
+
+  const stopNotice = await runStopHooks({
+    prompt,
+    responseText,
+    cwd,
+    model: resolved.model,
+    writeSystemMessage: (message) => {
+      if (emitterOpt) {
+        emitterOpt.emitSystemMessage(message, 'warn')
+      } else {
+        ensureNewline()
+        process.stderr.write(`\x1b[33m  ${message}\x1b[0m\n`)
+      }
+    },
+  })
+  if (stopNotice) {
+    responseText = responseText ? `${responseText}\n\n${stopNotice}` : stopNotice
+  }
 
   // Append to conversation history
   history.push({ role: 'user', content: prompt })
@@ -2204,6 +2416,21 @@ async function runSDKQuery(options: SDKQueryOptions): Promise<{ inputTokens: num
       outputTokens = (result.outputTokens as number) || 0
       turns = (result.turns as number) || 0
     }
+  }
+
+  const stopNotice = await runStopHooks({
+    prompt,
+    responseText,
+    cwd,
+    model: resolved.model,
+    writeSystemMessage: (message) => {
+      if (outputMode === 'streaming') {
+        process.stderr.write(`\x1b[33m  ${message}\x1b[0m\n`)
+      }
+    },
+  })
+  if (stopNotice) {
+    responseText = responseText ? `${responseText}\n\n${stopNotice}` : stopNotice
   }
 
   if (outputMode === 'streaming') {

@@ -84,6 +84,12 @@ describe('program', () => {
     expect(commands).toContain('logs')
   })
 
+  it('registers critique command', () => {
+    const program = createProgram()
+    const commands = program.commands.map(c => c.name())
+    expect(commands).toContain('critique')
+  })
+
   it('chat command has model option', () => {
     const program = createProgram()
     const chat = program.commands.find(c => c.name() === 'chat')!
@@ -132,6 +138,12 @@ describe('program', () => {
     const program = createProgram()
     const continueOption = program.options.find((option) => option.long === '--continue')
     expect(continueOption?.optional).toBe(true)
+  })
+
+  it('root command exposes cwd forwarding for launchers', () => {
+    const program = createProgram()
+    const options = program.options.map(o => o.long)
+    expect(options).toContain('--cwd')
   })
 
   it('resolves preset startup runtime options from the preset registry', () => {

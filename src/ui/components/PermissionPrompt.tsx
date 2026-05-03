@@ -8,6 +8,7 @@ import React, { useState } from 'react'
 import { Box, Text, useInput } from 'ink'
 import { PickerFrame } from './PickerFrame.js'
 import type { PermissionDecisionScope } from '../types.js'
+import { useTheme } from '../theme.js'
 
 interface Props {
   toolName: string
@@ -17,12 +18,13 @@ interface Props {
 }
 
 export function PermissionPrompt({ toolName, preview, onResolve, active }: Props): React.ReactElement | null {
+  const theme = useTheme()
   const [selected, setSelected] = useState<0 | 1 | 2 | 3>(0)
   const choices: Array<{ label: string; description: string; decision: { allowed: boolean; scope: PermissionDecisionScope } }> = [
-    { label: 'Allow once', description: 'run this tool call now', decision: { allowed: true, scope: 'once' } },
-    { label: 'Allow session', description: 'remember this action for this session', decision: { allowed: true, scope: 'session' } },
-    { label: 'Allow project', description: 'persist this action in project policy', decision: { allowed: true, scope: 'project' } },
-    { label: 'Deny', description: 'block this action', decision: { allowed: false, scope: 'once' } },
+    { label: 'Allow once', description: 'clear this scan only', decision: { allowed: true, scope: 'once' } },
+    { label: 'Allow session', description: 'trust this pattern for this session', decision: { allowed: true, scope: 'session' } },
+    { label: 'Allow project', description: 'write this trust rule to project policy', decision: { allowed: true, scope: 'project' } },
+    { label: 'Deny', description: 'hold the boundary', decision: { allowed: false, scope: 'once' } },
   ]
 
   useInput(
@@ -59,15 +61,19 @@ export function PermissionPrompt({ toolName, preview, onResolve, active }: Props
   return (
     <Box marginTop={1}>
       <PickerFrame
-        title={`Allow ${toolName}?`}
-        borderColor="yellow"
-        footer="y allow · n deny · arrows move · enter confirm · esc cancel"
+        title={`TRUST GATE · ${toolName}`}
+        subtitle="Orca needs approval before this tool crosses the boundary"
+        borderColor={theme.warning}
+        footer="y once · n deny · 1-4 choose · arrows · enter confirm · esc deny"
       >
-        <Text dimColor>{preview}</Text>
+        <Box>
+          <Text color={theme.accentDim} bold>SCAN </Text>
+          <Text dimColor>{preview}</Text>
+        </Box>
         {choices.map((choice, index) => (
           <Box key={choice.label} marginTop={index === 0 ? 1 : 0}>
-            <Text color={selected === index ? 'yellow' : 'gray'}>{selected === index ? '▸ ' : '  '}</Text>
-            <Text color={choice.decision.allowed ? 'green' : 'red'} bold={selected === index}>
+            <Text color={selected === index ? theme.warning : theme.dim}>{selected === index ? '▸ ' : '  '}</Text>
+            <Text color={choice.decision.allowed ? theme.permAllow : theme.permDeny} bold={selected === index}>
               {`${index + 1}. ${choice.label}`}
             </Text>
             <Text dimColor>  {choice.description}</Text>

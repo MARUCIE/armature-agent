@@ -9,6 +9,7 @@
 import { execSync } from 'node:child_process'
 
 import { logWarning } from '../logger.js'
+import { getContextWindowForModelOrDefault, getMaxOutputForModelOrDefault } from '../model-metadata.js'
 
 export interface OpenAICompatOptions {
   apiKey: string
@@ -117,57 +118,6 @@ function resolveProxy(): string | undefined {
   return _cachedSystemProxy
 }
 
-/**
- * Model max output tokens — keyed by lowercase prefix match.
- * When the model isn't recognized, fall back to 16384 (safe for all major providers).
- */
-const MODEL_MAX_OUTPUT: Array<[string, number]> = [
-  // Anthropic
-  ['claude-opus-4',     32000],
-  ['claude-sonnet-4',   64000],
-  // OpenAI
-  ['gpt-5',             64000],
-  // Google
-  ['gemini-3',          65536],
-  // Open-source / China
-  ['gemma-4',           8192],
-  ['glm-5',             8192],
-  ['grok-4',            32000],
-  ['qwen3',             32000],
-  ['kimi-k2',           32000],
-  ['minimax-m2',        16384],
-]
-
-function getModelMaxOutput(model: string): number {
-  const lower = model.toLowerCase()
-  for (const [prefix, max] of MODEL_MAX_OUTPUT) {
-    if (lower.includes(prefix)) return max
-  }
-  return 16384 // safe fallback
-}
-
-const MODEL_CONTEXT_WINDOW: Array<[string, number]> = [
-  ['claude-opus', 200_000],
-  ['claude-sonnet', 200_000],
-  ['gpt-5', 256_000],
-  ['gpt-4.1', 1_000_000],
-  ['gpt-4o', 128_000],
-  ['gemini-3', 2_000_000],
-  ['gemini-2', 1_000_000],
-  ['gemma', 128_000],
-  ['grok', 256_000],
-  ['qwen', 128_000],
-  ['kimi', 256_000],
-]
-
-function getModelContextWindow(model: string): number {
-  const lower = model.toLowerCase()
-  for (const [prefix, window] of MODEL_CONTEXT_WINDOW) {
-    if (lower.includes(prefix)) return window
-  }
-  return 128_000 // safe fallback
-}
-
 function getToolLimitForBaseURL(baseURL: string | undefined): number | undefined {
   if (!baseURL) return undefined
   if (baseURL.includes('githubcopilot.com')) return 128
@@ -260,6 +210,38 @@ async function withRateLimitRetry<T>(fn: () => Promise<T>, label?: string): Prom
  */
 export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: PromptContent }
 
+function buildChatMessages(
+  systemPrompt: PromptContent | undefined,
+  history: ChatMessage[] | undefined,
+  prompt: PromptContent,
+): Array<Record<string, unknown>> {
+  const messages: Array<Record<string, unknown>> = []
+  const systemPromptText = systemPrompt ? messageContentToText(systemPrompt) : ''
+  let skippedDuplicateSystemPrompt = false
+
+  if (systemPrompt) {
+    messages.push({ role: 'system', content: systemPrompt })
+  }
+
+  if (history) {
+    for (const message of history) {
+      if (
+        message.role === 'system' &&
+        systemPromptText &&
+        !skippedDuplicateSystemPrompt &&
+        messageContentToText(message.content) === systemPromptText
+      ) {
+        skippedDuplicateSystemPrompt = true
+        continue
+      }
+      messages.push({ role: message.role, content: message.content })
+    }
+  }
+
+  messages.push({ role: 'user', content: prompt })
+  return messages
+}
+
 export async function* streamChat(
   options: OpenAICompatOptions,
   prompt: PromptContent,
@@ -272,24 +254,13 @@ export async function* streamChat(
   const allowedToolNames = new Set((requestTools || []).map(getToolName).filter(Boolean))
   const skipReasoningEffort = shouldSkipReasoningEffortForChatCompletions(options, requestTools)
 
-  // Build message array with history
-  const messages: Array<Record<string, unknown>> = []
-
-  if (options.systemPrompt && (!history || history.length === 0)) {
-    messages.push({ role: 'system', content: options.systemPrompt })
-  }
-  if (history) {
-    for (const m of history) {
-      messages.push({ role: m.role, content: m.content })
-    }
-  }
-  messages.push({ role: 'user', content: prompt })
+  const messages = buildChatMessages(options.systemPrompt, history, prompt)
 
   let totalInputTokens = 0
   let totalOutputTokens = 0
 
   // Context window for budget checks (conservative estimate)
-  const modelContextWindow = getModelContextWindow(options.model)
+  const modelContextWindow = getContextWindowForModelOrDefault(options.model)
 
   // ── Layer 3: Cumulative tool result budget ──────────────────────
   // Track total chars from tool results within this turn.
@@ -357,7 +328,7 @@ export async function* streamChat(
       }
 
       // Build request params — use max_completion_tokens for APIs that require it (Copilot, newer OpenAI)
-      const maxOut = options.maxTokens || getModelMaxOutput(options.model)
+      const maxOut = options.maxTokens || getMaxOutputForModelOrDefault(options.model)
       const useNewTokenParam = options.baseURL?.includes('githubcopilot.com') || options.baseURL?.includes('api.openai.com')
       const params: Record<string, unknown> = {
         model: options.model,
@@ -580,7 +551,7 @@ export async function chatOnce(
   }
   messages.push({ role: 'user', content: prompt })
 
-  const maxOut = options.maxTokens || getModelMaxOutput(options.model)
+  const maxOut = options.maxTokens || getMaxOutputForModelOrDefault(options.model)
   const useNewTokenParam = options.baseURL?.includes('githubcopilot.com') || options.baseURL?.includes('api.openai.com')
   const response = await withRateLimitRetry(
     () => client.chat.completions.create({

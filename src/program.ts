@@ -21,6 +21,7 @@ import { createPermissionsCommand } from './commands/permissions.js'
 import { createPRCommand } from './commands/pr.js'
 import { createServeCommand } from './commands/serve.js'
 import { createEvolveCommand } from './commands/evolve.js'
+import { createCritiqueCommand } from './commands/critique.js'
 import { ORCA_VERSION } from './version.js'
 
 export function createProgram(): Command {
@@ -34,7 +35,7 @@ export function createProgram(): Command {
     .enablePositionalOptions()
     .passThroughOptions()
     .description(
-      'Orca — provider-neutral agent runtime. 41 tools · 11 models · multi-model collaboration.\n\n' +
+      'Orca — provider-neutral agent runtime. 42 tools · 11 models · multi-model collaboration.\n\n' +
        'Commands:\n' +
        '  chat              Interactive REPL or one-shot query\n' +
        `${workflowPresetHelp}\n` +
@@ -50,6 +51,7 @@ export function createProgram(): Command {
        '  session           Manage saved sessions\n' +
       '  queue             Inspect queued and completed task runs\n' +
       '  permissions       Inspect and configure approval modes\n' +
+      '  critique          Run a read-only Rubber Duck Critique quality gate\n' +
       '  pr                Checkout a GitHub PR and review it\n' +
       '  serve             Start headless agent server (HTTP + SSE)\n' +
       '  providers         List and test configured providers\n' +
@@ -75,6 +77,7 @@ export function createProgram(): Command {
   program.addCommand(createSessionCommand())
   program.addCommand(createQueueCommand())
   program.addCommand(createPermissionsCommand())
+  program.addCommand(createCritiqueCommand())
   program.addCommand(createPRCommand())
   program.addCommand(createServeCommand())
 
@@ -83,20 +86,22 @@ export function createProgram(): Command {
   program.option('-m, --model <model>', 'Model name')
   program.option('-p, --provider <provider>', 'Provider (poe, anthropic, openai, google)')
   program.option('-k, --api-key <key>', 'API key')
+  program.option('--cwd <dir>', 'Working directory')
   program.option('--safe', 'Enable permission prompts')
   program.option('--effort <level>', 'Thinking effort: low, medium, high, max')
   program.option('-c, --continue [id]', 'Resume the most recent saved session, or a specific session by id')
   program.action(async (prompt: string[], opts: Record<string, string | boolean | undefined>) => {
     // Delegate to chat command: orca "prompt" → orca chat "prompt"
     const args = ['node', 'orca', 'chat']
-    if (prompt.length > 0) args.push(prompt.join(' '))
     if (opts.model) args.push('-m', String(opts.model))
     if (opts.provider) args.push('-p', String(opts.provider))
     if (opts.apiKey) args.push('-k', String(opts.apiKey))
+    if (opts.cwd) args.push('--cwd', String(opts.cwd))
     if (opts.safe) args.push('--safe')
     if (opts.effort) args.push('--effort', String(opts.effort))
     if (opts.continue === true) args.push('--continue')
     else if (opts.continue) args.push('--continue', String(opts.continue))
+    if (prompt.length > 0) args.push(prompt.join(' '))
     await program.parseAsync(args)
   })
 

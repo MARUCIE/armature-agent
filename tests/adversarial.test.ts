@@ -248,13 +248,13 @@ describe('Boundary overflows', () => {
 // ── Tool Schema Validation ──────────────────────────────────────
 
 describe('Tool schema validation', () => {
-  it('11.18 all 41 tools handle missing required args gracefully', () => {
+  it('11.18 all registered tools handle missing required args gracefully', () => {
     // Call each tool with empty args — none should throw uncaught exceptions
     const safeTools = TOOL_DEFINITIONS.filter(t =>
       // Skip tools that have real side effects even with empty args
       !['run_command', 'run_background', 'git_commit', 'web_search',
         'fetch_url', 'spawn_agent', 'delegate_task', 'ask_user',
-        'sleep', 'mcp_list_resources', 'mcp_read_resource', 'mcp_call_tool',
+        'sleep', 'open_file', 'mcp_list_resources', 'mcp_read_resource', 'mcp_call_tool',
       ].includes(t.function.name)
     )
 

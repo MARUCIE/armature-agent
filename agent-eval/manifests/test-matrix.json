@@ -70,6 +70,17 @@
       "owner": "Runtime + storage"
     },
     {
+      "id": "tool-calls",
+      "script": "test:tool-calls",
+      "label": "Tool Calls",
+      "steps": [
+        { "argv": ["node", "--experimental-vm-modules", "node_modules/.bin/vitest", "run", "tests/tools.test.ts", "tests/tools-full.test.ts", "tests/local-file-intent.test.ts", "tests/chat-proxy-tool-call.test.ts", "tests/mcp-client.test.ts", "tests/chat-one-shot-mcp-cleanup.test.ts", "tests/openai-compat-multimodal.test.ts", "tests/e2e-workflow.test.ts"] }
+      ],
+      "threshold": "built-in, proxy, MCP, cleanup, and long-session tool prompt regressions pass",
+      "status_if_ok": "pass",
+      "owner": "Agent runtime / tool loop"
+    },
+    {
       "id": "e2e",
       "script": "test:e2e",
       "label": "E2E",

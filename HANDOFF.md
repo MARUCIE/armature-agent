@@ -1,9 +1,35 @@
 # HANDOFF — Orca CLI SOTA Review Continuation
 
-Updated: 2026-04-16
+Updated: 2026-04-22
 Project root: `/Users/mauricewen/Projects/orca-cli`
 
 ## Current State
+
+Superseding update (2026-04-22):
+
+- The current repo baseline is no longer the older 2026-04-16 remediation tranche alone. The active product direction now includes trust-policy hardening, continuity footholds, the global native Orca hook surface, the layered test matrix, and a completed one-click full-delivery pass for the current tranche.
+- Two blocker classes were closed in the 2026-04-22 delivery pass:
+  - harness drift from Cloudflare's provider-key fallback (`tests/config.test.ts`)
+  - trust-policy gaps around repo-local MCP autospawn, zero-tool fail-open allowlists, MCP stdout framing, `/chat` body limits, and global config test isolation
+- Latest verification baseline:
+  - `npm run lint` ✅
+  - `npm run build` ✅
+  - `npm test` ✅ (`1553/1553`)
+  - `npm run test:matrix:sync` ✅
+  - `npm run test:matrix` ✅ (`run-20260422-061719`; `static` / `security` / `performance` are `partial-pass` by design, all layer exit codes `0`)
+  - `npm run eval:fast` ✅ (`62/62`, run `20260422-063053-333719`)
+  - `npm run eval:nightly` ✅ (`65/65`, run `20260422-061814-339289`)
+  - `npm run eval:release` ✅ (`68/68`, run `20260422-061914-913077`)
+- Release/security evidence:
+  - `npm audit --omit=dev` ✅ (`0` prod vulnerabilities)
+  - `npm pack --json --dry-run` ✅
+  - `node dist/bin/orca.js bench --json` ✅ (`score 100`)
+- Delivery artifacts:
+  - `outputs/spec/2026-04-22-one-click-full-delivery-spec.md`
+  - `outputs/security/2026-04-22-security-readiness.md`
+  - `outputs/release/2026-04-22-release-readiness.md`
+  - `outputs/learn/2026-04-22-dna-capsule-candidates.md`
+- Older sections below remain useful historical context, but they no longer represent the latest gate counts or the current continuation point.
 
 This repo is in a good, test-green state after a long review/remediation tranche plus a new SOTA gate-system tranche focused on:
 
@@ -17,12 +43,12 @@ This repo is in a good, test-green state after a long review/remediation tranche
 Current verification baseline:
 
 - `npm run lint` passed
-- `npm test` passed `1280/1280`
+- `npm test` passed `1546/1546`
 - `npm run build` passed
 - `npm run bench` passed (`10/10`, `100%`)
-- `npm run eval:fast` passed (`61/61`) — run `20260417-012401-427935`
-- `npm run eval:nightly` passed (`64/64`) — run `20260417-012506-286459`
-- `npm run eval:release` passed (`67/67`) — run `20260417-012607-841549`
+- `npm run eval:fast` passed (`62/62`) — run `20260422-054119-735043`
+- `npm run eval:nightly` passed (`65/65`) — run `20260422-054727-090885`
+- `npm run eval:release` passed (`68/68`) — run `20260422-054415-886673`
 
 ## What Changed In This Tranche
 

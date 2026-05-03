@@ -1,5 +1,458 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Orca CLI Platform Optimization Plan</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } }</style></head><body><header><h1>Orca CLI Platform Optimization Plan</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#objective">Objective</a><a href="#current-optimization-targets">Current Optimization Targets</a><a href="#planned-improvements">Planned Improvements</a><a href="#guardrails">Guardrails</a></aside><article class="content markdown-body"><h1 id="orca-cli-platform-optimization-plan">Orca CLI Platform Optimization Plan</h1><h2 id="objective">Objective</h2><p>Keep Orca CLI maintainable as a fast-moving CLI runtime while preventing drift across docs, command surfaces, and provider-routing behavior.</p>
-<h2 id="current-optimization-targets">Current Optimization Targets</h2><table>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Orca CLI Platform Optimization Plan</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; max-height:calc(100vh - 32px); overflow:auto; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } .content { padding:22px; } }</style></head><body><header><h1>Orca CLI Platform Optimization Plan</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#2026-05-03-optimization-delta-markdown-artifact-write-integrity">2026-05-03 Optimization Delta - Markdown Artifact Write Integrity</a><a href="#2026-05-02-optimization-delta-tool-call-closure-and-orca-mark">2026-05-02 Optimization Delta - Tool-Call Closure and Orca Mark</a><a href="#2026-05-02-optimization-delta-model-catalog-ssot">2026-05-02 Optimization Delta - Model Catalog SSoT</a><a href="#2026-05-02-optimization-delta-terminal-operability-hardening">2026-05-02 Optimization Delta - Terminal Operability Hardening</a><a href="#2026-05-02-optimization-delta-critique-quality-gate">2026-05-02 Optimization Delta - Critique Quality Gate</a><a href="#2026-05-01-optimization-delta-pod-helm-footer-ui-ux">2026-05-01 Optimization Delta - Pod Helm Footer UI/UX</a><a href="#2026-05-01-optimization-delta-pod-council-runway-ui-ux">2026-05-01 Optimization Delta - Pod Council Runway UI/UX</a><a href="#2026-05-01-optimization-delta-pod-evidence-drawer-ui-ux">2026-05-01 Optimization Delta - Pod Evidence Drawer UI/UX</a><a href="#2026-05-01-optimization-delta-pod-trust-gate-ui-ux">2026-05-01 Optimization Delta - Pod Trust Gate UI/UX</a><a href="#2026-05-01-optimization-delta-pod-proof-wake-ui-ux">2026-05-01 Optimization Delta - Pod Proof Wake UI/UX</a><a href="#2026-05-01-optimization-delta-pod-status-rail-ui-ux">2026-05-01 Optimization Delta - Pod Status Rail UI/UX</a><a href="#2026-05-01-optimization-delta-pod-transcript-flow-ui-ux">2026-05-01 Optimization Delta - Pod Transcript Flow UI/UX</a><a href="#2026-05-01-optimization-delta-pod-command-surface-ui-ux">2026-05-01 Optimization Delta - Pod Command Surface UI/UX</a><a href="#2026-05-01-optimization-delta-cute-mascot-ui-ux">2026-05-01 Optimization Delta - Cute Mascot UI/UX</a><a href="#2026-04-30-optimization-delta-visual-identity">2026-04-30 Optimization Delta - Visual Identity</a><a href="#2026-04-29-optimization-delta-sota-swarm-audit">2026-04-29 Optimization Delta - SOTA Swarm Audit</a><a href="#objective">Objective</a><a href="#current-optimization-targets">Current Optimization Targets</a><a href="#planned-improvements">Planned Improvements</a><a href="#sota-competitive-program-2026-04-20">SOTA Competitive Program (2026-04-20)</a><a href="#repl-multimodal-completion-2026-04-20">REPL Multimodal Completion (2026-04-20)</a><a href="#2026-04-21-sota-sop-benchmark-conclusions">2026-04-21 SOTA SOP Benchmark Conclusions</a><a href="#2026-04-21-layered-test-matrix-snapshot">2026-04-21 Layered Test Matrix Snapshot</a><a href="#guardrails">Guardrails</a></aside><article class="content markdown-body"><h1>Orca CLI Platform Optimization Plan</h1>
+<h2>2026-05-03 Optimization Delta - Markdown Artifact Write Integrity</h2>
+<p>The Markdown artifact write-integrity tranche is complete:</p>
+<ol>
+<li>Root cause:<ul>
+<li>the built-in file tools were functional</li>
+<li>the bug lived in the post-model false-save repair layer, which previously used the full assistant response as repaired file content</li>
+</ul>
+</li>
+<li>Runtime correction:<ul>
+<li>false-save repair now extracts only fenced Markdown/text, explicit content markers, or Markdown-like artifact structure</li>
+<li>conversational save confirmations without artifact content are not written to disk</li>
+</ul>
+</li>
+<li>Provider contract:<ul>
+<li>the system prompt now states that <code>write_file.content</code> must be the final requested file body only</li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>focused local-file/proxy/e2e regression pack passed with <code>45</code> tests before full-suite validation</li>
+<li><code>npm run lint</code>, <code>npm run build</code>, and full <code>npm test</code> passed with <code>91</code> files / <code>1665</code> tests</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-02 Optimization Delta - Tool-Call Closure and Orca Mark</h2>
+<p>The local-file/tool-call and startup mark tranche is complete:</p>
+<ol>
+<li>Long-session tool continuity:<ul>
+<li>changed OpenAI-compatible streamed chat assembly so every turn receives the current system prompt</li>
+<li>preserved history while de-duplicating an identical leading system prompt</li>
+<li>strengthened local-file instructions so create/open requests must use file tools before failure claims</li>
+<li>added a runtime local-file intent guard so obvious REPL read/write/open follow-ups execute tools before the provider call</li>
+<li>added post-response repair so false <code>saved to &lt;path&gt;</code> claims without a tool call are converted into an actual <code>write_file</code> operation</li>
+<li>added missing-claimed-file repair so a follow-up &quot;本地没有这个文件，给我打开&quot; reconstructs the claimed file from chat history and opens it</li>
+</ul>
+</li>
+<li>Tool-call matrix closure:<ul>
+<li>added the <code>tool-calls</code> layer to <code>agent-eval/manifests/test-matrix.json</code></li>
+<li>generated <code>npm run test:tool-calls</code> and updated <code>agent-eval/generated/test-matrix-entrypoints.md</code></li>
+<li>covered built-in tools, dangerous tool registry, local-file intent repair, proxy tool calls, MCP routing, one-shot MCP cleanup, prompt assembly, and system-prompt tool rules</li>
+</ul>
+</li>
+<li>Blackfin startup cleanup:<ul>
+<li>replaced the compact <code>ORCA</code> startup mark with a dominant <code>ORCA-AGENT</code> wordmark</li>
+<li>removed the rejected independent banner mascot/hero/icon art</li>
+<li>retained Hermes-inspired structure: large wordmark hierarchy, theme-aware deck, and operational state rows</li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>focused system prompt/provider pack passed with <code>22</code> tests</li>
+<li><code>npm run test:tool-calls</code> passed</li>
+<li>focused Ink UI pack passed with <code>80</code> tests</li>
+<li>post-screenshot Banner render inspection shows <code>ORCA-AGENT</code>, <code>Orca Agent v0.8.16</code>, <code>Blackfin Signal</code>, clean state rows, and no independent hero art</li>
+<li>full <code>npm test</code> passed with <code>91</code> files / <code>1663</code> tests</li>
+<li>dist-level local <code>write_file</code> + <code>open_file</code> smoke passed with a fake <code>open</code> command to avoid launching desktop apps</li>
+<li>focused local-file guard pack passed with <code>31</code> tests</li>
+<li>live provider smoke remains externally blocked: Poe default timeout, Poe <code>qwen3.6-plus</code> no tool-call support, Anthropic credit exhaustion, Cloudflare unauthorized</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-02 Optimization Delta - Model Catalog SSoT</h2>
+<p>The model-catalog SSoT tranche is complete:</p>
+<ol>
+<li>Metadata consolidation:<ul>
+<li>added <code>src/model-metadata.ts</code> as the canonical owner for model context windows, max output defaults, pricing tiers, and capacity/pricing formatters</li>
+<li>kept <code>src/model-catalog.ts</code> as the provider-aware public catalog by re-exporting metadata helpers and preserving provider grouping / duplicate-model behavior</li>
+</ul>
+</li>
+<li>Runtime alignment:<ul>
+<li>changed <code>src/token-budget.ts</code> to use canonical context and max-output metadata</li>
+<li>changed <code>src/providers/openai-compat.ts</code> to use canonical context guard and max-token defaults</li>
+<li>changed <code>src/output.ts</code> to use canonical capacity labels and pricing for cost estimates</li>
+</ul>
+</li>
+<li>Anti-drift guard:<ul>
+<li>added model-catalog regression coverage that scans runtime consumers and fails if duplicated metadata tables return</li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>focused model/runtime/provider pack passed with <code>86</code> tests</li>
+<li><code>npm run lint</code> passed</li>
+<li><code>npm run build</code> passed</li>
+<li>full <code>npm test</code> passed with <code>91</code> files / <code>1663</code> tests</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-02 Optimization Delta - Terminal Operability Hardening</h2>
+<p>The copyability / cwd / tool-opening tranche is complete:</p>
+<ol>
+<li>Terminal copyability:<ul>
+<li>made alternate screen opt-in with <code>ORCA_ALT_SCREEN=1</code></li>
+<li>made mouse tracking opt-in with <code>ORCA_MOUSE=1</code></li>
+<li>preserved Ink rendering while restoring normal terminal scrollback and selection by default</li>
+</ul>
+</li>
+<li>Workspace reliability:<ul>
+<li>added explicit/env/ambient/remembered workspace cwd resolution</li>
+<li>added last-workspace persistence under <code>~/.orca/last-cwd</code></li>
+<li>forwarded root <code>orca --cwd &lt;dir&gt;</code> into chat for launcher/menu entrypoints</li>
+</ul>
+</li>
+<li>Tool system:<ul>
+<li>added <code>open_file</code> as the 42nd built-in tool</li>
+<li>marked <code>open_file</code> dangerous for approval policy</li>
+<li>refreshed README/tool-count tests and release evidence</li>
+</ul>
+</li>
+<li>MCP reliability:<ul>
+<li>fixed MCP tool routing for underscore/hyphen server names</li>
+<li>widened Codex TOML MCP parser to support hyphenated server sections</li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>targeted regression pack passed with <code>250</code> tests</li>
+<li>TypeScript build passed</li>
+<li>CLI help and doctor smokes passed</li>
+<li>live Poe one-shot <code>read_file</code> tool smoke passed</li>
+<li>full <code>npm test</code> passed with <code>90</code> files / <code>1651</code> tests</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-02 Optimization Delta - Critique Quality Gate</h2>
+<p>The critique-gate optimization tranche is complete:</p>
+<ol>
+<li>Quality gateway:<ul>
+<li>added <code>src/critique.ts</code> as the centralized Rubber Duck Critique model</li>
+<li>added <code>src/critique-workspace.ts</code> as the shared workspace inspection adapter</li>
+<li>added checkpoints, risk scoring, prompt generation, and structured JSON parsing</li>
+</ul>
+</li>
+<li>Command surface:<ul>
+<li>added <code>orca critique</code> as a first-class command</li>
+<li>supports plan/log/diff inputs, risk flags, <code>--force</code>, <code>--dry-run</code>, <code>--json</code>, and <code>--show-prompt</code></li>
+<li>added <code>/critique</code> inside <code>orca chat</code> for local read-only risk inspection without a model call</li>
+<li>registered slash discovery through help/completion and command picker surfaces</li>
+</ul>
+</li>
+<li>Automatic chat hint:<ul>
+<li>added <code>src/critique-auto.ts</code> for pre-send dirty-diff risk notices</li>
+<li>added session-level repeat suppression so the same diff signature only prompts once</li>
+<li>extended the notice to one-shot <code>orca chat &quot;prompt&quot;</code> streaming runs while leaving <code>--json</code> output clean</li>
+<li>kept automatic hints model-free, prompt-preserving, and configurable through <code>--no-auto-critique</code>, <code>--auto-critique-threshold</code>, <code>ORCA_AUTO_CRITIQUE</code>, and <code>ORCA_AUTO_CRITIQUE_THRESHOLD</code></li>
+</ul>
+</li>
+<li>Reviewer routing:<ul>
+<li>defaults to complementary model-family selection</li>
+<li>reuses existing provider and aggregator routing for live critique calls</li>
+</ul>
+</li>
+<li>Contract boundary:<ul>
+<li><code>reflect</code> remains Socratic diagnosis</li>
+<li><code>critique</code> remains read-only reviewer challenge</li>
+<li>no new dependency and no workspace mutation inside critique</li>
+</ul>
+</li>
+<li>Reliability cleanup:<ul>
+<li>fixed project hook trust evaluation so <code>ORCA_TRUST_PROJECT_HOOKS=1</code> is honored at hook load time even when the singleton already exists</li>
+<li>removed the full-suite stderr-hook gate flake exposed during this tranche</li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>focused command and contract tests passed</li>
+<li>focused slash and registry tests passed</li>
+<li>focused automatic hint tests passed</li>
+<li>focused command contract tests confirmed the chat option surface</li>
+<li>TypeScript lint and build passed</li>
+<li>release evidence snapshot was refreshed to <code>89</code> files / <code>1642</code> tests after adding automatic hint coverage</li>
+<li>full <code>npm test</code> passed with <code>89</code> files / <code>1642</code> tests</li>
+<li>built CLI dry-run smoke returned valid critique JSON</li>
+<li>scoped diff and new-file whitespace checks passed</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Optimization Delta - Pod Helm Footer UI/UX</h2>
+<p>The helm-footer optimization tranche is complete:</p>
+<ol>
+<li>Footer identity:<ul>
+<li>changed <code>Footer.tsx</code> from generic shortcut-only rendering to a <code>POD HELM</code> rail</li>
+<li>changed key and label colors from dim-only styling to active theme semantic tokens</li>
+</ul>
+</li>
+<li>Context-aware copy:<ul>
+<li>changed generating hint from <code>interrupt</code> to <code>interrupt echo</code></li>
+<li>changed active and idle send/help labels to <code>send brief</code> and <code>pod commands</code></li>
+<li>preserved <code>enter</code>, <code>ctrl+j</code>, <code>/help</code>, <code>shift+tab</code>, permission-mode, and permission-source visibility</li>
+</ul>
+</li>
+<li>Width discipline:<ul>
+<li>used terminal <code>cols</code> to keep core hints compact on ordinary-width terminals</li>
+<li>rendered lower-priority active hints only on wider terminals</li>
+<li>prevented shortcut groups from shrinking into broken text columns</li>
+</ul>
+</li>
+<li>Contract boundary:<ul>
+<li>no shortcut behavior change</li>
+<li>no input submission, permission-mode, or dependency change</li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>focused Ink UI tests, lint, build, release-evidence test, real CLI version smoke, scoped diff check, and full suite passed</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Optimization Delta - Pod Council Runway UI/UX</h2>
+<p>The council-runway optimization tranche is complete:</p>
+<ol>
+<li>Multi-model identity:<ul>
+<li>changed <code>MultiModelProgress.tsx</code> from command-only framing to <code>POD COUNCIL · &lt;command&gt;</code></li>
+<li>changed model count copy from generic <code>models</code> to coordinated <code>voices</code></li>
+</ul>
+</li>
+<li>Progress states:<ul>
+<li>changed completed row copy from <code>ok</code> to <code>surfaced</code></li>
+<li>added <code>sonar</code> copy beside the existing active spinner</li>
+<li>preserved model names and elapsed seconds</li>
+</ul>
+</li>
+<li>Tone system:<ul>
+<li>replaced hard-coded <code>cyan</code> and <code>green</code> colors with active theme semantic tokens</li>
+</ul>
+</li>
+<li>Contract boundary:<ul>
+<li>no <code>ModelProgress</code> shape change</li>
+<li>no council/race/pipeline runtime, spinner dependency, or new dependency change</li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>focused Ink UI tests passed during implementation; final lint, build, release-evidence, full suite, CLI smoke, and scoped diff check are recorded in <code>deliverable.md</code></li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Optimization Delta - Pod Evidence Drawer UI/UX</h2>
+<p>The evidence-drawer optimization tranche is complete:</p>
+<ol>
+<li>Detail panel identity:<ul>
+<li>changed <code>DetailPanel.tsx</code> from source-title-only framing to <code>EVIDENCE DRAWER · &lt;title&gt;</code></li>
+<li>added <code>pod scan</code> subtitle context while preserving original subtitle metadata</li>
+</ul>
+</li>
+<li>Tone system:<ul>
+<li>replaced hard-coded <code>cyan</code>, <code>yellow</code>, and <code>red</code> border colors with active theme semantic tokens</li>
+<li>preserved info/warn/error meaning through <code>theme.border</code>, <code>theme.warning</code>, and <code>theme.error</code></li>
+</ul>
+</li>
+<li>Contract boundary:<ul>
+<li>no <code>DetailPanelInfo</code> shape change</li>
+<li>no slash-command, evidence formatting, markdown parser, or dependency change</li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>focused Ink UI tests passed during implementation; final lint, build, release-evidence, full suite, CLI smoke, and scoped diff check are recorded in <code>deliverable.md</code></li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Optimization Delta - Pod Trust Gate UI/UX</h2>
+<p>The trust-gate optimization tranche is complete:</p>
+<ol>
+<li>Approval boundary:<ul>
+<li>changed <code>PermissionPrompt.tsx</code> from a generic tool approval panel to <code>TRUST GATE</code></li>
+<li>grouped the preview under <code>SCAN</code></li>
+<li>retuned choices to explain once/session/project trust scope and deny posture</li>
+</ul>
+</li>
+<li>Diff review:<ul>
+<li>changed <code>DiffPreview.tsx</code> from a generic diff header to <code>ECHO DIFF</code></li>
+<li>preserved file path, add/remove counts, line numbers, truncation, and diff content</li>
+</ul>
+</li>
+<li>Contract boundary:<ul>
+<li>no permission-policy changes</li>
+<li>no approval keybinding changes</li>
+<li>no diff algorithm, runtime event, or dependency changes</li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>focused Ink UI tests and lint passed during implementation; final build, release-evidence, full suite, CLI smoke, and scoped diff check are recorded in <code>deliverable.md</code></li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Optimization Delta - Pod Proof Wake UI/UX</h2>
+<p>The proof-wake optimization tranche is complete:</p>
+<ol>
+<li>Post-turn receipt:<ul>
+<li>changed <code>TurnSummary.tsx</code> from internal <code>r/d/u</code> shorthand to <code>PROOF WAKE</code></li>
+<li>preserved elapsed time, input tokens, output tokens, tool-call count, cost, and output throughput</li>
+</ul>
+</li>
+<li>Contract boundary:<ul>
+<li>no <code>TurnSummaryInfo</code> shape change</li>
+<li>no usage accounting, provider, or event-model behavior change</li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>focused Ink UI tests and lint passed during implementation; final build, release-evidence, full suite, CLI smoke, and scoped diff check are recorded in <code>deliverable.md</code></li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Optimization Delta - Pod Status Rail UI/UX</h2>
+<p>The status-rail optimization tranche is complete:</p>
+<ol>
+<li>Status identity:<ul>
+<li>kept <code>ORCA POD</code>, model, context bar / percentage, and branch on the first status line</li>
+<li>added a compact <code>sonar</code> label for context load on ordinary-width terminals</li>
+</ul>
+</li>
+<li>Signal and trust rails:<ul>
+<li>prefixed available live metrics with <code>signal:</code></li>
+<li>changed permission posture copy from <code>pod:</code> to <code>trust:</code> and retuned shift-tab guidance to <code>shift+tab cycles trust</code></li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>focused Ink UI tests and lint passed during implementation; final build, release-evidence, full suite, CLI smoke, and scoped diff check are recorded in <code>deliverable.md</code></li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Optimization Delta - Pod Transcript Flow UI/UX</h2>
+<p>The transcript-flow optimization tranche is complete:</p>
+<ol>
+<li>Transcript roles:<ul>
+<li>changed submitted user prompt panels from generic <code>You</code> to <code>POD BRIEF</code></li>
+<li>changed assistant response panels from <code>ORCA</code> to <code>ORCA POD</code></li>
+<li>changed streaming response copy from generic <code>streaming</code> to <code>echoing</code></li>
+</ul>
+</li>
+<li>Tool and thinking feedback:<ul>
+<li>added <code>ECHO TOOL</code> to active and completed tool-call rails</li>
+<li>replaced the broad generic thinking verb set with compact Orca/pod/proof-oriented verbs</li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>focused Ink UI tests, lint, build, release-evidence test, real CLI version smoke, scoped diff check, and full suite passed</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Optimization Delta - Pod Command Surface UI/UX</h2>
+<p>The command-surface optimization tranche is complete:</p>
+<ol>
+<li>Shared UI system:<ul>
+<li>made <code>PickerFrame.tsx</code> theme-aware so picker chrome uses Orca semantic tokens instead of a generic cyan default</li>
+<li>preserved existing sizing and caller override behavior</li>
+</ul>
+</li>
+<li>Command discovery:<ul>
+<li>reframed slash-command discovery as <code>POD COMMANDS</code></li>
+<li>added echo-filter copy and a persistent no-match state</li>
+</ul>
+</li>
+<li>Option and input UX:<ul>
+<li>moved <code>OptionPicker.tsx</code> selected rows, filter labels, descriptions, and scroll affordances onto theme tokens</li>
+<li>retuned the input placeholder and multiline hint toward pod briefing language</li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>focused Ink UI tests, lint, build, release-evidence test, real CLI version smoke, scoped diff check, and full suite passed</li>
+</ul>
+</li>
+</ol>
+<h2>2026-05-01 Optimization Delta - Cute Mascot UI/UX</h2>
+<p>Superseded on 2026-05-02 for startup Banner art: the independent mascot/icon block is removed. The pod-brief HomePanel language remains active.</p>
+<p>The mascot optimization tranche is complete:</p>
+<ol>
+<li>Logo system:<ul>
+<li>kept the Hermes-inspired structure of large wordmark plus state panel</li>
+<li>removed the later independent mascot/icon block from <code>Banner.tsx</code> after operator feedback</li>
+</ul>
+</li>
+<li>Entry UX:<ul>
+<li>renamed the primary entry panel to <code>POD BRIEF</code></li>
+<li>changed the copy toward friendly pod briefing while preserving one primary action, recovery, trust, and guardrail state</li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>focused Ink UI tests, lint, build, release-evidence test, real CLI version smoke, and full suite passed</li>
+</ul>
+</li>
+</ol>
+<h2>2026-04-30 Optimization Delta - Visual Identity</h2>
+<p>The visual optimization tranche is now complete:</p>
+<ol>
+<li>Identity:<ul>
+<li>shipped <code>Blackfin Signal</code> as the Orca default dark theme</li>
+<li>replaced generic startup art with an <code>ORCA-AGENT</code> block wordmark and clean startup deck</li>
+</ul>
+</li>
+<li>UI hierarchy:<ul>
+<li>turned the entry HomePanel into pod brief / pod signal / recover / guardrails sections</li>
+<li>preserved trust, session, model, tool, and recovery state as first-screen information</li>
+</ul>
+</li>
+<li>UX guardrails:<ul>
+<li>kept existing themes available</li>
+<li>avoided new dependencies and font bundling</li>
+<li>kept narrow-terminal rendering coherent</li>
+</ul>
+</li>
+<li>Verification:<ul>
+<li>focused Ink UI tests, lint, build, release-evidence test, real CLI version smoke, and full suite passed</li>
+<li><code>ai check</code> remains a tooling follow-up because the local checker hung without output</li>
+</ul>
+</li>
+</ol>
+<h2>2026-04-29 Optimization Delta - SOTA Swarm Audit</h2>
+<p>The next platform wave is now explicitly ordered:</p>
+<ol>
+<li>Trust hardening:<ul>
+<li>explicit project hook trust</li>
+<li>hook env allowlist</li>
+<li>approval-gated network tools</li>
+<li>private/loopback <code>fetch_url</code> guard</li>
+</ul>
+</li>
+<li>Queue visibility:<ul>
+<li>ship <code>orca queue list/show/follow/takeover/evidence/resume/schedule</code></li>
+<li>use lease state as the operator handoff point for concrete chat resume and background-job monitor plans</li>
+</ul>
+</li>
+<li>Unified execution contract:<ul>
+<li><code>run</code> default, goal-loop, mission, plan, and <code>serve /chat</code> now write canonical <code>WorkSession</code> / <code>TaskRun</code> records</li>
+<li>finish model routing and future background agents against the same record model now that <code>chat</code> REPL, <code>run</code>, and <code>serve /chat</code> write canonical records</li>
+</ul>
+</li>
+<li>Evidence console:<ul>
+<li><code>orca queue evidence</code> now opens TaskRun logs, diffs, data, reports, missing artifacts, and capped previews</li>
+<li><code>/evidence &lt;task-run-id&gt;</code> opens the same drawer model in the Ink <code>DetailPanel</code></li>
+<li>approval decisions now append to <code>TaskRun.approvals</code> and render before file evidence in both surfaces</li>
+</ul>
+</li>
+<li>Slash command surface:<ul>
+<li><code>src/slash-commands.ts</code> is now the shared registry for REPL completion, Ink picker, and <code>/help</code>; HomePanel hint metadata is prepared for the pending UI-baseline split</li>
+</ul>
+</li>
+<li>Chat transcript readability:<ul>
+<li>submitted Ink prompts now remain visible as highlighted <code>You</code> transcript blocks</li>
+<li>assistant markdown now renders inside structured <code>ORCA</code> response panels instead of raw transcript text</li>
+</ul>
+</li>
+<li>Release evidence:<ul>
+<li><code>verification_snapshot.json</code> plus <code>tests/release-evidence.test.ts</code> now guards README and active PDCA verification counts</li>
+</ul>
+</li>
+<li>Gate integrity:<ul>
+<li>CI now runs matrix sync, static, security, performance, and fast agent-eval gates</li>
+<li><code>agent-eval/manifests/test-matrix.json</code> is the manifest source for package entrypoints</li>
+</ul>
+</li>
+<li>Next platform tranche:<ul>
+<li>model-routing evidence and catalog SSoT</li>
+<li>replay-safe metadata for non-chat TaskRun resume</li>
+</ul>
+</li>
+</ol>
+<h2>Objective</h2>
+<p>Keep Orca CLI maintainable as a fast-moving CLI runtime while preventing drift across docs, command surfaces, and provider-routing behavior.</p>
+<h2>Current Optimization Targets</h2>
+<table>
 <thead>
 <tr>
 <th>Area</th>
@@ -43,6 +496,11 @@
 <td>Persist local logs and expose them through a simple CLI log surface</td>
 </tr>
 <tr>
+<td>Operator-wide hook ergonomics</td>
+<td>Personal hooks required per-project <code>.orca/hooks.json</code> duplication</td>
+<td>Load <code>~/.orca/hooks.json</code> as a global native hook source</td>
+</tr>
+<tr>
 <td>Health-check ergonomics</td>
 <td>Runtime state required manual inspection across config, hooks, MCP, and sessions</td>
 <td>Add a single doctor-style command for local diagnostics</td>
@@ -66,6 +524,11 @@
 <td>REPL interaction ergonomics</td>
 <td>Slash autocomplete can hijack Enter after arguments begin, and theme onboarding can ignore persisted choice</td>
 <td>Keep autocomplete token-scoped and honor saved theme preference before showing first-launch UI</td>
+</tr>
+<tr>
+<td>Debugging reflection ergonomics</td>
+<td>Standard chat can jump too quickly from symptom to rewrite</td>
+<td>Add explicit <code>reflect</code> surfaces plus conservative auto-triggering that restructures debugging/explanation asks into evidence-backed diagnosis</td>
 </tr>
 <tr>
 <td>Command/document parity</td>
@@ -98,7 +561,8 @@
 <td>Regenerate planning/architecture HTML companions from the canonical <code>.md</code> source</td>
 </tr>
 </tbody></table>
-<h2 id="planned-improvements">Planned Improvements</h2><ol>
+<h2>Planned Improvements</h2>
+<ol>
 <li>Migrate future architecture/product updates into the initiative docs instead of adding new flat docs.</li>
 <li>Keep provider/model/tool count claims sourced from code or explicitly dated when narrative docs summarize them.</li>
 <li>Add release-time doc verification to ensure README and canonical docs stay aligned with command registration.</li>
@@ -106,8 +570,52 @@
 <li>Move active test-growth goals out of historical flat docs and into PDCA + <code>AGENT_EVAL_PLAN.md</code>.</li>
 <li>Grow the quality program by matrix lane so count increases stay tied to signal and ownership.</li>
 <li>Keep release evidence under <code>agent-eval/runs/&lt;run_id&gt;/</code> so build / bench / black-box / CLI journey data stay reviewable after the terminal session ends.</li>
+<li>Keep reflect heuristics conservative, deduped, and documented so prompt-intent routing stays helpful rather than noisy.</li>
 </ol>
-<h2 id="sota-competitive-program-2026-04-20">SOTA Competitive Program (2026-04-20)</h2><p>Highest-value experience gaps after the new report are session lifecycle productization, approval / trust UX, inspect-and-act detail surfaces, remote / IDE / web continuity, and workflow preset packaging.</p><p>Wave 1 progress now landed:</p><ul>
+<h2>SOTA Competitive Program (2026-04-20)</h2>
+<p>Canonical competitive source:</p>
+<ul>
+<li><code>doc/00_project/initiative_orca/SOTA_EXPERIENCE_GAP_REPORT.md</code></li>
+</ul>
+<p>Highest-value experience gaps after the new report:</p>
+<ol>
+<li>Session lifecycle productization<ul>
+<li>missing: fork/share/export/import/handoff/inspect</li>
+<li>strongest references: Codex, Amp, OpenCode</li>
+</ul>
+</li>
+<li>Approval / trust UX clarity<ul>
+<li>missing: explicit top-level policy control + richer review panel</li>
+<li>strongest references: Claude Code, Codex, Amp</li>
+</ul>
+</li>
+<li>Inspect-and-act detail surfaces<ul>
+<li>missing: selected-item detail panels for search results</li>
+<li>strongest references: frontier IDE/CLI hybrids</li>
+</ul>
+</li>
+<li>Remote / IDE / web continuity<ul>
+<li>missing: platform-grade serve/web/IDE bridge story</li>
+<li>strongest references: Codex, OpenCode, Claude Code, GitHub Copilot ecosystem</li>
+</ul>
+</li>
+<li>Workflow preset packaging<ul>
+<li>missing: clearer “review/debug/ship/research/quick assist” operating lanes</li>
+<li>strongest references: Claude Code, Kilo Code</li>
+</ul>
+</li>
+</ol>
+<p>Execution order:</p>
+<ul>
+<li>Wave 0: picker/search-picker/operator shell unification — landed</li>
+<li>Wave 1: session lifecycle productization — started</li>
+<li>Wave 2: approval / trust UX — started</li>
+<li>Wave 3: workflow presets — started</li>
+<li>Wave 4: remote / IDE / web continuity</li>
+<li>Wave 5: performance instrumentation and operator evidence</li>
+</ul>
+<p>Wave 1 progress now landed:</p>
+<ul>
 <li><code>orca session fork</code></li>
 <li><code>orca session export</code></li>
 <li><code>orca session import</code></li>
@@ -121,9 +629,10 @@
 <li><code>/thread handoff</code></li>
 <li>session/thread share flows now emit metadata sidecars</li>
 <li>session handoff now emits a dedicated handoff artifact bundle</li>
-<li>thread handoff now emits a dedicated handoff artifact bundle</li>
-</ol>
-<p>Wave 2 progress now landed:</p><ul>
+<li>handoff now emits a dedicated handoff artifact bundle</li>
+</ul>
+<p>Wave 2 progress now landed:</p>
+<ul>
 <li>top-level <code>orca permissions</code> command for inspecting and persisting approval mode</li>
 <li><code>/permissions</code> slash surface for live session mode changes and persistence</li>
 <li>Ink <code>/permissions</code> detail panel + picker for live mode switching and project/global saves</li>
@@ -140,23 +649,29 @@
 <li>runtime mapping now honors persisted config instead of relying only on <code>--safe</code></li>
 <li><code>plan</code> mode now requests approval for every tool call</li>
 <li>permission prompts now support <code>once</code> / <code>session</code> / <code>project</code> scopes</li>
+<li>status/footer surfaces now display where the current permission mode comes from</li>
 </ul>
-<p>Wave 3 progress now landed:</p><ul>
-<li>top-level explicit workflow preset commands:</li>
+<p>Wave 3 progress now landed:</p>
+<ul>
+<li>top-level explicit workflow preset commands:<ul>
 <li><code>orca review</code></li>
 <li><code>orca debug</code></li>
 <li><code>orca architect</code></li>
+</ul>
+</li>
 <li>presets currently reuse existing built-in modes through <code>createChatCommand({ initialModeId })</code></li>
-<li>this gives Orca a first workflow-packaging surface without introducing a second preset framework</li>
+<li>this gives Orca a first explicit workflow-packaging surface without introducing a second preset framework</li>
 <li><code>/mode</code> picker descriptions now summarize what each workflow profile changes</li>
-<li>workflow preset registry now carries structured default policy fields (<code>effort</code>, <code>permission mode</code>)</li>
 <li>preset command metadata now resolves from one registry instead of scattered command-local strings</li>
+<li>workflow preset registry now carries structured default policy fields (<code>effort</code>, <code>permission mode</code>)</li>
 <li>preset-backed mode switches now apply default effort / permission policy at runtime</li>
+<li><code>/mode</code> picker now surfaces preset policy defaults directly in the operator UI</li>
 <li>startup and <code>/mode</code> switching now share one preset-policy application path</li>
 <li>status surfaces now expose the active workflow policy combination</li>
 <li>workflow preset registry now also carries <code>tool policy</code> and <code>output style</code></li>
-<li><code>/status</code> and live status surfaces now also expose <code>model policy</code></li>
+<li><code>/status</code> now exposes those extra policy dimensions</li>
 <li>live status surfaces now show compact tool/output summaries when available</li>
+<li><code>/status</code> and live status surfaces now also expose <code>model policy</code></li>
 <li>startup helper now composes the initial system prompt from the same preset contract used by <code>/mode</code></li>
 <li>proxy tool runtime now enforces the active mode whitelist instead of relying only on prompt text</li>
 <li>session effort / preset default effort now maps into proxy <code>reasoning_effort</code> (<code>max</code> → <code>xhigh</code>)</li>
@@ -164,71 +679,200 @@
 <li>non-interactive permission prompts now fail closed instead of silently approving</li>
 <li>SDK-backed REPL turns now consume the composed session prompt plus mapped permission mode</li>
 </ul>
-<h2 id="2026-04-21-sota-sop-benchmark-conclusions">2026-04-21 SOTA SOP Benchmark Conclusions</h2><p>Benchmark set:</p><ul>
+<h2>REPL Multimodal Completion (2026-04-20)</h2>
+<h3>Completed</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Change</th>
+<th>Impact</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MM-R1</td>
+<td>Detect embedded image paths in REPL prompts</td>
+<td>screenshots can be attached without <code>--image</code></td>
+<td>DONE</td>
+</tr>
+<tr>
+<td>MM-R2</td>
+<td>Support multiple image attachments in a single turn</td>
+<td>compare/reference multi-image workflows now work in REPL</td>
+<td>DONE</td>
+</tr>
+<tr>
+<td>MM-R3</td>
+<td>Preserve multimodal user turns in proxy history</td>
+<td>follow-up questions can still reference the attached images</td>
+<td>DONE</td>
+</tr>
+</tbody></table>
+<h3>Remaining</h3>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Current State</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Clipboard image paste</td>
+<td>still unsupported in ink REPL</td>
+<td>user must reference local image files for now</td>
+</tr>
+</tbody></table>
+<h2>2026-04-21 SOTA SOP Benchmark Conclusions</h2>
+<p>Benchmark set:</p>
+<ul>
 <li>Claude Code</li>
 <li>OpenAI Codex</li>
 <li>Amp</li>
 <li>OpenCode</li>
 <li>Cursor</li>
 <li>GitHub Copilot coding agent</li>
-</ul><p>Cross-product SOP pattern:</p><ol>
+</ul>
+<p>Cross-product SOP pattern:</p>
+<ol>
 <li>durable session / thread object</li>
 <li>detached or remote execution lane</li>
 <li>explicit approval / review gate</li>
 <li>resumable handoff back into terminal / IDE / PR</li>
 <li>visible evidence surface: logs, queue state, usage, timeline, or share link</li>
-</ol><p>What this means for Orca:</p><ul>
+</ol>
+<p>What this means for Orca:</p>
+<ul>
 <li>Wave 3 is now relatively mature compared with the market on workflow packaging and trust clarity.</li>
 <li>Orca’s biggest remaining product gap is Wave 4 continuity, not another round of naming or picker polish.</li>
 <li>The next roadmap should therefore focus on async continuity and evidence surfaces, not just more command aliases.</li>
-<li>The swarm audit further tightened that into a concrete delivery order: trust-default and executor unification, canonical <code>WorkSession</code> / <code>TaskRun</code> objects, async queue + take-over, then the evidence console.</li>
-</ul><p>Re-prioritized next steps:</p><ol>
-<li><strong>Wave 4a — Session Continuity</strong>: durable session ids across terminal / web / IDE; resumable handoff from headless/server runs back into local REPL; shareable session URLs or hosted session views</li>
-<li><strong>Wave 4b — Async Agent Queue</strong>: visible background/remote task list; resumable take-over; queue item detail panel with logs/artifacts; `orca queue evidence` now covers the CLI drawer</li>
-<li><strong>Wave 4c — Evidence Console</strong>: timeline of tool calls / approvals / artifacts / diffs; operator-first review surface before apply/merge</li>
-<li><strong>Wave 4d — Trust Hardening</strong>: safer default approval posture; shared policy executor across REPL / MCP / serve; transcript/share redaction and stronger artifact permissions</li>
-<li><strong>Wave 5 — Performance / Metrics</strong>: admin/operator metrics once the continuity surfaces exist</li>
-</ol><p>Wave 4a progress now started:</p><ul>
+<li>The swarm audit further tightened that into a concrete delivery order:<ol>
+<li>trust-default and executor unification</li>
+<li>canonical <code>WorkSession</code> / <code>TaskRun</code> objects</li>
+<li>async queue + take-over surface</li>
+<li>evidence console and richer review-before-apply bundles</li>
+</ol>
+</li>
+</ul>
+<p>Re-prioritized next steps:</p>
+<ol>
+<li><strong>Wave 4a — Session Continuity</strong><ul>
+<li>durable session ids across terminal / web / IDE</li>
+<li>resumable handoff from headless/server runs back into local REPL</li>
+<li>shareable session URLs or hosted session views</li>
+</ul>
+</li>
+<li><strong>Wave 4b — Async Agent Queue</strong><ul>
+<li>visible background/remote task list</li>
+<li>resumable take-over</li>
+<li>queue item detail panel with logs/artifacts</li>
+</ul>
+</li>
+<li><strong>Wave 4c — Evidence Console</strong><ul>
+<li>timeline of tool calls / approvals / artifacts / diffs</li>
+<li>operator-first review surface before apply/merge</li>
+</ul>
+</li>
+<li><strong>Wave 4d — Trust Hardening</strong><ul>
+<li>safer default approval posture</li>
+<li>shared policy executor across REPL / MCP / serve</li>
+<li>transcript/share redaction and stronger artifact permissions</li>
+</ul>
+</li>
+<li><strong>Wave 5 — Performance / Metrics</strong><ul>
+<li>admin/operator metrics once the continuity surfaces exist</li>
+</ul>
+</li>
+</ol>
+<p>Wave 4a progress now started:</p>
+<ul>
 <li>stable REPL <code>sessionId</code></li>
 <li><code>/status</code> and live status surfaces now expose the active session id</li>
 <li>CLI resume now supports exact durable objects through <code>orca -c &lt;id&gt;</code></li>
-<li><code>orca serve</code> now exposes <code>GET /sessions</code> and <code>GET /sessions/latest</code></li>
-<li><code>orca serve</code> now exposes <code>GET /sessions/:id</code></li>
-<li>this establishes a headless continuity discovery layer before richer hosted/web take-over flows</li>
-<li>continuity metadata is intentionally treated as trusted-local surface: no wildcard CORS, and session-discovery endpoints are loopback-only</li>
-<li>trust hardening has now started: legacy config <code>default</code> resolves to safer REPL <code>auto</code>, non-loopback <code>serve</code> now requires <code>ORCA_SERVE_TOKEN</code>, and a shared policy executor now covers normal chat tools plus MCP tool execution.</li>
+<li><code>orca serve</code> now exposes:<ul>
+<li><code>GET /sessions</code></li>
+<li><code>GET /sessions/latest</code></li>
+<li><code>GET /sessions/:id</code></li>
 </ul>
-<h2 id="2026-04-21-layered-test-matrix-snapshot">2026-04-21 Layered Test Matrix Snapshot</h2><p>Established evidence-backed layers:</p><ol>
-<li>Static:
-<code>npm run lint</code>, <code>npm run build</code>, dependency/license inventory, heuristic secret scan</li>
-<li>Unit:
-targeted Vitest module suites</li>
-<li>Contract:
-protocol / command-contract / manifest tests</li>
-<li>Integration:
-runtime / session / provider / MCP tests</li>
-<li>E2E:
-workflow and mission tests</li>
-<li>Security:
-adversarial/context/permission regressions plus <code>npm audit --omit=dev --json</code></li>
-<li>Performance:
-<code>orca bench --json</code> plus bench regression tests</li>
-<li>Resilience:
-provider-stream / agent-loop / retry-recovery suites</li>
-<li>AI Eval:
-<code>npm run eval:fast</code></li>
-</ol><p>Repo-native entrypoints now exist for those layers via <code>test:static</code>, <code>test:unit</code>, <code>test:contract</code>, <code>test:integration</code>, <code>test:e2e</code>, <code>test:security</code>, <code>test:resilience</code>, <code>test:performance</code>, <code>test:ai-eval-fast</code>, and <code>test:matrix</code>. The layer metadata now lives in <code>agent-eval/manifests/test-matrix.json</code>, the package scripts are thin wrappers around the runner, the manifest now uses typed <code>steps[].argv</code> entries so the runner no longer needs <code>shell=True</code>, the matrix runner is hardened against path-traversal run ids, and the secret scan no longer follows symlinks outside the repo root.</p><p>Still-missing institutional gates:</p><ul>
+</li>
+<li>this establishes a headless continuity discovery layer before richer hosted/web take-over flows</li>
+<li><code>orca run</code> now writes TaskRun records for default, goal-loop, mission, and plan branches, so queue inspection can see status, summary, usage, and mission-state evidence</li>
+<li><code>orca chat</code> REPL now writes per-prompt TaskRun records under the active chat WorkSession, so queue inspection can see interactive turn status and usage</li>
+<li><code>orca queue resume</code> now claims a resume lease and prints the saved-session continuation command for chat TaskRuns</li>
+<li><code>orca queue schedule</code> now selects the next unleased resumable or monitorable TaskRun instead of treating leases as passive metadata</li>
+<li>continuity metadata is intentionally treated as trusted-local surface:<ul>
+<li>no wildcard CORS</li>
+<li>session-discovery endpoints are loopback-only</li>
+</ul>
+</li>
+<li>trust hardening has now started:<ul>
+<li>legacy config <code>default</code> resolves to safer REPL <code>auto</code></li>
+<li>non-loopback <code>serve</code> now requires <code>ORCA_SERVE_TOKEN</code></li>
+<li>shared policy executor now covers normal chat tools and MCP tool execution</li>
+</ul>
+</li>
+</ul>
+<h2>2026-04-21 Layered Test Matrix Snapshot</h2>
+<p>Established evidence-backed layers:</p>
+<ol>
+<li>Static:<ul>
+<li><code>npm run lint</code></li>
+<li><code>npm run build</code></li>
+<li>dependency/license inventory</li>
+<li>heuristic secret scan</li>
+</ul>
+</li>
+<li>Unit:<ul>
+<li>targeted Vitest module suites</li>
+</ul>
+</li>
+<li>Contract:<ul>
+<li>protocol / command-contract / manifest tests</li>
+</ul>
+</li>
+<li>Integration:<ul>
+<li>runtime / session / provider / MCP tests</li>
+</ul>
+</li>
+<li>E2E:<ul>
+<li>workflow and mission tests</li>
+</ul>
+</li>
+<li>Security:<ul>
+<li>adversarial/context/permission regressions</li>
+<li><code>npm audit --omit=dev --json</code></li>
+</ul>
+</li>
+<li>Performance:<ul>
+<li><code>orca bench --json</code></li>
+<li>bench regression tests</li>
+</ul>
+</li>
+<li>Resilience:<ul>
+<li>provider-stream / agent-loop / retry-recovery suites</li>
+</ul>
+</li>
+<li>AI Eval:<ul>
+<li><code>npm run eval:fast</code></li>
+</ul>
+</li>
+</ol>
+<p>The layer metadata now lives in <code>agent-eval/manifests/test-matrix.json</code>, and <code>test:*</code> package scripts are thin wrappers around the matrix runner.
+That manifest now uses typed <code>steps[].argv</code> entries, so <code>run-test-matrix.py</code> executes repo-owned layer commands without <code>shell=True</code>.</p>
+<p>Still-missing institutional gates:</p>
+<ul>
 <li>dedicated formatter gate</li>
 <li>dead-code gate</li>
 <li>policy-grade license checker</li>
 <li>dedicated SAST / DAST / IaC / ASVS smoke</li>
 <li>true p95 / throughput / memory budget harness</li>
 </ul>
-<h2 id="guardrails">Guardrails</h2><ul>
+<h2>Guardrails</h2>
+<ul>
 <li>No backward-compatibility shims for obsolete surfaces</li>
 <li>No mock-only validation</li>
 <li>No manual edits in <code>dist/</code></li>
 <li>No new dependency added without explicit request</li>
 </ul>
-<section><h2>2026-04-29 平台优化增量</h2><p>平台波次重排为：信任边界硬化、队列可观测性、统一执行契约、证据控制台、slash command surface、chat transcript readability、release evidence、Gate integrity、scheduler/resume。当前已经完成 project hook 显式信任、hook env allowlist、网络工具审批、<code>fetch_url</code> 私网阻断、<code>orca queue list/show/follow/takeover/evidence/resume/schedule</code>，<code>serve /chat</code>、<code>orca run</code> default / goal-loop / mission / plan 以及 <code>orca chat</code> REPL turn 的 canonical <code>WorkSession</code> / <code>TaskRun</code> 写入，Ink <code>/evidence</code> 对共享 TaskRun evidence drawer 的会话内打开，审批时间线写入 <code>TaskRun.approvals</code> 并在文件证据前展示，Ink submitted prompt 高亮块与 structured assistant response panel，<code>src/slash-commands.ts</code> 对 completion、Ink picker 和 <code>/help</code> 的统一供给，<code>verification_snapshot.json</code> 对 README / active PDCA evidence 的守门，以及 GitHub Actions <code>gate-integrity</code> job 对 matrix/security/performance/eval gates 的执行。HomePanel metadata 已准备但消费端等待 UI baseline 拆分。下一步进入模型路由证据、catalog SSoT 与非 chat replay metadata。</p></section>
 </article></main></body></html>

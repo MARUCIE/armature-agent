@@ -194,6 +194,13 @@ async function handleSpecialProxyTool(params: ProxyToolCallParams): Promise<Tool
     )
 
     console.log(`\x1b[90m  sub-agent done (${(result.duration / 1000).toFixed(1)}s, ${result.tokensUsed} tokens)\x1b[0m`)
+    await hooks.run('SubagentStop', {
+      event: 'SubagentStop',
+      cwd,
+      model: resolved.model,
+      toolOutput: result.output,
+      toolSuccess: result.success,
+    })
     return { success: result.success, output: result.output }
   }
 

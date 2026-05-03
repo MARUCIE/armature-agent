@@ -1,5 +1,190 @@
 # Orca CLI PRD
 
+## 2026-05-03 Update - Markdown Artifact Write Integrity
+
+New product requirements from the local Markdown content-regression report:
+
+- When Orca generates a requested `.md` file, the file body must contain the requested artifact content, not the assistant's conversational save confirmation or chat transcript.
+- False-save repair may write a missing file only when it can extract a real artifact body from fenced Markdown, explicit content markers, or Markdown-like document structure.
+- If a model claims a file was saved but returns only conversational text, Orca must not create a polluted `.md` file from that conversation.
+- The system prompt must explicitly tell providers that `write_file.content` is the final file body only, not assistant chatter or instructions.
+- Regression tests must cover fenced Markdown extraction, save-claim stripping, and refusal/no-artifact non-repair.
+
+## 2026-05-02 Update - Tool-Call Continuity and Blackfin Mark
+
+New product requirements from the long-session local-file regression and visual identity follow-up:
+
+- Every streamed provider turn must carry the current Orca system prompt even when chat history already exists, so tool-use rules do not silently decay in long REPL sessions.
+- If a user asks Orca to create, save, verify, locate, or open a local file, Orca must use `write_file`, `read_file`, `file_info`, or `open_file` before claiming the task is impossible.
+- Local file requests must not rely on prompt discipline alone: REPL turns must intercept obvious read/write/open intents before sending to the model, and streamed proxy turns must repair false "saved to path" claims when no file tool actually ran.
+- A missing file that Orca previously claimed to save must be reconstructed from the chat transcript and opened with `open_file` when the operator asks to open it.
+- Tool-call regressions must be part of the canonical large-scale test matrix through a dedicated `tool-calls` layer, covering built-in tools, proxy tool loops, MCP routing, MCP cleanup, multimodal/OpenAI-compatible prompt assembly, and local-file system-prompt rules.
+- The startup visual identity must keep the Hermes-style lesson of a dominant wordmark, skin/theme-aware colors, and status deck, while avoiding any separate mascot/icon/hero art in the first frame.
+- The startup banner must retain the dominant `ORCA-AGENT` wordmark and `Blackfin Signal` state deck, and must not render the rejected independent Orca hero/icon block.
+
+## 2026-05-02 Update - Model Catalog SSoT Runtime Consolidation
+
+New product requirements from the model-routing evidence tranche:
+
+- Orca must keep model context windows, max output defaults, pricing, and display capacity labels in one canonical metadata source.
+- `/model`, `/models`, `orca providers`, token budget accounting, OpenAI-compatible provider request defaults, startup provider info, and usage cost summaries must not maintain separate metadata tables.
+- Unknown models must still use conservative runtime fallbacks without adding compatibility branches for old duplicated tables.
+- Regression coverage must fail if runtime consumers reintroduce their own `MODEL_CONTEXT`, `MODEL_CONTEXT_WINDOW`, `MODEL_MAX_OUTPUT`, or `MODEL_PRICING` tables.
+
+## 2026-05-02 Update - Terminal Operability Hardening
+
+New product requirements from the copyability / tool-cwd regression report:
+
+- Orca's default Ink UI must keep normal terminal scrollback copyable, matching the practical behavior operators expect from Claude Code.
+- Fullscreen/no-flicker alternate-screen rendering must be opt-in through `ORCA_TUI=fullscreen`, `ORCA_NO_FLICKER=1`, `ORCA_ALT_SCREEN=1`, or Claude Code compatible `CLAUDE_CODE_NO_FLICKER=1`.
+- Mouse tracking must be opt-in through `ORCA_MOUSE=1` so terminal text selection is not captured by the app by default.
+- `orca chat` must resolve a stable workspace cwd from explicit `--cwd`, `ORCA_CWD`, `ORCA_PROJECT_DIR`, the ambient project cwd, or the last remembered project workspace.
+- Root `orca --cwd <dir>` must forward the cwd into `orca chat` so launcher aliases and menu wrappers can pass a project directory without naming the subcommand.
+- MCP tool routing must support server names containing underscores and hyphens, including Codex/OMX-style names such as `omx_code_intel`.
+- Orca must include a first-class `open_file` tool for visually opening local Markdown/PDF/image files with the OS default app, while `read_file` remains the contents-reading tool.
+- `open_file` must be treated as a dangerous tool for approval policy because it launches an external application.
+
+## 2026-05-03 Update - Claude-Style No-Flicker TUI
+
+New product requirements from the Claude Code fullscreen/no-flicker research follow-up:
+
+- Orca must keep copyable primary-buffer rendering as the default.
+- Orca must expose an explicit Claude-style no-flicker fullscreen mode for operators who see terminal repaint flashes in VS Code, tmux, or iTerm2.
+- The no-flicker mode must switch to the terminal alternate buffer before Ink paints its first frame.
+- The no-flicker mode must reduce render pressure during long conversations by limiting the rendered block tree to recent visible history.
+- The no-flicker mode must preserve normal copyability by keeping mouse capture disabled unless `ORCA_MOUSE=1` is set.
+
+## 2026-05-02 Update - Rubber Duck Critique Quality Gate
+
+New product requirements from the local AI coding CLI research report:
+
+- Orca must expose `orca critique` as a first-class read-only Rubber Duck Critique gate, separate from `orca reflect`.
+- `reflect` remains the Socratic debugging/root-cause workflow; `critique` challenges a plan, diff, test output, and risk assumptions before the main agent continues.
+- The critique gate must support checkpoints: `after_plan`, `after_complex_implementation`, `before_test_execution`, `stuck_loop`, and `manual`.
+- The gate must compute a risk score from diff line count, changed file count, critical-path risk, repeated-failure risk, security/data sensitivity, and user uncertainty.
+- Manual critiques always run; high-risk plan/implementation checkpoints trigger at `0.65`; test and stuck-loop checkpoints trigger at `0.45`.
+- The reviewer prompt must be read-only and must require structured JSON findings with severity, category, file/line, claim, evidence, suggested fix, confidence, and `requires_user_decision`.
+- The command must support deterministic `--dry-run --json` output so local validation does not require live model credentials.
+- The default reviewer choice should prefer a complementary model family to the active model where possible.
+- `orca chat` must expose `/critique` as a local read-only inspection so operators can check the same gate without leaving the active session.
+- Slash critique output must show checkpoint, reviewer choice, risk score, changed file count, diff line count, and changed files without calling a model.
+- Normal `orca chat` turns must perform a lightweight local dirty-diff risk check before sending, and recommend `/critique --checkpoint after_complex_implementation` once per high-risk diff signature.
+- One-shot `orca chat "prompt"` must use the same local pre-send risk check in streaming mode so operators get the warning whether they use REPL or one-shot chat.
+- Automatic critique hints must remain read-only and model-free; they must not change the user prompt, block execution, or mutate the workspace.
+- `orca chat --json` must not emit automatic critique hints into machine-readable output.
+- Operators must be able to disable or tune the automatic local hint per session through `--no-auto-critique` and `--auto-critique-threshold <score>`, with `ORCA_AUTO_CRITIQUE` and `ORCA_AUTO_CRITIQUE_THRESHOLD` still available for process-wide defaults.
+
+## 2026-05-01 Update - Pod Helm Footer UI/UX Tranche
+
+New product requirements from the helm-footer UI/UX pass:
+
+- The persistent Footer must read as Orca pod helm guidance, not generic CLI shortcut copy.
+- The footer must start with `POD HELM` while preserving context-aware shortcut visibility.
+- Generating state must keep `esc` visible and explain it as `interrupt echo`.
+- Active input state must preserve `enter`, `ctrl+j`, `/help`, and `shift+tab` hints while using pod-oriented labels such as `send brief` and `pod commands`.
+- Footer rendering must avoid incoherent wrapping on ordinary-width terminals by keeping core hints compact and only showing lower-priority hints when width allows.
+- Footer colors must resolve through theme semantic tokens instead of dim-only terminal styling.
+- The tranche must not change shortcut behavior, input submission, permission-mode behavior, or add dependencies.
+
+## 2026-05-01 Update - Pod Council Runway UI/UX Tranche
+
+New product requirements from the council-runway UI/UX pass:
+
+- Live multi-model progress must read as Orca pod intelligence, not a generic model list.
+- The progress header must start with `POD COUNCIL` while preserving the active command name.
+- The model count must remain visible as coordinated pod voices.
+- Completed model rows must indicate surfaced output while keeping model name and elapsed time visible.
+- Active model rows must indicate sonar progress while keeping model name and elapsed time visible.
+- Progress colors must resolve through theme semantic tokens instead of hard-coded terminal colors.
+- The tranche must not change `ModelProgress`, council/race/pipeline runtime behavior, spinner dependency behavior, or add dependencies.
+
+## 2026-05-01 Update - Pod Evidence Drawer UI/UX Tranche
+
+New product requirements from the evidence-drawer UI/UX pass:
+
+- Detail panels must read as an Orca evidence surface, not a generic detail box.
+- The rendered title must start with `EVIDENCE DRAWER` while keeping the original detail title visible.
+- Existing subtitles must remain visible and gain compact `pod scan` context.
+- Detail panel info/warn/error tones must resolve through theme semantic tokens instead of hard-coded terminal colors.
+- Markdown body rendering must remain unchanged.
+- The tranche must not change `DetailPanelInfo`, slash-command behavior, evidence body formatting, markdown parsing, or add dependencies.
+
+## 2026-05-01 Update - Pod Trust Gate UI/UX Tranche
+
+New product requirements from the trust-gate UI/UX pass:
+
+- Permission prompts must read as an Orca pod trust boundary, not a generic approval modal.
+- The approval title must start with `TRUST GATE` while keeping the tool name visible.
+- Tool preview must remain visible under a compact `SCAN` label before any allow/deny decision.
+- Approval choices must preserve allow once, allow session, allow project, and deny semantics while using clearer trust-scope copy.
+- Keyboard behavior must remain unchanged for `y`, `n`, `1-4`, arrows, Enter, and Esc.
+- Write diff previews must read as `ECHO DIFF` while preserving file path, add/remove counts, line numbers, truncation, and diff content.
+- The tranche must not change permission policy, approval keybindings, diff algorithm, runtime event model, or add dependencies.
+
+## 2026-05-01 Update - Pod Proof Wake UI/UX Tranche
+
+New product requirements from the proof-wake UI/UX pass:
+
+- Post-turn summaries must belong to the Orca pod visual system, not use internal shorthand such as `r`, `d`, and `u`.
+- Each completed response must leave a compact `PROOF WAKE` summary.
+- The summary must preserve elapsed time, input token count, output token count, tool-call count, cost, and output throughput.
+- The tranche must not change `TurnSummaryInfo`, usage accounting, event payloads, or provider/runtime behavior.
+
+## 2026-05-01 Update - Pod Status Rail UI/UX Tranche
+
+New product requirements from the status-rail UI/UX pass:
+
+- The fixed bottom status bar must carry the Orca pod identity as strongly as the banner, home panel, pickers, and transcript.
+- Status line 1 must keep `ORCA POD`, model, context bar / percentage, and git branch visible, while labeling context as sonar load on ordinary-width terminals.
+- Status line 2 must read as a `signal:` rail when stats are present, while preserving cost, throughput, turns, session id, model policy, tool policy, output style, and sparkline evidence.
+- Status line 3 must read as a `trust:` rail while preserving permission mode, permission source, behavior mode, effort, and shift-tab cycling guidance.
+- The tranche must not change the status data shape, permission behavior, footer shortcuts, or runtime event model.
+
+## 2026-05-01 Update - Pod Transcript Flow UI/UX Tranche
+
+New product requirements from the transcript-flow UI/UX pass:
+
+- The live transcript must carry the Orca pod identity, not only the startup banner and picker surfaces.
+- Submitted user prompts must render as `POD BRIEF` blocks while preserving the exact prompt text.
+- Assistant responses must render as `ORCA POD` panels and continue to convert markdown headings, bullets, inline code, and emphasis into structured terminal text.
+- Streaming assistant responses must use Orca-specific state copy instead of generic `streaming`.
+- Tool-call rails must show an Orca scan label while preserving tool name, path/argument summary, result state, duration, and error preview.
+- Thinking state must use a compact Orca/pod/proof-oriented verb set instead of generic playful status verbs.
+
+## 2026-05-01 Update - Pod Command Surface UI/UX Tranche
+
+New product requirements from the command-surface UI/UX pass:
+
+- High-frequency operation surfaces must carry the Orca pod identity, not only the startup banner.
+- The shared picker frame must use theme semantic tokens instead of generic hard-coded cyan/yellow styling in the changed surfaces.
+- Slash-command discovery must present as `POD COMMANDS`, expose `echo filter` feedback, and remain visible with a clear no-match state.
+- Option selection must use Orca theme tokens for selected rows, filter labels, descriptions, and scroll affordances while preserving quick-pick behavior.
+- The input placeholder and multiline hint must use pod-brief language without changing input submission, history, paste, or cursor semantics.
+- Focused Ink tests must guard the new picker title, filter copy, no-match state, and input placeholder.
+
+## 2026-05-01 Update - Cute Orca Mascot UI/UX Tranche
+
+Superseded on 2026-05-02 for the startup Banner: Orca no longer renders a separate mascot/icon/hero block on startup. The surviving requirements from this tranche are the pod-brief first input surface and Orca-owned HomePanel language.
+
+New product requirements from the mascot UI/UX pass:
+
+- The startup logo must learn Hermes Agent's structure, not its content: large product wordmark plus status-rich startup panel.
+- The first input surface must use friendly pod briefing language: `POD BRIEF` as the primary intent panel, `POD SIGNAL` for trust/model/session/tool state, and existing recovery/guardrail affordances.
+- Regression tests must assert the clean startup deck and first-screen copy so future edits do not regress to abstract ocean marks, mascot blocks, or generic command onboarding.
+
+## 2026-04-30 Update - Orca Visual System Tranche
+
+New product requirements from the Hermes-inspired visual system pass:
+
+- Orca's first terminal frame must be recognizably Orca, not a generic cyan coding CLI.
+- Hermes Agent is a reference for recognition mechanics: large wordmark, one memorable symbol, semantic skin tokens, compact fallback, and content-first startup information.
+- Orca must not copy Hermes's caduceus or exact gold-only identity; the shipped direction is `Blackfin Signal`, a killer-whale pod system.
+- Default dark theme must resolve to semantic Orca tokens: blackfin / foam contrast, amber echolocation signal, brass, reef, kelp, coral, and deep border states.
+- Startup banner must show the `ORCA-AGENT` wordmark, model, cwd, trust, config, session, and fleet state without a separate mascot/icon block.
+- HomePanel must stay operational: one pod brief input path, visible trust / mode / model / session / tools state, recovery paths, and guardrails.
+- ThemePicker and StatusBar must name the new default identity while preserving existing alternate themes.
+- No new font or rendering dependency is allowed; terminal font guidance lives in the visual system plan.
+
 ## 2026-04-29 Update - SOTA Swarm Audit Tranche
 
 New product requirements from the SOTA swarm audit:

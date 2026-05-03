@@ -5,8 +5,8 @@
  * Dark/light mode auto-detection via COLORFGBG or ORCA_THEME env var.
  * Components use useTheme() to get the current theme's semantic colors.
  *
- * Themes: default (cyan/dark), light (cyan/light), dark (green/dark),
- *         ocean (blue/dark), warm (yellow/dark), mono (white/dark)
+ * Themes: orca (blackfin amber/ocean), default (cyan/dark), light (cyan/light),
+ *         dark (green/dark), ocean (blue/dark), warm (yellow/dark), mono (white/dark)
  */
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react'
@@ -112,6 +112,37 @@ function darkTheme(name: string, accent: string, accentDim: string, prompt: stri
   }
 }
 
+function orcaTheme(): InkTheme {
+  return {
+    name: 'orca', mode: 'dark',
+    accent: '#F6C945',
+    accentDim: '#B8792F',
+    prompt: '#F6C945',
+    success: '#72A276',
+    error: '#E45A3C',
+    warning: '#F6A63A',
+    info: '#9DB2BF',
+    text: '#E8E2D0',
+    dim: '#9DB2BF',
+    muted: '#6F7F89',
+    border: '#F6C945',
+    borderDim: '#3A4750',
+    statusBg: '#B8792F',
+    tool: '#F6A63A',
+    model: '#47BFB0',
+    filePath: '#84D2C6',
+    code: '#E8E2D0',
+    diffAdd: '#72A276',
+    diffRemove: '#E45A3C',
+    diffContext: '#9DB2BF',
+    permAllow: '#72A276',
+    permDeny: '#E45A3C',
+    ctxGreen: '#72A276',
+    ctxYellow: '#F6A63A',
+    ctxRed: '#E45A3C',
+  }
+}
+
 function lightTheme(name: string, accent: string, accentDim: string, prompt: string): InkTheme {
   return {
     name, mode: 'light',
@@ -127,6 +158,7 @@ function lightTheme(name: string, accent: string, accentDim: string, prompt: str
 }
 
 const THEMES: Record<string, InkTheme> = {
+  orca:     orcaTheme(),
   default:  darkTheme('default',  'cyan',   '#5F8787', 'cyan'),
   light:    lightTheme('light',   'blue',   '#5F87AF', 'blue'),
   dark:     darkTheme('dark',     'green',  '#5F875F', 'green'),
@@ -161,14 +193,14 @@ function resolveTheme(): InkTheme {
   // Priority: env var > file > auto-detect
   const configuredTheme = getConfiguredThemeId()
   if (configuredTheme) return THEMES[configuredTheme]!
-  // Auto-detect: dark → default (cyan), light → light (blue)
-  return isDark ? THEMES['default']! : THEMES['light']!
+  // Auto-detect: dark -> Orca brand theme, light -> light (blue)
+  return isDark ? THEMES['orca']! : THEMES['light']!
 }
 
 function resolveThemeFromId(themeId: string | null): InkTheme {
   if (themeId && THEMES[themeId]) return THEMES[themeId]!
-  // Auto-detect: dark → default (cyan), light → light (blue)
-  return isDark ? THEMES['default']! : THEMES['light']!
+  // Auto-detect: dark -> Orca brand theme, light -> light (blue)
+  return isDark ? THEMES['orca']! : THEMES['light']!
 }
 
 /** Available theme IDs for external use (e.g. ThemePicker) */

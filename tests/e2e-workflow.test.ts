@@ -143,13 +143,17 @@ describe('StreamMarkdown renderer', () => {
 // ── System Prompt ───────────────────────────────────────────────
 
 describe('System prompt generation', () => {
-  it('8.8 includes all 41 tools', () => {
+  it('8.8 includes all registered tools', () => {
     const prompt = buildSystemPrompt('/test/dir')
     expect(prompt).toContain(`Available Tools (${TOOL_DEFINITIONS.length})`)
-    expect(prompt).toContain('41')
+    expect(prompt).toContain(String(TOOL_DEFINITIONS.length))
     // Spot-check some tools
     expect(prompt).toContain('read_file')
     expect(prompt).toContain('edit_file')
+    expect(prompt).toContain('open_file')
+    expect(prompt).toContain('Never say you cannot create or open local files')
+    expect(prompt).toContain('write_file.content must be the final requested file body only')
+    expect(prompt).toContain('Do not claim that files were created/opened')
     expect(prompt).toContain('spawn_agent')
     expect(prompt).toContain('mcp_list_servers')
   })

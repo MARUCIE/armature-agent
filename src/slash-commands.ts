@@ -42,6 +42,7 @@ export const SLASH_COMMAND_DEFINITIONS: readonly SlashCommandDefinition[] = [
   { name: '/permissions', description: 'Approval and trust mode', category: 'Model', homeDescription: 'inspect or tighten approval mode' },
 
   { name: '/diff', description: 'Show git diff', category: 'Git' },
+  { name: '/critique', description: 'Read-only critique gate', category: 'Git', homeDescription: 'inspect risk before continuing' },
   { name: '/git', description: 'Run git command', category: 'Git' },
   { name: '/commit', description: 'Create commit', category: 'Git' },
   { name: '/review', description: 'Review changed files', category: 'Git', picker: false, help: false },

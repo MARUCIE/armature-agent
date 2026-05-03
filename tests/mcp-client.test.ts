@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { MCPClient } from '../src/mcp-client.js'
+import { MCPClient, parseMcpToolName } from '../src/mcp-client.js'
 import { createTempProject } from './helpers/temp-project.js'
 import { withEnv } from './helpers/env-snapshot.js'
 
@@ -144,6 +144,21 @@ describe('MCPClient', () => {
       await withEnv({ HOME: globalTemp.dir }, () => {
         client.loadConfigs(tempProject.dir)
         expect(client.configuredCount).toBe(1)
+      })
+
+      globalTemp.cleanup()
+    })
+
+    it('reads Codex TOML server names containing hyphens and underscores', async () => {
+      setupIsolated({})
+
+      const globalTemp = createTempProject({
+        '.codex/config.toml': `[mcp_servers.omx_code_intel]\ncommand = "node"\nargs = ["server.js"]\nenabled = true\n\n[mcp_servers.code-review-graph]\ncommand = "node"\nargs = ["graph.js"]\nenabled = true\n`,
+      })
+
+      await withEnv({ HOME: globalTemp.dir }, () => {
+        client.loadConfigs(tempProject.dir)
+        expect(client.configuredCount).toBe(2)
       })
 
       globalTemp.cleanup()
@@ -329,6 +344,22 @@ enabled = false
   describe('connectedCount', () => {
     it('returns 0 when no servers connected', () => {
       expect(client.connectedCount).toBe(0)
+    })
+  })
+
+  describe('parseMcpToolName()', () => {
+    it('routes server names containing underscores', () => {
+      expect(parseMcpToolName('mcp__omx_code_intel__lsp_diagnostics')).toEqual({
+        serverName: 'omx_code_intel',
+        toolName: 'lsp_diagnostics',
+      })
+    })
+
+    it('routes server names containing hyphens', () => {
+      expect(parseMcpToolName('mcp__code-review-graph__search')).toEqual({
+        serverName: 'code-review-graph',
+        toolName: 'search',
+      })
     })
   })
 

@@ -11,6 +11,7 @@ import type { ToolApprovalEventInput } from '../src/policy-executor.js'
 const mockState = vi.hoisted(() => ({
   askPermission: vi.fn(),
   printDiffPreview: vi.fn(),
+  loadHooks: vi.fn(),
   hasHooks: vi.fn(),
   runHook: vi.fn(),
   listResources: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock('../src/output.js', () => ({
 
 vi.mock('../src/hooks.js', () => ({
   hooks: {
+    load: mockState.loadHooks,
     hasHooks: mockState.hasHooks,
     run: mockState.runHook,
   },
@@ -90,6 +92,7 @@ beforeEach(() => {
   mockState.askPermission.mockReset()
   mockState.askPermission.mockResolvedValue({ allowed: true, scope: 'once' })
   mockState.printDiffPreview.mockReset()
+  mockState.loadHooks.mockReset()
   mockState.hasHooks.mockReset()
   mockState.hasHooks.mockReturnValue(false)
   mockState.runHook.mockReset()
@@ -678,6 +681,11 @@ describe('chat proxy tool helper', () => {
     })
 
     expect(result.success).toBe(true)
+    expect(mockState.runHook).toHaveBeenCalledWith('SubagentStop', expect.objectContaining({
+      event: 'SubagentStop',
+      toolOutput: 'delegated ok',
+      toolSuccess: true,
+    }))
     expect(mockState.runHook).toHaveBeenCalledWith('PostToolUse', expect.objectContaining({
       event: 'PostToolUse',
       toolName: 'delegate_task',

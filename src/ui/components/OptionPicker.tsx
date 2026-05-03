@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Box, Text, useInput } from 'ink'
+import { useTheme } from '../theme.js'
 import type { OptionPickerOption } from '../types.js'
 import { PickerFrame } from './PickerFrame.js'
 
@@ -30,6 +31,7 @@ export function OptionPicker({
 }: Props): React.ReactElement | null {
   const [selected, setSelected] = useState(0)
   const [query, setQuery] = useState(initialQuery)
+  const theme = useTheme()
 
   useEffect(() => {
     setQuery(initialQuery)
@@ -115,26 +117,26 @@ export function OptionPicker({
       subtitle={subtitle}
       footer={
         filterable
-          ? 'type to filter · arrows to browse · enter to select · esc to cancel'
-          : 'arrows to browse · enter to select · esc to cancel · 1-9,0 quick pick'
+          ? 'type filter · ↑↓ browse · enter select · esc close'
+          : '↑↓ browse · enter select · esc close · 1-9,0 quick pick'
       }
     >
       {filterable ? (
         <Box marginBottom={1}>
-          <Text dimColor>{`${filterPlaceholder}: `}</Text>
-          <Text>{query || ' '}</Text>
+          <Text color={theme.accentDim}>{`echo ${filterPlaceholder}: `}</Text>
+          <Text color={theme.text}>{query || ' '}</Text>
         </Box>
       ) : null}
 
       {visibleOptions.length === 0 ? (
         <Box>
-          <Text dimColor>no matches</Text>
+          <Text color={theme.dim}>no pod matches</Text>
         </Box>
       ) : null}
 
       {visibleOptions.length > 0 && pageStart > 0 ? (
         <Box>
-          <Text dimColor>{`  ↑ ${pageStart} more`}</Text>
+          <Text color={theme.dim}>{`  ↑ ${pageStart} more`}</Text>
         </Box>
       ) : null}
 
@@ -145,14 +147,14 @@ export function OptionPicker({
         return (
           <Box key={`${option.value}-${optionIndex}`} flexDirection="column" marginBottom={option.description ? 1 : 0}>
             <Box>
-              <Text color={isSelected ? 'cyan' : 'gray'}>{isSelected ? '▸ ' : '  '}</Text>
-              <Text color={isSelected ? 'cyan' : 'white'} bold={isSelected}>
+              <Text color={isSelected ? theme.accent : theme.dim}>{isSelected ? '▸ ' : '  '}</Text>
+              <Text color={isSelected ? theme.accent : theme.text} bold={isSelected}>
                 {`${quickPickLabel}. ${option.label}`}
               </Text>
             </Box>
             {option.description ? (
               <Box marginLeft={5}>
-                <Text dimColor>{option.description}</Text>
+                <Text color={theme.dim}>{option.description}</Text>
               </Box>
             ) : null}
           </Box>
@@ -161,7 +163,7 @@ export function OptionPicker({
 
       {visibleOptions.length > 0 && pageStart + pageOptions.length < visibleOptions.length ? (
         <Box>
-          <Text dimColor>{`  ↓ ${visibleOptions.length - pageStart - pageOptions.length} more`}</Text>
+          <Text color={theme.dim}>{`  ↓ ${visibleOptions.length - pageStart - pageOptions.length} more`}</Text>
         </Box>
       ) : null}
     </PickerFrame>

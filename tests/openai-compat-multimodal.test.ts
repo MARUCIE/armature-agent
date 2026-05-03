@@ -78,6 +78,54 @@ describe('openai-compat multimodal prompt support', () => {
     expect(lastCall.messages.at(-1).content).toEqual(prompt)
   })
 
+  it('streamChat keeps the current system prompt when history exists', async () => {
+    mockState.responses.push(() => makeStream([
+      { choices: [{ delta: { content: 'done' }, finish_reason: 'stop' }], usage: { prompt_tokens: 3, completion_tokens: 1 } },
+    ]))
+
+    const history = [
+      { role: 'user' as const, content: 'Previous question' },
+      { role: 'assistant' as const, content: 'Previous answer' },
+    ]
+
+    const events = []
+    for await (const event of streamChat(
+      { ...baseOpts, systemPrompt: 'Always use local tools for local files.' },
+      'Open the file',
+      history,
+    )) events.push(event)
+
+    expect(events.some((e) => e.type === 'text' && e.text === 'done')).toBe(true)
+    const lastCall = mockState.params.at(-1)
+    expect(lastCall.messages[0]).toEqual({
+      role: 'system',
+      content: 'Always use local tools for local files.',
+    })
+    expect(lastCall.messages.at(-1).content).toBe('Open the file')
+  })
+
+  it('streamChat avoids duplicating the same leading system prompt from history', async () => {
+    mockState.responses.push(() => makeStream([
+      { choices: [{ delta: { content: 'done' }, finish_reason: 'stop' }], usage: { prompt_tokens: 3, completion_tokens: 1 } },
+    ]))
+
+    const history = [
+      { role: 'system' as const, content: 'System prompt' },
+      { role: 'user' as const, content: 'Previous question' },
+    ]
+
+    const events = []
+    for await (const event of streamChat(
+      { ...baseOpts, systemPrompt: 'System prompt' },
+      'Next question',
+      history,
+    )) events.push(event)
+
+    expect(events.some((e) => e.type === 'text' && e.text === 'done')).toBe(true)
+    const lastCall = mockState.params.at(-1)
+    expect(lastCall.messages.filter((m) => m.role === 'system' && m.content === 'System prompt')).toHaveLength(1)
+  })
+
   it('trims tool definitions to the Copilot provider limit', async () => {
     mockState.responses.push(() => makeStream([
       { choices: [{ delta: { content: 'done' }, finish_reason: 'stop' }], usage: { prompt_tokens: 3, completion_tokens: 1 } },

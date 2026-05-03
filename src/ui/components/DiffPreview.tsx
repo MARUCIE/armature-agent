@@ -8,6 +8,7 @@
 
 import React from 'react'
 import { Box, Text } from 'ink'
+import { useTheme } from '../theme.js'
 
 interface Props {
   oldContent: string
@@ -62,6 +63,7 @@ function computeDiff(oldText: string, newText: string, maxLines: number): DiffLi
 }
 
 export function DiffPreview({ oldContent, newContent, filePath, maxLines = 16 }: Props): React.ReactElement {
+  const theme = useTheme()
   const lines = computeDiff(oldContent, newContent, maxLines)
   const addCount = lines.filter(l => l.type === 'add').length
   const removeCount = lines.filter(l => l.type === 'remove').length
@@ -70,21 +72,21 @@ export function DiffPreview({ oldContent, newContent, filePath, maxLines = 16 }:
     <Box
       flexDirection="column"
       borderStyle="single"
-      borderColor="gray"
+      borderColor={theme.borderDim}
       paddingLeft={1}
       marginLeft={1}
     >
       <Box>
-        <Text dimColor>diff </Text>
-        <Text color="cyan">{filePath}</Text>
+        <Text color={theme.accentDim} bold>ECHO DIFF </Text>
+        <Text color={theme.filePath}>{filePath}</Text>
         <Text dimColor> </Text>
-        <Text color="green">+{addCount}</Text>
+        <Text color={theme.diffAdd}>+{addCount}</Text>
         <Text dimColor> </Text>
-        <Text color="red">-{removeCount}</Text>
+        <Text color={theme.diffRemove}>-{removeCount}</Text>
       </Box>
       {lines.map((line, i) => {
         const prefix = line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' '
-        const color = line.type === 'add' ? 'green' : line.type === 'remove' ? 'red' : undefined
+        const color = line.type === 'add' ? theme.diffAdd : line.type === 'remove' ? theme.diffRemove : theme.diffContext
         const lineNum = line.lineNo ? String(line.lineNo).padStart(4) : '    '
         const content = line.content.length > 80 ? line.content.slice(0, 77) + '...' : line.content
         return (

@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import { ChatSessionEmitter } from '../src/ui/session.js'
 import { ContextMonitor, LoopDetector } from '../src/harness/index.js'
 import { RetryTracker } from '../src/retry-intelligence.js'
@@ -196,6 +198,111 @@ describe('chat internal regressions', () => {
     expect(result).toEqual({ inputTokens: 5, outputTokens: 7 })
     expect(capturedBase?.reasoningEffort).toBe('xhigh')
     expect(capturedTools).toBe(toolDefs)
+  })
+
+  it('repairs false local save claims when the model returns no file tool call', async () => {
+    const path = join(tmpdir(), `orca-chat-false-save-${process.pid}-${Date.now()}.md`)
+    const history = [{ role: 'system' as const, content: 'system prompt' }]
+    chatMocks.handleProxyToolCall.mockResolvedValueOnce({ success: true, output: `Created ${path}` })
+    chatMocks.streamChat.mockImplementation(async function* (_base: unknown, _prompt: unknown, _history: unknown, _runtime: unknown, tools: Array<Record<string, unknown>>) {
+      expect(tools.some((tool) => (tool.function as { name?: string } | undefined)?.name === 'write_file')).toBe(true)
+      yield { type: 'text', text: `Saved to \`${path}\`.\n\n# Demo\nBody\n` }
+      yield { type: 'usage', inputTokens: 8, outputTokens: 9 }
+      yield { type: 'done' }
+    })
+
+    const result = await runProxyTurn({
+      prompt: 'Please save this as a markdown file.',
+      resolved: {
+        provider: 'openai',
+        model: 'gpt-5.4',
+        apiKey: 'key',
+        baseURL: 'https://example.invalid/v1',
+      } as never,
+      config: { systemPrompt: 'system prompt' } as never,
+      outputMode: 'streaming',
+      history,
+      cwd: process.cwd(),
+      permissionMode: 'yolo',
+      retryTracker: new RetryTracker(),
+      loopDetector: new LoopDetector(),
+      tokenBudget: new TokenBudgetManager('gpt-5.4'),
+      contextMonitor: new ContextMonitor(200_000),
+    })
+
+    expect(result).toEqual({ inputTokens: 8, outputTokens: 9 })
+    expect(chatMocks.handleProxyToolCall).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'write_file',
+      args: expect.objectContaining({
+        path,
+        content: expect.stringContaining('# Demo'),
+      }),
+      allowedTools: expect.arrayContaining(['write_file']),
+    }))
+    expect(chatMocks.handleProxyToolCall.mock.calls[0]?.[0].args.content).not.toContain('Saved to')
+    expect(history[2]?.content).toContain('Local file guard wrote the file')
+  })
+
+  it('appends a claim evidence guard when completion claims lack supporting tools', async () => {
+    const history = [{ role: 'system' as const, content: 'system prompt' }]
+    chatMocks.streamChat.mockImplementation(async function* () {
+      yield { type: 'text', text: 'I ran npm test and all tests passed.' }
+      yield { type: 'usage', inputTokens: 4, outputTokens: 5 }
+      yield { type: 'done' }
+    })
+
+    await runProxyTurn({
+      prompt: 'verify the project',
+      resolved: {
+        provider: 'openai',
+        model: 'gpt-5.4',
+        apiKey: 'key',
+        baseURL: 'https://example.invalid/v1',
+      } as never,
+      config: { systemPrompt: 'system prompt' } as never,
+      outputMode: 'streaming',
+      history,
+      cwd: process.cwd(),
+      retryTracker: new RetryTracker(),
+      loopDetector: new LoopDetector(),
+      tokenBudget: new TokenBudgetManager('gpt-5.4'),
+      contextMonitor: new ContextMonitor(200_000),
+    })
+
+    expect(history[2]?.content).toContain('Claim evidence guard')
+    expect(history[2]?.content).toContain('tests, lint, build, typecheck, or checks')
+  })
+
+  it('does not append a claim evidence guard when a matching tool ran', async () => {
+    const history = [{ role: 'system' as const, content: 'system prompt' }]
+    chatMocks.handleProxyToolCall.mockResolvedValueOnce({ success: true, output: 'tests passed' })
+    chatMocks.streamChat.mockImplementation(async function* (_base: unknown, _prompt: unknown, _history: unknown, runtime: { onToolCall?: (name: string, args: Record<string, unknown>) => Promise<unknown> }) {
+      await runtime.onToolCall?.('run_command', { command: 'npm test' })
+      yield { type: 'text', text: 'I ran npm test and all tests passed.' }
+      yield { type: 'usage', inputTokens: 4, outputTokens: 5 }
+      yield { type: 'done' }
+    })
+
+    await runProxyTurn({
+      prompt: 'verify the project',
+      resolved: {
+        provider: 'openai',
+        model: 'gpt-5.4',
+        apiKey: 'key',
+        baseURL: 'https://example.invalid/v1',
+      } as never,
+      config: { systemPrompt: 'system prompt' } as never,
+      outputMode: 'streaming',
+      history,
+      cwd: process.cwd(),
+      retryTracker: new RetryTracker(),
+      loopDetector: new LoopDetector(),
+      tokenBudget: new TokenBudgetManager('gpt-5.4'),
+      contextMonitor: new ContextMonitor(200_000),
+    })
+
+    expect(history[2]?.content).toContain('I ran npm test')
+    expect(history[2]?.content).not.toContain('Claim evidence guard')
   })
 
   it('matches slash commands on token boundaries so /mode does not swallow /model', () => {

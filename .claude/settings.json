@@ -6,42 +6,50 @@
           {
             "type": "command",
             "command": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-cognitive-models.py 2>/dev/null || true",
-            "timeout": 3000
+            "timeout": 3000,
+            "bash": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-cognitive-models.py 2>/dev/null || true"
           },
           {
             "type": "command",
             "command": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-first-principles.py 2>/dev/null || true",
-            "timeout": 3000
+            "timeout": 3000,
+            "bash": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-first-principles.py 2>/dev/null || true"
           },
           {
             "type": "command",
             "command": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-expand.py 2>/dev/null || true",
-            "timeout": 3000
+            "timeout": 3000,
+            "bash": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-expand.py 2>/dev/null || true"
           },
           {
             "type": "command",
             "command": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-pre-research.py 2>/dev/null || true",
-            "timeout": 3000
+            "timeout": 3000,
+            "bash": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-pre-research.py 2>/dev/null || true"
           },
           {
             "type": "command",
             "command": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-path-expand.py 2>/dev/null || true",
-            "timeout": 5000
+            "timeout": 5000,
+            "bash": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-path-expand.py 2>/dev/null || true"
           },
           {
             "type": "command",
             "command": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-route.py 2>/dev/null || true",
-            "timeout": 3000
+            "timeout": 3000,
+            "bash": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-route.py 2>/dev/null || true"
           },
           {
             "type": "command",
             "command": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-design-system.py 2>/dev/null || true",
-            "timeout": 3000
+            "timeout": 3000,
+            "bash": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-design-system.py 2>/dev/null || true"
           },
           {
             "type": "command",
             "command": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-diagram-router.py 2>/dev/null || true",
-            "timeout": 3000
+            "timeout": 3000,
+            "bash": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/user-prompt-diagram-router.py 2>/dev/null || true"
           }
         ],
         "matcher": ""
@@ -54,7 +62,8 @@
           {
             "type": "command",
             "command": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/post-tool-2份制-guard.py 2>/dev/null || true",
-            "timeout": 5000
+            "timeout": 5000,
+            "bash": "python3 /Users/mauricewen/00-AI-Fleet/scripts/hooks/post-tool-2份制-guard.py 2>/dev/null || true"
           }
         ]
       }

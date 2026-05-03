@@ -2,11 +2,11 @@
 
 # Orca CLI
 
-**Provider-neutral coding agent — 11 providers · 41 tools · MCP server · 6 modes · multi-model collaboration.**
+**Provider-neutral coding agent — 11 providers · 42 tools · MCP server · 6 modes · multi-model collaboration.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/Node-%3E%3D18-green.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/Tests-1623%20passing-brightgreen.svg)](#sota-agent-capabilities)
+[![Tests](https://img.shields.io/badge/Tests-1663%20passing-brightgreen.svg)](#sota-agent-capabilities)
 [![TypeScript](https://img.shields.io/badge/TypeScript-ESM-3178C6.svg)](https://www.typescriptlang.org/)
 
 The one CLI that can do what no single-vendor CLI can: ask Claude, GPT, and Gemini the same question simultaneously, race them, or chain them as specialists. Works with any OpenAI-compatible provider.
@@ -20,7 +20,7 @@ The one CLI that can do what no single-vendor CLI can: ask Claude, GPT, and Gemi
 .:--==+++*****+++===---::::..
 .:-=++**#########**++==---::..
 .:-=+*##############*++==--::..   ▸ ~/Projects/my-app
-.:-=+*##############*++==-::..    41 tools · 8 hooks
+.:-=+*##############*++==-::..    42 tools · 8 hooks
 .:-=++**#########**++==---::..
 .:--==+++*****+++===---::::..
   .::--========----::::..
@@ -143,6 +143,34 @@ What `reflect` changes:
 - prefers diagnosis and smallest-next-step verification over broad rewrites
 - is explicit-first (`orca reflect`, `/reflect`, `/mode reflect`)
 - can auto-trigger inside normal chat for clear debugging or explanation asks, with an inline notice when it does
+
+## Critique Quality Gate - `orca critique`
+
+`critique` is the read-only Rubber Duck Critique gate from the 2026 CLI research pass. It is different from `reflect`: `reflect` helps the main agent reason through a problem, while `critique` asks a complementary reviewer model to challenge a plan, diff, tests, and risk assumptions before work continues.
+
+```bash
+orca critique --dry-run --json "review the current diff"
+orca critique --checkpoint after_plan --plan-file doc/plan.md "challenge this plan"
+orca critique --checkpoint after_complex_implementation --security-or-data "review before tests"
+```
+
+Inside `orca chat`, use `/critique --checkpoint after_plan "review current diff"` to inspect the same risk gate without leaving the active session. The slash command is local and read-only: it shows the reviewer choice, risk score, diff lines, and changed files in the legacy console or Ink detail panel.
+
+Chat also performs a lightweight pre-send workspace check in both REPL and one-shot streaming runs. When the local dirty diff crosses the auto hint threshold, Orca prints one suppressed-per-diff notice recommending `/critique --checkpoint after_complex_implementation`; it does not call a reviewer model or mutate the workspace, and `--json` output stays clean. Set `ORCA_AUTO_CRITIQUE=0` to disable it, or `ORCA_AUTO_CRITIQUE_THRESHOLD=<0..1>` to tune the hint threshold.
+
+```bash
+orca chat --no-auto-critique
+orca chat --auto-critique-threshold 0.4
+```
+
+What `critique` checks:
+
+- checkpoint routing: `after_plan`, `after_complex_implementation`, `before_test_execution`, `stuck_loop`, or `manual`
+- risk scoring from diff size, changed files, critical path, repeated failure, security/data sensitivity, and requirement uncertainty
+- a read-only structured JSON schema with severity, category, evidence, suggested fix, confidence, and `must_fix_before_continue`
+- complementary reviewer selection by default, so a Claude-backed main run is challenged by a GPT-family reviewer and a GPT-family main run is challenged by a Claude-family reviewer
+- `--dry-run --json` for deterministic local checks without requiring an API call
+- automatic chat hints for large local diffs, with repeat suppression for the same diff signature
 
 ## Multi-Model Collaboration (Unique Feature)
 
@@ -462,21 +490,21 @@ Features that close the gap between "tool" and "agent":
 | Oversized Tool Result Persistence | Saves full oversized output to `~/.orca/tool-results/` and returns an artifact path | Prevents destructive truncation while keeping context small |
 | Error Self-Correction | Failed tools return recovery hints ("use read_file first") | Model self-corrects without human intervention |
 | Tool Argument Coercion | Normalizes stringified numbers, booleans, and arrays to tool schema types | Improves GPT/Codex tool-call reliability |
-| Provider-Aware Model Catalog | `/model` and `/models` surface provider, context window, approximate pricing, and cautions | Makes live model switching safer and more informed |
+| Provider-Aware Model Catalog | `/model`, `/models`, runtime token budgets, provider max-output defaults, startup capacity labels, and cost summaries share one metadata source | Makes live model switching and runtime accounting safer and harder to drift |
 | Tiered SOTA Gate System | Manifest-driven `fast` / `nightly` / `release` bundles with auditable run artifacts | Turns release verification into a repeatable system instead of ad hoc shell history |
 | Shell Injection Protection | All user inputs shellEscaped before exec | Security baseline for production agent |
 | Unlimited Agent Loop | Auto-continue on truncation, incomplete text detection | Tasks complete without artificial limits |
 | Multi-edit Atomicity | Failed batch edits leave file unchanged | No partial corruption on error |
 | Background Completion Notifications | `run_background` jobs notify the REPL when they finish, and `/jobs` shows tracked state | Agent can keep working without manual PID polling |
 
-Tested: 1623 automated tests, fast gate `63/63`, nightly gate `66/66`, release gate `69/69`.
+Tested: 1663 automated tests, fast gate `63/63`, nightly gate `66/66`, release gate `69/69`.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Orca CLI  v0.8.16                                  │
-│  TypeScript ESM CLI · 88 test files · 1623 tests    │
+│  TypeScript ESM CLI · 91 test files · 1663 tests    │
 ├─────────────────────────────────────────────────────┤
 │  Command Layer                                      │
 │  chat · run · council · race · pipeline · serve     │
@@ -488,7 +516,7 @@ Tested: 1623 automated tests, fast gate `63/63`, nightly gate `66/66`, release g
 │  council · race · pipeline · provider-aware routing │
 ├─────────────────────────────────────────────────────┤
 │  Agent Runtime                                      │
-│  41 tools · 8 hooks · safe/YOLO · background jobs   │
+│  42 tools · 8 hooks · safe/YOLO · background jobs   │
 ├─────────────────────────────────────────────────────┤
 │  ink Terminal UI                                    │
 │  ScrollBox · InputArea · StatusBar · DiffPreview    │

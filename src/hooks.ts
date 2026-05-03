@@ -65,6 +65,8 @@ export interface HookDefinition {
 interface LoadedHookDefinition extends HookDefinition {
   /** Internal execution base resolved from the directory containing the hook config file. */
   baseDir: string
+  /** Project directory that owns repo-local hooks. Undefined means global hook. */
+  scopeCwd?: string
 }
 
 export interface HookInput {
@@ -74,6 +76,7 @@ export interface HookInput {
   toolOutput?: string
   toolSuccess?: boolean
   prompt?: string
+  response?: string
   /** Target project context exposed via env vars, not the subprocess execution directory. */
   cwd?: string
   model?: string
@@ -128,7 +131,8 @@ function claudeToolName(orcaName: string): string {
 
 export class HookManager {
   private hooks: Partial<Record<HookEvent, LoadedHookDefinition[]>> = {}
-  private loaded = false
+  private loadedGlobal = false
+  private loadedProjectDirs = new Set<string>()
   private readonly trustProjectHooks: boolean
 
   constructor(options: HookManagerOptions = {}) {
@@ -140,37 +144,39 @@ export class HookManager {
    * All sources are merged — later sources add hooks, never override.
    */
   load(cwd: string): void {
-    if (this.loaded) return
-    this.loaded = true
-
     const home = process.env.HOME || '/tmp'
 
     // Relative hook commands resolve from the directory that defines them.
     // That keeps project/global hooks isolated and makes file-location semantics explicit.
 
-    if (this.trustProjectHooks) {
+    const trustProjectHooks = this.trustProjectHooks || process.env.ORCA_TRUST_PROJECT_HOOKS === '1'
+    if (trustProjectHooks && !this.loadedProjectDirs.has(cwd)) {
       this.loadNativeHooks([
         join(cwd, '.orca', 'hooks.json'),
         join(cwd, '.orca.json'),
         join(cwd, '.claude', 'hooks.json'),
-      ])
+      ], cwd)
       this.loadClaudeCodeHooks([
         join(cwd, '.claude', 'settings.json'),
-      ])
+      ], cwd)
+      this.loadedProjectDirs.add(cwd)
     }
 
-    this.loadNativeHooks([
-      join(home, '.orca', 'hooks.json'),
-      join(home, '.codex', 'hooks.json'),
-    ])
+    if (!this.loadedGlobal) {
+      this.loadedGlobal = true
+      this.loadNativeHooks([
+        join(home, '.orca', 'hooks.json'),
+        join(home, '.codex', 'hooks.json'),
+      ])
 
-    this.loadClaudeCodeHooks([
-      join(home, '.claude', 'settings.json'),
-    ])
+      this.loadClaudeCodeHooks([
+        join(home, '.claude', 'settings.json'),
+      ])
+    }
   }
 
   /** Load native Orca/Codex format: { hooks: { Event: [{ command, matcher, timeout }] } } */
-  private loadNativeHooks(paths: string[]): void {
+  private loadNativeHooks(paths: string[], scopeCwd?: string): void {
     for (const configPath of paths) {
       if (!existsSync(configPath)) continue
       try {
@@ -180,7 +186,7 @@ export class HookManager {
         if (typeof hookConfig === 'object' && !Array.isArray(hookConfig)) {
           for (const [event, defs] of Object.entries(hookConfig)) {
             if (isHookEvent(event) && Array.isArray(defs)) {
-              this.addHooks(event, defs as HookDefinition[], resolvedBaseDir)
+              this.addHooks(event, defs as HookDefinition[], resolvedBaseDir, scopeCwd)
             }
           }
         }
@@ -197,7 +203,7 @@ export class HookManager {
    * Orca flattens to:
    *   { matcher: "run_command", command: "...", timeout: 5 }
    */
-  private loadClaudeCodeHooks(paths: string[]): void {
+  private loadClaudeCodeHooks(paths: string[], scopeCwd?: string): void {
     for (const settingsPath of paths) {
       if (!existsSync(settingsPath)) continue
       try {
@@ -231,7 +237,7 @@ export class HookManager {
                 timeout: ih.timeout ? Math.ceil(Number(ih.timeout) / 1000) : undefined,
                 async: ih.async === true ? true : undefined,
               }
-              this.addHooks(forgeEvent, [def], resolvedBaseDir)
+              this.addHooks(forgeEvent, [def], resolvedBaseDir, scopeCwd)
             }
           }
         }
@@ -239,11 +245,11 @@ export class HookManager {
     }
   }
 
-  private addHooks(event: HookEvent, defs: HookDefinition[], baseDir: string): void {
+  private addHooks(event: HookEvent, defs: HookDefinition[], baseDir: string, scopeCwd?: string): void {
     if (!this.hooks[event]) {
       this.hooks[event] = []
     }
-    this.hooks[event]!.push(...defs.map((def) => ({ ...def, baseDir })))
+    this.hooks[event]!.push(...defs.map((def) => ({ ...def, baseDir, scopeCwd })))
   }
 
   hasHooks(event: HookEvent): boolean {
@@ -252,6 +258,13 @@ export class HookManager {
 
   get totalHooks(): number {
     return Object.values(this.hooks).reduce((sum, defs) => sum + (defs?.length || 0), 0)
+  }
+
+  resetForTests(): void {
+    if (!process.env.VITEST) return
+    this.hooks = {}
+    this.loadedGlobal = false
+    this.loadedProjectDirs.clear()
   }
 
   /** Run all hooks for an event. Returns aggregated result. */
@@ -264,6 +277,7 @@ export class HookManager {
     const aggregated: HookResult = { continue: true }
 
     for (const def of defs) {
+      if (def.scopeCwd && input.cwd !== def.scopeCwd) continue
       // Check matcher for tool-specific hooks
       if (def.matcher && input.toolName) {
         const orcaName = input.toolName
@@ -400,6 +414,11 @@ function buildHookEnv(input: HookInput): Record<string, string> {
   }
   if (input.prompt) {
     env.CLAUDE_PROMPT = input.prompt
+  }
+  if (input.response) {
+    const response = input.response.slice(0, 10000)
+    env.ORCA_RESPONSE = response
+    env.CLAUDE_RESPONSE = response
   }
   if (input.model) {
     env.CLAUDE_MODEL = input.model

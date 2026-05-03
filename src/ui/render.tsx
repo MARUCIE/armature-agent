@@ -12,7 +12,7 @@ import { App } from './components/App.js'
 import type { BannerInfo } from './components/App.js'
 import { ThemeProvider } from './theme.js'
 import { TerminalSizeProvider } from './useTerminalSize.js'
-import { AlternateScreen } from './components/AlternateScreen.js'
+import { AlternateScreen, enterAlternateScreen, exitAlternateScreen } from './components/AlternateScreen.js'
 import type { ChatSessionEmitter } from './session.js'
 import type { StatusInfo } from './types.js'
 
@@ -29,6 +29,27 @@ export interface InkInstance {
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\[\?[0-9;]*[a-zA-Z]/g
 function stripAnsi(s: string): string {
   return s.replace(ANSI_RE, '')
+}
+
+export function shouldUseAlternateScreen(): boolean {
+  return shouldUseNoFlickerRenderer()
+}
+
+function isEnabled(value: string | undefined): boolean {
+  return /^(1|true|yes|on|fullscreen)$/i.test(value || '')
+}
+
+function isDisabled(value: string | undefined): boolean {
+  return /^(0|false|no|off|default|scrollback)$/i.test(value || '')
+}
+
+export function shouldUseNoFlickerRenderer(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (isDisabled(env.ORCA_TUI) || isDisabled(env.ORCA_NO_FLICKER) || isDisabled(env.ORCA_ALT_SCREEN)) return false
+  if (isDisabled(env.CLAUDE_CODE_NO_FLICKER)) return false
+  return isEnabled(env.ORCA_TUI)
+    || isEnabled(env.ORCA_NO_FLICKER)
+    || isEnabled(env.ORCA_ALT_SCREEN)
+    || isEnabled(env.CLAUDE_CODE_NO_FLICKER)
 }
 
 export function renderInkApp(
@@ -73,18 +94,32 @@ export function renderInkApp(
     return true
   }) as typeof process.stderr.write
 
-  const instance = render(
-    <TerminalSizeProvider>
-      <ThemeProvider>
-        <AlternateScreen>
-          <App session={session} initialStatus={initialStatus} banner={banner} />
-        </AlternateScreen>
-      </ThemeProvider>
-    </TerminalSizeProvider>,
-    {
-      exitOnCtrlC: false,
-    },
-  )
+  const noFlicker = shouldUseNoFlickerRenderer()
+  if (noFlicker) {
+    // Match Claude Code's no-flicker strategy: switch buffers before Ink's
+    // first frame so normal scrollback is never partially repainted.
+    enterAlternateScreen()
+  }
+
+  const app = <App session={session} initialStatus={initialStatus} banner={banner} noFlicker={noFlicker} />
+  const content = noFlicker ? <AlternateScreen enterOnMount={false}>{app}</AlternateScreen> : app
+
+  let instance: ReturnType<typeof render>
+  try {
+    instance = render(
+      <TerminalSizeProvider>
+        <ThemeProvider>
+          {content}
+        </ThemeProvider>
+      </TerminalSizeProvider>,
+      {
+        exitOnCtrlC: false,
+      },
+    )
+  } catch (error) {
+    if (noFlicker) exitAlternateScreen()
+    throw error
+  }
 
   const cleanup = () => {
     // Restore original methods

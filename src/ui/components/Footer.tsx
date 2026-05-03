@@ -2,12 +2,13 @@
  * Footer — keyboard shortcut hints below the status bar.
  *
  * Shows context-aware shortcuts: Esc (abort), Ctrl+L (clear), Shift+Tab (mode), /help.
- * Mirrors CC's footer navigation context.
+ * Keeps the persistent Orca pod identity visible after the banner scrolls away.
  */
 
 import React from 'react'
 import { Box, Text } from 'ink'
 import { useTerminalSize } from '../useTerminalSize.js'
+import { useTheme } from '../theme.js'
 
 interface Props {
   /** Whether the model is currently generating */
@@ -22,34 +23,41 @@ interface Props {
 
 export function Footer({ isGenerating, isInputActive, permMode, permSource }: Props): React.ReactElement {
   const { cols } = useTerminalSize()
+  const theme = useTheme()
   const permLabel = permSource ? `${permMode}:${permSource}` : permMode
+  const trustLabel = cols >= 96 ? `trust ${permLabel}` : permLabel
 
   const shortcuts: Array<{ key: string; label: string }> = []
 
   if (isGenerating) {
-    shortcuts.push({ key: 'esc', label: 'interrupt' })
+    shortcuts.push({ key: 'esc', label: 'interrupt echo' })
   } else if (isInputActive) {
-    shortcuts.push({ key: 'enter', label: 'send' })
-    shortcuts.push({ key: 'ctrl+j', label: 'newline' })
-    shortcuts.push({ key: '/help', label: 'commands' })
-    shortcuts.push({ key: 'shift+tab', label: permLabel })
-    shortcuts.push({ key: 'ctrl+z', label: 'undo' })
-    shortcuts.push({ key: 'ctrl+l', label: 'clear' })
+    shortcuts.push({ key: 'enter', label: 'send brief' })
+    shortcuts.push({ key: 'ctrl+j', label: 'new line' })
+    shortcuts.push({ key: '/help', label: 'pod commands' })
+    shortcuts.push({ key: 'shift+tab', label: trustLabel })
+    if (cols >= 104) {
+      shortcuts.push({ key: 'ctrl+z', label: 'undo' })
+      shortcuts.push({ key: 'ctrl+l', label: 'clear wake' })
+    }
   } else {
     // Idle / waiting for prompt_ready — still show basic hints
-    shortcuts.push({ key: 'enter', label: 'send' })
-    shortcuts.push({ key: '/help', label: 'commands' })
-    shortcuts.push({ key: 'shift+tab', label: permLabel })
+    shortcuts.push({ key: 'enter', label: 'send brief' })
+    shortcuts.push({ key: '/help', label: 'pod commands' })
+    shortcuts.push({ key: 'shift+tab', label: trustLabel })
   }
 
   if (shortcuts.length === 0) return <Box height={0} />
 
   return (
-    <Box width={cols} marginLeft={1}>
+    <Box width={Math.max(0, cols - 1)} marginLeft={1}>
+      <Box marginRight={2} flexShrink={0}>
+        <Text color={theme.accentDim} bold>POD HELM</Text>
+      </Box>
       {shortcuts.map((s, i) => (
-        <Box key={s.key} marginRight={i < shortcuts.length - 1 ? 2 : 0}>
-          <Text dimColor bold>{s.key}</Text>
-          <Text dimColor> {s.label}</Text>
+        <Box key={s.key} marginRight={i < shortcuts.length - 1 ? 2 : 0} flexShrink={0}>
+          <Text color={theme.accent} bold>{s.key}</Text>
+          <Text color={theme.dim}> {s.label}</Text>
         </Box>
       ))}
     </Box>

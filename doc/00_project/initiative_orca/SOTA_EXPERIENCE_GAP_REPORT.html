@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Orca CLI SOTA 体验差距报告</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --text: #15202b;
+      --muted: #5b6b7a;
+      --line: #d8e0e7;
+      --accent: #0a7cff;
+      --good: #0a8f5a;
+      --warn: #c57d00;
+      --bad: #c43b2f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "SF Pro Text", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      background: linear-gradient(180deg, #eef5fb 0%, var(--bg) 240px);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    main {
+      width: min(1120px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 32px 0 64px;
+    }
+    .hero, section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    h1, h2, h3 { margin: 0 0 12px; }
+    h1 { font-size: 32px; }
+    h2 { font-size: 22px; }
+    h3 { font-size: 17px; }
+    p, li { color: var(--muted); }
+    .eyebrow {
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      background: #fbfdff;
+    }
+    .metric strong {
+      display: block;
+      font-size: 22px;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+    th, td {
+      border-top: 1px solid var(--line);
+      padding: 10px 8px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { color: var(--text); }
+    td { color: var(--muted); }
+    .pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .p0 { background: rgba(196,59,47,.12); color: var(--bad); }
+    .p1 { background: rgba(197,125,0,.12); color: var(--warn); }
+    .p2 { background: rgba(10,124,255,.12); color: var(--accent); }
+    code {
+      background: #f3f7fb;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 1px 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      color: var(--text);
+    }
+    a { color: var(--accent); text-decoration: none; }
+    ul { margin: 10px 0 0 18px; padding: 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="eyebrow">SOTA Gap Report</div>
+      <h1>Orca CLI 体验差距报告</h1>
+      <p>本报告对照 <strong>Claude Code</strong>、<strong>Codex</strong>、<strong>Amp</strong>、<strong>Kilo Code</strong>、<strong>OpenCode</strong>、<strong>GitHub Copilot</strong> 的官方资料与本机 CLI 证据，判断 Orca 当前离“SOTA 体验”还差在哪些层面，以及下一阶段应该优先补什么。</p>
+      <div class="grid">
+        <div class="metric">
+          <strong>Orca 已领先</strong>
+          多模型协作、provider-neutral 路由、验证纪律、本机帮助冷启动
+        </div>
+        <div class="metric">
+          <strong>Orca 仍落后</strong>
+          Session 生命周期、审批/信任体系、协作与可移植性、远程/IDE/网页连续性
+        </div>
+        <div class="metric">
+          <strong>本机基准</strong>
+          <code>orca --help</code> 约 <strong>287.2ms</strong>，快于本机安装的 Claude/Codex/OpenCode 等入口
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>调研方法</h2>
+      <ul>
+        <li>官方文档/官方仓库：Claude Code、Codex、Amp、Kilo Code、OpenCode、GitHub Copilot。</li>
+        <li>本机 CLI 快照：<code>claude --help</code>、<code>codex --help</code>、<code>opencode --help</code>、<code>gh copilot --help</code>、Amp 原生二进制 <code>/Users/mauricewen/.amp/bin/amp --help</code>。</li>
+        <li>本机帮助冷启动只作为运维体验参考，不当作实验室性能 benchmark。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>本机帮助冷启动参考</h2>
+      <table>
+        <thead>
+          <tr><th>产品</th><th>命令</th><th>时间</th><th>结论</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Orca CLI</td><td><code>node dist/bin/orca.js --help</code></td><td>287.2ms</td><td>本机启动体验已很强，不是当前首要短板</td></tr>
+          <tr><td>Claude Code</td><td><code>claude --help</code></td><td>520.6ms</td><td>比 Orca 慢，但差距不大</td></tr>
+          <tr><td>Amp CLI</td><td><code>~/.amp/bin/amp --help</code></td><td>936.1ms</td><td>原生 CLI 启动中等</td></tr>
+          <tr><td>GitHub Copilot CLI</td><td><code>gh copilot --help</code></td><td>1223.5ms</td><td>功能窄，但入口并不极致轻量</td></tr>
+          <tr><td>OpenCode</td><td><code>opencode --help</code></td><td>2230.4ms</td><td>更像多客户端平台入口</td></tr>
+          <tr><td>Codex CLI</td><td><code>codex --help</code></td><td>3404.9ms</td><td>命令面非常丰富，帮助启动更重</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>逐个产品对照</h2>
+      <table>
+        <thead>
+          <tr><th>产品</th><th>最值得学的优势</th><th>Orca 当前差距</th><th>学习价值</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Claude Code</td><td>会话/权限/插件/MCP/子代理都被做成一等公民</td><td>Orca 的 operator surface 还不够完整</td><td>高</td></tr>
+          <tr><td>Codex</td><td>远程、本地、云、桌面、sandbox/approval 叙事非常清晰</td><td>Orca 缺 session fork/cloud/apply remote diff 这类强工作流动作</td><td>高</td></tr>
+          <tr><td>Amp</td><td>thread/share/handoff/visibility 做得像协作产品</td><td>Orca 的 session/thread 更像本地存档，不像协作对象</td><td>高</td></tr>
+          <tr><td>Kilo Code</td><td>mode/checkpoint/model choice 更像“引导式流程”</td><td>Orca 的 mode 仍偏技术开关，不够像任务模板</td><td>中高</td></tr>
+          <tr><td>OpenCode</td><td>TUI + serve + web + ACP + session import/export 连成体系</td><td>Orca 的 serve 还更像诊断接口，不像完整远程面</td><td>高</td></tr>
+          <tr><td>GitHub Copilot</td><td>快速 explain/suggest 的低认知负担</td><td>Orca 对浅任务仍偏“重”</td><td>中</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Orca 的核心差距</h2>
+      <div class="grid">
+        <div class="metric">
+          <span class="pill p0">P0</span>
+          <strong>Session 生命周期</strong>
+          缺 fork / share / export / import / handoff 等一整套工作流对象能力。
+        </div>
+        <div class="metric">
+          <span class="pill p0">P0</span>
+          <strong>审批/信任操作面</strong>
+          虽然已有 yolo/auto/plan，但还不像 Claude Code / Codex 那样显性、系统化。
+        </div>
+        <div class="metric">
+          <span class="pill p0">P0</span>
+          <strong>搜索后只到“选中”</strong>
+          Orca 现在已经有搜索式 picker，但还缺详情面板和 inspect-and-act 工作流。
+        </div>
+        <div class="metric">
+          <span class="pill p1">P1</span>
+          <strong>远程/网页/IDE 连续性</strong>
+          `serve` 还不够像完整平台能力，IDE/browser/context bridge 也偏弱。
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>推荐 PDCA 波次</h2>
+      <table>
+        <thead>
+          <tr><th>波次</th><th>目标</th><th>代表动作</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Wave 0</td><td>统一 picker 与有限选项交互</td><td>已落地：统一 picker、搜索式 picker、统一外壳</td></tr>
+          <tr><td>Wave 1</td><td>把 session/thread 变成一等工作对象</td><td>fork、share、handoff、export/import、inspect panel</td></tr>
+          <tr><td>Wave 2</td><td>做强 trust / approval UX</td><td>显式策略命令、审批详情面板、策略持久化</td></tr>
+          <tr><td>Wave 3</td><td>把 mode 做成任务模板</td><td>review/debug/ship/research/quick-assist presets</td></tr>
+          <tr><td>Wave 4</td><td>增强远程/网页/IDE 连续性</td><td>serve 升级、session portability、IDE bridge</td></tr>
+          <tr><td>Wave 5</td><td>补性能证据面</td><td>startup/TTFT/tool latency/turn cost 可视化</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>结论</h2>
+      <p>Orca 现在最不缺的是“功能点”，最缺的是把这些能力重新组织成 <strong>operator-grade workflow surface</strong>。和 SOTA 对手相比，下一阶段最值钱的不是继续加零散命令，而是把 <strong>session 生命周期</strong>、<strong>审批/信任模型</strong>、<strong>inspect-and-act</strong>、<strong>远程/IDE/web 连续性</strong> 做成系统。</p>
+      <p>官方与本机证据见 Markdown 真源：<code>SOTA_EXPERIENCE_GAP_REPORT.md</code>。</p>
+    </section>
+  </main>
+</body>
+</html>

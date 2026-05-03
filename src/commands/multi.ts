@@ -51,8 +51,6 @@ function describeAggregatorRoute(
 
 function describeBillingPath(aggregatorId: string | undefined): string {
   switch (aggregatorId) {
-    case 'copilot':
-      return 'copilot subscription'
     case 'cloudflare':
     case 'claudeflare':
       return 'cloudflare credits'

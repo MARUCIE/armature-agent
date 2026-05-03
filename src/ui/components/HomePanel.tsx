@@ -31,42 +31,42 @@ export function HomePanel({ status, toolCount, hookCount, savedSessionCount }: P
   return (
     <Box marginLeft={layout.offset} marginTop={1} marginBottom={1} flexDirection="column">
       <PickerFrame
-        title="Start Here"
-        subtitle="Primary action: type a task below and press Enter"
-        footer="Natural language works best. Press Tab for quick actions."
+        title="POD BRIEF"
+        subtitle="Give the pod one clear outcome; Orca gathers proof before edits"
+        footer="Natural language works best. Press Tab for pod actions."
         borderColor={theme.accent}
         width={layout.primaryWidth}
         marginLeft={0}
       >
         <Box flexDirection="column">
-          <Text bold color={theme.text}>Ask Orca to do one concrete thing.</Text>
-          <Text dimColor>Examples:</Text>
-          <Text color={theme.accent}>  “review the changed files”</Text>
-          <Text color={theme.accent}>  “debug the failing tests”</Text>
-          <Text color={theme.accent}>  “explain this repo and find the risky parts”</Text>
+          <Text bold color={theme.text}>Tell Orca the outcome; the pod handles plan, tools, and evidence.</Text>
+          <Text color={theme.accentDim}>Brief the pod:</Text>
+          <Text color={theme.accent}>  review the changed files and name the release risk</Text>
+          <Text color={theme.accent}>  debug the failing tests with evidence before edits</Text>
+          <Text color={theme.accent}>  map this repo, then identify the risky boundaries</Text>
         </Box>
       </PickerFrame>
 
       <Box flexDirection={layout.split ? 'row' : 'column'}>
         <PickerFrame
-          title="Trust & State"
-          subtitle="Make the current session legible before you delegate work."
+          title="POD SIGNAL"
+          subtitle="Current run posture before delegation."
           width={layout.leftColumnWidth}
           marginLeft={0}
           borderColor={theme.border}
         >
-          <Text>{`Permission: ${formatPermissionState(status)}`}</Text>
-          <Text>{`Mode: ${status.behaviorMode || 'default'} · effort: ${status.effort || 'high'}`}</Text>
-          <Text>{`Model: ${status.model}`}</Text>
-          <Text>{`Session: ${sessionLabel}`}</Text>
-          {toolCount ? <Text>{`Surface: ${toolCount} tools${hookCount ? ` · ${hookCount} hooks` : ''}`}</Text> : null}
+          <Text><Text color={theme.accentDim}>TRUST </Text>{formatPermissionState(status)}</Text>
+          <Text><Text color={theme.accentDim}>MODE  </Text>{`${status.behaviorMode || 'default'} · effort ${status.effort || 'high'}`}</Text>
+          <Text><Text color={theme.accentDim}>MODEL </Text><Text color={theme.model}>{status.model}</Text></Text>
+          <Text><Text color={theme.accentDim}>SID   </Text>{sessionLabel}</Text>
+          {toolCount ? <Text><Text color={theme.accentDim}>TOOLS </Text>{`${toolCount}${hookCount ? ` · ${hookCount} hooks` : ''}`}</Text> : null}
         </PickerFrame>
 
         {layout.split ? <Box width={layout.gap} /> : null}
 
         <PickerFrame
-          title="Quick Paths"
-          subtitle="The shortest recovery and operator commands."
+          title="RECOVER"
+          subtitle="Shortest paths when you need state, proof, or routing."
           width={layout.rightColumnWidth}
           marginLeft={0}
           borderColor={theme.border}
@@ -78,12 +78,13 @@ export function HomePanel({ status, toolCount, hookCount, savedSessionCount }: P
           <Text><Text color={theme.accent}>/permissions</Text><Text dimColor>{` ${getSlashCommandHomeDescription('/permissions')}`}</Text></Text>
           <Text><Text color={theme.accent}>/doctor</Text><Text dimColor>{` ${getSlashCommandHomeDescription('/doctor')}`}</Text></Text>
           <Text><Text color={theme.accent}>/models</Text><Text dimColor>{` ${getSlashCommandHomeDescription('/models')}`}</Text></Text>
+          <Text><Text color={theme.accent}>/evidence</Text><Text dimColor>{` ${getSlashCommandHomeDescription('/evidence')}`}</Text></Text>
         </PickerFrame>
       </Box>
 
       <PickerFrame
-        title="Failure Help"
-        subtitle="Clear next actions for the most common dead ends."
+        title="GUARDRAILS"
+        subtitle="Clear next actions for common dead ends."
         width={layout.primaryWidth}
         marginLeft={0}
         borderColor={theme.warning}

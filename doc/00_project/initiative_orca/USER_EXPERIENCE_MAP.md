@@ -1,5 +1,189 @@
 # Orca CLI User Experience Map
 
+## 2026-05-03 UX Delta - Markdown Artifact Write Integrity
+
+New operator journeys from the Markdown artifact write regression:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Generate a clean Markdown file | Ask Orca to generate a `.md` document and get only the requested article/document body in the file | `orca chat` / provider proxy save request | `src/commands/local-file-intent.ts`, `tests/local-file-intent.test.ts` |
+| Avoid chat transcript pollution | Prevent save confirmations, explanations, or prior chat text from being written into the target `.md` file | false-save repair path | `tests/chat-internals.test.ts` |
+| Avoid unsafe repair when no artifact exists | If a model only says it saved a file but provides no generated body, Orca does not fabricate a polluted file | post-model repair guard | `tests/local-file-intent.test.ts` |
+
+## 2026-05-02 UX Delta - Local File Tool Continuity and Orca Mark
+
+New operator journeys from the long-session tool-call fix, test matrix closure, and startup mark refresh:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Create and open a local Markdown file in a long chat | Ask Orca to write and visually open a `.md` file without the model claiming it has no local access after earlier turns | `orca chat` REPL with history | `src/providers/openai-compat.ts`, `src/system-prompt.ts`, `tests/openai-compat-multimodal.test.ts`, `tests/e2e-workflow.test.ts` |
+| Recover a falsely claimed saved file | Say the file is missing and ask Orca to open it; Orca reconstructs the claimed file from chat history, writes it, then opens it | `orca chat` follow-up prompt such as `本地没有这个文件，给我打开` | `src/commands/local-file-intent.ts`, `src/commands/chat-repl-turn.ts`, `tests/local-file-intent.test.ts`, `tests/chat-repl-turn.test.ts` |
+| Stop false save claims from becoming silent failures | When a model says `saved to <path>` but did not call a file tool, the proxy runtime writes the file and records the guard result | streamed proxy turn | `src/commands/chat.ts`, `tests/chat-internals.test.ts` |
+| Verify all tool-call paths together | Run one canonical matrix lane instead of remembering scattered tool tests | `npm run test:tool-calls` | `agent-eval/manifests/test-matrix.json`, `agent-eval/generated/test-matrix-entrypoints.md` |
+| Recognize Orca immediately on startup | See a dominant `ORCA-AGENT` wordmark and clean session deck without separate mascot/icon art | default Ink startup banner | `src/ui/components/Banner.tsx`, `tests/ink-ui.test.tsx` |
+| Keep Hermes-style branding mechanics without copying Hermes | Benefit from large wordmark hierarchy, theme-aware deck, and operational status while preserving Orca identity | Banner / HomePanel first frame | `src/ui/components/Banner.tsx`, `src/ui/theme.tsx` |
+
+## 2026-05-02 UX Delta - Model Metadata Consistency
+
+New operator journeys from the model-catalog SSoT tranche:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Trust model capacity labels | See the same context/max-output metadata in startup info, model picker, provider inspection, and runtime budget behavior | `orca chat`, `/model`, `/models`, `orca providers` | `src/model-metadata.ts`, `src/model-catalog.ts`, `src/output.ts`, `tests/model-catalog.test.ts` |
+| Trust cost summaries | Avoid pricing drift between model-picker metadata and usage/session cost estimates | turn summary and session summary | `src/model-metadata.ts`, `src/output.ts` |
+| Avoid runtime metadata drift | Know token budget guards and OpenAI-compatible request defaults use the same metadata as operator-facing model selection | normal provider calls and context guard behavior | `src/token-budget.ts`, `src/providers/openai-compat.ts`, `tests/model-catalog.test.ts` |
+
+## 2026-05-02 UX Delta - Copyable Terminal and Stable Tool Workspace
+
+New operator journeys from the terminal-operability hardening tranche:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Copy Orca output normally | Select and copy visible transcript text from the terminal without fighting alternate screen or mouse capture | default `orca chat` Ink UI | `src/ui/render.tsx`, `src/ui/components/App.tsx`, `tests/ink-ui.test.tsx` |
+| Opt into no-flicker fullscreen behavior | Suppress terminal repaint flashes with Claude-style alternate-screen rendering only when explicitly desired | `ORCA_TUI=fullscreen orca chat`, `ORCA_NO_FLICKER=1 orca chat`, or `CLAUDE_CODE_NO_FLICKER=1 orca chat` | `src/ui/render.tsx`, `src/ui/components/AlternateScreen.tsx`, `src/ui/components/App.tsx` |
+| Opt into mouse wheel capture | Restore app-level mouse wheel handling only when explicitly desired | `ORCA_MOUSE=1 orca chat` | `src/ui/components/App.tsx` |
+| Launch from a menu or home directory | Keep tools pointed at the last real project workspace instead of accidental `~` cwd | `orca`, `ai 7`, launcher wrappers | `src/commands/chat-support.ts`, `tests/chat-support.test.ts` |
+| Force a project from any launcher | Pass a specific project directory without changing shell cwd | `orca --cwd <project>`, `orca chat --cwd <project>` | `src/program.ts`, `src/commands/chat.ts`, `tests/program.test.ts` |
+| Open a Markdown file visually | Ask the agent to open a local `.md` or other document in the OS default app | `open_file` tool | `src/tools.ts`, `tests/tools.test.ts` |
+| Use Codex/OMX MCP tools | Route MCP tool calls for server names that contain `_` or `-` | `mcp__omx_code_intel__...` | `src/mcp-client.ts`, `tests/mcp-client.test.ts` |
+
+## 2026-05-02 UX Delta - Critique Quality Gate
+
+New operator journeys from the Rubber Duck Critique tranche:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Challenge a plan before implementation | Ask a separate reviewer to find plan gaps before execution starts | `orca critique --checkpoint after_plan --plan-file <file>` | `src/commands/critique.ts`, `tests/critique.test.ts` |
+| Review a complex working-tree diff | Gate a multi-file or sensitive implementation before tests or final review | `orca critique --checkpoint after_complex_implementation` | `src/critique.ts`, `src/commands/critique.ts` |
+| Inspect risk without spending tokens | See whether a checkpoint would run and why without live model credentials | `orca critique --dry-run --json` | `tests/critique.test.ts` |
+| Inspect critique risk mid-chat | Check risk and reviewer choice from the active REPL without leaving the session | `/critique --checkpoint after_plan` | `src/commands/chat-slash-readonly.ts`, `tests/chat-slash-readonly.test.ts` |
+| Notice risky dirty diffs before sending | Get a local reminder to challenge a large working-tree diff before the next provider call | automatic chat pre-send notice | `src/critique-auto.ts`, `src/commands/chat-repl-turn.ts`, `tests/chat-repl-turn.test.ts` |
+| Notice risky dirty diffs in one-shot chat | Get the same local reminder before `orca chat "prompt"` starts a one-shot provider run | one-shot chat pre-send notice | `src/commands/chat.ts`, `tests/chat-one-shot-mcp-cleanup.test.ts` |
+| Avoid repeated critique noise | See the automatic reminder once per dirty diff signature instead of every turn | repeat suppression in the chat session | `src/critique-auto.ts`, `tests/critique.test.ts` |
+| Tune automatic critique hints per session | Disable or retune local pre-send hints for the current REPL without changing env vars | `orca chat --no-auto-critique`, `orca chat --auto-critique-threshold 0.4` | `src/commands/chat.ts`, `tests/command-contracts.test.ts` |
+| Review critique output in Ink | Open checkpoint, risk, files, and diff-line evidence as an in-app detail panel | `/critique` in Ink chat | `src/commands/chat-slash-readonly.ts` |
+| Recover from repeated failures | Trigger a critique when the main loop keeps making similar fixes | `orca critique --checkpoint stuck_loop --repeated-failure` | `src/critique.ts` |
+| Keep reflection and critique distinct | Use `reflect` for Socratic diagnosis and `critique` for read-only reviewer challenge | `orca reflect`, `orca critique` | `README.md`, `src/commands/reflect-mode.ts`, `src/commands/critique.ts` |
+
+## 2026-05-01 UX Delta - Pod Helm Footer
+
+New operator journeys from the helm-footer UI/UX tranche:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Read persistent helm guidance | Keep Orca identity visible in the bottom shortcut rail after the banner scrolls away | Footer | `src/ui/components/Footer.tsx`, `tests/ink-ui.test.tsx` |
+| Interrupt active output clearly | Know that `esc` interrupts the current echo without losing the generating-state hint | Generating Footer | `src/ui/components/Footer.tsx` |
+| Send a pod brief | Understand `enter` as submitting a brief to the pod rather than a generic send action | Active input Footer | `src/ui/components/Footer.tsx`, `tests/ink-ui.test.tsx` |
+| Open pod commands | Read `/help` as the command surface for the pod | Active / idle Footer | `src/ui/components/Footer.tsx`, `tests/ink-ui.test.tsx` |
+| Preserve trust-mode awareness | Keep `shift+tab` and the active permission mode/source visible while the footer gains Orca language | Active / idle Footer | `src/ui/components/Footer.tsx` |
+| Avoid broken shortcut wraps | Keep ordinary-width terminals from splitting `POD HELM` and key labels into incoherent columns | Footer responsive rendering | `src/ui/components/Footer.tsx`, `tests/ink-ui.test.tsx` |
+
+## 2026-05-01 UX Delta - Pod Council Runway
+
+New operator journeys from the council-runway UI/UX tranche:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Track a multi-model pod run | See council, race, or pipeline progress as coordinated Orca pod work | MultiModelProgress | `src/ui/components/MultiModelProgress.tsx`, `tests/ink-ui.test.tsx` |
+| Read active command and voice count | Know which multi-model command is running and how many model voices are involved | MultiModelProgress header | `src/ui/components/MultiModelProgress.tsx` |
+| Distinguish surfaced voices | Identify completed model outputs without losing model name or elapsed time | Completed model row | `src/ui/components/MultiModelProgress.tsx`, `tests/ink-ui.test.tsx` |
+| Distinguish active sonar scans | Identify in-progress model work as sonar scanning while preserving spinner feedback | Active model row | `src/ui/components/MultiModelProgress.tsx`, `tests/ink-ui.test.tsx` |
+
+## 2026-05-01 UX Delta - Pod Evidence Drawer
+
+New operator journeys from the evidence-drawer UI/UX tranche:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Read detail panels as surfaced evidence | Recognize status, permission, notes, thread, and TaskRun detail panels as one Orca evidence family | DetailPanel | `src/ui/components/DetailPanel.tsx`, `tests/ink-ui.test.tsx` |
+| Keep source context visible | See the original detail title and subtitle after the Orca frame label is added | DetailPanel title/subtitle | `src/ui/components/DetailPanel.tsx` |
+| Understand detail context as a pod scan | Read `pod scan` before the original subtitle without losing the source metadata | DetailPanel subtitle | `src/ui/components/DetailPanel.tsx`, `tests/ink-ui.test.tsx` |
+| Preserve markdown evidence readability | Keep body markdown rendering identical while the frame becomes Orca-branded | MarkdownText in DetailPanel | `src/ui/components/DetailPanel.tsx`, `src/ui/components/MarkdownText.tsx` |
+
+## 2026-05-01 UX Delta - Pod Trust Gate
+
+New operator journeys from the trust-gate UI/UX tranche:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Read approval as a trust boundary | Understand that a tool is crossing a permission boundary before allowing it | PermissionPrompt | `src/ui/components/PermissionPrompt.tsx`, `tests/ink-ui.test.tsx` |
+| Scan tool impact before deciding | See the tool preview under `SCAN` before selecting allow or deny | PermissionPrompt preview | `src/ui/components/PermissionPrompt.tsx` |
+| Pick the correct trust scope | Distinguish one-time approval from session trust and project policy persistence | PermissionPrompt choices | `src/ui/components/PermissionPrompt.tsx`, `tests/ink-ui.test.tsx` |
+| Deny quickly without ambiguity | Hold the boundary through `Deny`, `n`, or Esc without changing existing semantics | PermissionPrompt footer / keybindings | `src/ui/components/PermissionPrompt.tsx` |
+| Review writes as an echo diff | Read write previews as `ECHO DIFF` while retaining file path, counts, line numbers, and truncation | DiffPreview | `src/ui/components/DiffPreview.tsx`, `tests/ink-ui.test.tsx` |
+
+## 2026-05-01 UX Delta - Pod Proof Wake
+
+New operator journeys from the proof-wake UI/UX tranche:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Read a completed turn's proof wake | See a compact completion receipt after the assistant response finishes | TurnSummary after `turn_summary` event | `src/ui/components/TurnSummary.tsx`, `tests/ink-ui.test.tsx` |
+| Interpret token flow without internal shorthand | Read `time`, `in`, `out`, `tools`, cost, and throughput instead of `r`, `d`, and `u` | Post-turn summary | `src/ui/components/TurnSummary.tsx` |
+| Preserve accounting trust | Confirm UI wording changed without altering usage payloads or provider behavior | `TurnSummaryInfo` unchanged | `src/ui/types.ts`, `tests/ink-ui.test.tsx` |
+
+## 2026-05-01 UX Delta - Pod Status Rail
+
+New operator journeys from the status-rail UI/UX tranche:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Read persistent pod identity | Keep Orca identity visible after the startup banner scrolls away | Fixed StatusBar line 1 | `src/ui/components/StatusBar.tsx`, `tests/ink-ui.test.tsx` |
+| Interpret context as sonar load | Understand context pressure as an operational signal instead of an unlabeled meter | StatusBar context segment | `src/ui/components/StatusBar.tsx`, `tests/ink-ui.test.tsx` |
+| Scan live session metrics | Read cost, throughput, turns, session id, policy summaries, output style, and sparkline as one signal rail | StatusBar line 2 | `src/ui/components/StatusBar.tsx` |
+| Check trust posture quickly | See permission mode, source, behavior mode, effort, and shift-tab cycling guidance in one trust rail | StatusBar line 3 | `src/ui/components/StatusBar.tsx`, `tests/ink-ui.test.tsx` |
+
+## 2026-05-01 UX Delta - Pod Transcript Flow
+
+New operator journeys from the transcript-flow UI/UX tranche:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Read submitted prompts as operator briefs | Keep the user's own prompt visible as an Orca-owned `POD BRIEF` block | Press Enter in Ink chat | `src/ui/components/App.tsx`, `tests/ink-ui.test.tsx` |
+| Read assistant output as pod response | See assistant markdown in an `ORCA POD` panel with headings and bullets rendered structurally | Assistant response / turn summary | `src/ui/components/App.tsx`, `src/ui/components/MarkdownText.tsx`, `tests/ink-ui.test.tsx` |
+| Understand streaming as live echolocation | Read in-progress assistant output as `ORCA POD echoing` rather than a generic stream | Assistant streaming | `src/ui/components/App.tsx` |
+| Track tools as evidence scans | Recognize active and completed tool calls as `ECHO TOOL` rails while keeping tool name, path, result, and duration visible | Tool start/end events | `src/ui/components/App.tsx`, `src/ui/components/ToolCallBlock.tsx`, `tests/ink-ui.test.tsx` |
+| Interpret waiting state as pod work | See compact `POD <verb>...` feedback tied to listening, routing, verifying, and evidence surfacing | ThinkingSpinner | `src/ui/components/ThinkingSpinner.tsx`, `tests/ink-ui.test.tsx` |
+
+## 2026-05-01 UX Delta - Pod Command Surface
+
+New operator journeys from the command-surface UI/UX tranche:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Brief the pod from the prompt | Start typing from an Orca-owned input surface instead of a generic message box | InputArea empty state | `src/ui/components/InputArea.tsx`, `tests/ink-ui.test.tsx` |
+| Discover commands without losing brand context | Browse slash commands inside a `POD COMMANDS` picker with filter feedback | Type `/` or use command picker | `src/ui/components/CommandPicker.tsx`, `tests/ink-ui.test.tsx` |
+| Recover from an over-specific command filter | See `no matching command` instead of a disappearing picker | CommandPicker filtered no-match state | `src/ui/components/CommandPicker.tsx`, `tests/ink-ui.test.tsx` |
+| Select finite options with Orca hierarchy | Pick modes, models, themes, or actions with the same Orca semantic color language | OptionPicker surfaces | `src/ui/components/OptionPicker.tsx` |
+| Read shared picker framing consistently | Recognize all picker panels as the same terminal control family | PickerFrame | `src/ui/components/PickerFrame.tsx` |
+
+## 2026-05-01 UX Delta - Cute Orca Mascot Entry
+
+Superseded on 2026-05-02 for the startup Banner: the independent mascot/icon block is removed. The HomePanel pod-brief journey remains active.
+
+New operator journeys from the mascot UI/UX tranche:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Recognize Orca startup identity | See a dominant `ORCA-AGENT` wordmark and clean live state deck, not a mascot/icon block | `orca`, `orca chat` startup | `src/ui/components/Banner.tsx`, `tests/ink-ui.test.tsx` |
+| Understand the logo system | Read the Hermes-inspired structure as wordmark + live state, without copying Hermes's caduceus or adding a mascot | Banner | `src/ui/components/Banner.tsx` |
+| Brief the pod | Give Orca one outcome in a friendly first panel rather than a generic mission-control prompt | HomePanel `POD BRIEF` | `src/ui/components/HomePanel.tsx` |
+| Keep operational context visible | Preserve trust, model, session, tools, recovery, and guardrails after the startup cleanup | HomePanel / StatusBar | `src/ui/components/HomePanel.tsx`, `src/ui/components/StatusBar.tsx` |
+
+## 2026-04-30 UX Delta - Blackfin Signal Entry Deck
+
+New operator journeys from the visual system tranche:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Recognize Orca immediately | See a distinctive `ORCA` wordmark and killer-whale pod signal motif before reading details | `orca`, `orca chat` startup | `src/ui/components/Banner.tsx`, `tests/ink-ui.test.tsx` |
+| Read operational startup state | Confirm model, cwd, trust, config, session, and fleet state without scanning raw logs | Banner info deck | `src/ui/components/Banner.tsx` |
+| Start from pod brief intent | Focus the first screen on the next objective rather than decorative onboarding copy | HomePanel `POD BRIEF` | `src/ui/components/HomePanel.tsx` |
+| Check live pod state | See trust mode, workflow mode, model, session id, and tool count as a compact operator panel | HomePanel `POD SIGNAL` | `src/ui/components/HomePanel.tsx` |
+| Recover without remembering commands | Continue sessions, inspect permissions, run doctor, switch models, or open evidence from the first screen | HomePanel `RECOVER` | `src/ui/components/HomePanel.tsx` |
+| Pick identity deliberately | See `Blackfin Signal` as the default while preserving existing theme choices | ThemePicker | `src/ui/components/ThemePicker.tsx` |
+| Track status consistently | Read the status bar as an Orca pod surface rather than a generic status strip | StatusBar | `src/ui/components/StatusBar.tsx` |
+
 ## 2026-04-29 UX Delta - Queue and Trust
 
 New operator journeys:
@@ -265,7 +449,7 @@ The 2026-04-21 swarm audit adds one sharper constraint to these journeys: they d
 
 ### 5. ink Terminal UI Interaction Model
 
-The REPL now uses ink (React for terminals) as the rendering engine. The UI is a fullscreen alternate-screen layout:
+The REPL now uses ink (React for terminals) as the rendering engine. By default it renders in the primary terminal buffer for normal selection/copy. Operators who see repaint flashes can opt into the Claude-style fullscreen/no-flicker alternate-screen layout:
 
 ```
 ┌─────────────────────────────────┐

@@ -1,14 +1,20 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
 import {
   findModelChoice,
   formatContextWindow,
+  formatModelCapacity,
   formatPricing,
   getAgenticWarning,
+  getContextWindowForModel,
+  getMaxOutputForModel,
+  getPricingForModel,
   groupModelChoicesByProvider,
   listModelChoices,
   modelChoiceKey,
 } from '../src/model-catalog.js'
 import type { OrcaConfig } from '../src/config.js'
+import { TokenBudgetManager } from '../src/token-budget.js'
 
 describe('model catalog', () => {
   const baseConfig: OrcaConfig = {
@@ -105,5 +111,29 @@ describe('model catalog', () => {
 
     expect(gemini?.contextWindow).toBe(1_000_000)
     expect(gemini?.pricing).toEqual([1.25, 10])
+  })
+
+  it('uses one metadata source for catalog, token budget, and display capacity', () => {
+    expect(getContextWindowForModel('gpt-4.1')).toBe(1_000_000)
+    expect(getMaxOutputForModel('gpt-4.1')).toBe(32_000)
+    expect(getPricingForModel('gpt-5.4')).toEqual([1.25, 10])
+    expect(formatModelCapacity('gpt-5.4')).toBe('256K ctx · 64K out')
+
+    const budget = new TokenBudgetManager('gpt-4.1').getBudget([])
+    expect(budget.contextWindow).toBe(1_000_000)
+    expect(budget.maxOutput).toBe(32_000)
+  })
+
+  it('keeps model metadata tables out of runtime consumers', () => {
+    const consumers = [
+      '../src/token-budget.ts',
+      '../src/providers/openai-compat.ts',
+      '../src/output.ts',
+    ]
+
+    for (const relativePath of consumers) {
+      const source = readFileSync(new URL(relativePath, import.meta.url), 'utf-8')
+      expect(source).not.toMatch(/const MODEL_(?:CONTEXT|CONTEXT_WINDOW|MAX_OUTPUT|PRICING)/)
+    }
   })
 })
