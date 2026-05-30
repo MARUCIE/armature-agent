@@ -1,4 +1,31 @@
+---
+Title: Orca CLI PDCA Execution Plan
+Scope: project PDCA execution plan
+Owner: Maurice
+Status: Active
+LastUpdated: 2026-05-29
+---
 # Orca CLI PDCA Execution Plan
+
+## 2026-05-03 - Claude Code Parity UX Audit PDCA
+
+- Plan:
+  - Close user-reported Claude Code parity gaps in active-turn cancellation, slash command clearing, command aliases, capability inspection, and command menu discoverability.
+  - Keep the work scoped to terminal UX and read-only discovery surfaces; leave IDE/desktop/web parity as product-surface follow-up.
+- Do:
+  - Added Claude-style keybinding metadata, Esc/Ctrl-C abort propagation, and slash input clearing after command dispatch.
+  - Added Claude-compatible aliases and daily commands: `/usage`, `/settings`, `/resume`, `/tasks`, `/bashes`, `/reset`, `/new`, `/context`, `/export`, `/copy`, and `/rewind`.
+  - Added `/memory`, `/skills`, and `/agents` read-only detail panels.
+  - Added dynamic `/` picker entries for discovered project/user skills, custom agent specs, and configured MCP servers.
+  - Prioritized project-local skills before user-global skills.
+  - Added read-only `/mcp <name>` server details without changing default MCP startup safety.
+- Check:
+  - `npm test -- tests/mcp-client.test.ts tests/slash-picker-items.test.ts tests/chat-slash-mutations.test.ts tests/chat-slash-readonly.test.ts` -> `111` tests passed.
+  - `npm run lint` -> pass.
+  - `npm run build` -> pass.
+  - `npm test` -> `97` files / `1776` tests passed.
+- Act:
+  - Updated Claude parity audit report, task plan, PDCA checklist, rolling ledger, README, release evidence snapshot, and SOTA evidence pointers.
 
 ## 2026-05-02 - Model Catalog SSoT Runtime Consolidation PDCA
 
@@ -16,7 +43,7 @@
   - `npm test -- tests/model-catalog.test.ts tests/context-protection.test.ts tests/agent-intelligence.test.ts tests/openai-compat-multimodal.test.ts` -> `86` tests passed.
   - `npm run lint` -> pass.
   - `npm run build` -> pass.
-  - `npm test` -> `97` files / `1776` tests passed.
+  - `npm test` -> `91` files / `1663` tests passed.
 - Act:
   - Updated PRD, architecture, UX map, optimization plan, task plan, notes, deliverable, rolling ledger, README, release evidence snapshot, and HTML companions.
 
@@ -42,7 +69,7 @@
   - `node dist/bin/orca.js --help` -> `42 tools`, `--cwd`, and `critique` visible.
   - `node dist/bin/orca.js doctor` -> provider OK and `14` MCP configs discovered.
   - Live Poe one-shot tool smoke -> model used `read_file`; tool result succeeded; final answer `Orca CLI`.
-  - `npm test` -> `97` files / `1776` tests passed.
+  - `npm test` -> `91` files / `1663` tests passed.
 - Act:
   - Updated PRD, architecture, UX map, optimization plan, task plan, notes, deliverable, rolling ledger, README, and release evidence snapshot.
 
@@ -416,3 +443,9 @@ Superseded on 2026-05-02 for startup Banner art: the separate mascot/icon block 
 - Update `AGENT_EVAL_PLAN.md` whenever task families, grader rules, or gate thresholds change
 - Re-rank SOTA gaps after every completed wave so the next tranche is selected from fresh evidence, not stale assumptions
 - Treat trust hardening as part of Wave 4 delivery, not as a postscript after continuity work lands.
+
+## Changelog
+
+| Date | Change |
+| --- | --- |
+| 2026-05-29 | Normalized metadata for the project ai check gate and recorded the multi-model review ledger integration. |

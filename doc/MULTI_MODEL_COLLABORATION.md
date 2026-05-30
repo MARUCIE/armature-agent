@@ -62,7 +62,7 @@ orca race "write a function to parse CSV" --models 5
 
 **Flow**:
 ```
-                    ┌─── Model A ──→ ✓ (3.2s) ──→ WINNER
+                    ┌─── Model A ──→ yes (3.2s) ──→ WINNER
 User Prompt ───────├─── Model B ──→ ... (still running)
                     ├─── Model C ──→ ... (still running)
                     └─── (cancel remaining)
@@ -168,7 +168,7 @@ const DIVERSITY_GROUPS = [
 
   ─────────────────────────────────────────
 
-  ★ Verdict (claude-opus-4.6 as judge, 5.1s)
+  Verdict Verdict (claude-opus-4.6 as judge, 5.1s)
 
   All three models agree on indexing. Key differences:
   - Claude: covering index (simplest, works for most cases)
@@ -187,11 +187,11 @@ const DIVERSITY_GROUPS = [
 
 | Feature | Claude Code | Codex | Orca CLI |
 |---------|------------|-------|-----------|
-| Single model | ✓ Claude only | ✓ GPT only | ✓ Any of 11 |
-| Multi-model parallel | ✗ | ✗ | ✓ Council |
-| First-wins racing | ✗ | ✗ | ✓ Race |
-| Specialist pipeline | ✗ | ✗ | ✓ Pipeline |
-| Cross-vendor synthesis | ✗ | ✗ | ✓ Judge model |
+| Single model | yes Claude only | yes GPT only | yes Any of 11 |
+| Multi-model parallel | no | no | yes Council |
+| First-wins racing | no | no | yes Race |
+| Specialist pipeline | no | no | yes Pipeline |
+| Cross-vendor synthesis | no | no | yes Judge model |
 
 ## Implementation Priority
 

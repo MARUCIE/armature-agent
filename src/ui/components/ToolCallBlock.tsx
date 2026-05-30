@@ -51,8 +51,7 @@ export function ToolCallBlock({ start, end }: Props): React.ReactElement {
       marginLeft={1}
     >
       <Box>
-        <Text color={theme.accentDim} bold>ECHO TOOL</Text>
-        <Text color={theme.dim}> </Text>
+        <Text color={theme.accentToolBlock} bold>{'◆ '}</Text>
         <Text color={theme.tool} bold>{start.name}</Text>
         {hasPath ? (
           <Text> <FileLink path={String(start.args.path)} color={theme.filePath} /></Text>

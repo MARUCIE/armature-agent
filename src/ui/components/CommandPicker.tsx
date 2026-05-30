@@ -75,8 +75,8 @@ export function CommandPicker({ commands, filter, onSelect, onCancel, active }: 
 
   return (
     <PickerFrame
-      title="POD COMMANDS"
-      subtitle={filter ? `echo filter: /${filter}` : `${commands.length} slash commands`}
+      title="COMMANDS"
+      subtitle={filter ? `filter: /${filter}` : `${commands.length} slash commands`}
       footer="↑↓ browse · enter select · esc close"
     >
       {filtered.length === 0 ? (

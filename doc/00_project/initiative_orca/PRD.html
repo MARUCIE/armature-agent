@@ -502,4 +502,15 @@
 <li>Focused UI tests prove input-focused history scroll activation no longer disables non-text scroll keys.</li>
 <li>Focused local-file tests prove generated Markdown artifacts are written and refusal/no-tool paths are marked incomplete.</li>
 </ul>
+<!-- generated-by: html-style-router; route=html-document-style; update=2026-05-29 review-ledger -->
+<h2>2026-05-29 更新 - 多模型 Review Ledger</h2>
+<p>本次更新把大 PR 多模型审查流程沉淀为 Orca 的一等命令能力，用于把独立模型报告、共识汇总、人类决策、修复记录、复审结论和 E2E 证据串成可审计账本。</p>
+<h3>新增要求</h3>
+<ul>
+<li>Orca 必须提供 <code>review-ledger</code> 命令，用于大 PR 或补丁审查。</li>
+<li>多个模型必须先独立审查同一份 diff，再由 judge 模型汇总共性问题和优先级。</li>
+<li>所有问题必须保留人类 checkbox 决策门，模型共识只提升优先级，不自动授权修复。</li>
+<li>账本必须包含 fix log、review verdict 和 E2E evidence 模板，支持后续 Claude/GPT 等 agent 闭环。</li>
+<li><code>--dry-run</code> 必须能生成完整提示词和模板，方便在不消耗 provider token 的情况下预检。</li>
+</ul>
 </article></main></body></html>

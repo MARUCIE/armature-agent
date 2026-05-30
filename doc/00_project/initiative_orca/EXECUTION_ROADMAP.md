@@ -1,3 +1,10 @@
+---
+Title: Orca CLI Execution Roadmap
+Scope: project execution roadmap
+Owner: Maurice
+Status: Active
+LastUpdated: 2026-05-29
+---
 # Orca CLI Execution Roadmap
 
 ## Phase 0 - Governance Baseline
@@ -17,3 +24,9 @@
 - Extend automation around doc drift and release verification
 - Tighten serve-mode and multi-model operational documentation
 - Continue reducing architecture ambiguity as the runtime grows
+
+## Changelog
+
+| Date | Change |
+| --- | --- |
+| 2026-05-29 | Normalized metadata for the project ai check gate and recorded the multi-model review ledger integration. |

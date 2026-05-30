@@ -34,7 +34,7 @@ describe('Project context: Node/TypeScript detection', () => {
     writeFileSync(join(projDir, 'src', 'index.ts'), 'export const app = "hello"\n')
     writeFileSync(join(projDir, 'src', 'utils.py'), 'def helper(): pass\n')
     try {
-      execSync('git init && git add -A && git commit -m "init"', {
+      execSync('git init && git config user.email "orca-test@example.com" && git config user.name "Orca Test" && git add -A && git commit -m "init"', {
         cwd: projDir, encoding: 'utf-8', stdio: 'pipe',
       })
     } catch { /* ignore */ }

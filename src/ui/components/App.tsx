@@ -12,8 +12,11 @@
  *   └─────────────────────────────────┘
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { Box, Text, useInput } from 'ink'
 import type { ChatSessionEmitter } from '../session.js'
 import { hasConfiguredThemePreference, useTheme, useThemeController } from '../theme.js'
@@ -39,8 +42,7 @@ import type { ScrollBoxHandle } from './ScrollBox.js'
 import { useMouseWheel } from '../useMouseWheel.js'
 import { getCommandPickerFilter, shouldShowCommandPicker, truncateLabel } from '../utils.js'
 import { listSlashCommandPickerItems } from '../../slash-commands.js'
-
-const SLASH_COMMANDS = listSlashCommandPickerItems()
+import { buildSlashCommandPickerItems } from '../../slash-picker-items.js'
 
 export function resolveHomeActionSelection(value: string): string | null {
   if (value.startsWith('prompt:')) return value.slice('prompt:'.length)
@@ -128,37 +130,44 @@ interface OutputBlock {
 
 function UserPromptBlock({ content }: { content: string }): React.ReactElement {
   const theme = useTheme()
+  // Grok user-prompt block: left accent line (accent_user), no themed label.
   return (
     <Box
       flexDirection="column"
-      borderStyle="round"
-      borderColor={theme.prompt}
-      paddingX={1}
+      borderStyle="single"
+      borderTop={false}
+      borderRight={false}
+      borderBottom={false}
+      borderLeft
+      borderColor={theme.accentUser}
+      paddingLeft={1}
       marginY={1}
       width="100%"
     >
-      <Text color={theme.prompt} bold>POD BRIEF</Text>
-      <Text>{content}</Text>
+      <Text color={theme.text}>{content}</Text>
     </Box>
   )
 }
 
 function AssistantMessageBlock({ content, streaming = false }: { content: string; streaming?: boolean }): React.ReactElement {
   const theme = useTheme()
+  // Grok assistant block: left accent line (accent_assistant), markdown body,
+  // a subtle dim cursor while streaming. No themed label.
   return (
     <Box
       flexDirection="column"
       borderStyle="single"
-      borderColor={streaming ? theme.accent : theme.borderDim}
-      paddingX={1}
+      borderTop={false}
+      borderRight={false}
+      borderBottom={false}
+      borderLeft
+      borderColor={streaming ? theme.accent : theme.accentAssistant}
+      paddingLeft={1}
       marginY={1}
       width="100%"
     >
-      <Box>
-        <Text color={theme.accent} bold>ORCA POD</Text>
-        {streaming ? <Text color={theme.dim}> echoing</Text> : null}
-      </Box>
       <MarkdownText>{content}</MarkdownText>
+      {streaming ? <Text color={theme.dim}>{'▌'}</Text> : null}
     </Box>
   )
 }
@@ -183,18 +192,17 @@ function ActiveToolCall({ start, startTime }: { start: ToolStartInfo; startTime:
       borderRight={false}
       borderTop={false}
       borderBottom={false}
-      borderColor={theme.accent}
+      borderColor={theme.accentToolBlock}
       paddingLeft={1}
       marginLeft={1}
     >
       <Box>
-        <Text color={theme.accentDim} bold>ECHO TOOL</Text>
-        <Text color={theme.dim}> </Text>
+        <Text color={theme.accentToolBlock} bold>{'◆ '}</Text>
         <Text color={theme.tool} bold>{start.name}</Text>
         {shortLabel ? <Text dimColor> {shortLabel}</Text> : null}
       </Box>
       <Box>
-        <Text color={theme.accent}>{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[Math.floor(elapsed / 80) % 10]}</Text>
+        <Text color={theme.accentToolBlock}>{'⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'[Math.floor(elapsed / 80) % 10]}</Text>
         <Text dimColor> {(elapsed / 1000).toFixed(1)}s</Text>
       </Box>
     </Box>
@@ -209,6 +217,61 @@ function summarizeToolArgs(args: Record<string, unknown>): string {
   }
   if ('query' in args) return String(args.query).slice(0, 50)
   return ''
+}
+
+function openExternalEditor(initialText: string): string | null {
+  const editor = process.env.VISUAL || process.env.EDITOR
+  if (!editor) return null
+  const dir = mkdtempSync(join(tmpdir(), 'orca-prompt-'))
+  const filePath = join(dir, 'prompt.md')
+  try {
+    writeFileSync(filePath, initialText, 'utf-8')
+    const [command, ...args] = editor.split(/\s+/).filter(Boolean)
+    if (!command) return null
+    const result = spawnSync(command, [...args, filePath], { stdio: 'inherit' })
+    if (result.status !== 0) return null
+    return readFileSync(filePath, 'utf-8').trimEnd()
+  } catch {
+    return null
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
+function pasteClipboardImage(currentText: string): string | null {
+  const dir = mkdtempSync(join(tmpdir(), 'orca-clipboard-image-'))
+  const filePath = join(dir, 'clipboard.png')
+
+  const pngpaste = spawnSync('pngpaste', [filePath], { encoding: 'utf-8' })
+  if (pngpaste.status !== 0) {
+    const script = [
+      `set outFile to POSIX file "${filePath}"`,
+      'try',
+      'set pngData to the clipboard as «class PNGf»',
+      'set fileRef to open for access outFile with write permission',
+      'set eof of fileRef to 0',
+      'write pngData to fileRef',
+      'close access fileRef',
+      'on error errMsg',
+      'try',
+      'close access outFile',
+      'end try',
+      'error errMsg',
+      'end try',
+    ].flatMap((line) => ['-e', line])
+    const result = spawnSync('osascript', script, { encoding: 'utf-8' })
+    if (result.status !== 0) {
+      rmSync(dir, { recursive: true, force: true })
+      return null
+    }
+  }
+
+  const suffix = shellQuote(filePath)
+  return currentText.trim().length > 0 ? `${currentText} ${suffix}` : suffix
 }
 
 export function App({ session, initialStatus, banner, noFlicker = false }: Props): React.ReactElement {
@@ -240,12 +303,21 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
   const [multiModelState, setMultiModelState] = useState<{ command: string; models: ModelProgress[] } | null>(null)
   const [activeTool, setActiveTool] = useState<{ id: string; start: ToolStartInfo; startTime: number } | null>(null)
   const [inputValue, setInputValue] = useState('')
+  const [inputDraft, setInputDraft] = useState<{ id: number; text: string } | null>(null)
   // Theme picker: show on first launch if ORCA_THEME not set
   const [showThemePicker, setShowThemePicker] = useState(() => !hasConfiguredThemePreference())
 
   // Command picker state
   // Only show the picker for actual slash-command prefixes, not absolute paths.
-  const showPicker = shouldShowCommandPicker(inputValue, SLASH_COMMANDS)
+  const slashCommandInput = inputValue.startsWith('/')
+  const staticSlashCommands = useMemo(() => listSlashCommandPickerItems(), [])
+  const slashCommands = useMemo(() => {
+    if (!slashCommandInput) return staticSlashCommands
+    if (!shouldShowCommandPicker(inputValue, staticSlashCommands)) return staticSlashCommands
+    const cwd = banner?.cwd || process.cwd()
+    return buildSlashCommandPickerItems(cwd)
+  }, [banner?.cwd, inputValue, slashCommandInput, staticSlashCommands])
+  const showPicker = shouldShowCommandPicker(inputValue, slashCommands)
   const pickerFilter = getCommandPickerFilter(inputValue)
 
   // ScrollBox ref for imperative scroll control
@@ -263,6 +335,11 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
   // Batched text streaming: accumulate tokens, flush at 20fps
   const textBuffer = useRef('')
   const flushTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+  const inputDraftSeq = useRef(0)
+  const injectInputDraft = useCallback((text: string) => {
+    inputDraftSeq.current += 1
+    setInputDraft({ id: inputDraftSeq.current, text })
+  }, [])
 
   useEffect(() => {
     flushTimer.current = setInterval(() => {
@@ -363,6 +440,11 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
           break
         }
 
+        case 'input_draft':
+          injectInputDraft(event.text)
+          setInputActive(true)
+          break
+
         case 'permission_request':
           setPermRequest({
             toolName: event.request.toolName,
@@ -444,7 +526,7 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
 
     session.on('*', handler)
     return () => { session.removeListener('*', handler) }
-  }, [session, optionPickerRequest])
+  }, [session, optionPickerRequest, injectInputDraft])
 
   // Input value tracking (for command picker)
   const handleInputChange = useCallback((val: string) => {
@@ -458,8 +540,9 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
     }
     setInputActive(false)
     setInputValue('')
+    injectInputDraft('')
     session.submitInput(text || null)
-  }, [session])
+  }, [session, injectInputDraft])
 
   // Command picker selection
   const handleCommandSelect = useCallback((command: string) => {
@@ -468,7 +551,8 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
 
   const handleCommandCancel = useCallback(() => {
     setInputValue('')
-  }, [])
+    injectInputDraft('')
+  }, [injectInputDraft])
 
   // Input submission
   const handleSubmit = useCallback((text: string) => {
@@ -479,12 +563,24 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
     session.emitAbort()
   }, [session])
 
-  const handleClear = useCallback(() => {
-    session.emitCommand('clear-screen')
-    setBlocks([])
-    setStreamingText('')
-    textBuffer.current = ''
-    setLastTurnSummary(null)
+  const handleRedraw = useCallback(() => {
+    session.emitCommand('redraw-screen')
+  }, [session])
+
+  const handleToggleTodos = useCallback(() => {
+    submitInputValue('/jobs')
+  }, [submitInputValue])
+
+  const handleBackgroundTask = useCallback(() => {
+    session.emitSystemMessage('backgrounding the active model turn is not available in this terminal session.', 'warn')
+  }, [session])
+
+  const handleKillAgents = useCallback((confirmed: boolean) => {
+    if (!confirmed) {
+      session.emitSystemMessage('press Ctrl+X Ctrl+K again within 3s to kill all background agents.', 'warn')
+      return
+    }
+    session.emitCommand('kill-agents')
   }, [session])
 
   const handleModeCycle = useCallback(() => {
@@ -494,6 +590,78 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
   const handleUndo = useCallback(() => {
     session.emitCommand('undo')
   }, [session])
+
+  const handleExit = useCallback(() => {
+    submitInputValue('/exit')
+  }, [submitInputValue])
+
+  const handleRewind = useCallback(() => {
+    session.emitCommand('rewind')
+  }, [session])
+
+  const handleHistorySearch = useCallback(() => {
+    if (inputHistory.length === 0) {
+      session.emitSystemMessage('no input history.', 'info')
+      return
+    }
+    const seen = new Set<string>()
+    const options = [...inputHistory]
+      .reverse()
+      .filter((entry) => {
+        if (seen.has(entry)) return false
+        seen.add(entry)
+        return true
+      })
+      .slice(0, 30)
+      .map((entry, index) => ({
+        value: entry,
+        label: `${index + 1}. ${entry.slice(0, 64)}`,
+        description: entry.length > 64 ? entry.slice(64, 140) : undefined,
+      }))
+    setOptionPickerRequest({
+      title: 'Prompt History',
+      subtitle: 'Select a previous prompt to edit',
+      options,
+      filterable: true,
+      filterPlaceholder: 'history search',
+      resolve: (value) => {
+        setOptionPickerRequest(null)
+        setInputActive(true)
+        if (value) injectInputDraft(value)
+      },
+    })
+    setInputActive(false)
+  }, [inputHistory, session, injectInputDraft])
+
+  const handleExternalEditor = useCallback((text: string) => {
+    return openExternalEditor(text)
+  }, [])
+
+  const handleModelPicker = useCallback(() => {
+    submitInputValue('/model')
+  }, [submitInputValue])
+
+  const handleFastMode = useCallback(() => {
+    session.emitCommand('fast-mode')
+  }, [session])
+
+  const handleThinkingToggle = useCallback(() => {
+    session.emitCommand('thinking-toggle')
+  }, [session])
+
+  const handleImagePaste = useCallback((text: string) => {
+    const next = pasteClipboardImage(text)
+    if (!next) {
+      session.emitSystemMessage('clipboard does not contain a pasteable PNG image.', 'warn')
+      return null
+    }
+    session.emitSystemMessage('pasted clipboard image into prompt.', 'info')
+    return next
+  }, [session])
+
+  const handleToggleTranscript = useCallback(() => {
+    submitInputValue('/history')
+  }, [submitInputValue])
 
   const handleThemeSelect = useCallback((themeId: string) => {
     setThemeId(themeId)
@@ -508,6 +676,7 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
   }, [setThemeId])
 
   const hasContent = blocks.length > 0 || streamingText || thinking || activeTool || multiModelState
+  const isGenerating = thinking || Boolean(activeTool) || streamingText.length > 0 || Boolean(multiModelState)
   const renderedBlocks = noFlicker && blocks.length > 80 ? blocks.slice(-80) : blocks
   const homeActionsAvailable = !hasContent
     && inputActive
@@ -654,7 +823,7 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
         {/* Command picker (above input box) */}
         {showPicker && (
           <CommandPicker
-            commands={SLASH_COMMANDS}
+            commands={slashCommands}
             filter={pickerFilter}
             onSelect={handleCommandSelect}
             onCancel={handleCommandCancel}
@@ -680,14 +849,28 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
         <InputArea
           onSubmit={handleSubmit}
           onAbort={handleAbort}
-          onClear={handleClear}
+          onRedraw={handleRedraw}
+          onToggleTodos={handleToggleTodos}
+          onBackgroundTask={handleBackgroundTask}
+          onKillAgents={handleKillAgents}
           onModeCycle={handleModeCycle}
           onUndo={handleUndo}
+          onExit={handleExit}
+          onRewind={handleRewind}
+          onHistorySearch={handleHistorySearch}
+          onExternalEditor={handleExternalEditor}
+          onModelPicker={handleModelPicker}
+          onFastMode={handleFastMode}
+          onThinkingToggle={handleThinkingToggle}
+          onImagePaste={handleImagePaste}
+          onToggleTranscript={handleToggleTranscript}
           onChange={handleInputChange}
           active={inputActive && !permRequest && !showThemePicker}
+          isGenerating={isGenerating}
           permissionBlocked={!!permRequest || showThemePicker}
           pickerActive={showPicker || !!optionPickerRequest}
           history={inputHistory}
+          draft={inputDraft}
         />
 
         {/* Status bar */}
@@ -695,7 +878,7 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
 
         {/* Footer: keyboard shortcuts */}
         <Footer
-          isGenerating={thinking}
+          isGenerating={isGenerating}
           isInputActive={inputActive && !permRequest}
           permMode={status.permMode}
           permSource={status.permSource}

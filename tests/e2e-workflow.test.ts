@@ -35,7 +35,7 @@ export class Calculator {
   writeFileSync(join(testDir, 'package.json'), '{"name":"e2e-test","version":"1.0.0"}\n')
 
   try {
-    execSync('git init && git add -A && git commit -m "init: calculator"', {
+    execSync('git init && git config user.email "orca-test@example.com" && git config user.name "Orca Test" && git add -A && git commit -m "init: calculator"', {
       cwd: testDir, encoding: 'utf-8', stdio: 'pipe',
     })
   } catch { /* ignore */ }

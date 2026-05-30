@@ -1,10 +1,13 @@
 import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from 'node:child_process'
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { getGlobalConfigPath, listProviders, resolveConfig } from '../config.js'
+import { discoverGuidance } from '../agents-discovery.js'
+import { discoverAgentSpecs, type AgentSpec } from '../agent-specs.js'
 import { listBackgroundJobs } from '../background-jobs.js'
+import { loadProjectContext, loadSkills, type SkillInfo } from '../context.js'
 import { hooks } from '../hooks.js'
 import { mcpClient } from '../mcp-client.js'
+import { DELEGATE_TOOLS, READ_ONLY_TOOLS } from '../agent/sub-agent.js'
 import { parseCritiqueCheckpoint, type CritiqueCheckpoint } from '../critique.js'
 import { inspectWorkspaceCritique, type WorkspaceCritiqueInspection } from '../critique-workspace.js'
 import {
@@ -29,6 +32,7 @@ import {
   type CommandOutput,
 } from '../ui/command-output.js'
 import type { ChatSessionEmitter } from '../ui/session.js'
+import { CLAUDE_CODE_KEYBINDINGS } from '../ui/keybindings.js'
 import { buildSafeGitSlashArgs, tokenizeCommandLine } from './chat-input.js'
 import {
   listSlashHelpCommands,
@@ -145,7 +149,7 @@ function renderHelp(session?: ChatSessionEmitter): void {
       }
       lines.push('')
     }
-    lines.push('**Tips**: `!cmd` shell escape · `Tab` auto-complete · `/` command picker · `Ctrl+J` newline')
+    lines.push('**Tips**: `!cmd` shell escape · `Tab` auto-complete · `/` command picker · `Ctrl+J` newline · `Ctrl+L` redraw · `Esc Esc` rewind')
     session.emitText(lines.join('\n'))
     return
   }
@@ -168,8 +172,9 @@ function renderHelp(session?: ChatSessionEmitter): void {
   }
   console.log()
   console.log(`${dim}  ${bold}Tips${reset}`)
-  console.log(row('!cmd      Shell escape', 'Ctrl+L   Reset chat'))
-  console.log(row('Tab       Auto-complete', 'Ctrl+Z   Undo last write'))
+  console.log(row('!cmd      Shell escape', 'Ctrl+L   Redraw screen'))
+  console.log(row('Ctrl+G   External editor', 'Alt+P    Model picker'))
+  console.log(row('Tab       Auto-complete', 'Esc Esc  Rewind'))
   console.log(row('/         Command picker', 'Shift+Tab Mode cycle'))
   console.log(reset)
 }
@@ -606,6 +611,37 @@ function renderConfig(
   console.log('\x1b[90m  Edit: orca init (project) or ~/.orca/config.json (global)\x1b[0m')
 }
 
+function renderKeybindings(output: CommandOutput, session?: ChatSessionEmitter): void {
+  const rows = CLAUDE_CODE_KEYBINDINGS
+    .map((binding) => ({
+      context: binding.context,
+      key: binding.key,
+      action: binding.action,
+      description: binding.description,
+    }))
+
+  if (session) {
+    const body = [
+      '| Context | Key | Action | Description |',
+      '| --- | --- | --- | --- |',
+      ...rows.map((row) =>
+        `| ${escapeMarkdownTableCell(row.context)} | ${formatMarkdownCodeSpan(row.key)} | ${formatMarkdownCodeSpan(row.action)} | ${escapeMarkdownTableCell(row.description)} |`,
+      ),
+    ].join('\n')
+    session.emitDetailPanel({
+      title: 'Keybindings',
+      subtitle: 'Claude Code default shortcut contract',
+      body,
+      tone: 'info',
+    })
+    return
+  }
+
+  output.info(rows.map((row) =>
+    `${row.context.padEnd(7)}  ${row.key.padEnd(12)}  ${row.action.padEnd(24)}  ${row.description}`,
+  ).join('\n'))
+}
+
 function renderProviders(cwd: string, mc: ReadonlySlashModelControl, output: CommandOutput): void {
   const console = createCommandConsole(output)
   const resolvedConfig = resolveConfig({ cwd })
@@ -616,6 +652,330 @@ function renderProviders(cwd: string, mc: ReadonlySlashModelControl, output: Com
     const active = provider.id === mc.getProvider() ? ' \x1b[36m←\x1b[0m' : ''
     console.log(`\x1b[90m    ${provider.id.padEnd(14)} ${provider.model.padEnd(24)} ${status}${active}\x1b[0m`)
   }
+}
+
+function renderContext(
+  history: ChatMessage[],
+  stats: ReadonlySlashSessionStats,
+  mc: ReadonlySlashModelControl,
+  output: CommandOutput,
+  harness?: ReadonlySlashHarness,
+  session?: ChatSessionEmitter,
+): void {
+  const roleCounts = {
+    system: history.filter((message) => message.role === 'system').length,
+    user: history.filter((message) => message.role === 'user').length,
+    assistant: history.filter((message) => message.role === 'assistant').length,
+  }
+  const roleChars = {
+    system: history
+      .filter((message) => message.role === 'system')
+      .reduce((sum, message) => sum + messageContentToText(message.content).length, 0),
+    user: history
+      .filter((message) => message.role === 'user')
+      .reduce((sum, message) => sum + messageContentToText(message.content).length, 0),
+    assistant: history
+      .filter((message) => message.role === 'assistant')
+      .reduce((sum, message) => sum + messageContentToText(message.content).length, 0),
+  }
+  const totalChars = roleChars.system + roleChars.user + roleChars.assistant
+  const estimatedTokens = Math.ceil(totalChars / 4)
+  const budget = harness?.tokenBudget.getBudget(history)
+  const contextWindow = budget?.contextWindow || mc.getChoices().find((choice) => choice.model === mc.getModel() && choice.provider === mc.getProvider())?.contextWindow
+  const utilizationPct = budget?.utilizationPct ?? (contextWindow ? Math.min(100, Math.round((estimatedTokens / contextWindow) * 100)) : null)
+  const totalTokens = stats.totalInputTokens + stats.totalOutputTokens
+
+  if (session) {
+    const rows = [
+      ['Model', `${mc.getProvider()}/${mc.getModel()}`],
+      ['Messages', `${history.length} (${roleCounts.system} system / ${roleCounts.user} user / ${roleCounts.assistant} assistant)`],
+      ['Transcript chars', totalChars.toLocaleString()],
+      ['Estimated context', budget ? `${budget.historyTokensEst.toLocaleString()} tokens` : `${estimatedTokens.toLocaleString()} tokens`],
+      ['Context window', contextWindow ? contextWindow.toLocaleString() : 'unknown'],
+      ['Utilization', utilizationPct === null ? 'unknown' : `${Math.round(utilizationPct)}%`],
+      ['Actual usage', `${totalTokens.toLocaleString()} tokens (${stats.totalInputTokens.toLocaleString()} in / ${stats.totalOutputTokens.toLocaleString()} out)`],
+    ]
+    session.emitDetailPanel({
+      title: 'Context',
+      subtitle: utilizationPct === null ? 'context window unknown' : `${Math.round(utilizationPct)}% of window`,
+      body: [
+        '| Metric | Value |',
+        '| --- | --- |',
+        ...rows.map(([label, value]) => `| ${escapeMarkdownTableCell(label)} | ${escapeMarkdownTableCell(value)} |`),
+        '',
+        'Role character split:',
+        `- system: ${roleChars.system.toLocaleString()}`,
+        `- user: ${roleChars.user.toLocaleString()}`,
+        `- assistant: ${roleChars.assistant.toLocaleString()}`,
+      ].join('\n'),
+      tone: utilizationPct !== null && utilizationPct >= 85 ? 'warn' : 'info',
+    })
+    return
+  }
+
+  output.info([
+    `model:    ${mc.getProvider()}/${mc.getModel()}`,
+    `messages: ${history.length} (${roleCounts.system} system / ${roleCounts.user} user / ${roleCounts.assistant} assistant)`,
+    `chars:    ${totalChars.toLocaleString()} (system ${roleChars.system.toLocaleString()} / user ${roleChars.user.toLocaleString()} / assistant ${roleChars.assistant.toLocaleString()})`,
+    `context:  ${budget ? budget.historyTokensEst.toLocaleString() : estimatedTokens.toLocaleString()} tokens est${contextWindow ? ` / ${contextWindow.toLocaleString()}` : ''}${utilizationPct === null ? '' : ` (${Math.round(utilizationPct)}%)`}`,
+    `usage:    ${totalTokens.toLocaleString()} tokens (${stats.totalInputTokens.toLocaleString()} in / ${stats.totalOutputTokens.toLocaleString()} out)`,
+  ].join('\n'))
+}
+
+function resolveCapabilityName(arg: string): string {
+  return arg.trim().split(/\s+/, 1)[0] || ''
+}
+
+function renderSkillDetail(skill: SkillInfo, output: CommandOutput, session?: ChatSessionEmitter): void {
+  if (session) {
+    session.emitDetailPanel({
+      title: `Skill: ${skill.name}`,
+      subtitle: `${skill.source} · ${skill.path}`,
+      body: [
+        '| Field | Value |',
+        '| --- | --- |',
+        `| Name | ${formatMarkdownCodeSpan(skill.name)} |`,
+        `| Source | ${escapeMarkdownTableCell(skill.source)} |`,
+        `| Description | ${escapeMarkdownTableCell(skill.description)} |`,
+        `| Path | ${formatMarkdownCodeSpan(skill.path)} |`,
+      ].join('\n'),
+      tone: 'info',
+    })
+    return
+  }
+
+  output.info([
+    `skill: ${skill.name}`,
+    `source: ${skill.source}`,
+    `path: ${skill.path}`,
+    `description: ${skill.description}`,
+  ].join('\n'))
+}
+
+function renderSkills(cwd: string, output: CommandOutput, session?: ChatSessionEmitter, arg = ''): void {
+  const skills = loadSkills(cwd)
+  const requested = resolveCapabilityName(arg)
+  if (requested) {
+    const skill = skills.find((candidate) => candidate.name === requested)
+    if (!skill) {
+      output.warn(`skill not found: ${requested}`)
+      return
+    }
+    renderSkillDetail(skill, output, session)
+    return
+  }
+
+  const bySource = skills.reduce<Record<SkillInfo['source'], number>>((acc, skill) => {
+    acc[skill.source] += 1
+    return acc
+  }, { claude: 0, codex: 0, orca: 0 })
+  const visible = skills.slice(0, 40)
+
+  if (session) {
+    session.emitDetailPanel({
+      title: 'Skills',
+      subtitle: `${skills.length} discovered · claude ${bySource.claude} · codex ${bySource.codex} · orca ${bySource.orca}`,
+      body: [
+        '| Skill | Source | Description |',
+        '| --- | --- | --- |',
+        ...visible.map((skill) =>
+          `| ${formatMarkdownCodeSpan(skill.name)} | ${escapeMarkdownTableCell(skill.source)} | ${escapeMarkdownTableCell(skill.description)} |`,
+        ),
+        skills.length > visible.length ? `\n... ${skills.length - visible.length} more skills omitted from this view.` : '',
+      ].filter(Boolean).join('\n'),
+      tone: skills.length === 0 ? 'warn' : 'info',
+    })
+    return
+  }
+
+  if (skills.length === 0) {
+    output.warn('no skills found in .claude/skills, .codex/skills, or .orca/skills.')
+    return
+  }
+  output.info([
+    `skills: ${skills.length} discovered (claude ${bySource.claude}, codex ${bySource.codex}, orca ${bySource.orca})`,
+    ...visible.map((skill) => `${skill.source.padEnd(6)}  ${skill.name.padEnd(28)}  ${skill.description}`),
+    skills.length > visible.length ? `... ${skills.length - visible.length} more` : '',
+  ].filter(Boolean).join('\n'))
+}
+
+function renderMemory(cwd: string, output: CommandOutput, session?: ChatSessionEmitter): void {
+  const project = loadProjectContext(cwd)
+  const guidance = discoverGuidance(cwd)
+  const skills = loadSkills(cwd)
+  const guidanceRows = guidance.map((entry) => ({
+    source: entry.source,
+    depth: entry.depth,
+    path: entry.path,
+    chars: entry.content.length,
+  }))
+
+  if (session) {
+    session.emitDetailPanel({
+      title: 'Memory',
+      subtitle: `${guidance.length} guidance files · ${skills.length} skills · ${project.name}`,
+      body: [
+        '| Area | Value |',
+        '| --- | --- |',
+        `| Project | ${escapeMarkdownTableCell(project.name)} |`,
+        `| Type | ${escapeMarkdownTableCell(project.type)} |`,
+        `| Languages | ${escapeMarkdownTableCell(project.languages.join(', ') || 'unknown')} |`,
+        `| Framework | ${escapeMarkdownTableCell(project.framework || 'unknown')} |`,
+        `| Tests | ${escapeMarkdownTableCell(project.testRunner || 'unknown')} |`,
+        `| Config files | ${escapeMarkdownTableCell(project.configFiles.join(', ') || 'none')} |`,
+        `| Guidance files | ${guidance.length} |`,
+        `| Skills | ${skills.length} |`,
+        '',
+        'Guidance sources:',
+        guidanceRows.length === 0
+          ? '(none)'
+          : guidanceRows.map((row) =>
+              `- ${row.source} depth ${row.depth}: ${row.path} (${row.chars.toLocaleString()} chars)`,
+            ).join('\n'),
+      ].join('\n'),
+      tone: guidance.length === 0 && skills.length === 0 ? 'warn' : 'info',
+    })
+    return
+  }
+
+  output.info([
+    `project: ${project.name} (${project.type})`,
+    `languages: ${project.languages.join(', ') || 'unknown'}`,
+    `framework: ${project.framework || 'unknown'} · tests: ${project.testRunner || 'unknown'}`,
+    `config: ${project.configFiles.join(', ') || 'none'}`,
+    `guidance: ${guidance.length}`,
+    ...guidanceRows.slice(0, 20).map((row) => `  ${row.source.padEnd(12)} depth ${row.depth}  ${row.path}`),
+    `skills: ${skills.length}`,
+  ].join('\n'))
+}
+
+interface BuiltInAgentSurface {
+  name: string
+  label: string
+  tools: string
+  description: string
+}
+
+function renderBuiltInAgentDetail(agent: BuiltInAgentSurface, output: CommandOutput, session?: ChatSessionEmitter): void {
+  if (session) {
+    session.emitDetailPanel({
+      title: `Agent: ${agent.name}`,
+      subtitle: agent.label,
+      body: [
+        '| Field | Value |',
+        '| --- | --- |',
+        `| Name | ${formatMarkdownCodeSpan(agent.name)} |`,
+        `| Surface | ${escapeMarkdownTableCell(agent.label)} |`,
+        `| Tools | ${escapeMarkdownTableCell(agent.tools)} |`,
+        `| Description | ${escapeMarkdownTableCell(agent.description)} |`,
+      ].join('\n'),
+      tone: 'info',
+    })
+    return
+  }
+
+  output.info([
+    `agent: ${agent.name}`,
+    `surface: ${agent.label}`,
+    `tools: ${agent.tools}`,
+    `description: ${agent.description}`,
+  ].join('\n'))
+}
+
+function renderAgentSpecDetail(spec: AgentSpec, output: CommandOutput, session?: ChatSessionEmitter): void {
+  if (session) {
+    session.emitDetailPanel({
+      title: `Agent: ${spec.name}`,
+      subtitle: `${spec.source} · ${spec.path}`,
+      body: [
+        '| Field | Value |',
+        '| --- | --- |',
+        `| Name | ${formatMarkdownCodeSpan(spec.name)} |`,
+        `| Source | ${escapeMarkdownTableCell(spec.source)} |`,
+        `| Description | ${escapeMarkdownTableCell(spec.description)} |`,
+        `| Path | ${formatMarkdownCodeSpan(spec.path)} |`,
+      ].join('\n'),
+      tone: 'info',
+    })
+    return
+  }
+
+  output.info([
+    `agent: ${spec.name}`,
+    `source: ${spec.source}`,
+    `path: ${spec.path}`,
+    `description: ${spec.description}`,
+  ].join('\n'))
+}
+
+function renderAgents(cwd: string, output: CommandOutput, session?: ChatSessionEmitter, arg = ''): void {
+  const specs = discoverAgentSpecs(cwd)
+  const builtInRows: BuiltInAgentSurface[] = [
+    {
+      name: 'read-only',
+      label: 'read-only sub-agent',
+      tools: `${READ_ONLY_TOOLS.length} tools`,
+      description: 'Safe codebase exploration and analysis worker.',
+    },
+    {
+      name: 'delegate',
+      label: 'delegate sub-agent',
+      tools: `${DELEGATE_TOOLS.length} tools`,
+      description: 'Implementation-capable worker with write and command tools.',
+    },
+  ]
+  const requested = resolveCapabilityName(arg)
+  if (requested) {
+    const builtIn = builtInRows.find((agent) => agent.name === requested || agent.label === requested)
+    if (builtIn) {
+      renderBuiltInAgentDetail(builtIn, output, session)
+      return
+    }
+    const spec = specs.find((candidate) => candidate.name === requested)
+    if (!spec) {
+      output.warn(`agent not found: ${requested}`)
+      return
+    }
+    renderAgentSpecDetail(spec, output, session)
+    return
+  }
+
+  if (session) {
+    session.emitDetailPanel({
+      title: 'Agents',
+      subtitle: `${builtInRows.length} built-in surfaces · ${specs.length} custom specs`,
+      body: [
+        'Built-in surfaces:',
+        '',
+        '| Agent | Surface | Tools | Description |',
+        '| --- | --- | --- | --- |',
+        ...builtInRows.map((agent) =>
+          `| ${formatMarkdownCodeSpan(agent.name)} | ${escapeMarkdownTableCell(agent.label)} | ${escapeMarkdownTableCell(agent.tools)} | ${escapeMarkdownTableCell(agent.description)} |`,
+        ),
+        '',
+        'Custom specs:',
+        '',
+        specs.length === 0
+          ? '(none found in `.claude/agents`, `.codex/agents`, or `.orca/agents`)'
+          : [
+              '| Agent | Source | Description | Path |',
+              '| --- | --- | --- | --- |',
+              ...specs.slice(0, 40).map((spec) =>
+                `| ${formatMarkdownCodeSpan(spec.name)} | ${escapeMarkdownTableCell(spec.source)} | ${escapeMarkdownTableCell(spec.description)} | ${formatMarkdownCodeSpan(spec.path)} |`,
+              ),
+            ].join('\n'),
+      ].join('\n'),
+      tone: 'info',
+    })
+    return
+  }
+
+  output.info([
+    `built-in agents: ${builtInRows.length}`,
+    ...builtInRows.map((agent) => `  ${agent.name.padEnd(22)} ${agent.tools.padEnd(8)} ${agent.description}`),
+    `custom agents: ${specs.length}`,
+    ...specs.slice(0, 40).map((spec) => `  ${spec.source.padEnd(6)} ${spec.name.padEnd(28)} ${spec.description}`),
+  ].join('\n'))
 }
 
 export function handleReadonlySlashCommand(options: ReadonlySlashCommandOptions): ReadonlySlashCommandResult {
@@ -671,6 +1031,18 @@ export function handleReadonlySlashCommand(options: ReadonlySlashCommandOptions)
       ].join('\n'))
       return 'handled'
     }
+
+    case '/context':
+      renderContext(history, stats, mc, output, harness, session)
+      return 'handled'
+
+    case '/memory':
+      renderMemory(cwd, output, session)
+      return 'handled'
+
+    case '/skills':
+      renderSkills(cwd, output, session, arg)
+      return 'handled'
 
     case '/cwd':
       console.log(`\x1b[90m  ${cwd}\x1b[0m`)
@@ -748,6 +1120,14 @@ export function handleReadonlySlashCommand(options: ReadonlySlashCommandOptions)
 
     case '/config':
       renderConfig(cwd, mc, modeLabel, output)
+      return 'handled'
+
+    case '/agents':
+      renderAgents(cwd, output, session, arg)
+      return 'handled'
+
+    case '/keybindings':
+      renderKeybindings(output, session)
       return 'handled'
 
     case '/providers':

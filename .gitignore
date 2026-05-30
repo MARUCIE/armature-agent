@@ -11,3 +11,18 @@ configs/dev-pipeline-registry.json
 configs/skill-groups.json
 knowledge/refs/design-systems
 knowledge/models/COGNITIVE_SKELETON.md
+
+# Local test harness artifacts
+.copilot-git-alias-test/
+.copilot-git-output-test/
+agent-eval/runs/
+agent-eval/scripts/__pycache__/
+outputs/build/
+outputs/check/
+outputs/harness-traces/
+outputs/manual-cli-smoke/
+outputs/test/
+outputs/test-matrix/
+outputs/ui-smoke/
+outputs/verification/
+state/

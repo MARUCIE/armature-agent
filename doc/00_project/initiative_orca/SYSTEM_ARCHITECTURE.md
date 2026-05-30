@@ -1,4 +1,35 @@
+---
+Title: Orca CLI System Architecture
+Scope: project architecture
+Owner: Maurice
+Status: Active
+LastUpdated: 2026-05-29
+---
 # Orca CLI System Architecture
+
+## 2026-05-29 Architecture Delta - Multi-Model Review Ledger
+
+This tranche adds a durable code-review ledger beside the existing council / race / pipeline collaboration modes:
+
+1. Command surface:
+   - `src/commands/review-ledger.ts`
+   - Registers `orca review-ledger` with alias `orca review-swarm`.
+   - Accepts `--pr`, `--diff-file`, `--base`, `--head`, `--models`, `--judge`, `--provider`, `--api-key`, `--out`, `--dry-run`, and `--json`.
+2. Review ledger engine:
+   - `src/review-ledger.ts`
+   - Builds independent reviewer prompts, synthesis prompts, and durable artifact templates.
+   - Writes `00_diff.patch`, `00_review_packet.md`, `01_*` reviewer reports or prompts, `04_synthesis.md`, `05_human_decisions.md`, `06_fix_log.md`, `07_review_verdict.md`, `08_e2e_evidence.md`, and `review-state.json`.
+3. Provider routing:
+   - Reuses `resolveConfig`, `findAggregator`, and `resolveModelEndpoint`.
+   - Keeps Orca's aggregator-first strategy while allowing explicit model lists for GPT / Composer / Deepseek style review pods.
+4. Human gate boundary:
+   - The review ledger command is review/report generation only.
+   - Fix agents may only act on issues whose human decision is `accepted`.
+   - Accepted issues still require a separate review verdict and E2E evidence before closure.
+5. Regression coverage:
+   - `tests/review-ledger.test.ts`
+   - `tests/program.test.ts`
+   - `tests/command-contracts.test.ts`
 
 ## 2026-05-03 Architecture Delta - Markdown Artifact Write Integrity
 
@@ -604,3 +635,9 @@ Architectural invariant:
 - `src/commands/chat.ts`
   - executes post-model local file repair/generated-write plans before claim-evidence guarding
   - records enforcement notices into the assistant history so later turns do not treat incomplete local file operations as successful evidence
+
+## Changelog
+
+| Date | Change |
+| --- | --- |
+| 2026-05-29 | Normalized metadata for the project ai check gate and recorded the multi-model review ledger integration. |

@@ -258,6 +258,7 @@ export interface SkillInfo {
   name: string
   description: string
   source: 'claude' | 'codex' | 'orca'
+  path: string
 }
 
 /**
@@ -270,10 +271,10 @@ export function loadSkills(cwd: string): SkillInfo[] {
 
   const skillDirs: Array<{ path: string; source: SkillInfo['source'] }> = [
     { path: join(cwd, '.claude', 'skills'), source: 'claude' },
-    { path: join(home, '.claude', 'skills'), source: 'claude' },
     { path: join(cwd, '.codex', 'skills'), source: 'codex' },
-    { path: join(home, '.codex', 'skills'), source: 'codex' },
     { path: join(cwd, '.orca', 'skills'), source: 'orca' },
+    { path: join(home, '.claude', 'skills'), source: 'claude' },
+    { path: join(home, '.codex', 'skills'), source: 'codex' },
   ]
 
   const seen = new Set<string>()
@@ -302,7 +303,7 @@ export function loadSkills(cwd: string): SkillInfo[] {
             description = trimmed.slice(0, 120)
             break
           }
-          skills.push({ name: entry, description: description || entry, source })
+          skills.push({ name: entry, description: description || entry, source, path: skillMd })
         } catch { /* skip unreadable */ }
       }
     } catch { /* skip unreadable dirs */ }

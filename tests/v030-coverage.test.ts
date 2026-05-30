@@ -16,8 +16,21 @@ import { tmpdir } from 'node:os'
 // ── 1. Usage Database ───────────────────────────────────────────
 
 describe('usage-db: SQLite persistent tracking', () => {
-  // usage-db uses getGlobalDir() which reads homedir()/.orca, not ORCA_HOME
-  // The db file is at ~/.orca/usage.db — we verify behavior, not file location
+  let usageHome: string
+  const previousOrcaHome = process.env.ORCA_HOME
+
+  beforeAll(() => {
+    usageHome = join(tmpdir(), `orca-usage-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    process.env.ORCA_HOME = usageHome
+    vi.resetModules()
+  })
+
+  afterAll(() => {
+    vi.resetModules()
+    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
+    else process.env.ORCA_HOME = previousOrcaHome
+    try { rmSync(usageHome, { recursive: true, force: true }) } catch { /* ignore */ }
+  })
 
   it('17.1 recordUsage does not crash and inserts successfully', async () => {
     const { recordUsage } = await import('../src/usage-db.js')

@@ -26,22 +26,24 @@ export function PickerFrame({
 }: Props): React.ReactElement {
   const { cols } = useTerminalSize()
   const theme = useTheme()
-  const resolvedBorderColor = borderColor ?? theme.border
+  const resolvedBorderColor = borderColor ?? theme.accent
   const resolvedWidth = width ?? Math.min(Math.max(cols - 4, 40), widthLimit)
 
   return (
     <Box
       flexDirection="column"
-      borderStyle="round"
+      borderStyle="single"
+      borderTop={false}
+      borderRight={false}
+      borderBottom={false}
       borderColor={resolvedBorderColor}
       width={resolvedWidth}
       marginLeft={marginLeft}
       paddingLeft={1}
-      paddingRight={1}
       marginBottom={1}
     >
       <Box marginBottom={subtitle ? 0 : 1}>
-        <Text color={theme.accent} bold>{`◇ ${title}`}</Text>
+        <Text color={resolvedBorderColor} bold>{`◆ ${title}`}</Text>
       </Box>
       {subtitle ? (
         <Box marginBottom={1}>

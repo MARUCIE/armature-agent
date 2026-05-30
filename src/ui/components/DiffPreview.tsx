@@ -68,18 +68,24 @@ export function DiffPreview({ oldContent, newContent, filePath, maxLines = 16 }:
   const addCount = lines.filter(l => l.type === 'add').length
   const removeCount = lines.filter(l => l.type === 'remove').length
 
+  // Grok edit block: left accent line, diamond header, gutter line numbers,
+  // and a "⋯" hunk separator where context lines skip a range.
   return (
     <Box
       flexDirection="column"
       borderStyle="single"
-      borderColor={theme.borderDim}
+      borderTop={false}
+      borderRight={false}
+      borderBottom={false}
+      borderLeft
+      borderColor={theme.accentToolBlock}
       paddingLeft={1}
       marginLeft={1}
     >
       <Box>
-        <Text color={theme.accentDim} bold>ECHO DIFF </Text>
+        <Text color={theme.accentToolBlock} bold>{'◆ '}</Text>
         <Text color={theme.filePath}>{filePath}</Text>
-        <Text dimColor> </Text>
+        <Text dimColor>{'  '}</Text>
         <Text color={theme.diffAdd}>+{addCount}</Text>
         <Text dimColor> </Text>
         <Text color={theme.diffRemove}>-{removeCount}</Text>
@@ -89,15 +95,24 @@ export function DiffPreview({ oldContent, newContent, filePath, maxLines = 16 }:
         const color = line.type === 'add' ? theme.diffAdd : line.type === 'remove' ? theme.diffRemove : theme.diffContext
         const lineNum = line.lineNo ? String(line.lineNo).padStart(4) : '    '
         const content = line.content.length > 80 ? line.content.slice(0, 77) + '...' : line.content
+        // Hunk separator: contiguous context/remove (old-side) lines jumping > 1.
+        const prev = lines[i - 1]
+        const showHunkGap = Boolean(
+          prev && prev.type !== 'add' && line.type !== 'add' &&
+          prev.lineNo && line.lineNo && line.lineNo - prev.lineNo > 1,
+        )
         return (
-          <Box key={i}>
-            <Text dimColor>{lineNum} </Text>
-            <Text color={color}>{prefix} {content}</Text>
-          </Box>
+          <React.Fragment key={i}>
+            {showHunkGap ? <Text color={theme.diffContext}>{'     ⋯'}</Text> : null}
+            <Box>
+              <Text dimColor>{lineNum} </Text>
+              <Text color={color}>{prefix} {content}</Text>
+            </Box>
+          </React.Fragment>
         )
       })}
       {lines.length >= maxLines && (
-        <Text dimColor>  ... (truncated)</Text>
+        <Text color={theme.diffContext}>{'     ⋯ (truncated)'}</Text>
       )}
     </Box>
   )

@@ -870,4 +870,13 @@
 </ul>
 </li>
 </ul>
+<!-- generated-by: html-style-router; route=html-document-style; update=2026-05-29 review-ledger -->
+<h2>2026-05-29 架构增量 - 多模型 Review Ledger</h2>
+<ul>
+<li><code>src/commands/review-ledger.ts</code> 负责 Commander 命令注册、参数解析、PR / diff-file / local git diff 来源读取，以及 JSON / 文本输出。</li>
+<li><code>src/review-ledger.ts</code> 是账本引擎，负责模型列表解析、diff 截断、独立审查提示词、synthesis 提示词、artifact 写入和 live orchestration。</li>
+<li>模型调用复用现有 <code>resolveConfig</code>、<code>findAggregator</code>、<code>resolveModelEndpoint</code> 与 <code>chatOnce</code> 路由，不引入第二套 provider 栈。</li>
+<li>artifact contract 固化为 <code>00_diff.patch</code>、独立报告、<code>04_synthesis.md</code>、<code>05_human_decisions.md</code>、<code>06_fix_log.md</code>、<code>07_review_verdict.md</code>、<code>08_e2e_evidence.md</code>。</li>
+<li>测试入口覆盖新命令注册、command contract、dry-run artifact、独立 reviewer 调用和 judge synthesis 调用。</li>
+</ul>
 </article></main></body></html>

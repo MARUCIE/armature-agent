@@ -19,7 +19,11 @@ interface ThemeOption {
 }
 
 const THEMES: ThemeOption[] = [
-  { id: 'orca', label: 'Blackfin', accent: '#F6C945', mode: 'dark', description: 'Killer-whale posture with amber echolocation accents' },
+  { id: 'groknight', label: 'GrokNight', accent: '#7D4BC6', mode: 'dark', description: 'Neutral gray base with brand accents (default)' },
+  { id: 'grokday', label: 'GrokDay', accent: '#6C3EB2', mode: 'light', description: 'Light theme for bright terminals' },
+  { id: 'tokyonight', label: 'TokyoNight', accent: '#BB9AF7', mode: 'dark', description: 'Blue-tinted Tokyo Night palette' },
+  { id: 'rosepine-moon', label: 'RosePineMoon', accent: '#C4A7E7', mode: 'dark', description: 'Warm muted Rose Pine palette' },
+  { id: 'orca', label: 'Blackfin', accent: '#F6C945', mode: 'dark', description: 'Orca legacy amber echolocation accents' },
   { id: 'default', label: 'Default', accent: 'cyan', mode: 'dark', description: 'Cyan accents on dark background' },
   { id: 'dark', label: 'Dark', accent: 'green', mode: 'dark', description: 'Matrix green on dark background' },
   { id: 'ocean', label: 'Ocean', accent: 'blue', mode: 'dark', description: 'Deep blue on dark background' },
@@ -51,7 +55,7 @@ export function ThemePicker({ onSelect, active }: Props): React.ReactElement {
         return
       }
       if (key.escape) {
-        onSelect('orca')
+        onSelect('groknight')
         return
       }
     },
@@ -63,7 +67,7 @@ export function ThemePicker({ onSelect, active }: Props): React.ReactElement {
   return (
     <PickerFrame
       title="Choose a theme"
-      subtitle="Blackfin Signal is the Orca default. Browse with arrows, confirm with enter"
+      subtitle="GrokNight is the default. Browse with arrows, confirm with enter"
       borderColor={current.accent}
       widthLimit={56}
     >

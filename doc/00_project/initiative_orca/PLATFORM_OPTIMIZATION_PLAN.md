@@ -1,4 +1,52 @@
+---
+Title: Orca CLI Platform Optimization Plan
+Scope: project optimization plan
+Owner: Maurice
+Status: Active
+LastUpdated: 2026-05-29
+---
 # Orca CLI Platform Optimization Plan
+
+## 2026-05-29 Optimization Delta - Multi-Model Review Ledger
+
+The large-PR review workflow is now integrated as an Orca CLI command:
+
+1. Multi-model review pod:
+   - `orca review-ledger` runs independent model review prompts for the same PR/diff.
+   - Reviewer model lists are explicit with `--models <csv>`, so operators can combine GPT, Composer, Deepseek, Claude, Gemini, or any routed model.
+2. Human-gated review ledger:
+   - synthesis writes Critical / High / Medium findings with checkbox rows and agreement counts
+   - decisions remain `pending` until a human marks `accepted`, `rejected`, or `deferred`
+3. Fix/review/E2E separation:
+   - fix agents update `06_fix_log.md`
+   - review agents update `07_review_verdict.md`
+   - final regression evidence is recorded in `08_e2e_evidence.md`
+4. Deterministic local validation:
+   - `--dry-run --json` writes prompts/templates without model calls
+   - targeted tests cover prompt contracts, dry-run artifact generation, live mocked reviewer/judge orchestration, and command registration
+5. Verification:
+   - `npm run build` passed
+   - `vitest run tests/review-ledger.test.ts tests/program.test.ts tests/command-contracts.test.ts` passed with `44/44` tests
+   - dist-level dry-run smoke wrote `10` review artifacts under `/tmp/orca-review-ledger-smoke`
+
+## 2026-05-03 Optimization Delta - Claude Code Parity UX
+
+The Claude Code parity UX tranche is complete:
+
+1. Cancellation and input lifecycle:
+   - Esc/Ctrl-C now propagate active-turn aborts through the chat session and provider layer
+   - slash commands clear from the input after dispatch instead of remaining as stale text
+2. Command surface:
+   - added Claude-compatible aliases and daily commands for usage/settings/resume/jobs/reset/new/context/export/copy/rewind
+   - added `/memory`, `/skills`, `/agents`, and `/mcp <name>` read-only detail panels
+3. Discoverability:
+   - `/` picker now lazily includes discovered project/user skills, custom agent specs, and configured MCP servers
+   - selecting `/skills <name>`, `/agents <name>`, or `/mcp <name>` opens a targeted detail panel
+   - project-local skills are discovered before user-global skills
+   - MCP discovery parses config files only and does not auto-start project-scoped servers
+4. Verification:
+   - targeted MCP/picker/slash pack passed with `111` tests
+   - `npm run lint`, `npm run build`, and full `npm test` passed with `92` files / `1696` tests
 
 ## 2026-05-03 Optimization Delta - Markdown Artifact Write Integrity
 
@@ -606,3 +654,9 @@ Still-missing institutional gates:
 - Verification lane:
   - targeted regressions in `tests/local-file-intent.test.ts`, `tests/chat-internals.test.ts`, and `tests/ink-ui.test.tsx`
   - `npm run lint`, `npm run build`, and full `npm test` passed on 2026-05-03
+
+## Changelog
+
+| Date | Change |
+| --- | --- |
+| 2026-05-29 | Normalized metadata for the project ai check gate and recorded the multi-model review ledger integration. |

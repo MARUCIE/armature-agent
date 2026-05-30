@@ -22,6 +22,7 @@ import { createPRCommand } from './commands/pr.js'
 import { createServeCommand } from './commands/serve.js'
 import { createEvolveCommand } from './commands/evolve.js'
 import { createCritiqueCommand } from './commands/critique.js'
+import { createReviewLedgerCommand } from './commands/review-ledger.js'
 import { ORCA_VERSION } from './version.js'
 
 export function createProgram(): Command {
@@ -52,6 +53,7 @@ export function createProgram(): Command {
       '  queue             Inspect queued and completed task runs\n' +
       '  permissions       Inspect and configure approval modes\n' +
       '  critique          Run a read-only Rubber Duck Critique quality gate\n' +
+      '  review-ledger     Multi-model review ledger with human-gated fixes\n' +
       '  pr                Checkout a GitHub PR and review it\n' +
       '  serve             Start headless agent server (HTTP + SSE)\n' +
       '  providers         List and test configured providers\n' +
@@ -78,6 +80,7 @@ export function createProgram(): Command {
   program.addCommand(createQueueCommand())
   program.addCommand(createPermissionsCommand())
   program.addCommand(createCritiqueCommand())
+  program.addCommand(createReviewLedgerCommand())
   program.addCommand(createPRCommand())
   program.addCommand(createServeCommand())
 

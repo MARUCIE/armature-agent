@@ -23,7 +23,7 @@ beforeAll(() => {
   writeFileSync(join(testDir, 'src', 'app.ts'), 'export const version = "1.0.0"\n')
   writeFileSync(join(testDir, 'target.txt'), 'line1\nline2\nline3\n')
   try {
-    execSync('git init && git add -A && git commit -m "init"', {
+    execSync('git init && git config user.email "orca-test@example.com" && git config user.name "Orca Test" && git add -A && git commit -m "init"', {
       cwd: testDir, encoding: 'utf-8', stdio: 'pipe',
     })
   } catch { /* ignore */ }

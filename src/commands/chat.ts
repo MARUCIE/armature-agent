@@ -50,7 +50,7 @@ import { TOOL_DEFINITIONS, setSandboxMode } from '../tools.js'
 import { TokenBudgetManager } from '../token-budget.js'
 import { RetryTracker } from '../retry-intelligence.js'
 import { recordUsage } from '../usage-db.js'
-import { consumeCompletedBackgroundJobs, readBackgroundJobLog } from '../background-jobs.js'
+import { consumeCompletedBackgroundJobs, killRunningBackgroundJobs, readBackgroundJobLog } from '../background-jobs.js'
 import { appendTaskRunApproval, createTaskRun, createWorkSession, finishTaskRun, updateWorkSession } from '../work-session-store.js'
 import type { ToolApprovalEventInput } from '../policy-executor.js'
 import {
@@ -115,7 +115,7 @@ import { resetConversationState } from './chat-session-state.js'
 import { applyModeSystemPrompt } from './mode-system-prompt.js'
 import { prepareReflectPromptContent } from './reflect-mode.js'
 import { emitCommandMessage, formatMarkdownCodeBlock } from '../ui/command-output.js'
-import { listSlashCommandCompletions } from '../slash-commands.js'
+import { getSlashCommandDefinition, listSlashCommandCompletions } from '../slash-commands.js'
 import {
   buildLocalFileEnforcementNotice,
   buildPostModelSaveRepairPlan,
@@ -634,19 +634,26 @@ async function runREPL(
       })
 
   if (!useInk) {
-    // Ctrl+L to clear screen + live slash hint
+    // Claude Code-compatible prompt shortcuts + live slash hint
     let lastHintLen = 0
     rl.on('SIGCONT', () => { /* resume after bg */ })
     rl.on('line', () => { lastHintLen = 0 }) // clear hint state on submit
+    rl.on('SIGINT', () => {
+      const mutableRl = rl as unknown as { line?: string; write?: (data: string | null, key?: { ctrl?: boolean; name?: string }) => void }
+      if (mutableRl.line) {
+        mutableRl.write?.(null, { ctrl: true, name: 'u' })
+        process.stdout.write('\r\x1b[2K')
+        rl.prompt(true)
+        return
+      }
+      rl.close()
+    })
 
     // Keyboard shortcuts (legacy mode only — ink handles these via useInput)
     process.stdin.on('keypress', (_ch: string, key: { name?: string; ctrl?: boolean; shift?: boolean; meta?: boolean; sequence?: string }) => {
-      // Ctrl+L: clear screen and reset conversation state
+      // Ctrl+L: redraw terminal; do not clear conversation state.
       if (key && key.ctrl && key.name === 'l') {
-        resetConversationState(history, stats, { tokenBudget, contextMonitor })
-        resetTransientSessionState()
         process.stdout.write('\x1b[2J\x1b[H')
-        console.log('\x1b[90m  conversation cleared.\x1b[0m')
         rl.prompt(true)
         return
       }
@@ -663,8 +670,8 @@ async function runREPL(
         return
       }
 
-      // Ctrl+Z: quick undo (same as /undo)
-      if (key && key.ctrl && key.name === 'z') {
+      // Ctrl+_: quick undo (same as /undo)
+      if (key && key.ctrl && (key.name === '_' || key.sequence === '\x1f')) {
         if (undoState.lastWrite?.path) {
           const { path: undoPath, oldContent } = undoState.lastWrite
           try {
@@ -919,6 +926,7 @@ async function runREPL(
 
   const { ChatSessionEmitter } = await import('../ui/session.js')
   const session = new ChatSessionEmitter()
+  let inkInstance: { unmount: () => void; waitUntilExit: () => Promise<void>; clear: () => void } | null = null
 
   // Handle UI commands (keyboard shortcuts from ink InputArea)
   session.onCommand((command) => {
@@ -948,12 +956,63 @@ async function runREPL(
         }
         break
       }
+      case 'rewind': {
+        let lastUserIndex = -1
+        for (let index = history.length - 1; index >= 0; index--) {
+          if (history[index]!.role === 'user') {
+            lastUserIndex = index
+            break
+          }
+        }
+        if (lastUserIndex < 0) {
+          session.emitSystemMessage('nothing to rewind.', 'info')
+          break
+        }
+        const draft = messageContentToText(history[lastUserIndex]!.content)
+        history.splice(lastUserIndex)
+        stats.turns = Math.max(0, stats.turns - 1)
+        stats.turnTokens.pop()
+        session.emitInputDraft(draft)
+        session.emitSystemMessage('rewound previous prompt for editing.', 'info')
+        session.emitStatusUpdate(getStatusInfo())
+        break
+      }
       case 'clear-screen': {
         // UI already clears blocks; business logic resets conversation state
         resetConversationState(history, stats, { tokenBudget, contextMonitor })
         resetTransientSessionState()
         session.emitClear()
         session.emitSystemMessage('conversation cleared.', 'info')
+        session.emitStatusUpdate(getStatusInfo())
+        break
+      }
+      case 'redraw-screen': {
+        inkInstance?.clear?.()
+        session.emitStatusUpdate(getStatusInfo())
+        break
+      }
+      case 'kill-agents': {
+        const killed = killRunningBackgroundJobs()
+        session.emitSystemMessage(
+          killed.length === 0
+            ? 'no running background agents.'
+            : `killed ${killed.length} background agent${killed.length === 1 ? '' : 's'}.`,
+          killed.length === 0 ? 'info' : 'warn',
+        )
+        session.emitStatusUpdate(getStatusInfo())
+        break
+      }
+      case 'fast-mode': {
+        const old = currentEffort
+        currentEffort = currentEffort === 'low' ? 'high' : 'low'
+        session.emitSystemMessage(`fast mode: ${old} → ${currentEffort}`, 'info')
+        session.emitStatusUpdate(getStatusInfo())
+        break
+      }
+      case 'thinking-toggle': {
+        const old = currentEffort
+        currentEffort = currentEffort === 'max' ? 'high' : 'max'
+        session.emitSystemMessage(`extended thinking: ${old} → ${currentEffort}`, 'info')
         session.emitStatusUpdate(getStatusInfo())
         break
       }
@@ -988,8 +1047,6 @@ async function runREPL(
   }
 
   // Choose renderer (useInk determined at top of runREPL)
-  let inkInstance: { unmount: () => void; waitUntilExit: () => Promise<void>; clear: () => void } | null = null
-
   if (useInk) {
     const { renderInkApp } = await import('../ui/render.js')
     const configFiles = detectConfigFiles(cwd)
@@ -1206,7 +1263,7 @@ async function runREPL(
     if (startupWarning) {
       console.log(`\x1b[33m  ${startupWarning}\x1b[0m`)
     }
-    console.log('\x1b[90m  /help for commands. Ctrl+C to quit.\x1b[0m\n')
+    console.log('\x1b[90m  /help for commands. Ctrl+C cancels input/turn · Ctrl+D exits.\x1b[0m\n')
   }
 
   // Input history collector for persistence
@@ -1923,7 +1980,8 @@ function handleSlashCommand(
   normalizePermissionRules?: (scope: 'project' | 'global') => { changedCount: number; unresolvedCount: number; total: number },
 ): SlashCommandResult {
   const parts = input.split(/\s+/)
-  const cmd = parts[0]!.toLowerCase()
+  const rawCmd = parts[0]!.toLowerCase()
+  const cmd = getSlashCommandDefinition(rawCmd)?.name || rawCmd
   const arg = parts.slice(1).join(' ').trim()
 
   const readonlyResult = handleReadonlySlashCommand({
@@ -2217,6 +2275,16 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
   // Flush remaining markdown buffer
   md.flush()
 
+  if (abortSignal?.aborted) {
+    if (emitterOpt && !responseText.includes('[interrupted]')) {
+      emitterOpt.emitSystemMessage('[interrupted]', 'warn')
+    } else if (!responseText.includes('[interrupted]')) {
+      ensureNewline()
+      process.stdout.write('\x1b[90m  [interrupted]\x1b[0m\n')
+    }
+    return { inputTokens, outputTokens }
+  }
+
   const repairPlan = buildPostModelSaveRepairPlan({
     prompt,
     responseText,
@@ -2377,15 +2445,16 @@ interface SDKQueryOptions {
   outputMode: OutputMode
   cwd: string
   history?: ChatMessage[]
+  abortSignal?: AbortSignal
 }
 
 async function runSDKQuery(options: SDKQueryOptions): Promise<{ inputTokens: number; outputTokens: number; turns: number; text: string }> {
-  const { prompt, resolved, config, outputMode, cwd, history = [] } = options
+  const { prompt, resolved, config, outputMode, cwd, history = [], abortSignal } = options
   if (typeof prompt !== 'string') {
     throw new Error('SDK path does not yet support multimodal prompt content. Use a proxy provider for --image.')
   }
 
-  let sdk: { createAgent: (opts: Record<string, unknown>) => { query: (p: string) => AsyncIterable<unknown> } }
+  let sdk: { createAgent: (opts: Record<string, unknown>) => { query: (p: string, opts?: { abortSignal?: AbortSignal }) => AsyncIterable<unknown> } }
   try {
     // @ts-ignore — @orca/sdk is an optional dependency for native provider path
     sdk = await import('@orca/sdk')
@@ -2414,7 +2483,14 @@ async function runSDKQuery(options: SDKQueryOptions): Promise<{ inputTokens: num
   let turns = 0
   let responseText = ''
 
-  for await (const event of agent.query(buildSDKReplayPrompt(history, prompt))) {
+  for await (const event of agent.query(buildSDKReplayPrompt(history, prompt), { abortSignal })) {
+    if (abortSignal?.aborted) {
+      if (outputMode === 'streaming') {
+        ensureNewline()
+        process.stdout.write('\x1b[90m  [interrupted]\x1b[0m\n')
+      }
+      break
+    }
     if (outputMode === 'json') {
       emitJson(event as unknown as Record<string, unknown>)
       continue
@@ -2440,6 +2516,10 @@ async function runSDKQuery(options: SDKQueryOptions): Promise<{ inputTokens: num
       outputTokens = (result.outputTokens as number) || 0
       turns = (result.turns as number) || 0
     }
+  }
+
+  if (abortSignal?.aborted) {
+    return { inputTokens, outputTokens, turns, text: responseText }
   }
 
   const stopNotice = await runStopHooks({

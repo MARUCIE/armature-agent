@@ -1,3 +1,10 @@
+---
+Title: Orca CLI Initiative Index
+Scope: initiative index
+Owner: Maurice
+Status: Active
+LastUpdated: 2026-05-29
+---
 # Orca CLI Initiative
 
 ## 2026-04-29 Active Audit Artifacts
@@ -40,3 +47,9 @@
 - [PDCA_ITERATION_CHECKLIST.html](./PDCA_ITERATION_CHECKLIST.html)
 - [SOTA_GAP_SWARM_AUDIT.html](./SOTA_GAP_SWARM_AUDIT.html)
 - [ORCA_VISUAL_SYSTEM_PLAN.html](./ORCA_VISUAL_SYSTEM_PLAN.html)
+
+## Changelog
+
+| Date | Change |
+| --- | --- |
+| 2026-05-29 | Normalized metadata for the project ai check gate and recorded the multi-model review ledger integration. |

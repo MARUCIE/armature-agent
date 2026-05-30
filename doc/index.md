@@ -1,3 +1,10 @@
+---
+Title: Orca CLI Docs Index
+Scope: project docs index
+Owner: Maurice
+Status: Active
+LastUpdated: 2026-05-29
+---
 # Orca CLI Docs Index
 
 This file is the canonical path index for the `Orca CLI` repository.
@@ -16,8 +23,10 @@ This file is the canonical path index for the `Orca CLI` repository.
 | CLI entry | `src/bin/orca.ts` | Node executable entry point |
 | Program assembly | `src/program.ts` | Registers all top-level commands |
 | Commands | `src/commands/` | `chat`, `doctor`, `run`, `multi`, `bench`, `logs`, `providers`, `stats`, `session`, `queue`, `permissions`, `pr`, `serve`, `init`, `evolve`, workflow presets |
+| Review ledger command | `src/commands/review-ledger.ts` | Multi-model PR/diff review entry that writes human-gated review artifacts |
 | Provider bridge | `src/providers/openai-compat.ts` | Provider-neutral runtime transport layer |
 | Multi-model engine | `src/multi-model.ts` | Council, race, pipeline orchestration |
+| Review ledger engine | `src/review-ledger.ts` | Independent model review prompts, synthesis prompt, and review artifact writer |
 | Tool surface | `src/tools.ts` | Agent tools available to the runtime |
 | Background job tracking | `src/background-jobs.ts` | Detached job registry, log paths, and completion notifications |
 | Runtime logging | `src/logger.ts` | Local `agent.log` / `errors.log` persistence |
@@ -47,3 +56,9 @@ This file is the canonical path index for the `Orca CLI` repository.
 - This repository is a CLI product. It has command surfaces rather than web routes.
 - Use `USER_EXPERIENCE_MAP.md` for command-entry and user-flow mapping.
 - 2026-04-20: REPL now supports multimodal local image-path turns on the proxy path; direct clipboard bitmap paste remains unsupported.
+
+## Changelog
+
+| Date | Change |
+| --- | --- |
+| 2026-05-29 | Normalized metadata for the project ai check gate and recorded the multi-model review ledger integration. |

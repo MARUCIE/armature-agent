@@ -1,7 +1,7 @@
 /**
  * Footer — keyboard shortcut hints below the status bar.
  *
- * Shows context-aware shortcuts: Esc (abort), Ctrl+L (clear), Shift+Tab (mode), /help.
+ * Shows context-aware shortcuts: Esc/Ctrl+C (interrupt), Ctrl+L (redraw), Shift+Tab (mode), /help.
  * Keeps the persistent Orca pod identity visible after the banner scrolls away.
  */
 
@@ -30,20 +30,24 @@ export function Footer({ isGenerating, isInputActive, permMode, permSource }: Pr
   const shortcuts: Array<{ key: string; label: string }> = []
 
   if (isGenerating) {
-    shortcuts.push({ key: 'esc', label: 'interrupt echo' })
+    shortcuts.push({ key: 'esc', label: 'interrupt' })
+    if (cols >= 84) shortcuts.push({ key: 'ctrl+c', label: 'interrupt' })
   } else if (isInputActive) {
-    shortcuts.push({ key: 'enter', label: 'send brief' })
-    shortcuts.push({ key: 'ctrl+j', label: 'new line' })
-    shortcuts.push({ key: '/help', label: 'pod commands' })
+    shortcuts.push({ key: 'enter', label: 'send' })
+    shortcuts.push({ key: 'ctrl+j', label: 'newline' })
+    shortcuts.push({ key: 'esc esc', label: 'rewind' })
+    shortcuts.push({ key: '/help', label: 'commands' })
     shortcuts.push({ key: 'shift+tab', label: trustLabel })
     if (cols >= 104) {
-      shortcuts.push({ key: 'ctrl+z', label: 'undo' })
-      shortcuts.push({ key: 'ctrl+l', label: 'clear wake' })
+      shortcuts.push({ key: 'ctrl+_', label: 'undo' })
+      shortcuts.push({ key: 'ctrl+l', label: 'redraw' })
+      shortcuts.push({ key: 'alt+p', label: 'model' })
+      shortcuts.push({ key: 'ctrl+g', label: 'editor' })
     }
   } else {
     // Idle / waiting for prompt_ready — still show basic hints
-    shortcuts.push({ key: 'enter', label: 'send brief' })
-    shortcuts.push({ key: '/help', label: 'pod commands' })
+    shortcuts.push({ key: 'enter', label: 'send' })
+    shortcuts.push({ key: '/help', label: 'commands' })
     shortcuts.push({ key: 'shift+tab', label: trustLabel })
   }
 
@@ -51,9 +55,6 @@ export function Footer({ isGenerating, isInputActive, permMode, permSource }: Pr
 
   return (
     <Box width={Math.max(0, cols - 1)} marginLeft={1}>
-      <Box marginRight={2} flexShrink={0}>
-        <Text color={theme.accentDim} bold>POD HELM</Text>
-      </Box>
       {shortcuts.map((s, i) => (
         <Box key={s.key} marginRight={i < shortcuts.length - 1 ? 2 : 0} flexShrink={0}>
           <Text color={theme.accent} bold>{s.key}</Text>

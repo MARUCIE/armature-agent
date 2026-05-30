@@ -1,3 +1,10 @@
+---
+Title: Orca CLI Deliverable
+Scope: planning-with-files deliverable
+Owner: Maurice
+Status: Active
+LastUpdated: 2026-05-29
+---
 # Deliverable
 
 ## 2026-05-03 - Markdown Artifact Write Integrity
@@ -823,14 +830,14 @@ Optimize the local Orca CLI Ink experience by studying Hermes Agent's high-recog
 | PDCA four docs | Updated PRD, system architecture, user experience map, and platform optimization plan. |
 | Root guidance | N/A. No new cross-task AGENTS / CLAUDE rule. |
 | Rolling ledger | Updated `ROLLING_REQUIREMENTS_AND_PROMPTS.md` with requirement status and anti-regression guard. |
-| Technical debt | `ai check` hung without output in the local AI-Fleet checker; recorded as residual gate risk, outside the Ink UI code boundary. |
+| Technical debt | Historical tranche note: `ai check` hung without output in the local AI-Fleet checker; this was superseded by `REQ-041` on 2026-05-29. |
 | Three-end consistency | N/A. Local CLI visual refresh only; no GitHub / VPS production deployment requested. |
 
 ### Remaining Risks
 
 | Risk | Owner | Follow-up |
 | --- | --- | --- |
-| `ai check` did not complete; it hung in the local AI-Fleet checker and was interrupted | Tooling | Inspect `runtime/control_plane/check_cli.py` / `tests/test_all.py` separately before treating `ai check` as a release gate |
+| `ai check` did not complete in this historical tranche; it hung in the local AI-Fleet checker and was interrupted | Tooling | Superseded by `REQ-041` on 2026-05-29 |
 | The visual system is terminal-native; exact perceived font quality depends on the operator's terminal font | UX | Recommend Berkeley Mono, Commit Mono, JetBrains Mono, or SF Mono in the plan rather than bundling a font dependency |
 
 ## 2026-04-29 - TaskRun Scheduler/Resume PDCA Tranche
@@ -1374,7 +1381,7 @@ Complete ORCA-SWARM-009 as a queue-first evidence drawer so operators can inspec
 - `npm run build` -> pass
 - `npm test` -> `86` files / `1602` tests passed
 - `node dist/bin/orca.js --version` -> `0.8.5`
-- `ai check` -> failed on existing harness/doc gates: docs require frontmatter/changelog across legacy docs, no-emoji flags existing historical entries, and the test harness looks for missing `tests/test_all.py`; evidence at `outputs/check/20260429-044244-b917cb00`
+- `ai check` -> failed on existing harness/doc gates: docs require frontmatter/changelog across legacy docs, no-emoji flags existing historical entries, and the test harness looks for missing `tests/test_all.py`; evidence at `outputs/check/20260429-044244-b917cb00`. Superseded by `REQ-041` on 2026-05-29.
 
 ### Remaining Risks
 
@@ -1382,7 +1389,7 @@ Complete ORCA-SWARM-009 as a queue-first evidence drawer so operators can inspec
 | --- | --- | --- |
 | Evidence drawer is CLI-terminal first, not a full Ink side panel | UX/runtime | Extend the drawer into Ink after the existing uncommitted UI baseline is committed or split |
 | Approvals and tool-call timelines are still not attached as first-class TaskRun evidence | Runtime/architecture | Continue M3 evidence-console work after execution contract unification |
-| `ai check` harness is not aligned with this TypeScript repo baseline | Verification | Add a repo-local check adapter or update the harness before treating `ai check` as a release gate |
+| `ai check` harness was not aligned with this TypeScript repo baseline in this historical tranche | Verification | Superseded by `REQ-041` on 2026-05-29 |
 
 ## 2026-04-29 - Serve Canonical Run PDCA Tranche
 
@@ -2872,3 +2879,64 @@ Internalize the first Hermes-inspired runtime capability bundle into Orca CLI an
 - `npm run lint` => passed
 - `npm run build` => passed
 - `npm test` => passed (`91` files / `1679` tests)
+
+## Multi-Model Review Ledger (2026-05-29)
+
+### Outcome
+
+- Added `orca review-ledger` with alias `orca review-swarm`.
+- The command accepts PR diffs, local git diffs, or patch files and produces a durable review ledger.
+- The ledger keeps independent model reports separate, synthesizes common findings after all reports are saved, and leaves each issue behind a human decision checkbox.
+- Fix agent work, review agent verdicts, and E2E regression evidence have separate artifact templates so the review loop remains auditable.
+
+### Changed Files
+
+- `src/review-ledger.ts`
+- `src/commands/review-ledger.ts`
+- `src/program.ts`
+- `src/usage-db.ts`
+- `tests/review-ledger.test.ts`
+- `tests/program.test.ts`
+- `tests/command-contracts.test.ts`
+- `tests/test_all.py`
+- `tests/v030-coverage.test.ts`
+- `tests/determinism.test.ts`
+- `tests/e2e-workflow.test.ts`
+- `tests/tools-full.test.ts`
+- `tests/sota-capabilities.test.ts`
+- `README.md`
+- `doc/index.md`
+- `doc/00_project/initiative_orca/PRD.md`
+- `doc/00_project/initiative_orca/SYSTEM_ARCHITECTURE.md`
+- `doc/00_project/initiative_orca/USER_EXPERIENCE_MAP.md`
+- `doc/00_project/initiative_orca/PLATFORM_OPTIMIZATION_PLAN.md`
+- `doc/00_project/initiative_orca/ROLLING_REQUIREMENTS_AND_PROMPTS.md`
+- `doc/00_project/initiative_orca/task_plan.md`
+- `doc/00_project/initiative_orca/notes.md`
+- `doc/00_project/initiative_orca/deliverable.md`
+
+### Verification
+
+- `npm run build` => passed
+- `npm run lint` => passed
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/review-ledger.test.ts tests/program.test.ts tests/command-contracts.test.ts` => passed (`44` tests)
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/v030-coverage.test.ts tests/stats-command.test.ts` => passed (`19` tests)
+- `npm test` => passed (`93` files / `1704` tests)
+- `node dist/bin/orca.js review-ledger --dry-run --json --out /tmp/orca-review-ledger-smoke "focus on multi-model review ledger command"` => passed and wrote `10` artifacts
+- `git diff --check` on touched code/docs paths => passed
+- `ai check --base-dir /Users/mauricewen/Projects/orca-cli --json` => passed, evidence in `outputs/check/20260529-012813-244bdac2`
+
+### Closeout
+
+- Skills: N/A. The reusable workflow is now a first-class Orca CLI command; no separate project skill was created in this tranche.
+- PDCA four documents: updated `PRD.md`, `USER_EXPERIENCE_MAP.md`, `SYSTEM_ARCHITECTURE.md`, and `PLATFORM_OPTIMIZATION_PLAN.md`.
+- CLAUDE/AGENTS: N/A. No cross-project operating rule changed.
+- Rolling ledger: updated `ROLLING_REQUIREMENTS_AND_PROMPTS.md` with `REQ-040`, `REQ-041`, `PROMPT-016`, and anti-regression Q&A.
+- Technical debt: live provider/`gh pr` execution remains credential-gated; local validation used deterministic dry-run smoke and mocked orchestration tests. The in-scope `ai check` gate debt was closed with `tests/test_all.py`, docs metadata/changelog normalization, no-emoji cleanup, refreshed release evidence, deterministic temp git identity in tests, and `$ORCA_HOME`-isolated usage DB tests.
+- Three-end consistency: N/A. No commit, GitHub push, or production VPS deployment was requested for this local CLI change.
+
+## Changelog
+
+| Date | Change |
+| --- | --- |
+| 2026-05-29 | Normalized metadata for the project ai check gate and recorded the multi-model review ledger integration. |

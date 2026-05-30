@@ -12,7 +12,7 @@ import { homedir } from 'node:os'
 import { basename, join } from 'node:path'
 import { spawn } from 'node:child_process'
 
-export type BackgroundJobStatus = 'running' | 'completed' | 'failed'
+export type BackgroundJobStatus = 'running' | 'completed' | 'failed' | 'aborted'
 
 export interface BackgroundJobRecord {
   id: string
@@ -155,6 +155,30 @@ export function listBackgroundJobs(limit = 20): BackgroundJobRecord[] {
   return files
     .map((name) => readJob(join(dir, name)))
     .filter((job): job is BackgroundJobRecord => Boolean(job))
+}
+
+export function killRunningBackgroundJobs(limit = 100): BackgroundJobRecord[] {
+  const jobs = listBackgroundJobs(limit).filter((job) => job.status === 'running')
+  const killedAt = new Date().toISOString()
+
+  for (const job of jobs) {
+    for (const pid of [job.pid, job.runnerPid]) {
+      if (!pid) continue
+      try {
+        process.kill(pid, 'SIGTERM')
+      } catch {
+        // Process may have already exited; metadata update below keeps the UI consistent.
+      }
+    }
+    writeJob(job.metaPath, {
+      ...job,
+      status: 'aborted',
+      completedAt: killedAt,
+      signal: 'SIGTERM',
+    })
+  }
+
+  return jobs
 }
 
 export function getBackgroundJobById(id: string): BackgroundJobRecord | null {

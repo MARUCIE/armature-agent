@@ -4,7 +4,7 @@
  * Implements CC-style viewport scrolling within ink's Yoga layout:
  * - Tracks scrollTop offset, renders content with negative marginTop
  * - stickyScroll: auto-follows bottom when new content is added
- * - Keyboard: PageUp/PageDown and vim g/G for navigation
+ * - Keyboard: PageUp/PageDown and Claude Code-style Ctrl+Home/Ctrl+End
  * - Mouse wheel: via parent-injected onWheel (SGR mouse protocol)
  *
  * Uses ink's overflow="hidden" for viewport clipping.
@@ -37,14 +37,14 @@ interface Props {
   children: React.ReactNode
   /** Whether non-text keyboard scroll controls are active. */
   keyboardActive?: boolean
-  /** Whether text-key shortcuts such as g/G are active. Disable while input is focused. */
+  /** Legacy compatibility flag; text-key scroll shortcuts are disabled for Claude Code parity. */
   vimKeysActive?: boolean
   /** Available height for viewport (if not provided, uses flexGrow) */
   height?: number
 }
 
 export const ScrollBox = forwardRef<ScrollBoxHandle, Props>(function ScrollBox(
-  { children, keyboardActive = false, vimKeysActive = keyboardActive, height },
+  { children, keyboardActive = false, vimKeysActive: _vimKeysActive = keyboardActive, height },
   ref,
 ): React.ReactElement {
   const { rows } = useTerminalSize()
@@ -153,15 +153,15 @@ export const ScrollBox = forwardRef<ScrollBoxHandle, Props>(function ScrollBox(
         return
       }
 
-      // g: scroll to top (vim-style). Keep disabled while text input is focused.
-      if (vimKeysActive && input === 'g' && !key.ctrl && !key.meta) {
+      // Ctrl+Home: scroll to top. Some terminal adapters pass raw CSI.
+      if (input === '\x1b[1;5H' || (input === '\x1b[H' && key.ctrl)) {
         setScrollTop(0)
         setSticky(false)
         return
       }
 
-      // G: scroll to bottom (vim-style). Keep disabled while text input is focused.
-      if (vimKeysActive && input === 'G' && !key.ctrl && !key.meta) {
+      // Ctrl+End: scroll to bottom. Some terminal adapters pass raw CSI.
+      if (input === '\x1b[1;5F' || (input === '\x1b[F' && key.ctrl)) {
         setScrollTop(maxScroll)
         setSticky(true)
         return

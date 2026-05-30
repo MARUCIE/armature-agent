@@ -1,4 +1,24 @@
+---
+Title: Orca CLI PRD
+Scope: project product requirements
+Owner: Maurice
+Status: Active
+LastUpdated: 2026-05-29
+---
 # Orca CLI PRD
+
+## 2026-05-29 Update - Multi-Model Review Ledger
+
+New product requirements from the TinyShip rebate large-PR review practice:
+
+- Orca must expose a first-class `review-ledger` command for large PR / diff review where multiple models independently inspect the same change.
+- The command must preserve the human gate: every issue starts as an unchecked item and no fix agent may act until the human decision is `accepted`.
+- The command must support `--pr`, `--diff-file`, and local git diff sources so operators can review GitHub PRs, saved patches, or current working-tree changes.
+- The command must support explicit reviewer model lists such as `gpt-5.5,composer-2.5,deepseek-v4-pro`, while retaining Orca's existing aggregator-first routing.
+- The command must write durable review artifacts: full diff, review packet, independent reports, synthesis ledger, human decisions, fix log, review verdict, and E2E evidence.
+- The synthesis must rank Critical / High / Medium findings, surface multi-model agreement, and keep checkbox rows visible for manual review.
+- The workflow must keep fixing, reviewing, and E2E regression as separate phases rather than allowing the reviewer models to decide what should be fixed.
+- `--dry-run --json` must create deterministic prompts/templates without live model calls so the command surface can be tested locally.
 
 ## 2026-05-03 Update - Markdown Artifact Write Integrity
 
@@ -469,3 +489,9 @@ Current Wave 4a foothold already landed:
 
 - Focused UI tests prove input-focused history scroll activation no longer disables non-text scroll keys.
 - Focused local-file tests prove generated Markdown artifacts are written and refusal/no-tool paths are marked incomplete.
+
+## Changelog
+
+| Date | Change |
+| --- | --- |
+| 2026-05-29 | Normalized metadata for the project ai check gate and recorded the multi-model review ledger integration. |

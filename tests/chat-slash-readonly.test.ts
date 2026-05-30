@@ -7,6 +7,7 @@ import type { ModelChoice } from '../src/model-catalog.js'
 import { ChatSessionEmitter } from '../src/ui/session.js'
 import { handleReadonlySlashCommand } from '../src/commands/chat-slash-readonly.js'
 import { stripAnsi } from '../src/ui/command-output.js'
+import { getSlashCommandDefinition, listSlashCommandCompletions } from '../src/slash-commands.js'
 
 const MODEL_CHOICES: ModelChoice[] = [
   {
@@ -142,6 +143,185 @@ describe('chat readonly slash helpers', () => {
     expect(blocks[0]).toContain('**Session**')
     expect(blocks[0]).toContain('/status')
     expect(blocks[0]).toContain('/doctor')
+  })
+
+  it('exposes Claude Code-compatible slash aliases for discovery and completion', () => {
+    expect(getSlashCommandDefinition('/usage')?.name).toBe('/cost')
+    expect(getSlashCommandDefinition('/settings')?.name).toBe('/config')
+    expect(getSlashCommandDefinition('/resume')?.name).toBe('/continue')
+    expect(getSlashCommandDefinition('/tasks')?.name).toBe('/jobs')
+    expect(getSlashCommandDefinition('/bashes')?.name).toBe('/jobs')
+    expect(listSlashCommandCompletions()).toEqual(expect.arrayContaining(['/usage', '/settings', '/resume', '/tasks', '/bashes']))
+  })
+
+  it('renders /context through an ink detail panel', () => {
+    const session = new ChatSessionEmitter()
+    const panels: Array<{ title: string; subtitle?: string; body: string }> = []
+    session.on('detail_panel', (event) => { panels.push(event.info) })
+
+    const result = handleReadonlySlashCommand({
+      ...baseOptions,
+      cmd: '/context',
+      arg: '',
+      session,
+      harness: {
+        tokenBudget: {
+          getBudget: () => ({
+            utilizationPct: 42,
+            historyTokensEst: 1234,
+            contextWindow: 32000,
+          }),
+        },
+      },
+    })
+
+    expect(result).toBe('handled')
+    expect(panels).toHaveLength(1)
+    expect(panels[0]?.title).toBe('Context')
+    expect(panels[0]?.body).toContain('Estimated context')
+    expect(panels[0]?.body).toContain('1,234 tokens')
+  })
+
+  it('renders memory sources through an ink detail panel', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-memory-panel-'))
+    mkdirSync(join(cwd, '.claude', 'skills', 'audit-lite'), { recursive: true })
+    writeFileSync(join(cwd, 'AGENTS.md'), '# Project guidance\nKeep tests focused.\n', 'utf-8')
+    writeFileSync(join(cwd, '.claude', 'skills', 'audit-lite', 'SKILL.md'), '# audit-lite\nInspect risks quickly.\n', 'utf-8')
+    const session = new ChatSessionEmitter()
+    const panels: Array<{ title: string; subtitle?: string; body: string }> = []
+    session.on('detail_panel', (event) => { panels.push(event.info) })
+
+    try {
+      const result = handleReadonlySlashCommand({
+        ...baseOptions,
+        cwd,
+        cmd: '/memory',
+        arg: '',
+        session,
+      })
+
+      expect(result).toBe('handled')
+      expect(panels[0]?.title).toBe('Memory')
+      expect(panels[0]?.body).toContain('AGENTS.md')
+      expect(panels[0]?.body).toContain('Skills')
+    } finally {
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('renders discovered skills through an ink detail panel', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-skills-panel-'))
+    mkdirSync(join(cwd, '.orca', 'skills', 'local-skill'), { recursive: true })
+    writeFileSync(join(cwd, '.orca', 'skills', 'local-skill', 'SKILL.md'), '# local-skill\nLocal project workflow.\n', 'utf-8')
+    const session = new ChatSessionEmitter()
+    const panels: Array<{ title: string; subtitle?: string; body: string }> = []
+    session.on('detail_panel', (event) => { panels.push(event.info) })
+
+    try {
+      const result = handleReadonlySlashCommand({
+        ...baseOptions,
+        cwd,
+        cmd: '/skills',
+        arg: '',
+        session,
+      })
+
+      expect(result).toBe('handled')
+      expect(panels[0]?.title).toBe('Skills')
+      expect(panels[0]?.body).toContain('local-skill')
+      expect(panels[0]?.body).toContain('Local project workflow')
+    } finally {
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('renders a selected skill detail from the picker command', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-skill-detail-'))
+    mkdirSync(join(cwd, '.orca', 'skills', 'local-skill'), { recursive: true })
+    writeFileSync(join(cwd, '.orca', 'skills', 'local-skill', 'SKILL.md'), '# local-skill\nLocal project workflow.\n', 'utf-8')
+    const session = new ChatSessionEmitter()
+    const panels: Array<{ title: string; subtitle?: string; body: string }> = []
+    session.on('detail_panel', (event) => { panels.push(event.info) })
+
+    try {
+      const result = handleReadonlySlashCommand({
+        ...baseOptions,
+        cwd,
+        cmd: '/skills',
+        arg: 'local-skill',
+        session,
+      })
+
+      expect(result).toBe('handled')
+      expect(panels[0]?.title).toBe('Skill: local-skill')
+      expect(panels[0]?.body).toContain('Local project workflow')
+      expect(panels[0]?.body).toContain('SKILL.md')
+    } finally {
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('renders built-in and custom agent specs through an ink detail panel', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-agents-panel-'))
+    mkdirSync(join(cwd, '.claude', 'agents'), { recursive: true })
+    writeFileSync(join(cwd, '.claude', 'agents', 'reviewer.md'), [
+      '---',
+      'description: Review changed code for regressions',
+      '---',
+      '# Reviewer',
+    ].join('\n'), 'utf-8')
+    const session = new ChatSessionEmitter()
+    const panels: Array<{ title: string; subtitle?: string; body: string }> = []
+    session.on('detail_panel', (event) => { panels.push(event.info) })
+
+    try {
+      const result = handleReadonlySlashCommand({
+        ...baseOptions,
+        cwd,
+        cmd: '/agents',
+        arg: '',
+        session,
+      })
+
+      expect(result).toBe('handled')
+      expect(panels[0]?.title).toBe('Agents')
+      expect(panels[0]?.body).toContain('read-only sub-agent')
+      expect(panels[0]?.body).toContain('reviewer')
+      expect(panels[0]?.body).toContain('Review changed code for regressions')
+    } finally {
+      rmSync(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('renders a selected custom agent detail from the picker command', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-agent-detail-'))
+    mkdirSync(join(cwd, '.claude', 'agents'), { recursive: true })
+    writeFileSync(join(cwd, '.claude', 'agents', 'reviewer.md'), [
+      '---',
+      'description: Review changed code for regressions',
+      '---',
+      '# Reviewer',
+    ].join('\n'), 'utf-8')
+    const session = new ChatSessionEmitter()
+    const panels: Array<{ title: string; subtitle?: string; body: string }> = []
+    session.on('detail_panel', (event) => { panels.push(event.info) })
+
+    try {
+      const result = handleReadonlySlashCommand({
+        ...baseOptions,
+        cwd,
+        cmd: '/agents',
+        arg: 'reviewer',
+        session,
+      })
+
+      expect(result).toBe('handled')
+      expect(panels[0]?.title).toBe('Agent: reviewer')
+      expect(panels[0]?.body).toContain('Review changed code for regressions')
+      expect(panels[0]?.body).toContain('reviewer.md')
+    } finally {
+      rmSync(cwd, { recursive: true, force: true })
+    }
   })
 
   it('opens TaskRun evidence in an ink detail panel', async () => {

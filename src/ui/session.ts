@@ -138,6 +138,10 @@ export class ChatSessionEmitter extends EventEmitter {
     this.emitUI({ type: 'prompt_ready' })
   }
 
+  emitInputDraft(text: string): void {
+    this.emitUI({ type: 'input_draft', text })
+  }
+
   emitAbort(): void {
     this.emitUI({ type: 'abort' })
   }
@@ -162,7 +166,16 @@ export class ChatSessionEmitter extends EventEmitter {
   // ── UI commands (UI → business logic) ─────────────────────
 
   /** Emit a command from UI to business logic (e.g., mode-cycle, undo, clear-screen) */
-  emitCommand(command: 'mode-cycle' | 'undo' | 'clear-screen'): void {
+  emitCommand(command:
+    | 'mode-cycle'
+    | 'undo'
+    | 'clear-screen'
+    | 'redraw-screen'
+    | 'rewind'
+    | 'kill-agents'
+    | 'fast-mode'
+    | 'thinking-toggle'
+  ): void {
     this.emit('command', command)
   }
 

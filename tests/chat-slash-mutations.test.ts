@@ -120,6 +120,75 @@ describe('chat mutating slash helpers', () => {
     expect(messages.join('')).toContain('model: model-a → model-b (openai)')
   })
 
+  it('exports the current transcript as a Markdown artifact', () => {
+    const outDir = mkdtempSync(join(tmpdir(), 'orca-current-export-'))
+    const outFile = join(outDir, 'current-session.md')
+    const logs: string[] = []
+    vi.spyOn(console, 'log').mockImplementation((...args) => { logs.push(args.join(' ')) })
+
+    try {
+      const result = handleMutatingSlashCommand({
+        cmd: '/export',
+        arg: outFile,
+        history: [
+          { role: 'system', content: 'system prompt' },
+          { role: 'user', content: 'hello' },
+          { role: 'assistant', content: 'hi there' },
+        ],
+        stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 5 },
+        cwd: '/tmp/orca-cli',
+        mc: {
+          getModel: () => 'model-a',
+          setModel: () => true,
+          getProvider: () => 'openai',
+          getChoices: () => MODEL_CHOICES,
+        },
+      })
+
+      expect(result).toBe('handled')
+      expect(readFileSync(outFile, 'utf-8')).toContain('# Session: current-')
+      expect(readFileSync(outFile, 'utf-8')).toContain('hi there')
+      expect(logs.join('\n')).toContain('exported transcript:')
+    } finally {
+      rmSync(outDir, { recursive: true, force: true })
+    }
+  })
+
+  it('rewinds the last user prompt into an ink draft and truncates later history', () => {
+    const session = new ChatSessionEmitter()
+    const drafts: string[] = []
+    session.on('input_draft', (event) => { drafts.push(event.text) })
+    const history = [
+      { role: 'system' as const, content: 'system prompt' },
+      { role: 'user' as const, content: 'first' },
+      { role: 'assistant' as const, content: 'answer' },
+      { role: 'user' as const, content: 'second' },
+      { role: 'assistant' as const, content: 'answer 2' },
+    ]
+    const stats = { turns: 2, totalInputTokens: 20, totalOutputTokens: 10, turnTokens: [10, 20] }
+
+    const result = handleMutatingSlashCommand({
+      cmd: '/rewind',
+      arg: '',
+      history,
+      stats,
+      cwd: '/tmp/orca-cli',
+      mc: {
+        getModel: () => 'model-a',
+        setModel: () => true,
+        getProvider: () => 'openai',
+        getChoices: () => MODEL_CHOICES,
+      },
+      session,
+    })
+
+    expect(result).toBe('handled')
+    expect(drafts).toEqual(['second'])
+    expect(history.map((message) => message.content)).toEqual(['system prompt', 'first', 'answer'])
+    expect(stats.turns).toBe(1)
+    expect(stats.turnTokens).toEqual([10])
+  })
+
   it('emits async /mcp connect results through the ink session', async () => {
     const session = new ChatSessionEmitter()
     const messages: Array<{ text: string; level: string }> = []
@@ -199,6 +268,42 @@ describe('chat mutating slash helpers', () => {
     await Promise.resolve()
     expect(messages).toContainEqual({ text: 'enabled: demo', level: 'info' })
     expect(messages).toContainEqual({ text: 'enabled but failed to connect: demo', level: 'warn' })
+  })
+
+  it('renders a selected MCP server detail panel from the picker command', () => {
+    const session = new ChatSessionEmitter()
+    const panels: Array<{ title: string; subtitle?: string; body: string }> = []
+    session.on('detail_panel', (event) => { panels.push(event.info) })
+    mcpState.listServers.mockReturnValueOnce([
+      {
+        name: 'docs',
+        initialized: false,
+        pid: 0,
+        disabled: false,
+        scope: 'project',
+        configPath: '/tmp/project/.mcp.json',
+      },
+    ])
+
+    const result = handleMutatingSlashCommand({
+      cmd: '/mcp',
+      arg: 'docs',
+      history: [],
+      stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
+      cwd: '/tmp/orca-cli',
+      mc: {
+        getModel: () => 'model-a',
+        setModel: () => true,
+        getProvider: () => 'openai',
+        getChoices: () => MODEL_CHOICES,
+      },
+      session,
+    })
+
+    expect(result).toBe('handled')
+    expect(panels[0]?.title).toBe('MCP: docs')
+    expect(panels[0]?.body).toContain('/mcp connect docs')
+    expect(panels[0]?.body).toContain('/tmp/project/.mcp.json')
   })
 
   it('routes /hooks through the ink session output path', () => {

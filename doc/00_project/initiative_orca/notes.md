@@ -1,3 +1,10 @@
+---
+Title: Orca CLI Notes
+Scope: planning-with-files notes
+Owner: Maurice
+Status: Active
+LastUpdated: 2026-05-29
+---
 # Notes
 
 ## 2026-05-03 - Markdown artifact write integrity
@@ -428,7 +435,7 @@ Verification:
 - `ORCA_THEME=orca node dist/bin/orca.js --version` -> `0.8.16`.
 - `npm test -- tests/release-evidence.test.ts` -> `3` tests passed.
 - `npm test` -> `88` files / `1625` tests passed.
-- `ai check` was attempted through the local AI-Fleet binary, but it produced no output and hung in `runtime/control_plane/check_cli.py` / `tests/test_all.py`; child processes were interrupted and the gate remains a recorded residual risk rather than passing evidence.
+- `ai check` was attempted through the local AI-Fleet binary, but it produced no output and hung in `runtime/control_plane/check_cli.py` / `tests/test_all.py`; child processes were interrupted and the gate remained a recorded residual risk for that historical tranche. Superseded by `REQ-041` on 2026-05-29.
 
 Closeout:
 
@@ -702,7 +709,7 @@ PDCA executed:
   - `npm run build` -> pass.
   - Full `npm test` -> `86` files / `1602` tests passed.
   - `node dist/bin/orca.js --version` -> `0.8.5`.
-  - `ai check` -> failed on existing harness/doc gates: docs frontmatter/changelog baseline, historical no-emoji hits, and missing `tests/test_all.py` in the generic test runner. Evidence: `outputs/check/20260429-044244-b917cb00`.
+  - `ai check` -> failed on existing harness/doc gates: docs frontmatter/changelog baseline, historical no-emoji hits, and missing `tests/test_all.py` in the generic test runner. Evidence: `outputs/check/20260429-044244-b917cb00`. Superseded by `REQ-041` on 2026-05-29.
 - Act: next queue item is ORCA-SWARM-010, centralizing slash-command registry, unless the dirty UI baseline or repo-local `ai check` adapter must be closed first.
 
 ## 2026-04-29 - Serve canonical run PDCA continuation
@@ -2349,3 +2356,27 @@ Artifacts:
   - `npm run lint` => passed
   - `npm run build` => passed
   - `npm test` => passed (`91` files / `1679` tests)
+
+## 2026-05-29 Multi-Model Review Ledger
+
+- User request:
+  - integrate the recent large-PR multi-model review practice into Orca CLI
+  - preserve the value of multiple independent model reports, synthesis, human checkbox gating, fix/review agent loop, and final E2E regression evidence
+- Implementation decision:
+  - added a first-class `orca review-ledger` command with alias `orca review-swarm`
+  - kept first-pass model reviews independent before synthesis to avoid cross-model contamination
+  - reused Orca's existing aggregator-first model routing instead of adding a parallel provider stack
+  - wrote durable Markdown artifacts so human decisions remain the canonical fix gate
+- Evidence:
+  - `npm run build` passed
+  - `vitest run tests/review-ledger.test.ts tests/program.test.ts tests/command-contracts.test.ts` passed with `44/44` tests
+  - `npm run lint` passed
+  - built CLI dry-run smoke passed: `node dist/bin/orca.js review-ledger --dry-run --json --out /tmp/orca-review-ledger-smoke "focus on multi-model review ledger command"`
+  - dry-run smoke wrote `10` artifacts, including independent prompt files, synthesis prompt, human decision ledger, fix log, review verdict, and E2E evidence template
+  - `git diff --check` on the touched code/docs paths passed
+  - `ai check --base-dir /Users/mauricewen/Projects/orca-cli --json` passed in `outputs/check/20260529-012813-244bdac2`
+  - `npm test` passed with `93` files / `1704` tests after isolating usage DB writes under `$ORCA_HOME`
+- Validation boundary:
+  - live `--pr` execution depends on authenticated `gh` and configured provider credentials, so the local proof used deterministic dry-run and mocked orchestration tests
+  - full project E2E matrix was not rerun for this narrow command addition; targeted contract/build/smoke coverage is the current evidence
+  - earlier `ai check` failures were closed by adding the Orca-local `tests/test_all.py` npm gate bridge, normalizing required docs metadata/changelogs, removing no-emoji hits, refreshing release evidence counts, configuring temp git identity inside git-dependent tests, and isolating `usage-db` tests from the real `~/.orca/usage.db`

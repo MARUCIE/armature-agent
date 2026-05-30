@@ -1472,4 +1472,16 @@ The 2026-04-21 swarm audit adds one sharper constraint to these journeys: they d
 <td><code>buildLocalFileEnforcementNotice()</code></td>
 </tr>
 </tbody></table>
+<!-- generated-by: html-style-router; route=html-document-style; update=2026-05-29 review-ledger -->
+<h2>2026-05-29 体验增量 - 多模型 Review Ledger</h2>
+<table>
+<thead><tr><th>步骤</th><th>用户动作</th><th>系统响应</th><th>证据</th></tr></thead>
+<tbody>
+<tr><td>RL-1</td><td>用户运行 <code>orca review-ledger --pr &lt;number&gt; --models &lt;csv&gt;</code></td><td>Orca 读取 PR 元数据和 diff，生成统一 review packet</td><td><code>src/commands/review-ledger.ts</code></td></tr>
+<tr><td>RL-2</td><td>用户选择多个模型参与审查</td><td>Orca 对每个模型发起独立 first-pass review，避免互相污染</td><td><code>buildIndependentReviewPrompt()</code></td></tr>
+<tr><td>RL-3</td><td>用户查看 synthesis ledger</td><td>Orca 按 Critical / High / Medium 汇总共性问题，并显示 agreement count</td><td><code>buildSynthesisPrompt()</code></td></tr>
+<tr><td>RL-4</td><td>用户勾选 accepted / rejected / deferred</td><td>Fix agent 只能处理 accepted 项，所有决策留在 <code>05_human_decisions.md</code></td><td>ledger artifact contract</td></tr>
+<tr><td>RL-5</td><td>修复后进入复审和回归</td><td>Orca 账本保留 fix log、review verdict、E2E evidence 三段证据</td><td><code>06_fix_log.md</code> 到 <code>08_e2e_evidence.md</code></td></tr>
+</tbody>
+</table>
 </article></main></body></html>

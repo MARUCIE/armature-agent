@@ -25,6 +25,7 @@ describe('public command surface contracts', () => {
       'session',
       'queue',
       'critique',
+      'review-ledger',
       'pr',
       'serve',
       'providers',
@@ -126,6 +127,30 @@ describe('public command surface contracts', () => {
     expect(options).toEqual(expect.arrayContaining([
       '--checkpoint',
       '--model',
+      '--provider',
+      '--api-key',
+      '--dry-run',
+      '--json',
+    ]))
+  })
+
+  it('keeps review-ledger surfaced as the multi-model human-gated review command', () => {
+    const reviewLedger = getCommand('review-ledger')
+    const args = reviewLedger.registeredArguments.map((arg) => ({
+      name: arg.name(),
+      required: arg.required,
+      variadic: arg.variadic,
+    }))
+    const options = reviewLedger.options.map((option) => option.long)
+
+    expect(reviewLedger.description()).toBe('Run a multi-model code review and write a human-gated review ledger')
+    expect(reviewLedger.aliases()).toContain('review-swarm')
+    expect(args).toEqual([{ name: 'focus', required: false, variadic: true }])
+    expect(options).toEqual(expect.arrayContaining([
+      '--pr',
+      '--diff-file',
+      '--models',
+      '--judge',
       '--provider',
       '--api-key',
       '--dry-run',

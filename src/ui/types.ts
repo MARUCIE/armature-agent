@@ -152,5 +152,6 @@ export type UIEvent =
   | { type: 'multi_model_result'; command: string; model: string; output: string; elapsedMs: number }
   | { type: 'session_end'; info: SessionSummaryInfo }
   | { type: 'prompt_ready' }
+  | { type: 'input_draft'; text: string }
   | { type: 'abort' }
   | { type: 'clear' }

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { MCPClient, parseMcpToolName } from '../src/mcp-client.js'
+import { MCPClient, discoverMcpServerConfigs, parseMcpToolName } from '../src/mcp-client.js'
 import { createTempProject } from './helpers/temp-project.js'
 import { withEnv } from './helpers/env-snapshot.js'
 
@@ -277,6 +277,26 @@ enabled = false
       client.loadConfigs(tempProject.dir)
 
       expect(client.configuredCount).toBe(1)
+    })
+
+    it('discovers configured servers without connecting or mutating a client', () => {
+      setupIsolated({
+        '.mcp.json': JSON.stringify({
+          docs: { command: 'node', args: ['docs.js'] },
+        }),
+      })
+
+      const specs = discoverMcpServerConfigs(tempProject.dir)
+
+      expect(specs).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          name: 'docs',
+          command: 'node',
+          args: ['docs.js'],
+          scope: 'project',
+        }),
+      ]))
+      expect(client.configuredCount).toBe(0)
     })
 
     it('produces zero configs when all files missing', () => {

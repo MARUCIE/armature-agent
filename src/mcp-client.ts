@@ -18,16 +18,16 @@ import { createInterface, type Interface as ReadlineInterface } from 'node:readl
 
 // ── Types ────────────────────────────────────────────────────────
 
-interface MCPServerConfig {
+export interface MCPServerConfig {
   command: string
   args?: string[]
   env?: Record<string, string>
   cwd?: string
 }
 
-type MCPConfigScope = 'project' | 'home'
+export type MCPConfigScope = 'project' | 'home'
 
-interface MCPConfigProvenance {
+export interface MCPConfigProvenance {
   path: string
   scope: MCPConfigScope
 }
@@ -64,6 +64,12 @@ export interface MCPTool {
   inputSchema?: Record<string, unknown>
 }
 
+export interface MCPServerConfigSpec extends MCPServerConfig {
+  name: string
+  scope: MCPConfigScope
+  configPath: string
+}
+
 interface MCPConnection {
   name: string
   process: ChildProcess
@@ -84,6 +90,124 @@ export function parseMcpToolName(fullName: string): { serverName: string; toolNa
   return { serverName, toolName }
 }
 
+function setDiscoveredConfig(
+  configs: Map<string, LoadedMCPServerConfig>,
+  name: string,
+  config: MCPServerConfig,
+  provenance: MCPConfigProvenance,
+): void {
+  configs.set(name, { config, provenance })
+}
+
+function discoverLoadedMcpServerConfigs(cwd: string): Map<string, LoadedMCPServerConfig> {
+  const home = process.env.HOME || '/tmp'
+  const configs = new Map<string, LoadedMCPServerConfig>()
+
+  // Native Orca configs
+  const jsonSources: Array<{ path: string; scope: MCPConfigScope }> = [
+    { path: join(cwd, '.mcp.json'), scope: 'project' },
+    { path: join(cwd, '.orca.json'), scope: 'project' },
+    { path: join(cwd, '.orca', 'mcp.json'), scope: 'project' },
+    { path: join(home, '.orca', 'mcp.json'), scope: 'home' },
+  ]
+
+  for (const { path: configPath, scope } of jsonSources) {
+    if (!existsSync(configPath)) continue
+    try {
+      const raw = JSON.parse(readFileSync(configPath, 'utf-8'))
+      const servers = raw.mcpServers || raw.servers || raw
+      if (typeof servers === 'object' && !Array.isArray(servers)) {
+        for (const [name, config] of Object.entries(servers)) {
+          if (typeof config === 'object' && config !== null) {
+            setDiscoveredConfig(configs, name, config as MCPServerConfig, {
+              path: configPath,
+              scope,
+            })
+          }
+        }
+      }
+    } catch { /* ignore parse errors */ }
+  }
+
+  // Claude Code: .claude/settings.json (project + global)
+  const claudeSettingsSources: Array<{ path: string; scope: MCPConfigScope }> = [
+    { path: join(cwd, '.claude', 'settings.json'), scope: 'project' },
+    { path: join(home, '.claude', 'settings.json'), scope: 'home' },
+  ]
+  for (const { path: settingsPath, scope } of claudeSettingsSources) {
+    if (!existsSync(settingsPath)) continue
+    try {
+      const raw = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+      const servers = raw.mcpServers
+      if (typeof servers === 'object' && servers !== null && !Array.isArray(servers)) {
+        for (const [name, config] of Object.entries(servers)) {
+          if (configs.has(name)) continue // don't override native configs
+          if (typeof config === 'object' && config !== null) {
+            const cc = config as Record<string, unknown>
+            // Claude Code uses { command, args, env } — same as MCP standard
+            if (cc.command) {
+              setDiscoveredConfig(configs, name, {
+                command: String(cc.command),
+                args: Array.isArray(cc.args) ? cc.args.map(String) : undefined,
+                env: cc.env && typeof cc.env === 'object' ? cc.env as Record<string, string> : undefined,
+              }, {
+                path: settingsPath,
+                scope,
+              })
+            }
+          }
+        }
+      }
+    } catch { /* ignore parse errors */ }
+  }
+
+  // Codex: .codex/config.toml [mcp_servers.*] sections
+  const codexConfigPath = join(home, '.codex', 'config.toml')
+  if (existsSync(codexConfigPath)) {
+    try {
+      const toml = readFileSync(codexConfigPath, 'utf-8')
+      // Simple TOML parser for [mcp_servers.name] sections
+      const serverRegex = /\[mcp_servers\.([^\]]+)\]\s*\n((?:[^\[]*\n)*)/g
+      let match
+      while ((match = serverRegex.exec(toml)) !== null) {
+        const name = match[1]!
+        const body = match[2]!
+        if (configs.has(name)) continue
+
+        const command = body.match(/^command\s*=\s*"([^"]+)"/m)?.[1]
+        const argsMatch = body.match(/^args\s*=\s*\[([^\]]*)\]/m)
+        const enabled = body.match(/^enabled\s*=\s*(true|false)/m)?.[1]
+
+        if (enabled === 'false') continue
+        if (!command) continue
+
+        const args = argsMatch
+          ? argsMatch[1]!.split(',').map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean)
+          : undefined
+
+        setDiscoveredConfig(configs, name, { command, args }, {
+          path: codexConfigPath,
+          scope: 'home',
+        })
+      }
+    } catch { /* ignore parse errors */ }
+  }
+
+  return configs
+}
+
+export function discoverMcpServerConfigs(cwd: string): MCPServerConfigSpec[] {
+  return [...discoverLoadedMcpServerConfigs(cwd).entries()].map(([name, loaded]) => ({
+    name,
+    command: loaded.config.command,
+    args: loaded.config.args,
+    env: loaded.config.env,
+    cwd: loaded.config.cwd,
+    scope: loaded.provenance.scope,
+    configPath: loaded.provenance.path,
+  }))
+}
+
 // ── MCP Client ───────────────────────────────────────────────────
 
 export class MCPClient {
@@ -95,96 +219,8 @@ export class MCPClient {
    *  Supports native .orca, Claude Code (.claude/settings.json), and Codex (.codex/config.toml).
    */
   loadConfigs(cwd: string): void {
-    const home = process.env.HOME || '/tmp'
-
-    // Native Orca configs
-    const jsonSources: Array<{ path: string; scope: MCPConfigScope }> = [
-      { path: join(cwd, '.mcp.json'), scope: 'project' },
-      { path: join(cwd, '.orca.json'), scope: 'project' },
-      { path: join(cwd, '.orca', 'mcp.json'), scope: 'project' },
-      { path: join(home, '.orca', 'mcp.json'), scope: 'home' },
-    ]
-
-    for (const { path: configPath, scope } of jsonSources) {
-      if (!existsSync(configPath)) continue
-      try {
-        const raw = JSON.parse(readFileSync(configPath, 'utf-8'))
-        const servers = raw.mcpServers || raw.servers || raw
-        if (typeof servers === 'object' && !Array.isArray(servers)) {
-          for (const [name, config] of Object.entries(servers)) {
-            if (typeof config === 'object' && config !== null) {
-              this.setConfig(name, config as MCPServerConfig, {
-                path: configPath,
-                scope,
-              })
-            }
-          }
-        }
-      } catch { /* ignore parse errors */ }
-    }
-
-    // Claude Code: .claude/settings.json (project + global)
-    const claudeSettingsSources: Array<{ path: string; scope: MCPConfigScope }> = [
-      { path: join(cwd, '.claude', 'settings.json'), scope: 'project' },
-      { path: join(home, '.claude', 'settings.json'), scope: 'home' },
-    ]
-    for (const { path: settingsPath, scope } of claudeSettingsSources) {
-      if (!existsSync(settingsPath)) continue
-      try {
-        const raw = JSON.parse(readFileSync(settingsPath, 'utf-8'))
-        const servers = raw.mcpServers
-        if (typeof servers === 'object' && servers !== null && !Array.isArray(servers)) {
-          for (const [name, config] of Object.entries(servers)) {
-            if (this.configs.has(name)) continue // don't override native configs
-            if (typeof config === 'object' && config !== null) {
-              const cc = config as Record<string, unknown>
-              // Claude Code uses { command, args, env } — same as MCP standard
-              if (cc.command) {
-                this.setConfig(name, {
-                  command: String(cc.command),
-                  args: Array.isArray(cc.args) ? cc.args.map(String) : undefined,
-                  env: cc.env && typeof cc.env === 'object' ? cc.env as Record<string, string> : undefined,
-                }, {
-                  path: settingsPath,
-                  scope,
-                })
-              }
-            }
-          }
-        }
-      } catch { /* ignore parse errors */ }
-    }
-
-    // Codex: .codex/config.toml [mcp_servers.*] sections
-    const codexConfigPath = join(home, '.codex', 'config.toml')
-    if (existsSync(codexConfigPath)) {
-      try {
-        const toml = readFileSync(codexConfigPath, 'utf-8')
-        // Simple TOML parser for [mcp_servers.name] sections
-        const serverRegex = /\[mcp_servers\.([^\]]+)\]\s*\n((?:[^\[]*\n)*)/g
-        let match
-        while ((match = serverRegex.exec(toml)) !== null) {
-          const name = match[1]!
-          const body = match[2]!
-          if (this.configs.has(name)) continue
-
-          const command = body.match(/^command\s*=\s*"([^"]+)"/m)?.[1]
-          const argsMatch = body.match(/^args\s*=\s*\[([^\]]*)\]/m)
-          const enabled = body.match(/^enabled\s*=\s*(true|false)/m)?.[1]
-
-          if (enabled === 'false') continue
-          if (!command) continue
-
-          const args = argsMatch
-            ? argsMatch[1]!.split(',').map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean)
-            : undefined
-
-          this.setConfig(name, { command, args }, {
-            path: codexConfigPath,
-            scope: 'home',
-          })
-        }
-      } catch { /* ignore parse errors */ }
+    for (const [name, loaded] of discoverLoadedMcpServerConfigs(cwd)) {
+      this.setConfig(name, loaded.config, loaded.provenance)
     }
   }
 

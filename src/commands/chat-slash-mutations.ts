@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process'
+import { execSync, spawnSync } from 'node:child_process'
 import { mkdirSync as fsMkdirSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import {
   detectPermissionModeSource,
@@ -19,13 +19,13 @@ import { mcpClient } from '../mcp-client.js'
 import type { ModeRegistry } from '../modes/index.js'
 import { messageContentToText } from '../providers/openai-compat.js'
 import type { ChatMessage } from '../providers/openai-compat.js'
-import { getLatestSavedSession, getSavedSessionById, listSavedSessions, writeSavedSession } from '../session-store.js'
+import { getLatestSavedSession, getSavedSessionById, listSavedSessions, renderSavedSessionMarkdown, writeSavedSession, writeSharedSessionArtifact } from '../session-store.js'
 import { buildPendingContinueRestore } from './chat-resume-state.js'
 import { resetConversationState } from './chat-session-state.js'
 import type { TokenBudgetManager } from '../token-budget.js'
 import type { ContextMonitor } from '../harness/index.js'
 import type { ThreadManager } from '../memory/threads.js'
-import { createCommandConsole, createCommandOutput } from '../ui/command-output.js'
+import { createCommandConsole, createCommandOutput, escapeMarkdownTableCell, formatMarkdownCodeSpan } from '../ui/command-output.js'
 import type { ChatSessionEmitter } from '../ui/session.js'
 
 type ModelSelectionTarget = string | Pick<ModelChoice, 'model' | 'provider'>
@@ -104,6 +104,130 @@ function buildPermissionDetailBody(
     '- `auto` — prompt on dangerous tools only',
     '- `plan` — prompt on every tool call',
   ].join('\n')
+}
+
+function buildCurrentSessionSnapshot(
+  name: string,
+  history: ChatMessage[],
+  stats: SessionStatsLike,
+  mc: ModelControl,
+  modeRegistry?: Pick<ModeRegistry, 'getActive' | 'switchTo'>,
+) {
+  return {
+    name,
+    session: {
+      provider: mc.getProvider(),
+      model: mc.getModel(),
+      modeId: modeRegistry?.getActive().id,
+      history,
+      stats: {
+        turns: stats.turns,
+        inputTokens: stats.totalInputTokens,
+        outputTokens: stats.totalOutputTokens,
+      },
+      savedAt: new Date().toISOString(),
+    },
+  }
+}
+
+interface McpServerStatus {
+  name: string
+  initialized: boolean
+  pid: number
+  disabled: boolean
+  scope?: 'project' | 'home'
+  configPath?: string
+}
+
+function formatMcpServerState(server: McpServerStatus): string {
+  if (server.disabled) return 'disabled'
+  if (server.initialized) return `connected (pid ${server.pid})`
+  if (server.pid > 0) return 'starting'
+  return 'not connected'
+}
+
+function renderMcpServerDetail(server: McpServerStatus, output: ReturnType<typeof createCommandOutput>, session?: ChatSessionEmitter): void {
+  const state = formatMcpServerState(server)
+  if (session) {
+    session.emitDetailPanel({
+      title: `MCP: ${server.name}`,
+      subtitle: `${state} · ${server.scope || 'unknown scope'}`,
+      body: [
+        '| Field | Value |',
+        '| --- | --- |',
+        `| Name | ${formatMarkdownCodeSpan(server.name)} |`,
+        `| State | ${escapeMarkdownTableCell(state)} |`,
+        `| Scope | ${escapeMarkdownTableCell(server.scope || 'unknown')} |`,
+        `| Config | ${server.configPath ? formatMarkdownCodeSpan(server.configPath) : '(unknown)'} |`,
+        `| PID | ${server.pid > 0 ? server.pid : '(none)'} |`,
+        '',
+        'Actions:',
+        `- ${formatMarkdownCodeSpan(`/mcp connect ${server.name}`)} starts the server explicitly.`,
+        `- ${formatMarkdownCodeSpan(`/mcp disable ${server.name}`)} disables the server for this session.`,
+        `- ${formatMarkdownCodeSpan(`/mcp enable ${server.name}`)} re-enables and attempts a connection.`,
+      ].join('\n'),
+      tone: server.disabled ? 'warn' : 'info',
+    })
+    return
+  }
+
+  output.info([
+    `mcp: ${server.name}`,
+    `state: ${state}`,
+    `scope: ${server.scope || 'unknown'}`,
+    `config: ${server.configPath || 'unknown'}`,
+    `pid: ${server.pid > 0 ? server.pid : 'none'}`,
+  ].join('\n'))
+}
+
+function latestAssistantText(history: ChatMessage[]): string {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const message = history[index]
+    if (message?.role === 'assistant') {
+      return messageContentToText(message.content).trim()
+    }
+  }
+  return ''
+}
+
+function copyTextToClipboard(text: string): boolean {
+  const candidates = process.platform === 'darwin'
+    ? [['pbcopy', []] as const]
+    : process.platform === 'win32'
+      ? [['clip', []] as const]
+      : [
+          ['wl-copy', []] as const,
+          ['xclip', ['-selection', 'clipboard']] as const,
+          ['xsel', ['--clipboard', '--input']] as const,
+        ]
+
+  for (const [command, args] of candidates) {
+    const result = spawnSync(command, args, { input: text, encoding: 'utf-8', stdio: ['pipe', 'ignore', 'ignore'] })
+    if (result.status === 0) return true
+  }
+  return false
+}
+
+function rewindLastUserPrompt(
+  history: ChatMessage[],
+  stats: SessionStatsLike,
+  harness?: { tokenBudget: TokenBudgetManager; contextMonitor: ContextMonitor },
+): string | null {
+  let lastUserIndex = -1
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    if (history[index]?.role === 'user') {
+      lastUserIndex = index
+      break
+    }
+  }
+  if (lastUserIndex < 0) return null
+  const draft = messageContentToText(history[lastUserIndex]!.content)
+  history.splice(lastUserIndex)
+  stats.turns = Math.max(0, stats.turns - 1)
+  stats.turnTokens?.pop()
+  harness?.tokenBudget.clearCurrentUsage()
+  harness?.contextMonitor.clearCurrentUsage()
+  return draft
 }
 
 function buildPermissionRulesBody(scope: 'session' | 'project' | 'global', rules: string[]): string {
@@ -382,6 +506,23 @@ export function handleMutatingSlashCommand(options: MutatingSlashCommandOptions)
       return 'handled'
     }
 
+    case '/rewind': {
+      const draft = rewindLastUserPrompt(history, stats, harness)
+      if (!draft) {
+        console.log('\x1b[90m  nothing to rewind.\x1b[0m')
+        return 'handled'
+      }
+      if (session) {
+        session.emitClear()
+        session.emitInputDraft(draft)
+        session.emitSystemMessage('rewound previous prompt for editing.', 'info')
+      } else {
+        console.log(`\x1b[90m  rewound previous prompt (${draft.length} chars). Re-run it manually if needed.\x1b[0m`)
+      }
+      onSessionReset?.()
+      return 'handled'
+    }
+
     case '/compact': {
       hooks.run('PreCompact', { event: 'PreCompact', cwd })
       if (harness?.tokenBudget) {
@@ -614,6 +755,36 @@ export function handleMutatingSlashCommand(options: MutatingSlashCommandOptions)
       return 'handled'
     }
 
+    case '/export': {
+      const snapshot = buildCurrentSessionSnapshot(`current-${Date.now()}`, history, stats, mc, modeRegistry)
+      try {
+        const bundle = writeSharedSessionArtifact(snapshot.name, snapshot.session, arg || undefined)
+        console.log(`\x1b[90m  exported transcript: ${bundle.markdownPath}\x1b[0m`)
+        console.log(`\x1b[90m  metadata: ${bundle.metadataPath}\x1b[0m`)
+      } catch (error) {
+        console.log(`\x1b[31m  export failed: ${error instanceof Error ? error.message : error}\x1b[0m`)
+      }
+      return 'handled'
+    }
+
+    case '/copy': {
+      const mode = arg.trim().toLowerCase()
+      const snapshot = buildCurrentSessionSnapshot('current', history, stats, mc, modeRegistry)
+      const text = mode === 'transcript' || mode === 'session'
+        ? renderSavedSessionMarkdown(snapshot.name, snapshot.session)
+        : latestAssistantText(history)
+      if (!text) {
+        console.log('\x1b[90m  nothing to copy.\x1b[0m')
+        return 'handled'
+      }
+      if (!copyTextToClipboard(text)) {
+        console.log('\x1b[31m  copy failed: no clipboard command available.\x1b[0m')
+        return 'handled'
+      }
+      console.log(`\x1b[90m  copied ${mode === 'transcript' || mode === 'session' ? 'transcript' : 'last assistant response'} (${text.length} chars).\x1b[0m`)
+      return 'handled'
+    }
+
     case '/load': {
       if (!arg) {
         if (session) {
@@ -820,6 +991,17 @@ export function handleMutatingSlashCommand(options: MutatingSlashCommandOptions)
 
       {
         const servers = mcpClient.listServers()
+        const requested = arg.trim()
+        if (requested && requested !== 'list' && requested !== 'status') {
+          const server = servers.find((candidate) => candidate.name === requested)
+          if (!server) {
+            output.warn(`MCP server not found: ${requested}`)
+            return 'handled'
+          }
+          renderMcpServerDetail(server, output, session)
+          return 'handled'
+        }
+
         if (servers.length === 0) {
           console.log('\x1b[90m  no MCP servers configured.\x1b[0m')
         } else {

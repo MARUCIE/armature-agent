@@ -73,10 +73,8 @@ export function StatusBar({ status }: Props): React.ReactElement {
     <Box flexDirection="column" width={cols}>
       {/* Line 1 */}
       <Box>
-        <Text dimColor>{'\u25C7 '}</Text>
-        <Text color={theme.accent} bold>ORCA POD</Text>
-        <Text dimColor> {'\u2502'} </Text>
-        <Text>{modelShort}</Text>
+        <Text color={theme.model}>{'\u25C6 '}</Text>
+        <Text color={theme.model} bold>{modelShort}</Text>
         <Text dimColor> {'\u2502'} </Text>
         <Text dimColor>{contextLabel}</Text>
         <Text color={ctxColor}>{miniBar(ctxPct)}</Text>
@@ -86,7 +84,6 @@ export function StatusBar({ status }: Props): React.ReactElement {
       {/* Line 2 */}
       {stats.length > 0 && (
         <Box>
-          <Text color={theme.accentDim}>signal: </Text>
           <Text dimColor>{stats.join('  \u00B7  ')}</Text>
           {sparkline && <Text dimColor>  {sparkline}</Text>}
         </Box>

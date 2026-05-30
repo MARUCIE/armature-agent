@@ -21,7 +21,7 @@ export function MultiModelProgress({ command, models }: Props): React.ReactEleme
   return (
     <Box flexDirection="column" marginLeft={2}>
       <Box>
-        <Text color={theme.accentDim} bold>  POD COUNCIL </Text>
+        <Text color={theme.accentToolBlock} bold>  ◆ council </Text>
         <Text color={theme.accent} bold>{command}</Text>
         <Text dimColor> · {models.length} voices</Text>
       </Box>

@@ -1,11 +1,10 @@
 /**
- * ThinkingSpinner — animated indicator during model thinking/generation.
+ * ThinkingSpinner — Grok Build-style thinking indicator.
  *
- * Orca transcript features:
- * - Compact pod/status verbs rotating every 4 seconds
- * - stalledIntensity: color shifts accent → warning → error as wait grows
- * - Reduced motion: respects REDUCE_MOTION env var (static indicator)
- * - Elapsed timer with smooth animation
+ * Renders a spinner + "Thinking" header in accent_thinking, with an elapsed
+ * timer. Keeps orca's stalled-intensity color shift (accent → warning → error)
+ * on the spinner as wait grows, and respects reduced motion.
+ * See doc/GROK_UI_REFERENCE.md §2 (thinking block).
  */
 
 import React, { useState, useEffect } from 'react'
@@ -13,22 +12,11 @@ import { Box, Text } from 'ink'
 import Spinner from 'ink-spinner'
 import { useTheme } from '../theme.js'
 
-const VERBS = [
-  'Listening', 'Echoing', 'Triangulating', 'Scanning', 'Mapping',
-  'Routing', 'Verifying', 'Checking proof', 'Reading context', 'Tracking signal',
-  'Aligning tools', 'Inspecting state', 'Surfacing evidence', 'Following current',
-  'Holding pattern', 'Gathering bearings', 'Testing route', 'Closing loop',
-]
-
-function pickVerb(): string {
-  return VERBS[Math.floor(Math.random() * VERBS.length)]!
-}
-
-/** stalledIntensity: how long before the spinner looks "stalled" */
+/** stalledIntensity: spinner color shifts as the wait grows. */
 function getStalledColor(theme: ReturnType<typeof useTheme>, elapsed: number): string {
-  if (elapsed < 10) return theme.accent      // Normal: accent color
-  if (elapsed < 30) return theme.warning      // Getting slow: warning
-  return theme.error                           // Very slow: error/red
+  if (elapsed < 10) return theme.accentThinking  // Normal
+  if (elapsed < 30) return theme.warning           // Getting slow
+  return theme.error                               // Very slow
 }
 
 // Respect reduced motion preference
@@ -42,7 +30,6 @@ interface Props {
 
 export function ThinkingSpinner({ active }: Props): React.ReactElement | null {
   const [elapsed, setElapsed] = useState(0)
-  const [verb, setVerb] = useState(pickVerb)
   const theme = useTheme()
 
   useEffect(() => {
@@ -51,12 +38,8 @@ export function ThinkingSpinner({ active }: Props): React.ReactElement | null {
       return
     }
     const start = Date.now()
-    setVerb(pickVerb())
     const timer = setInterval(() => {
-      const secs = Math.round((Date.now() - start) / 1000)
-      setElapsed(secs)
-      // Change verb every 4 seconds for visual interest
-      if (secs > 0 && secs % 4 === 0) setVerb(pickVerb())
+      setElapsed(Math.round((Date.now() - start) / 1000))
     }, 1000)
     return () => clearInterval(timer)
   }, [active])
@@ -68,13 +51,13 @@ export function ThinkingSpinner({ active }: Props): React.ReactElement | null {
   return (
     <Box>
       {reducedMotion ? (
-        <Text color={spinnerColor}>{'>'}</Text>
+        <Text color={spinnerColor}>{'◆'}</Text>
       ) : (
         <Text color={spinnerColor}>
           <Spinner type="dots" />
         </Text>
       )}
-      <Text color={spinnerColor}> POD {verb}...</Text>
+      <Text color={theme.accentThinking} bold> Thinking</Text>
       <Text dimColor> ({elapsed}s)</Text>
     </Box>
   )

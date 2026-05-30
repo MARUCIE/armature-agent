@@ -8,11 +8,9 @@
 
 import { run } from '../program.js'
 
-// Graceful shutdown on SIGINT/SIGTERM
-process.on('SIGINT', () => {
-  process.stdout.write('\n')
-  process.exit(130)
-})
+// Keep SIGINT free for interactive chat to implement Claude Code-style
+// interrupt/cancel semantics. Non-interactive commands still use Node's
+// default SIGINT exit behavior.
 process.on('SIGTERM', () => {
   process.exit(143)
 })

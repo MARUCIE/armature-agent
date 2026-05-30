@@ -90,6 +90,12 @@ describe('program', () => {
     expect(commands).toContain('critique')
   })
 
+  it('registers review-ledger command', () => {
+    const program = createProgram()
+    const commands = program.commands.map(c => c.name())
+    expect(commands).toContain('review-ledger')
+  })
+
   it('chat command has model option', () => {
     const program = createProgram()
     const chat = program.commands.find(c => c.name() === 'chat')!

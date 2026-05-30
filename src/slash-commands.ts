@@ -20,14 +20,18 @@ export interface SlashCommandDefinition {
 
 export const SLASH_COMMAND_DEFINITIONS: readonly SlashCommandDefinition[] = [
   { name: '/help', description: 'Show all commands', category: 'Session', aliases: ['/h', '/?'], homeDescription: 'show command surface' },
-  { name: '/clear', description: 'Clear conversation', category: 'Session' },
+  { name: '/clear', description: 'Clear conversation', category: 'Session', aliases: ['/reset', '/new'] },
   { name: '/compact', description: 'Smart compaction', category: 'Session' },
   { name: '/status', description: 'Session overview', category: 'Session' },
-  { name: '/cost', description: 'Token breakdown', category: 'Session' },
+  { name: '/context', description: 'Context window usage', category: 'Session' },
+  { name: '/cost', description: 'Token breakdown', category: 'Session', aliases: ['/usage'] },
+  { name: '/copy', description: 'Copy last response or transcript', category: 'Session' },
+  { name: '/export', description: 'Export current transcript', category: 'Session' },
+  { name: '/rewind', description: 'Rewind last prompt for editing', category: 'Session' },
   { name: '/save', description: 'Save session', category: 'Session' },
   { name: '/load', description: 'Load saved session', category: 'Session', picker: false, help: false },
   { name: '/sessions', description: 'Inspect saved sessions', category: 'Session', picker: false, help: false, homeDescription: 'inspect saved sessions' },
-  { name: '/continue', description: 'Continue latest session', category: 'Session', picker: false, help: false },
+  { name: '/continue', description: 'Continue latest session', category: 'Session', aliases: ['/resume'], picker: false, help: false },
   { name: '/history', description: 'Message counts', category: 'Session', picker: false, help: false },
   { name: '/tokens', description: 'Token totals', category: 'Session', picker: false, help: false },
   { name: '/stats', description: 'Session statistics', category: 'Session', picker: false, help: false },
@@ -56,17 +60,21 @@ export const SLASH_COMMAND_DEFINITIONS: readonly SlashCommandDefinition[] = [
   { name: '/plan', description: 'Task decomposition', category: 'Multi-Model' },
 
   { name: '/notes', description: 'Observations', category: 'Knowledge' },
+  { name: '/memory', description: 'Loaded memory and guidance', category: 'Knowledge' },
+  { name: '/skills', description: 'Available skills', category: 'Knowledge' },
   { name: '/postmortem', description: 'Error patterns', category: 'Knowledge' },
   { name: '/prompts', description: 'Template library', category: 'Knowledge' },
   { name: '/learn', description: 'Evolution rules', category: 'Knowledge' },
   { name: '/thread', description: 'Conversation memory', category: 'Knowledge' },
   { name: '/threads', description: 'Conversation memory', category: 'Knowledge', picker: false, help: false },
 
-  { name: '/config', description: 'Config snapshot', category: 'System' },
+  { name: '/config', description: 'Config snapshot', category: 'System', aliases: ['/settings'] },
+  { name: '/agents', description: 'Available subagents', category: 'System' },
+  { name: '/keybindings', description: 'Claude Code keyboard shortcuts', category: 'System' },
   { name: '/init', description: 'Initialize project config', category: 'System', picker: false, help: false },
   { name: '/hooks', description: 'Registered hooks', category: 'System' },
   { name: '/mcp', description: 'MCP servers', category: 'System' },
-  { name: '/jobs', description: 'Background jobs', category: 'System', picker: false, help: false },
+  { name: '/jobs', description: 'Background jobs', category: 'System', aliases: ['/tasks', '/bashes'], picker: false, help: false },
   { name: '/evidence', description: 'Open TaskRun evidence', category: 'System' },
   { name: '/doctor', description: 'Health check', category: 'System', homeDescription: 'diagnose runtime and config problems' },
   { name: '/system', description: 'System prompt', category: 'System', picker: false, help: false },
@@ -87,6 +95,9 @@ export function listSlashCommandCompletions(): string[] {
   for (const command of SLASH_COMMAND_DEFINITIONS) {
     if (command.completion === false) continue
     commands.add(command.name)
+    for (const alias of command.aliases || []) {
+      commands.add(alias)
+    }
   }
   return [...commands]
 }

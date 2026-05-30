@@ -10,6 +10,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
+import { mkdirSync } from 'node:fs'
 import { getGlobalDir } from './config.js'
 
 // ── Schema ──────────────────────────────────────────────────────────
@@ -51,7 +52,9 @@ function ensureUsageSchema(db: DatabaseSync): void {
 
 function getDb(): DatabaseSync {
   if (!_db) {
-    const dbPath = join(getGlobalDir(), 'usage.db')
+    const usageHome = process.env.ORCA_HOME || getGlobalDir()
+    mkdirSync(usageHome, { recursive: true })
+    const dbPath = join(usageHome, 'usage.db')
     _db = new DatabaseSync(dbPath)
     ensureUsageSchema(_db)
   }

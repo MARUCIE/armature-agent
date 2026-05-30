@@ -1,4 +1,24 @@
+---
+Title: Orca CLI User Experience Map
+Scope: project UX map
+Owner: Maurice
+Status: Active
+LastUpdated: 2026-05-29
+---
 # Orca CLI User Experience Map
+
+## 2026-05-29 UX Delta - Multi-Model Review Ledger
+
+New operator journeys from the large-PR multi-model review workflow:
+
+| Journey | User Need | Entry | Evidence |
+| --- | --- | --- | --- |
+| Run independent model reviews | Send the same PR / diff to several models without cross-contaminating their first-pass findings | `orca review-ledger --pr <number> --models <csv>` | `src/commands/review-ledger.ts`, `src/review-ledger.ts` |
+| Prepare a deterministic review packet | Generate prompts and ledger templates without spending provider tokens | `orca review-ledger --diff-file <patch> --dry-run --json` | `tests/review-ledger.test.ts`, CLI dry-run smoke |
+| Review consensus before fixing | See Critical / High / Medium issues deduplicated with model agreement and checkboxes | `04_synthesis.md` | `buildSynthesisPrompt()` |
+| Preserve human decision authority | Accept, reject, or defer each issue before fix agents can act | `05_human_decisions.md` | `renderHumanDecisionTemplate()` |
+| Separate fix and review loops | Track fix-agent changes separately from review-agent verification | `06_fix_log.md`, `07_review_verdict.md` | review ledger artifact contract |
+| Close with regression evidence | Require targeted tests plus full E2E evidence before the review is complete | `08_e2e_evidence.md` | `renderE2eEvidenceTemplate()` |
 
 ## 2026-05-03 UX Delta - Markdown Artifact Write Integrity
 
@@ -553,3 +573,9 @@ Hooks and modules:
 | HD-2 | User types ordinary text such as `g` or `G` into the prompt | Text-key scroll shortcuts remain disabled while input is focused | `ScrollBox.vimKeysActive` |
 | HD-3 | User asks Orca to generate/save a Markdown file at a local path | If the model returns generated Markdown body content, runtime writes it with `write_file` | `buildPostModelRequiredFileWritePlan()` |
 | HD-4 | Model refuses or omits required file-tool evidence | Orca emits a local-file enforcement notice and does not treat the request as completed | `buildLocalFileEnforcementNotice()` |
+
+## Changelog
+
+| Date | Change |
+| --- | --- |
+| 2026-05-29 | Normalized metadata for the project ai check gate and recorded the multi-model review ledger integration. |

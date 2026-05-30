@@ -1,8 +1,9 @@
 /**
- * Banner - Orca Blackfin Signal startup identity.
+ * Banner — Grok Build-style minimal welcome.
  *
- * Top: ORCA-AGENT display wordmark
- * Bottom: Bordered signal deck with session details
+ * No giant ASCII wordmark. A single left-accent-line block (grok's signature
+ * block visual language) holding a compact identity header + signal rows.
+ * See doc/GROK_UI_REFERENCE.md §2.
  */
 
 import React from 'react'
@@ -12,19 +13,15 @@ import { useTerminalSize } from '../useTerminalSize.js'
 import { truncateLabel, truncateSessionId } from '../utils.js'
 import { getHomeLayout } from './homeLayout.js'
 
-const ORCA_WORDMARK_LINES = [
-  ' ██████╗ ██████╗  ██████╗ █████╗        █████╗  ██████╗ ███████╗███╗   ██╗████████╗',
-  '██╔═══██╗██╔══██╗██╔════╝██╔══██╗      ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝',
-  '██║   ██║██████╔╝██║     ███████║█████╗███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║   ',
-  '██║   ██║██╔══██╗██║     ██╔══██║╚════╝██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║   ',
-  '╚██████╔╝██║  ██║╚██████╗██║  ██║      ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║   ',
-  ' ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝      ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝   ',
-]
+/** Width at/above which the expanded (subtitle) welcome header is shown. */
+const WIDE_WELCOME_WIDTH = 82
 
-const ORCA_ART_WIDTH = ORCA_WORDMARK_LINES.reduce((max, line) => Math.max(max, line.length), 0)
-
+/**
+ * Whether the wide welcome header (with subtitle) fits. Retained for layout
+ * tests; grok's welcome has no ASCII art, so this now gates the subtitle only.
+ */
 export function shouldRenderBannerArt(frameWidth: number): boolean {
-  return frameWidth >= ORCA_ART_WIDTH
+  return frameWidth >= WIDE_WELCOME_WIDTH
 }
 
 interface Props {
@@ -43,22 +40,21 @@ export function Banner({ version, cwd, configFiles, toolCount, hookCount, model,
   const theme = useTheme()
   const layout = getHomeLayout(cols)
   const shortCwd = abbreviatePath(cwd)
-
-  const showArt = shouldRenderBannerArt(layout.frameWidth)
+  const wide = shouldRenderBannerArt(layout.frameWidth)
 
   const rows: Array<[string, string]> = []
-  if (model) rows.push(['MODEL', model])
-  rows.push(['DIRECTORY', shortCwd])
-  if (permMode) rows.push(['TRUST', permMode === 'yolo' ? 'Full Access' : permMode === 'plan' ? 'Plan Mode' : 'Auto'])
+  if (model) rows.push(['model', model])
+  rows.push(['directory', shortCwd])
+  if (permMode) rows.push(['trust', permMode === 'yolo' ? 'Full Access' : permMode === 'plan' ? 'Plan Mode' : 'Auto'])
   if (toolCount) {
     const toolStr = hookCount ? `${toolCount} tools · ${hookCount} hooks` : `${toolCount} tools`
-    rows.push(['TOOLS', toolStr])
+    rows.push(['tools', toolStr])
   }
   if (configFiles && configFiles.length > 0) {
-    rows.push(['CONFIG', configFiles.join(', ')])
+    rows.push(['config', configFiles.join(', ')])
   }
   if (sessionId) {
-    rows.push(['SESSION', truncateSessionId(sessionId)])
+    rows.push(['session', truncateSessionId(sessionId)])
   }
 
   let fleetLine: string | null = null
@@ -66,46 +62,40 @@ export function Banner({ version, cwd, configFiles, toolCount, hookCount, model,
     const { getFleetSummaryLine } = require('../../fleet-env.js') as { getFleetSummaryLine: () => string | null }
     fleetLine = getFleetSummaryLine()
   } catch {}
-  if (fleetLine) rows.push(['FLEET', fleetLine])
+  if (fleetLine) rows.push(['fleet', fleetLine])
 
   const labelWidth = rows.reduce((max, [label]) => Math.max(max, label.length), 0) + 1
   const bodyValueWidth = Math.max(24, layout.frameWidth - 4 - labelWidth)
 
+  // Grok block: a left vertical accent line, content padded to its right.
   return (
     <Box flexDirection="column" marginBottom={1} marginLeft={layout.offset}>
-      {showArt ? (
-        <Box flexDirection="column">
-          {ORCA_WORDMARK_LINES.map((line, i) => {
-            const color = i < 2 ? theme.warning : i < 5 ? theme.accent : theme.accentDim
-            return <Text key={i} color={color} bold>{line}</Text>
-          })}
-        </Box>
-      ) : null}
-
       <Box
         flexDirection="column"
-        borderStyle="round"
-        borderColor={theme.accent}
+        borderStyle="single"
+        borderTop={false}
+        borderRight={false}
+        borderBottom={false}
+        borderLeft
+        borderColor={theme.accentUser}
         width={layout.frameWidth}
-        marginTop={showArt ? 1 : 0}
         paddingLeft={1}
-        paddingRight={1}
       >
-        <Box marginBottom={1} justifyContent="center">
-          <Text color={theme.warning} bold>{`Orca Agent v${version}`}</Text>
-          <Text dimColor> · </Text>
-          <Text color={theme.accent} bold>Blackfin Signal</Text>
+        {/* Identity header — no box, no wordmark */}
+        <Box>
+          <Text color={theme.accent} bold>Orca</Text>
+          <Text color={theme.dim}>{`  v${version}`}</Text>
+          {wide ? <Text color={theme.muted}>{'   provider-neutral agent runtime'}</Text> : null}
         </Box>
-        <Box flexDirection="column">
-          <Box flexDirection="column" flexGrow={1}>
-            <Text color={theme.warning} bold>Available Surface</Text>
-            {rows.map(([label, value], i) => (
-              <Box key={i}>
-                <Text color={theme.accentDim}>{label.padEnd(labelWidth)}</Text>
-                <Text color={label === 'MODEL' ? theme.model : theme.text}>{truncateLabel(value, bodyValueWidth)}</Text>
-              </Box>
-            ))}
-          </Box>
+
+        {/* Signal rows */}
+        <Box flexDirection="column" marginTop={1}>
+          {rows.map(([label, value], i) => (
+            <Box key={i}>
+              <Text color={theme.accentSystem}>{label.padEnd(labelWidth)}</Text>
+              <Text color={label === 'model' ? theme.model : theme.text}>{truncateLabel(value, bodyValueWidth)}</Text>
+            </Box>
+          ))}
         </Box>
       </Box>
     </Box>

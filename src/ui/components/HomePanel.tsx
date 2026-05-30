@@ -31,26 +31,26 @@ export function HomePanel({ status, toolCount, hookCount, savedSessionCount }: P
   return (
     <Box marginLeft={layout.offset} marginTop={1} marginBottom={1} flexDirection="column">
       <PickerFrame
-        title="POD BRIEF"
-        subtitle="Give the pod one clear outcome; Orca gathers proof before edits"
-        footer="Natural language works best. Press Tab for pod actions."
-        borderColor={theme.accent}
+        title="GET STARTED"
+        subtitle="Give Orca one clear outcome; it gathers proof before edits"
+        footer="Natural language works best. Press Tab for quick actions."
+        borderColor={theme.accentUser}
         width={layout.primaryWidth}
         marginLeft={0}
       >
         <Box flexDirection="column">
-          <Text bold color={theme.text}>Tell Orca the outcome; the pod handles plan, tools, and evidence.</Text>
-          <Text color={theme.accentDim}>Brief the pod:</Text>
-          <Text color={theme.accent}>  review the changed files and name the release risk</Text>
-          <Text color={theme.accent}>  debug the failing tests with evidence before edits</Text>
-          <Text color={theme.accent}>  map this repo, then identify the risky boundaries</Text>
+          <Text bold color={theme.text}>Tell Orca the outcome — it plans, runs tools, and gathers evidence.</Text>
+          <Text color={theme.accentSystem}>Try:</Text>
+          <Text color={theme.accentUser}>  review the changed files and name the release risk</Text>
+          <Text color={theme.accentUser}>  debug the failing tests with evidence before edits</Text>
+          <Text color={theme.accentUser}>  map this repo, then identify the risky boundaries</Text>
         </Box>
       </PickerFrame>
 
       <Box flexDirection={layout.split ? 'row' : 'column'}>
         <PickerFrame
-          title="POD SIGNAL"
-          subtitle="Current run posture before delegation."
+          title="SESSION"
+          subtitle="Current run posture before you start."
           width={layout.leftColumnWidth}
           marginLeft={0}
           borderColor={theme.border}

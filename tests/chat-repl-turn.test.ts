@@ -8,6 +8,7 @@ import { ResetSensitiveWaitCanceledError } from '../src/commands/chat-proxy-tool
 import { ContextMonitor, LoopDetector } from '../src/harness/index.js'
 import { RetryTracker } from '../src/retry-intelligence.js'
 import { TokenBudgetManager } from '../src/token-budget.js'
+import { ChatSessionEmitter } from '../src/ui/session.js'
 
 const hooksMocks = vi.hoisted(() => ({
   hasHooks: vi.fn(),
@@ -537,6 +538,38 @@ describe('executeReplTurn', () => {
     })
     expect(history).toEqual([{ role: 'system', content: 'system prompt' }])
     expect(outputMocks.printError).not.toHaveBeenCalled()
+  })
+
+  it('returns aborted metadata when the ink session emits interrupt during a proxy turn', async () => {
+    const session = new ChatSessionEmitter()
+    const options = createOptions({
+      useInk: true,
+      session,
+      runProxyTurn: vi.fn().mockImplementation(({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        return new Promise<{ inputTokens: number; outputTokens: number }>((resolve) => {
+          if (abortSignal?.aborted) {
+            resolve({ inputTokens: 0, outputTokens: 0 })
+            return
+          }
+          abortSignal?.addEventListener('abort', () => {
+            resolve({ inputTokens: 0, outputTokens: 0 })
+          }, { once: true })
+        })
+      }),
+    })
+
+    const pending = executeReplTurn(options)
+    setTimeout(() => session.emitAbort(), 0)
+    const result = await pending
+
+    expect(result).toMatchObject({
+      status: 'aborted',
+      inputTokens: 0,
+      outputTokens: 0,
+      summary: 'chat turn aborted',
+    })
+    expect(options.stats.turns).toBe(0)
+    expect(options.history).toEqual([{ role: 'system', content: 'system prompt' }])
   })
 
   it('returns failed metadata for unrecovered turn errors', async () => {

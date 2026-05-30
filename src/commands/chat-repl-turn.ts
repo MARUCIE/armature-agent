@@ -109,6 +109,7 @@ interface ExecuteReplTurnOptions<TResolved extends ReplTurnResolvedProviderBase>
     outputMode: OutputMode
     cwd: string
     history?: ChatMessage[]
+    abortSignal?: AbortSignal
   }) => Promise<{ inputTokens: number; outputTokens: number; turns: number; text: string }>
 }
 
@@ -397,6 +398,18 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
         },
         reasoningEffort,
       })
+      if (abortController.signal.aborted) {
+        executionStatus = 'aborted'
+        executionSummary = 'chat turn aborted'
+        return buildReplTurnExecutionResult(
+          executionStatus,
+          executionSummary,
+          turnStartTime,
+          stats,
+          initialInputTokens,
+          initialOutputTokens,
+        )
+      }
       stats.turns++
       stats.totalInputTokens += result.inputTokens
       stats.totalOutputTokens += result.outputTokens
@@ -455,7 +468,20 @@ export async function executeReplTurn<TResolved extends ReplTurnResolvedProvider
         outputMode,
         cwd,
         history,
+        abortSignal: abortController.signal,
       })
+      if (abortController.signal.aborted) {
+        executionStatus = 'aborted'
+        executionSummary = 'chat turn aborted'
+        return buildReplTurnExecutionResult(
+          executionStatus,
+          executionSummary,
+          turnStartTime,
+          stats,
+          initialInputTokens,
+          initialOutputTokens,
+        )
+      }
       stats.turns++
       stats.totalInputTokens += result.inputTokens
       stats.totalOutputTokens += result.outputTokens

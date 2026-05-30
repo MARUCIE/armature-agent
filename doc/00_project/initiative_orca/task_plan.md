@@ -1,4 +1,41 @@
+---
+Title: Orca CLI Task Plan
+Scope: planning-with-files task plan
+Owner: Maurice
+Status: Active
+LastUpdated: 2026-05-29
+---
 # Task Plan
+
+## 2026-05-03 - Claude Code Parity UX Audit and Command Surface
+
+### Objective
+
+Close the high-frequency Claude Code parity gaps around interrupt behavior, slash command clearing, Claude-compatible aliases, context/memory/skills/agents inspection, and `/` command menu discoverability.
+
+### Design Scheme
+
+- Direction: `Claude Code Parity UX`
+- Boundary: keyboard handling, abort propagation, slash command dispatch, transcript utilities, read-only capability panels, dynamic slash picker entries, focused tests, and release evidence.
+- Constraint: keep dynamic command discovery lazy so the TUI does not scan user-global skills until the user starts a slash command.
+
+### Atomic Task Queue
+
+| ID | Priority | Task | Status |
+| --- | --- | --- | --- |
+| ORCA-CLAUDE-001 | P0 | Align Esc/Ctrl-C behavior with Claude-style interrupt semantics | Done |
+| ORCA-CLAUDE-002 | P0 | Clear slash commands from input after execution | Done |
+| ORCA-CLAUDE-003 | P1 | Add Claude-compatible slash aliases and daily commands | Done |
+| ORCA-CLAUDE-004 | P1 | Add `/memory`, `/skills`, `/agents`, and dynamic picker entries for project/user capabilities | Done |
+| ORCA-CLAUDE-005 | P1 | Refresh audit report and release evidence | Done |
+| ORCA-CLAUDE-006 | P1 | Add read-only MCP server discovery to the dynamic picker without auto-starting project MCP servers | Done |
+
+### Verification Evidence
+
+- `npm test -- tests/mcp-client.test.ts tests/slash-picker-items.test.ts tests/chat-slash-mutations.test.ts tests/chat-slash-readonly.test.ts` -> `111/111` passed.
+- `npm run lint` -> pass.
+- `npm run build` -> pass.
+- Final `npm test` -> `1776` tests passed across `97` files.
 
 ## 2026-05-03 - Claude-Style No-Flicker TUI
 
@@ -139,7 +176,7 @@ Close ORCA-SWARM-021 by making model context windows, max output defaults, prici
 - `npm test -- tests/model-catalog.test.ts tests/context-protection.test.ts tests/agent-intelligence.test.ts tests/openai-compat-multimodal.test.ts` -> `86/86` passed.
 - `npm run lint` -> pass.
 - `npm run build` -> pass.
-- Final `npm test` -> `1776` tests passed across `97` files.
+- Final `npm test` -> `1663` tests passed across `91` files.
 
 ## 2026-05-02 - Copyable TUI, Stable Workspace CWD, and Tool Opening
 
@@ -172,7 +209,7 @@ Fix the operator-visible Orca regressions reported from the launcher menu: Ink o
 - `node dist/bin/orca.js --help` -> root help exposes `42 tools`, `--cwd`, and `critique`.
 - `node dist/bin/orca.js doctor` -> provider OK (`poe / claude-opus-4.6`), `14` MCP configs discovered.
 - Live one-shot smoke with `ORCA_NO_INK=1 node dist/bin/orca.js chat --json --cwd /Users/mauricewen/Projects/orca-cli -p poe --max-turns 4 ...` -> model used `read_file`, tool succeeded, final answer `Orca CLI`.
-- Final `npm test` -> `1776` tests passed across `97` files.
+- Final `npm test` -> `1663` tests passed across `91` files.
 
 ## 2026-05-02 - Rubber Duck Critique Quality Gate
 
@@ -647,7 +684,7 @@ Optimize the local Orca CLI Ink interface by learning the high-recognition start
 - `ORCA_THEME=orca node dist/bin/orca.js --version` -> `0.8.16`.
 - `npm test -- tests/release-evidence.test.ts` -> `3` tests passed.
 - `npm test` -> `88` files / `1625` tests passed.
-- `ai check` was attempted through `/Users/mauricewen/00-AI-Fleet/bin/ai`, but produced no output and hung in `runtime/control_plane/check_cli.py` / `tests/test_all.py`; the child processes were interrupted and this is not counted as a passing gate.
+- `ai check` was attempted through `/Users/mauricewen/00-AI-Fleet/bin/ai`, but produced no output and hung in `runtime/control_plane/check_cli.py` / `tests/test_all.py`; the child processes were interrupted and this is not counted as a passing gate for that historical tranche. Superseded by `REQ-041` on 2026-05-29.
 
 ## 2026-04-29 - SOTA Swarm Audit, Queue, and Trust PDCA
 
@@ -1399,54 +1436,54 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 
 ## Verification Summary (this round)
 
-- `npm run lint` ✅
-- `node --experimental-vm-modules node_modules/.bin/vitest run tests/cursor.test.ts tests/ink-ui.test.tsx` ✅ (`83/83`)
-- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-file-expansion.test.ts tests/file-expansion.test.ts` ✅ (`70/70`)
-- `npm test` ✅ (`1206/1206`)
-- `npm test` ✅ (`1212/1212`) after file-expansion follow-up
-- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-file-expansion.test.ts` ✅ (`8/8`) after directory-path follow-up
-- `npm test` ✅ (`1214/1214`) after directory-path follow-up
-- `node --experimental-vm-modules node_modules/.bin/vitest run tests/adversarial.test.ts tests/preprocess.test.ts tests/phase1-agent.test.ts` ✅ (`134/134`) after shell-hardening follow-up
-- `npm test` ✅ (`1216/1216`) after shell-hardening follow-up
-- `node --experimental-vm-modules node_modules/.bin/vitest run tests/vscode-extension.test.ts` ✅ (`3/3`)
-- `npm test` ✅ (`1219/1219`) after VS Code skeleton follow-up
-- `node --experimental-vm-modules node_modules/.bin/vitest run tests/openai-compat-multimodal.test.ts tests/chat-image-option.test.ts tests/provider-stream-resilience.test.ts tests/agent-loop.test.ts` ✅ (`36/36`)
-- `npm test` ✅ (`1226/1226`) after multimodal one-shot follow-up
-- `node --experimental-vm-modules node_modules/.bin/vitest run tests/openai-compat-multimodal.test.ts tests/chat-image-option.test.ts tests/context-protection.test.ts tests/provider-stream-resilience.test.ts tests/agent-loop.test.ts` ✅ (`78/78`)
-- `npm test` ✅ (`1227/1227`) after multimodal history/budget follow-up
-- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/openai-compat-multimodal.test.ts tests/chat-file-expansion.test.ts` ✅ (`16/16`)
-- `npm test` ✅ (`1227/1227`) after `chat-input.ts` partial extraction
-- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts tests/openai-compat-multimodal.test.ts tests/vscode-extension.test.ts` ✅ (`19/19`)
-- `npm test` ✅ (`1238/1238`) after `chat-input.ts` / `chat-support.ts` extraction
-- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-slash-readonly.test.ts tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts` ✅ (`18/18`)
-- `npm test` ✅ (`1242/1242`) after `chat-slash-readonly.ts` extraction
-- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-proxy-tool-call.test.ts tests/chat-slash-readonly.test.ts tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts` ✅ (`22/22`)
-- `npm test` ✅ (`1246/1246`) after `chat-proxy-tool-call.ts` extraction
-- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-slash-mutations.test.ts tests/chat-proxy-tool-call.test.ts tests/chat-slash-readonly.test.ts tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts` ✅ (`26/26`)
-- `npm test` ✅ (`1250/1250`) after `chat-slash-mutations.ts` extraction
-- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-repl-async-slash.test.ts tests/chat-slash-mutations.test.ts tests/chat-proxy-tool-call.test.ts tests/chat-slash-readonly.test.ts tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts` ✅ (`31/31`)
-- `npm test` ✅ (`1254/1254`) after `chat-repl-async-slash.ts` extraction
-- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-repl-turn.test.ts` ✅ (`6/6`)
-- `npm test` ✅ (`1260/1260`) after `chat-repl-turn.ts` extraction
-- `npm run build` ✅
+- `npm run lint` PASS
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/cursor.test.ts tests/ink-ui.test.tsx` PASS (`83/83`)
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-file-expansion.test.ts tests/file-expansion.test.ts` PASS (`70/70`)
+- `npm test` PASS (`1206/1206`)
+- `npm test` PASS (`1212/1212`) after file-expansion follow-up
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-file-expansion.test.ts` PASS (`8/8`) after directory-path follow-up
+- `npm test` PASS (`1214/1214`) after directory-path follow-up
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/adversarial.test.ts tests/preprocess.test.ts tests/phase1-agent.test.ts` PASS (`134/134`) after shell-hardening follow-up
+- `npm test` PASS (`1216/1216`) after shell-hardening follow-up
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/vscode-extension.test.ts` PASS (`3/3`)
+- `npm test` PASS (`1219/1219`) after VS Code skeleton follow-up
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/openai-compat-multimodal.test.ts tests/chat-image-option.test.ts tests/provider-stream-resilience.test.ts tests/agent-loop.test.ts` PASS (`36/36`)
+- `npm test` PASS (`1226/1226`) after multimodal one-shot follow-up
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/openai-compat-multimodal.test.ts tests/chat-image-option.test.ts tests/context-protection.test.ts tests/provider-stream-resilience.test.ts tests/agent-loop.test.ts` PASS (`78/78`)
+- `npm test` PASS (`1227/1227`) after multimodal history/budget follow-up
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/openai-compat-multimodal.test.ts tests/chat-file-expansion.test.ts` PASS (`16/16`)
+- `npm test` PASS (`1227/1227`) after `chat-input.ts` partial extraction
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts tests/openai-compat-multimodal.test.ts tests/vscode-extension.test.ts` PASS (`19/19`)
+- `npm test` PASS (`1238/1238`) after `chat-input.ts` / `chat-support.ts` extraction
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-slash-readonly.test.ts tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts` PASS (`18/18`)
+- `npm test` PASS (`1242/1242`) after `chat-slash-readonly.ts` extraction
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-proxy-tool-call.test.ts tests/chat-slash-readonly.test.ts tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts` PASS (`22/22`)
+- `npm test` PASS (`1246/1246`) after `chat-proxy-tool-call.ts` extraction
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-slash-mutations.test.ts tests/chat-proxy-tool-call.test.ts tests/chat-slash-readonly.test.ts tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts` PASS (`26/26`)
+- `npm test` PASS (`1250/1250`) after `chat-slash-mutations.ts` extraction
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-repl-async-slash.test.ts tests/chat-slash-mutations.test.ts tests/chat-proxy-tool-call.test.ts tests/chat-slash-readonly.test.ts tests/chat-git-command.test.ts tests/chat-image-option.test.ts tests/chat-file-expansion.test.ts` PASS (`31/31`)
+- `npm test` PASS (`1254/1254`) after `chat-repl-async-slash.ts` extraction
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/chat-repl-turn.test.ts` PASS (`6/6`)
+- `npm test` PASS (`1260/1260`) after `chat-repl-turn.ts` extraction
+- `npm run build` PASS
 - `npm run bench` not run
   - Reason: this round changed ink UI behavior and docs only; no benchmark/provider-selection logic changed
 
 ### P0 Completed (2026-04-14)
-1. useTerminalSize — reactive resize via SIGWINCH ✅
-2. ScrollBox — stickyScroll + keyboard nav ✅
-3. usePasteHandler — bracketed paste mode ✅
+1. useTerminalSize — reactive resize via SIGWINCH PASS
+2. ScrollBox — stickyScroll + keyboard nav PASS
+3. usePasteHandler — bracketed paste mode PASS
 
 ### P1 Completed (2026-04-14)
-4. Cursor model — 28 tests, word-boundary, kill/yank ✅
-5. Theme expansion — 25 semantic tokens, dark/light auto-detect ✅
-6. Mouse wheel — SGR protocol, ScrollBox integration ✅
-7. Focus control — showCursor prop, theme-aware borders ✅
+4. Cursor model — 28 tests, word-boundary, kill/yank PASS
+5. Theme expansion — 25 semantic tokens, dark/light auto-detect PASS
+6. Mouse wheel — SGR protocol, ScrollBox integration PASS
+7. Focus control — showCursor prop, theme-aware borders PASS
 
 ### P2 Completed (2026-04-14)
-8. Spinner upgrade — 204 verbs + stalledIntensity ✅
-9. Tool call graduated error rendering — 6 error types ✅
-10. Meta+Enter / Shift+Enter newline support ✅
+8. Spinner upgrade — 204 verbs + stalledIntensity PASS
+9. Tool call graduated error rendering — 6 error types PASS
+10. Meta+Enter / Shift+Enter newline support PASS
 
 ### Remaining (post-round, if still out of scope)
 - Interactive image paste support in the ink REPL
@@ -1480,21 +1517,21 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 
 ## Verification Summary
 
-- `npm run lint` ✅
-- `npm test` ✅ (`426/426` tests passed)
-- `npm run build` ✅
-- `npm run bench` ✅ (`10/10`, `100%`)
-- `node dist/bin/orca.js --help` ✅
-- `vitest run tests/hermes-runtime.test.ts` ✅ (`3/3`)
-- `vitest run tests/model-catalog.test.ts` ✅ (`4/4`)
-- `vitest run tests/model-catalog.test.ts tests/providers-command.test.ts` ✅ (`5/5`)
-- `node dist/bin/orca.js providers` ✅
-- `vitest run tests/logger.test.ts tests/logs-command.test.ts tests/program.test.ts` ✅ (`12/12`)
-- `node dist/bin/orca.js logs` ✅
-- `node dist/bin/orca.js doctor --json` ✅
-- `vitest run tests/doctor-command.test.ts tests/logger.test.ts tests/logs-command.test.ts tests/program.test.ts` ✅ (`14/14`)
-- `vitest run tests/serve-command.test.ts` ✅ (`1/1`)
-- `vitest run tests/stats-command.test.ts` ✅ (`1/1`)
+- `npm run lint` PASS
+- `npm test` PASS (`426/426` tests passed)
+- `npm run build` PASS
+- `npm run bench` PASS (`10/10`, `100%`)
+- `node dist/bin/orca.js --help` PASS
+- `vitest run tests/hermes-runtime.test.ts` PASS (`3/3`)
+- `vitest run tests/model-catalog.test.ts` PASS (`4/4`)
+- `vitest run tests/model-catalog.test.ts tests/providers-command.test.ts` PASS (`5/5`)
+- `node dist/bin/orca.js providers` PASS
+- `vitest run tests/logger.test.ts tests/logs-command.test.ts tests/program.test.ts` PASS (`12/12`)
+- `node dist/bin/orca.js logs` PASS
+- `node dist/bin/orca.js doctor --json` PASS
+- `vitest run tests/doctor-command.test.ts tests/logger.test.ts tests/logs-command.test.ts tests/program.test.ts` PASS (`14/14`)
+- `vitest run tests/serve-command.test.ts` PASS (`1/1`)
+- `vitest run tests/stats-command.test.ts` PASS (`1/1`)
 
 ## Current Task
 
@@ -1542,11 +1579,11 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 
 ## Verification Summary
 
-- `npm test -- tests/chat-internals.test.ts tests/chat-one-shot-mcp-cleanup.test.ts tests/chat-proxy-tool-call.test.ts tests/hooks.test.ts tests/hooks-compat.test.ts tests/e2e-workflow.test.ts` ✅
-- `npm run lint` ✅
-- `npm run build` ✅
-- `npm test` ✅ (`91` files / `1670` tests)
-- Hook smoke ✅ (`39` hooks / `9` events loaded; lifecycle smoke returned `continue:true`)
+- `npm test -- tests/chat-internals.test.ts tests/chat-one-shot-mcp-cleanup.test.ts tests/chat-proxy-tool-call.test.ts tests/hooks.test.ts tests/hooks-compat.test.ts tests/e2e-workflow.test.ts` PASS
+- `npm run lint` PASS
+- `npm run build` PASS
+- `npm test` PASS (`91` files / `1670` tests)
+- Hook smoke PASS (`39` hooks / `9` events loaded; lifecycle smoke returned `continue:true`)
 
 ## Current Task
 
@@ -1573,7 +1610,48 @@ Run a SOTA swarm audit for Orca, publish the routed audit report, convert findin
 
 ## Verification Summary
 
-- `npm test -- tests/local-file-intent.test.ts tests/chat-internals.test.ts tests/ink-ui.test.tsx` ✅ (`106` tests)
-- `npm run lint` ✅
-- `npm run build` ✅
-- `npm test` ✅ (`91` files / `1679` tests)
+- `npm test -- tests/local-file-intent.test.ts tests/chat-internals.test.ts tests/ink-ui.test.tsx` PASS (`106` tests)
+- `npm run lint` PASS
+- `npm run build` PASS
+- `npm test` PASS (`91` files / `1679` tests)
+
+## Current Task
+
+- Task: Integrate multi-model large-PR review ledger into Orca CLI
+- Status: completed
+- Started: 2026-05-29
+- Completed: 2026-05-29
+
+## Plan
+
+1. Add a first-class `review-ledger` command instead of overloading single-model `pr` or read-only `critique`.
+2. Reuse Orca's aggregator-first model routing with explicit `--models` and `--judge` controls.
+3. Write durable review artifacts for independent reports, synthesis, human decisions, fix log, review verdict, and E2E evidence.
+4. Keep human decisions as the fix gate; model consensus raises priority but does not authorize fixes.
+5. Verify with focused unit/contract tests, TypeScript build, and a built-CLI dry-run smoke.
+
+## Exit Criteria
+
+- `orca review-ledger` appears in the public command surface and help contract.
+- `--pr`, `--diff-file`, and local git diff sources are supported.
+- `--dry-run --json` writes prompts/templates without provider calls.
+- Live orchestration calls independent reviewers and a synthesis judge through existing provider routing.
+- Review artifacts include human decision, fix, review verdict, and E2E evidence templates.
+- Focused tests and build pass.
+
+## Verification Summary
+
+- `git diff --check` on touched code/docs paths passed.
+- `npm run build` passed.
+- `npm run lint` passed.
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/review-ledger.test.ts tests/program.test.ts tests/command-contracts.test.ts` passed (`44/44` tests).
+- `node --experimental-vm-modules node_modules/.bin/vitest run tests/v030-coverage.test.ts tests/stats-command.test.ts` passed (`19/19` tests).
+- `npm test` passed (`93` files / `1704` tests).
+- `node dist/bin/orca.js review-ledger --dry-run --json --out /tmp/orca-review-ledger-smoke "focus on multi-model review ledger command"` passed and wrote `10` artifacts.
+- `ai check --base-dir /Users/mauricewen/Projects/orca-cli --json` passed in `outputs/check/20260529-012813-244bdac2`; `REQ-041` is closed.
+
+## Changelog
+
+| Date | Change |
+| --- | --- |
+| 2026-05-29 | Normalized metadata for the project ai check gate and recorded the multi-model review ledger integration. |

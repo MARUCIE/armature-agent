@@ -18,6 +18,7 @@ import type { StatusInfo } from '../src/ui/types.js'
 import { App, buildHomeActions, getHistoryScrollActivationState, resolveHomeActionSelection } from '../src/ui/components/App.js'
 import { getHomeLayout } from '../src/ui/components/homeLayout.js'
 import { shouldUseAlternateScreen, shouldUseNoFlickerRenderer } from '../src/ui/render.js'
+import { CLAUDE_CODE_KEYBINDINGS, resolveChatKeyAction } from '../src/ui/keybindings.js'
 import { withEnv } from './helpers/env-snapshot.js'
 
 function stripAnsi(text: string): string {
@@ -84,7 +85,6 @@ describe('StatusBar', () => {
 
   it('renders cost', () => {
     const { lastFrame } = render(<TerminalSizeProvider><StatusBar status={baseStatus} /></TerminalSizeProvider>)
-    expect(lastFrame()).toContain('signal:')
     expect(lastFrame()).toContain('$0.0034')
   })
 
@@ -140,8 +140,7 @@ describe('ThinkingSpinner', () => {
 
   it('renders spinner when active', () => {
     const { lastFrame } = render(<ThinkingSpinner active={true} />)
-    expect(lastFrame()).toContain('POD')
-    expect(lastFrame()).toContain('...')
+    expect(lastFrame()).toContain('Thinking')
     expect(lastFrame()).toContain('0s')
   })
 })
@@ -151,7 +150,7 @@ describe('ToolCallBlock', () => {
     const { lastFrame } = render(
       <ToolCallBlock start={{ name: 'read_file', args: { path: '/tmp/test.ts' } }} />,
     )
-    expect(lastFrame()).toContain('ECHO TOOL')
+    expect(lastFrame()).toContain('◆')
     expect(lastFrame()).toContain('read_file')
   })
 
@@ -194,8 +193,63 @@ describe('InputArea', () => {
     const { lastFrame } = render(<TerminalSizeProvider><InputArea onSubmit={() => {}} active={true} /></TerminalSizeProvider>)
     // Block cursor renders as inverse space — check that prompt and placeholder are present
     expect(lastFrame()).toContain('>')
-    expect(lastFrame()).toContain('Brief the pod')
+    expect(lastFrame()).toContain('Type a message')
   })
+
+  it('uses the Claude Code keybinding contract for chat actions', () => {
+    expect(CLAUDE_CODE_KEYBINDINGS.some((binding) => binding.key === 'Esc' && binding.action === 'chat:cancel')).toBe(true)
+    expect(CLAUDE_CODE_KEYBINDINGS.some((binding) => binding.key === 'Esc Esc' && binding.action === 'chat:rewind')).toBe(true)
+    expect(CLAUDE_CODE_KEYBINDINGS.some((binding) => binding.key === 'Ctrl+C' && binding.action === 'app:interrupt')).toBe(true)
+    expect(CLAUDE_CODE_KEYBINDINGS.some((binding) => binding.key === '\\ + Enter' && binding.action === 'chat:newline')).toBe(true)
+    expect(CLAUDE_CODE_KEYBINDINGS.some((binding) => binding.key === 'Ctrl+P' && binding.action === 'chat:history-previous')).toBe(true)
+    expect(CLAUDE_CODE_KEYBINDINGS.some((binding) => binding.key === 'Ctrl+N' && binding.action === 'chat:history-next')).toBe(true)
+    expect(CLAUDE_CODE_KEYBINDINGS.some((binding) => binding.key === 'Meta+P' && binding.action === 'chat:modelPicker')).toBe(true)
+    expect(CLAUDE_CODE_KEYBINDINGS.some((binding) => binding.key === 'Ctrl+G' && binding.action === 'chat:externalEditor')).toBe(true)
+    expect(resolveChatKeyAction('', { escape: true })).toBe('chat:cancel')
+    expect(resolveChatKeyAction('c', { ctrl: true })).toBe('app:interrupt')
+    expect(resolveChatKeyAction('l', { ctrl: true })).toBe('chat:clearInput')
+    expect(resolveChatKeyAction('_', { ctrl: true })).toBe('chat:undo')
+    expect(resolveChatKeyAction('p', { ctrl: true })).toBe('chat:history-previous')
+    expect(resolveChatKeyAction('n', { ctrl: true })).toBe('chat:history-next')
+    expect(resolveChatKeyAction('p', { meta: true })).toBe('chat:modelPicker')
+    expect(resolveChatKeyAction('v', { meta: true })).toBe('chat:imagePaste')
+  })
+
+  it('clears the prompt when the parent injects an empty draft after picker submission', async () => {
+    const view = render(
+      <TerminalSizeProvider><InputArea onSubmit={() => {}} active={true} draft={{ id: 1, text: 'z' }} /></TerminalSizeProvider>,
+    )
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(stripAnsi(view.lastFrame() || '')).toContain('z')
+
+    view.rerender(
+      <TerminalSizeProvider><InputArea onSubmit={() => {}} active={true} draft={{ id: 2, text: '' }} /></TerminalSizeProvider>,
+    )
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const frame = stripAnsi(view.lastFrame() || '')
+    expect(frame).not.toContain('z')
+    expect(frame).toContain('Type a message')
+    view.unmount()
+  })
+
+  it('uses backslash enter as a portable multiline escape without submitting', async () => {
+    const submitted: string[] = []
+    const view = render(
+      <TerminalSizeProvider><InputArea onSubmit={(value) => submitted.push(value)} active={true} draft={{ id: 1, text: 'first\\' }} /></TerminalSizeProvider>,
+    )
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    view.stdin.write('\r')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const frame = stripAnsi(view.lastFrame() || '')
+    expect(submitted).toEqual([])
+    expect(frame).toContain('first')
+    expect(frame).not.toContain('first\\')
+    view.unmount()
+  })
+
 })
 
 describe('PermissionPrompt', () => {
@@ -268,7 +322,6 @@ describe('MultiModelProgress', () => {
         ]}
       />,
     )
-    expect(lastFrame()).toContain('POD COUNCIL')
     expect(lastFrame()).toContain('council')
     expect(lastFrame()).toContain('2 voices')
     expect(lastFrame()).toContain('claude-sonnet')
@@ -292,8 +345,8 @@ describe('CommandPicker', () => {
     )
     expect(lastFrame()).toContain('/history')
     expect(lastFrame()).not.toContain('/model')
-    expect(lastFrame()).toContain('POD COMMANDS')
-    expect(lastFrame()).toContain('echo filter: /hi')
+    expect(lastFrame()).toContain('COMMANDS')
+    expect(lastFrame()).toContain('filter: /hi')
   })
 
   it('keeps slash command picker visible when a filter has no matches', async () => {
@@ -308,7 +361,7 @@ describe('CommandPicker', () => {
       />,
     )
 
-    expect(lastFrame()).toContain('POD COMMANDS')
+    expect(lastFrame()).toContain('COMMANDS')
     expect(lastFrame()).toContain('no matching command')
   })
 
@@ -427,7 +480,7 @@ describe('ThemePicker', () => {
     )
 
     expect(lastFrame()).toContain('Choose a theme')
-    expect(lastFrame()).toContain('Blackfin Signal')
+    expect(lastFrame()).toContain('GrokNight')
     expect(lastFrame()).toContain('Preview:')
   })
 })
@@ -495,9 +548,8 @@ describe('Footer', () => {
     const { lastFrame } = render(
       <TerminalSizeProvider><Footer isGenerating={true} isInputActive={false} permMode="yolo" /></TerminalSizeProvider>,
     )
-    expect(lastFrame()).toContain('POD HELM')
     expect(lastFrame()).toContain('esc')
-    expect(lastFrame()).toContain('interrupt echo')
+    expect(lastFrame()).toContain('interrupt')
   })
 
   it('shows send/help hints when input is active', async () => {
@@ -505,11 +557,10 @@ describe('Footer', () => {
     const { lastFrame } = render(
       <TerminalSizeProvider><Footer isGenerating={false} isInputActive={true} permMode="auto" permSource="project" /></TerminalSizeProvider>,
     )
-    expect(lastFrame()).toContain('POD HELM')
     expect(lastFrame()).toContain('enter')
-    expect(lastFrame()).toContain('send brief')
+    expect(lastFrame()).toContain('send')
     expect(lastFrame()).toContain('/help')
-    expect(lastFrame()).toContain('pod commands')
+    expect(lastFrame()).toContain('commands')
     expect(lastFrame()).toContain('auto:project')
   })
 
@@ -519,11 +570,10 @@ describe('Footer', () => {
       <TerminalSizeProvider><Footer isGenerating={false} isInputActive={false} permMode="yolo" /></TerminalSizeProvider>,
     )
     // Shows basic hints even when idle (waiting for prompt_ready)
-    expect(lastFrame()).toContain('POD HELM')
     expect(lastFrame()).toContain('enter')
-    expect(lastFrame()).toContain('send brief')
+    expect(lastFrame()).toContain('send')
     expect(lastFrame()).toContain('/help')
-    expect(lastFrame()).toContain('pod commands')
+    expect(lastFrame()).toContain('commands')
     expect(lastFrame()).toContain('yolo')
     expect(lastFrame()).not.toContain('esc') // no interrupt when not generating
   })
@@ -633,17 +683,16 @@ describe('Banner', () => {
       <TerminalSizeProvider><Banner version="0.8.0" cwd="/tmp" model="claude-sonnet-4.6" permMode="auto" /></TerminalSizeProvider>,
     )
     const frame = lastFrame() ?? ''
-    // Should contain the branded signal deck fields.
-    expect(frame).toContain('██████')
-    expect(frame).toContain('Orca Agent v0.8.0')
-    expect(frame).toContain('Blackfin Signal')
-    expect(frame).toContain('Available Surface')
-    expect(frame).toContain('MODEL')
-    expect(frame).toContain('TRUST')
-    expect(frame).toContain('DIRECTORY')
+    // Grok-minimal welcome: no ASCII wordmark, compact identity header + rows.
+    expect(frame).not.toContain('██████')
+    expect(frame).toContain('Orca')
+    expect(frame).toContain('v0.8.0')
+    expect(frame).toContain('model')
+    expect(frame).toContain('trust')
+    expect(frame).toContain('directory')
     expect(frame).not.toContain('terminal-native coding pod')
-    expect(frame).not.toContain('BLACKFIN SIGNAL')
-    expect(frame).not.toContain('POD       ____')
+    expect(frame).not.toContain('Blackfin Signal')
+    expect(frame).not.toContain('Available Surface')
   })
 
   it('renders config files when provided', async () => {
@@ -696,12 +745,12 @@ describe('HomePanel', () => {
     const { lastFrame } = render(
       <TerminalSizeProvider><HomePanel status={status} toolCount={42} hookCount={11} /></TerminalSizeProvider>,
     )
-    expect(lastFrame()).toContain('POD BRIEF')
-    expect(lastFrame()).toContain('Give the pod one clear outcome')
-    expect(lastFrame()).toContain('POD SIGNAL')
+    expect(lastFrame()).toContain('GET STARTED')
+    expect(lastFrame()).toContain('Give Orca one clear outcome')
+    expect(lastFrame()).toContain('SESSION')
     expect(lastFrame()).toContain('GUARDRAILS')
     expect(lastFrame()).toContain('prompt on dangerous tools')
-    expect(lastFrame()).toContain('Press Tab for pod actions')
+    expect(lastFrame()).toContain('Press Tab for quick actions')
   })
 
   it('surfaces saved-session recovery when summaries exist', async () => {
@@ -768,7 +817,7 @@ describe('App empty state', () => {
     const { lastFrame } = render(
       <TerminalSizeProvider><App session={session} initialStatus={status} banner={banner} /></TerminalSizeProvider>,
     )
-    expect(lastFrame()).toContain('POD BRIEF')
+    expect(lastFrame()).toContain('GET STARTED')
     expect(lastFrame()).toContain('RECOVER')
     expect(lastFrame()).not.toContain('Multi-Model Collaboration')
   })
@@ -800,6 +849,42 @@ describe('App empty state', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(view.lastFrame()).toContain('Quick Actions')
     expect(view.lastFrame()).toContain('Review changed files')
+    view.unmount()
+  })
+
+  it('clears slash command text after selecting a command from the picker', async () => {
+    const session = new ChatSessionEmitter()
+    const status: StatusInfo = {
+      model: 'gpt-5.4',
+      contextPct: 12,
+      permMode: 'auto',
+      permSource: 'default',
+      turns: 0,
+      costUsd: 0,
+      behaviorMode: 'default',
+      effort: 'high',
+    }
+    const view = render(
+      <TerminalSizeProvider><App session={session} initialStatus={status} /></TerminalSizeProvider>,
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    session.emitInputDraft('/model')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(view.lastFrame()).toContain('COMMANDS')
+
+    view.stdin.write('\r')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const submitted = await Promise.race([
+      session.waitForInput(),
+      new Promise<string | null>((_, reject) => setTimeout(() => reject(new Error('timed out waiting for submitted slash command')), 100)),
+    ])
+    const frame = stripAnsi(view.lastFrame() || '')
+    expect(submitted).toBe('/model')
+    expect(frame).not.toContain('COMMANDS')
+    expect(frame).toContain('Type a message')
     view.unmount()
   })
 
@@ -853,7 +938,6 @@ describe('App empty state', () => {
     session.emitUserMessage('银行开户地址策略')
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(view.lastFrame()).toContain('POD BRIEF')
     expect(view.lastFrame()).toContain('银行开户地址策略')
     view.unmount()
   })
@@ -884,8 +968,7 @@ describe('App empty state', () => {
     })
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    const frame = stripAnsi(view.lastFrame())
-    expect(frame).toContain('ORCA POD')
+    const frame = stripAnsi(view.lastFrame() || '')
     expect(frame).toContain('One reality check')
     expect(frame).toContain('• Do this first')
     expect(frame).not.toContain('### One reality check')
@@ -957,7 +1040,7 @@ describe('MarkdownText', () => {
     const { lastFrame } = render(
       <MarkdownText>{'### Concrete judgment\n- **Works** now\n- `Needs proof` next'}</MarkdownText>,
     )
-    const frame = stripAnsi(lastFrame())
+    const frame = stripAnsi(lastFrame() || '')
     expect(frame).toContain('Concrete judgment')
     expect(frame).toContain('• Works now')
     expect(frame).toContain('• Needs proof next')
@@ -976,7 +1059,7 @@ describe('DiffPreview', () => {
         filePath="/tmp/test.ts"
       />,
     )
-    expect(lastFrame()).toContain('ECHO DIFF')
+    expect(lastFrame()).toContain('◆')
     expect(lastFrame()).toContain('/tmp/test.ts')
     expect(lastFrame()).toContain('+')
     expect(lastFrame()).toContain('-')

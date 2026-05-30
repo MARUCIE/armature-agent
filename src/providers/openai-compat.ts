@@ -345,7 +345,10 @@ export async function* streamChat(
 
       // Force stream=true typing with unknown cast (params built dynamically for tool support)
       const response = await withRateLimitRetry(
-        () => client.chat.completions.create(params as unknown as Parameters<typeof client.chat.completions.create>[0]),
+        () => client.chat.completions.create(
+          params as unknown as Parameters<typeof client.chat.completions.create>[0],
+          toolCallbacks?.abortSignal ? { signal: toolCallbacks.abortSignal } : undefined,
+        ),
         options.model,
       )
       const stream = response as AsyncIterable<Record<string, unknown>>
@@ -355,6 +358,11 @@ export async function* streamChat(
       let finishReason = ''
 
       for await (const rawChunk of stream) {
+        if (toolCallbacks?.abortSignal?.aborted) {
+          yield { type: 'text', text: '\n\n[interrupted]' }
+          yield { type: 'done' }
+          return
+        }
         const chunk = rawChunk as Record<string, unknown>
         const choices = chunk.choices as Array<Record<string, unknown>> | undefined
         const choice = choices?.[0]
@@ -525,6 +533,11 @@ export async function* streamChat(
       break
     }
   } catch (err) {
+    if (toolCallbacks?.abortSignal?.aborted) {
+      yield { type: 'text', text: '\n\n[interrupted]' }
+      yield { type: 'done' }
+      return
+    }
     const message = err instanceof Error ? err.message : String(err)
     yield { type: 'error', error: message }
     // Still yield usage so the caller can track what was consumed
