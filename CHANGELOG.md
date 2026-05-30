@@ -2,6 +2,27 @@
 
 This file is a historical release log. Version-specific counts and examples reflect the release date they were recorded, not the current repo head.
 
+## Unreleased — Dynamic Workflows (2026-05-30)
+
+A `workflow` tool that lets the model write a small, deterministic JavaScript
+orchestration script which fans work out across many isolated sub-agents and
+synthesizes the results — Orca's port of Claude Code's dynamic workflows and the
+`pi-dynamic-workflows` prototype.
+
+### Added
+- **`src/workflow/`** — `parseWorkflowScript` (acorn-backed: determinism blocklist + literal `meta` validation), `runWorkflow` (vm sandbox with `agent`/`parallel`/`pipeline`/`phase`/`log`/`args`/`budget` globals), `OrcaWorkflowAgentRunner` (bridges each `agent()` onto `spawnSubAgent` with optional git-worktree isolation and a JSON output contract for `schema`), and a compact progress renderer.
+- **`workflow` tool** registered in `TOOL_DEFINITIONS` and handled in `handleSpecialProxyTool` (yolo-only, like `delegate_task`, since sub-agents run unsupervised).
+- System-prompt authoring guide so the model knows the script shape and when to use it.
+- `acorn` dependency for literal `meta` validation.
+- Two-layer determinism enforcement: parse-time regex blocklist **plus** frozen runtime `Math`/`Date` stubs in the vm context, closing the bracket-access bypass (`Math['ra'+'ndom']()`, `Date['now']()`) the static scan cannot see.
+- Tests: `tests/workflow-parser.test.ts` (incl. adversarial edges), `tests/workflow-runtime.test.ts` (core/parallel/pipeline/budget/abort/determinism/robustness — stub runner, no LLM), `tests/workflow-runner.test.ts` (runner dispatch + real-git worktree isolation + structured-output edges), workflow block in `tests/chat-proxy-tool-call.test.ts`, and `tests/workflow-e2e-real.test.ts` — a real-LLM closure proof gated by `ORCA_E2E_REAL=1`.
+- Design doc: `doc/DYNAMIC_WORKFLOWS.md` (with threat model + closure-proof evidence).
+
+### Notes
+- v1 structured output is JSON-in-text (fenced block parsed + required-key checked), not a terminating tool call; persisted/resumable runs and a `/workflows` manager are not yet implemented.
+- The Node `vm` is a determinism guardrail for a trusted model-authored script, not an adversarial sandbox; the real isolation boundary is the forked sub-agent child process.
+- Closure proven end-to-end against `poe/claude-opus-4.6`: parallel fan-out (two real sub-agents) and structured output (real model emits fenced JSON → parsed/validated). Falsification surfaced and fixed a test-only `src/`-vs-`dist/` worker-path coupling in the e2e harness.
+
 ## v0.7.1 — Knowledge Management + Goal-Loop Execution (2026-04-13)
 
 AI-Fleet documentation management system transplant + long task delivery.

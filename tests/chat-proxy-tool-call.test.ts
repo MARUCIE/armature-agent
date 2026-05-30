@@ -716,3 +716,96 @@ describe('chat proxy tool helper', () => {
     expect(onFileWrite).toHaveBeenCalledWith(join(cwd, 'src/generated.ts'), null)
   })
 })
+
+describe('chat proxy tool — workflow', () => {
+  const SINGLE = `export const meta = { name: 'audit', description: 'd' }\nreturn await agent('inspect', { label: 'one' })`
+  const FANOUT = `export const meta = { name: 'fan', description: 'd' }\nreturn await parallel([0,1,2].map(i => () => agent('t'+i, { label: 'a'+i })))`
+
+  it('blocks workflow outside yolo mode', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-wf-'))
+    const result = await handleProxyToolCall({
+      ...baseParams,
+      cwd,
+      name: 'workflow',
+      args: { script: SINGLE },
+      permissionMode: 'auto',
+    })
+    expect(result.success).toBe(false)
+    expect(result.output).toContain('disabled in safe mode')
+    expect(mockState.spawnSubAgent).not.toHaveBeenCalled()
+  })
+
+  it('runs a workflow in yolo mode and returns progress + result', async () => {
+    mockState.spawnSubAgent.mockResolvedValue({ success: true, output: 'inspection report', duration: 5, tokensUsed: 9 })
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-wf-'))
+    const result = await handleProxyToolCall({
+      ...baseParams,
+      cwd,
+      name: 'workflow',
+      args: { script: SINGLE },
+      permissionMode: 'yolo',
+    })
+    expect(result.success).toBe(true)
+    expect(result.output).toContain('workflow audit')
+    expect(result.output).toContain('inspection report')
+    expect(mockState.spawnSubAgent).toHaveBeenCalledTimes(1)
+  })
+
+  it('surfaces a script parse error without spawning any sub-agent', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-wf-'))
+    const result = await handleProxyToolCall({
+      ...baseParams,
+      cwd,
+      name: 'workflow',
+      args: { script: 'const x = 1\nreturn x' },
+      permissionMode: 'yolo',
+    })
+    expect(result.success).toBe(false)
+    expect(result.output).toContain('workflow script error')
+    expect(mockState.spawnSubAgent).not.toHaveBeenCalled()
+  })
+
+  it('fans out one sub-agent per parallel branch', async () => {
+    mockState.spawnSubAgent.mockResolvedValue({ success: true, output: 'ok', duration: 1, tokensUsed: 1 })
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-wf-'))
+    const result = await handleProxyToolCall({
+      ...baseParams,
+      cwd,
+      name: 'workflow',
+      args: { script: FANOUT },
+      permissionMode: 'yolo',
+    })
+    expect(result.success).toBe(true)
+    expect(mockState.spawnSubAgent).toHaveBeenCalledTimes(3)
+  })
+
+  it('threads the resolved model/apiKey/baseURL into each sub-agent', async () => {
+    mockState.spawnSubAgent.mockResolvedValue({ success: true, output: 'ok', duration: 1, tokensUsed: 1 })
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-wf-'))
+    await handleProxyToolCall({
+      ...baseParams,
+      cwd,
+      name: 'workflow',
+      args: { script: SINGLE },
+      permissionMode: 'yolo',
+    })
+    expect(mockState.spawnSubAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd }),
+      { model: 'gpt-5.4', apiKey: 'test-key', baseURL: 'https://example.invalid/v1' },
+    )
+  })
+
+  it('fires SubagentStart and SubagentStop hooks around the run', async () => {
+    mockState.spawnSubAgent.mockResolvedValue({ success: true, output: 'ok', duration: 1, tokensUsed: 1 })
+    const cwd = mkdtempSync(join(tmpdir(), 'orca-wf-'))
+    await handleProxyToolCall({
+      ...baseParams,
+      cwd,
+      name: 'workflow',
+      args: { script: SINGLE },
+      permissionMode: 'yolo',
+    })
+    expect(mockState.runHook).toHaveBeenCalledWith('SubagentStart', expect.objectContaining({ event: 'SubagentStart' }))
+    expect(mockState.runHook).toHaveBeenCalledWith('SubagentStop', expect.objectContaining({ event: 'SubagentStop' }))
+  })
+})

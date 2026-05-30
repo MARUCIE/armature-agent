@@ -171,6 +171,76 @@ async function requestPermissionDecision(
   return askPermission(name, preview)
 }
 
+async function runWorkflowTool(
+  args: ToolArgs,
+  cwd: string,
+  resolved: ProxyToolModelContext,
+  session?: ChatSessionEmitter,
+): Promise<ToolResult> {
+  const script = String(args.script || '')
+  if (!script.trim()) return { success: false, output: 'script is required.' }
+
+  const { runWorkflow, OrcaWorkflowAgentRunner, WorkflowProgress, parseWorkflowScript } = await import('../workflow/index.js')
+
+  let workflowName = 'workflow'
+  try {
+    workflowName = parseWorkflowScript(script).meta.name
+  } catch (error) {
+    return { success: false, output: `workflow script error: ${error instanceof Error ? error.message : String(error)}` }
+  }
+
+  const progress = new WorkflowProgress(workflowName)
+  const notify = (message: string) => {
+    if (session) session.emitSystemMessage(message, 'info')
+    else process.stderr.write(`\x1b[90m  ${message}\x1b[0m\n`)
+  }
+
+  await hooks.run('SubagentStart', { event: 'SubagentStart', cwd, model: resolved.model })
+  notify(`workflow ${workflowName}: starting`)
+
+  const runner = new OrcaWorkflowAgentRunner({
+    cwd,
+    parent: { model: resolved.model, apiKey: resolved.apiKey, baseURL: resolved.baseURL },
+  })
+
+  try {
+    const run = await runWorkflow(script, {
+      runner,
+      args: args.args,
+      cwd,
+      onPhase: (title) => {
+        progress.phase(title)
+        notify(`workflow ${workflowName}: phase ${title}`)
+      },
+      onAgentStart: (event) => progress.agentStart(event),
+      onAgentEnd: (event) => progress.agentEnd(event),
+      onLog: (message) => notify(`workflow: ${message}`),
+    })
+
+    const counts = progress.counts()
+    await hooks.run('SubagentStop', {
+      event: 'SubagentStop',
+      cwd,
+      model: resolved.model,
+      toolSuccess: counts.failed === 0,
+    })
+
+    const serialized = typeof run.result === 'string' ? run.result : JSON.stringify(run.result, null, 2)
+    const cappedResult = serialized.length > 20_000 ? `${serialized.slice(0, 20_000)}\n…[truncated]` : serialized
+    const output = [
+      progress.render(),
+      `(${run.agentCount} sub-agents, ${counts.failed} failed, ${(run.durationMs / 1000).toFixed(1)}s)`,
+      '',
+      'result:',
+      cappedResult,
+    ].join('\n')
+    return { success: true, output }
+  } catch (error) {
+    notify(`workflow ${workflowName} failed`)
+    return { success: false, output: `workflow failed: ${error instanceof Error ? error.message : String(error)}\n${progress.render()}` }
+  }
+}
+
 async function handleSpecialProxyTool(params: ProxyToolCallParams): Promise<ToolResult | undefined> {
   const { name, args, cwd, resolved, session, permissionMode } = params
 
@@ -202,6 +272,16 @@ async function handleSpecialProxyTool(params: ProxyToolCallParams): Promise<Tool
       toolSuccess: result.success,
     })
     return { success: result.success, output: result.output }
+  }
+
+  if (name === 'workflow') {
+    // Sub-agents run unsupervised in forked processes (no per-tool permission
+    // prompts reach them), so gate workflows behind yolo — same posture as
+    // delegate_task.
+    if (permissionMode !== 'yolo') {
+      return { success: false, output: 'workflow is disabled in safe mode (sub-agents run unsupervised). Re-run in yolo mode.' }
+    }
+    return runWorkflowTool(args, cwd, resolved, session)
   }
 
   if (name === 'ask_user') {

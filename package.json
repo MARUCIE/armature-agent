@@ -38,6 +38,7 @@
     "test:tool-calls": "python3 agent-eval/scripts/run-test-matrix.py --layers tool-calls"
   },
   "dependencies": {
+    "acorn": "^8.16.0",
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
     "https-proxy-agent": "^7.0.0",

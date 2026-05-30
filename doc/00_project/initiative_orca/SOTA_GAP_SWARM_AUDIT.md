@@ -6,7 +6,7 @@
 - Baseline: dirty working tree audit; existing user changes were preserved
 - Report route: `html-style-router` -> `html-economist-style`
 - Verification baseline before fixes: `npm run lint`, `npm test` (`85` files / `1583` tests), `npm run build`
-- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`91` files / `1663` tests)
+- Final verification after PDCA tranche: `npm run lint`, `npm run build`, `npm test` (`97` files / `1776` tests)
 
 ## Scope
 

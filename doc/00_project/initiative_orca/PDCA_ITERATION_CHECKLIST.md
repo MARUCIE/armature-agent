@@ -15,7 +15,7 @@
 | --- | --- | --- |
 | Plan | Pass | Long-session local-file failure, canonical tool-call matrix closure, and Hermes-style Orca mark refresh scoped together |
 | Do | Pass | `streamChat()` system prompt persistence, local-file prompt contract, runtime local-file intent guard, false-save repair, `test:tool-calls` matrix layer, generated entrypoints, and `Banner.tsx` `ORCA-AGENT` clean-deck icon removal |
-| Check | Pass | provider/system-prompt pack -> `22`; local-file guard pack -> `31`; `npm run lint`; `npm run test:tool-calls`; focused Ink UI pack -> `80`; `npm test` -> `91` files / `1663` tests; dist tool smoke passed; rendered Banner inspection confirmed new `ORCA-AGENT` first frame |
+| Check | Pass | provider/system-prompt pack -> `22`; local-file guard pack -> `31`; `npm run lint`; `npm run test:tool-calls`; focused Ink UI pack -> `80`; `npm test` -> `97` files / `1776` tests; dist tool smoke passed; rendered Banner inspection confirmed new `ORCA-AGENT` first frame |
 | Act | Pass | PRD, architecture, UX map, optimization plan, task plan, notes, deliverable, rolling ledger, and HTML companions synced |
 
 ## 2026-05-02 - Model Catalog SSoT Runtime Consolidation
@@ -24,7 +24,7 @@
 | --- | --- | --- |
 | Plan | Pass | `Model Catalog SSoT` tranche documented in task plan with canonical metadata, runtime, provider, output, and anti-drift test scope |
 | Do | Pass | `src/model-metadata.ts`, `src/model-catalog.ts`, `src/token-budget.ts`, `src/providers/openai-compat.ts`, `src/output.ts`, and `tests/model-catalog.test.ts` updated |
-| Check | Pass | focused model/runtime/provider pack -> `86`; `npm run lint`; `npm run build`; `npm test` -> `91` files / `1663` tests |
+| Check | Pass | focused model/runtime/provider pack -> `86`; `npm run lint`; `npm run build`; `npm test` -> `97` files / `1776` tests |
 | Act | Pass | PRD, architecture, UX map, optimization plan, task plan, notes, deliverable, rolling ledger, README, release evidence snapshot, and HTML companions synced |
 
 ## 2026-05-02 - Terminal Operability Hardening
@@ -33,7 +33,7 @@
 | --- | --- | --- |
 | Plan | Pass | `Terminal Operability Hardening` tranche documented in task plan with copyable TUI, cwd, MCP, and `open_file` scope |
 | Do | Pass | `AlternateScreen` / no-flicker opt-in, mouse tracking opt-in, workspace cwd resolver, root `--cwd`, MCP underscore/hyphen parser, Codex TOML parser widening, `open_file`, tests, README, and release evidence refresh |
-| Check | Pass | targeted regression pack -> `250`; `npm run build`; root/chat help smoke; `orca doctor`; live Poe `read_file` smoke; `npm test` -> `91` files / `1663` tests |
+| Check | Pass | targeted regression pack -> `250`; `npm run build`; root/chat help smoke; `orca doctor`; live Poe `read_file` smoke; `npm test` -> `97` files / `1776` tests |
 | Act | Pass | PRD, architecture, UX map, optimization plan, task plan, notes, deliverable, rolling ledger, README, and release evidence snapshot synced |
 
 ## 2026-05-02 - Rubber Duck Critique Quality Gate

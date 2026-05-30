@@ -16,7 +16,7 @@
   - `npm test -- tests/model-catalog.test.ts tests/context-protection.test.ts tests/agent-intelligence.test.ts tests/openai-compat-multimodal.test.ts` -> `86` tests passed.
   - `npm run lint` -> pass.
   - `npm run build` -> pass.
-  - `npm test` -> `91` files / `1663` tests passed.
+  - `npm test` -> `97` files / `1776` tests passed.
 - Act:
   - Updated PRD, architecture, UX map, optimization plan, task plan, notes, deliverable, rolling ledger, README, release evidence snapshot, and HTML companions.
 
@@ -42,7 +42,7 @@
   - `node dist/bin/orca.js --help` -> `42 tools`, `--cwd`, and `critique` visible.
   - `node dist/bin/orca.js doctor` -> provider OK and `14` MCP configs discovered.
   - Live Poe one-shot tool smoke -> model used `read_file`; tool result succeeded; final answer `Orca CLI`.
-  - `npm test` -> `91` files / `1663` tests passed.
+  - `npm test` -> `97` files / `1776` tests passed.
 - Act:
   - Updated PRD, architecture, UX map, optimization plan, task plan, notes, deliverable, rolling ledger, README, and release evidence snapshot.
 

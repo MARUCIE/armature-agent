@@ -1,5 +1,5 @@
 /**
- * Round 1: Full tool coverage — all 42 tools exercised.
+ * Round 1: Full tool coverage — all 43 tools exercised.
  * Simulates real coding scenarios with actual file operations.
  */
 
@@ -63,7 +63,7 @@ describe('math', () => {
 
   // Init git repo for git tools
   try {
-    execSync('git init && git add -A && git commit -m "init"', {
+    execSync('git init && git config user.email "orca-test@example.com" && git config user.name "Orca Test" && git add -A && git commit -m "init"', {
       cwd: testDir, encoding: 'utf-8', stdio: 'pipe',
     })
   } catch { /* ignore git errors in CI */ }
@@ -76,8 +76,8 @@ afterAll(() => {
 // ── Registry Tests ───────────────────────────────────────────────
 
 describe('Round 1: Tool Registry', () => {
-  it('has exactly 42 tools', () => {
-    expect(TOOL_DEFINITIONS.length).toBe(42)
+  it('has exactly 43 tools', () => {
+    expect(TOOL_DEFINITIONS.length).toBe(43)
   })
 
   it('all tools have valid function calling schema', () => {

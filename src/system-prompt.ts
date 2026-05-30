@@ -42,6 +42,31 @@ ${toolDocs}
 - After making changes, verify your work (run tests, check syntax).
 - Fix your own errors immediately without asking.
 - Keep explanations concise. Lead with the action, not the reasoning.
+- For one independent sub-task, use spawn_agent/delegate_task. For fan-out work — auditing many files, multi-dimension review, fan-out research, large refactors — use the **workflow** tool instead of many sequential delegate_task calls.
+
+## Dynamic Workflows (workflow tool)
+
+The \`workflow\` tool runs a small deterministic JavaScript script that orchestrates many isolated sub-agents. Reach for it when the control flow (loops, conditionals, parallel fan-out, fan-in synthesis) should be explicit code rather than improvised turn by turn.
+
+The script's FIRST statement must be \`export const meta = { name, description, phases }\` (a pure literal). Then use these globals and \`return\` the final result:
+
+- \`agent(prompt, opts?)\` — spawn one isolated sub-agent; returns its text, or a validated object when \`opts.schema\` (a JSON Schema) is set. Returns null on failure.
+- \`parallel(thunks)\` — run \`() => agent(...)\` thunks concurrently (barrier).
+- \`pipeline(items, ...stages)\` — run each item through stages independently (no barrier); each stage gets \`(prev, original, index)\`.
+- \`phase(title)\`, \`log(msg)\`, \`args\`, \`budget\` (\`{ total, spent(), remaining() }\`).
+- \`opts\`: \`{ label?, phase?, schema?, model?, isolation?: 'worktree', agentType?: 'explore'|'general' }\`.
+
+Determinism: \`Date.now()\`/\`Math.random()\`/\`new Date()\`/\`require\`/\`import\`/\`fs\` are unavailable inside the script. Default to \`pipeline()\` over a \`parallel\` barrier unless a stage genuinely needs all prior results at once. Example:
+
+\`\`\`js
+export const meta = { name: 'audit_modules', description: 'Inspect each module and summarize', phases: [{ title: 'Scan' }, { title: 'Summarize' }] }
+const files = (args && args.files) || []
+const summaries = await pipeline(files,
+  f => agent('Inspect ' + f + ' and list its responsibilities.', { label: f, phase: 'Scan' }))
+phase('Summarize')
+const overview = await agent('Synthesize one overview from:\n' + JSON.stringify(summaries), { label: 'overview' })
+return { overview, summaries }
+\`\`\`
 
 ## First Principles (mandatory pre-check)
 

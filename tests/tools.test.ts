@@ -19,8 +19,8 @@ afterAll(() => {
 })
 
 describe('TOOL_DEFINITIONS', () => {
-  it('has 42 tools registered', () => {
-    expect(TOOL_DEFINITIONS.length).toBe(42)
+  it('has 43 tools registered', () => {
+    expect(TOOL_DEFINITIONS.length).toBe(43)
   })
 
   it('every tool has name, description, and parameters', () => {

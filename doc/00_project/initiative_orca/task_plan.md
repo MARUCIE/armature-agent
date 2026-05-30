@@ -139,7 +139,7 @@ Close ORCA-SWARM-021 by making model context windows, max output defaults, prici
 - `npm test -- tests/model-catalog.test.ts tests/context-protection.test.ts tests/agent-intelligence.test.ts tests/openai-compat-multimodal.test.ts` -> `86/86` passed.
 - `npm run lint` -> pass.
 - `npm run build` -> pass.
-- Final `npm test` -> `1663` tests passed across `91` files.
+- Final `npm test` -> `1776` tests passed across `97` files.
 
 ## 2026-05-02 - Copyable TUI, Stable Workspace CWD, and Tool Opening
 
@@ -172,7 +172,7 @@ Fix the operator-visible Orca regressions reported from the launcher menu: Ink o
 - `node dist/bin/orca.js --help` -> root help exposes `42 tools`, `--cwd`, and `critique`.
 - `node dist/bin/orca.js doctor` -> provider OK (`poe / claude-opus-4.6`), `14` MCP configs discovered.
 - Live one-shot smoke with `ORCA_NO_INK=1 node dist/bin/orca.js chat --json --cwd /Users/mauricewen/Projects/orca-cli -p poe --max-turns 4 ...` -> model used `read_file`, tool succeeded, final answer `Orca CLI`.
-- Final `npm test` -> `1663` tests passed across `91` files.
+- Final `npm test` -> `1776` tests passed across `97` files.
 
 ## 2026-05-02 - Rubber Duck Critique Quality Gate
 
