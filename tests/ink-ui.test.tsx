@@ -88,7 +88,7 @@ describe('StatusBar', () => {
     expect(lastFrame()).toContain('$0.0034')
   })
 
-  it('renders trust-cycle guidance with Orca rail copy', () => {
+  it('renders trust-cycle guidance with Armature rail copy', () => {
     const { lastFrame } = render(<TerminalSizeProvider><StatusBar status={baseStatus} /></TerminalSizeProvider>)
     expect(lastFrame()).toContain('shift+tab cycles trust')
   })
@@ -109,24 +109,24 @@ describe('StatusBar', () => {
 describe('Ink terminal mode', () => {
   it('keeps no-flicker fullscreen opt-in so terminal scrollback stays copyable by default', async () => {
     await withEnv({
-      ORCA_ALT_SCREEN: undefined,
-      ORCA_NO_FLICKER: undefined,
-      ORCA_TUI: undefined,
+      ARMATURE_ALT_SCREEN: undefined,
+      ARMATURE_NO_FLICKER: undefined,
+      ARMATURE_TUI: undefined,
       CLAUDE_CODE_NO_FLICKER: undefined,
     }, () => {
       expect(shouldUseAlternateScreen()).toBe(false)
       expect(shouldUseNoFlickerRenderer()).toBe(false)
     })
-    await withEnv({ ORCA_ALT_SCREEN: '1' }, () => {
+    await withEnv({ ARMATURE_ALT_SCREEN: '1' }, () => {
       expect(shouldUseAlternateScreen()).toBe(true)
     })
     await withEnv({ CLAUDE_CODE_NO_FLICKER: '1' }, () => {
       expect(shouldUseNoFlickerRenderer()).toBe(true)
     })
-    await withEnv({ ORCA_TUI: 'fullscreen' }, () => {
+    await withEnv({ ARMATURE_TUI: 'fullscreen' }, () => {
       expect(shouldUseNoFlickerRenderer()).toBe(true)
     })
-    await withEnv({ ORCA_TUI: 'default', ORCA_NO_FLICKER: '1' }, () => {
+    await withEnv({ ARMATURE_TUI: 'default', ARMATURE_NO_FLICKER: '1' }, () => {
       expect(shouldUseNoFlickerRenderer()).toBe(false)
     })
   })
@@ -508,8 +508,8 @@ describe('DetailPanel', () => {
 
 describe('ThemeProvider', () => {
   it('applies selected theme immediately in the current session', async () => {
-    const originalOrcaTheme = process.env.ORCA_THEME
-    delete process.env.ORCA_THEME
+    const originalArmatureTheme = process.env.ARMATURE_THEME
+    delete process.env.ARMATURE_THEME
 
     const { ThemeProvider, useTheme, useThemeController } = await import('../src/ui/theme.js')
 
@@ -534,10 +534,10 @@ describe('ThemeProvider', () => {
       await new Promise(resolve => setTimeout(resolve, 20))
 
       expect(lastFrame()).toContain('ocean')
-      expect(process.env.ORCA_THEME).toBe('ocean')
+      expect(process.env.ARMATURE_THEME).toBe('ocean')
     } finally {
-      if (originalOrcaTheme === undefined) delete process.env.ORCA_THEME
-      else process.env.ORCA_THEME = originalOrcaTheme
+      if (originalArmatureTheme === undefined) delete process.env.ARMATURE_THEME
+      else process.env.ARMATURE_THEME = originalArmatureTheme
     }
   })
 })
@@ -658,12 +658,12 @@ describe('ScrollBox', () => {
 })
 
 describe('Banner', () => {
-  it('drops the orca art when the frame is too narrow', async () => {
+  it('drops the armature art when the frame is too narrow', async () => {
     const { shouldRenderBannerArt } = await import('../src/ui/components/Banner.js')
     expect(shouldRenderBannerArt(getHomeLayout(24).frameWidth)).toBe(false)
   })
 
-  it('keeps the orca art when the frame is wide enough', async () => {
+  it('keeps the armature art when the frame is wide enough', async () => {
     const { shouldRenderBannerArt } = await import('../src/ui/components/Banner.js')
     expect(shouldRenderBannerArt(92)).toBe(true)
   })
@@ -673,11 +673,11 @@ describe('Banner', () => {
     const { lastFrame } = render(
       <TerminalSizeProvider><Banner version="0.8.0" cwd="/Users/me/project" /></TerminalSizeProvider>,
     )
-    expect(lastFrame()).toContain('Orca')
+    expect(lastFrame()).toContain('Armature')
     expect(lastFrame()).toContain('0.8.0')
   })
 
-  it('renders Orca Agent wordmark and a clean signal deck without icon art', async () => {
+  it('renders Armature Agent wordmark and a clean signal deck without icon art', async () => {
     const { Banner } = await import('../src/ui/components/Banner.js')
     const { lastFrame } = render(
       <TerminalSizeProvider><Banner version="0.8.0" cwd="/tmp" model="claude-sonnet-4.6" permMode="auto" /></TerminalSizeProvider>,
@@ -685,7 +685,7 @@ describe('Banner', () => {
     const frame = lastFrame() ?? ''
     // Grok-minimal welcome: no ASCII wordmark, compact identity header + rows.
     expect(frame).not.toContain('██████')
-    expect(frame).toContain('Orca')
+    expect(frame).toContain('Armature')
     expect(frame).toContain('v0.8.0')
     expect(frame).toContain('model')
     expect(frame).toContain('trust')
@@ -746,7 +746,7 @@ describe('HomePanel', () => {
       <TerminalSizeProvider><HomePanel status={status} toolCount={42} hookCount={11} /></TerminalSizeProvider>,
     )
     expect(lastFrame()).toContain('GET STARTED')
-    expect(lastFrame()).toContain('Give Orca one clear outcome')
+    expect(lastFrame()).toContain('Give Armature one clear outcome')
     expect(lastFrame()).toContain('SESSION')
     expect(lastFrame()).toContain('GUARDRAILS')
     expect(lastFrame()).toContain('prompt on dangerous tools')

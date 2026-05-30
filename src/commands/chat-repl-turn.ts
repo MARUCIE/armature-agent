@@ -1,4 +1,4 @@
-import { configPermissionModeFromRepl, type OrcaConfig } from '../config.js'
+import { configPermissionModeFromRepl, type ArmatureConfig } from '../config.js'
 import { hooks } from '../hooks.js'
 import { ContextMonitor, LoopDetector } from '../harness/index.js'
 import { getPricingForModel } from '../model-catalog.js'
@@ -48,7 +48,7 @@ interface ExecuteReplTurnOptions<TResolved extends ReplTurnResolvedProviderBase>
   currentModel: string
   currentPermMode: PermMode
   resolved: TResolved
-  config: OrcaConfig
+  config: ArmatureConfig
   outputMode: OutputMode
   cwd: string
   useInk: boolean
@@ -79,7 +79,7 @@ interface ExecuteReplTurnOptions<TResolved extends ReplTurnResolvedProviderBase>
   runProxyTurn: (options: {
     prompt: PromptContent
     resolved: TResolved
-    config: OrcaConfig
+    config: ArmatureConfig
     outputMode: OutputMode
     history: ChatMessage[]
     cwd: string
@@ -105,7 +105,7 @@ interface ExecuteReplTurnOptions<TResolved extends ReplTurnResolvedProviderBase>
   runSDKQuery: (options: {
     prompt: PromptContent
     resolved: TResolved
-    config: OrcaConfig
+    config: ArmatureConfig
     outputMode: OutputMode
     cwd: string
     history?: ChatMessage[]

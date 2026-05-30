@@ -1,9 +1,9 @@
 {
   "id": "fast-logs-unknown-kind-fallback",
   "title": "Logs falls back to agent log for unknown kinds",
-  "description": "Black-box smoke for `orca logs <unknown-kind>` with a preseeded agent log.",
-  "input": "Seed an agent log entry, run `orca logs nonsense`, and verify the command falls back to the agent log instead of erroring.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home/.orca/logs\"; cat > \"$TMP_ROOT/home/.orca/logs/agent.log\" <<EOF\n[INFO] fallback agent entry\nEOF\nenv -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ORCA_HOME=\"$TMP_ROOT/home/.orca\" node dist/bin/orca.js logs nonsense'",
+  "description": "Black-box smoke for `armature logs <unknown-kind>` with a preseeded agent log.",
+  "input": "Seed an agent log entry, run `armature logs nonsense`, and verify the command falls back to the agent log instead of erroring.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home/.armature/logs\"; cat > \"$TMP_ROOT/home/.armature/logs/agent.log\" <<EOF\n[INFO] fallback agent entry\nEOF\nenv -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ARMATURE_HOME=\"$TMP_ROOT/home/.armature\" node dist/bin/armature.js logs nonsense'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

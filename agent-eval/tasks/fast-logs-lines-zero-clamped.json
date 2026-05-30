@@ -1,9 +1,9 @@
 {
   "id": "fast-logs-lines-zero-clamped",
   "title": "Logs clamps --lines 0 to the newest entry",
-  "description": "Black-box smoke for `orca logs --lines 0` with a preseeded agent log.",
-  "input": "Seed an agent log with two lines, run `orca logs --lines 0`, and verify the command returns only the newest entry instead of all lines.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home/.orca/logs\"; cat > \"$TMP_ROOT/home/.orca/logs/agent.log\" <<EOF\n[INFO] line one\n[INFO] line two\nEOF\nOUTPUT=$(env -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ORCA_HOME=\"$TMP_ROOT/home/.orca\" node dist/bin/orca.js logs --lines 0); printf \"%s\\n\" \"$OUTPUT\"; ! printf \"%s\" \"$OUTPUT\" | grep -q \"\\[INFO\\] line one\"; printf \"logs-lines-zero-ok\\n\"'",
+  "description": "Black-box smoke for `armature logs --lines 0` with a preseeded agent log.",
+  "input": "Seed an agent log with two lines, run `armature logs --lines 0`, and verify the command returns only the newest entry instead of all lines.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home/.armature/logs\"; cat > \"$TMP_ROOT/home/.armature/logs/agent.log\" <<EOF\n[INFO] line one\n[INFO] line two\nEOF\nOUTPUT=$(env -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ARMATURE_HOME=\"$TMP_ROOT/home/.armature\" node dist/bin/armature.js logs --lines 0); printf \"%s\\n\" \"$OUTPUT\"; ! printf \"%s\" \"$OUTPUT\" | grep -q \"\\[INFO\\] line one\"; printf \"logs-lines-zero-ok\\n\"'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

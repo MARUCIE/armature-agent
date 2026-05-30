@@ -32,14 +32,14 @@ export function HomePanel({ status, toolCount, hookCount, savedSessionCount }: P
     <Box marginLeft={layout.offset} marginTop={1} marginBottom={1} flexDirection="column">
       <PickerFrame
         title="GET STARTED"
-        subtitle="Give Orca one clear outcome; it gathers proof before edits"
+        subtitle="Give Armature one clear outcome; it gathers proof before edits"
         footer="Natural language works best. Press Tab for quick actions."
         borderColor={theme.accentUser}
         width={layout.primaryWidth}
         marginLeft={0}
       >
         <Box flexDirection="column">
-          <Text bold color={theme.text}>Tell Orca the outcome — it plans, runs tools, and gathers evidence.</Text>
+          <Text bold color={theme.text}>Tell Armature the outcome — it plans, runs tools, and gathers evidence.</Text>
           <Text color={theme.accentSystem}>Try:</Text>
           <Text color={theme.accentUser}>  review the changed files and name the release risk</Text>
           <Text color={theme.accentUser}>  debug the failing tests with evidence before edits</Text>
@@ -71,7 +71,7 @@ export function HomePanel({ status, toolCount, hookCount, savedSessionCount }: P
           marginLeft={0}
           borderColor={theme.border}
         >
-          <Text><Text color={theme.accent}>orca -c</Text><Text dimColor> continue the latest saved session</Text></Text>
+          <Text><Text color={theme.accent}>armature -c</Text><Text dimColor> continue the latest saved session</Text></Text>
           {savedSessionCount ? (
             <Text><Text color={theme.accent}>/sessions</Text><Text dimColor>{` inspect ${savedSessionCount} saved session${savedSessionCount === 1 ? '' : 's'}`}</Text></Text>
           ) : null}
@@ -91,7 +91,7 @@ export function HomePanel({ status, toolCount, hookCount, savedSessionCount }: P
       >
         <Text><Text color={theme.warning}>Need a safer posture?</Text><Text dimColor> /permissions set plan</Text></Text>
         <Text><Text color={theme.warning}>No useful output or provider confusion?</Text><Text dimColor>{` /doctor or /providers (${getSlashCommandHomeDescription('/providers')})`}</Text></Text>
-        <Text><Text color={theme.warning}>Need to recover context?</Text><Text dimColor> /compact or orca -c</Text></Text>
+        <Text><Text color={theme.warning}>Need to recover context?</Text><Text dimColor> /compact or armature -c</Text></Text>
         <Text><Text color={theme.warning}>Want the full command surface?</Text><Text dimColor>{` /help (${getSlashCommandHomeDescription('/help')})`}</Text></Text>
       </PickerFrame>
     </Box>

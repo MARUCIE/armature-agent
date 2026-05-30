@@ -2,7 +2,7 @@
  * Footer — keyboard shortcut hints below the status bar.
  *
  * Shows context-aware shortcuts: Esc/Ctrl+C (interrupt), Ctrl+L (redraw), Shift+Tab (mode), /help.
- * Keeps the persistent Orca pod identity visible after the banner scrolls away.
+ * Keeps the persistent Armature pod identity visible after the banner scrolls away.
  */
 
 import React from 'react'

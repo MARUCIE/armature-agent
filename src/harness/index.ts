@@ -1,5 +1,5 @@
 /**
- * Orca Harness — runtime intelligence layer.
+ * Armature Harness — runtime intelligence layer.
  *
  * Closes the 20-point gap between model capability and agent delivery.
  * Ported from AI-Fleet core/harness/ (Python → TypeScript).

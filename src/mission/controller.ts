@@ -34,7 +34,7 @@ import type {
 
 // ── Constants ───────────────────────────────────────────────────
 
-const MISSION_DIR = '.orca/missions'
+const MISSION_DIR = '.armature/missions'
 const MAX_FEATURE_RETRIES = 3
 const MAX_MILESTONE_RETRIES = 2
 const WORKER_TIMEOUT = 120_000   // 2 min per feature

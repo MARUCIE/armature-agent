@@ -1,5 +1,5 @@
 /**
- * Orca CLI built-in tools for function calling.
+ * Armature CLI built-in tools for function calling.
  *
  * These tools are passed to the OpenAI-compatible chat completions API
  * as function definitions, enabling the model to autonomously read files,
@@ -352,7 +352,7 @@ function globPatternToRegex(pattern: string): RegExp {
 function walkFiles(basePath: string, limit = 500): string[] {
   const results: string[] = []
   const stack = [basePath]
-  const ignored = new Set(['.git', 'node_modules', 'dist', '.orca-worktrees'])
+  const ignored = new Set(['.git', 'node_modules', 'dist', '.armature-worktrees'])
 
   while (stack.length > 0 && results.length < limit) {
     const current = stack.pop()!
@@ -457,8 +457,8 @@ function coerceValue(value: unknown, schema: Record<string, unknown>): unknown {
 }
 
 function getToolResultsDir(): string {
-  const orcaHome = process.env.ORCA_HOME || join(process.env.HOME || homedir(), '.orca')
-  const dir = join(orcaHome, 'tool-results')
+  const armatureHome = process.env.ARMATURE_HOME || join(process.env.HOME || homedir(), '.armature')
+  const dir = join(armatureHome, 'tool-results')
   mkdirSync(dir, { recursive: true })
   return dir
 }
@@ -561,7 +561,7 @@ function executeListDirectory(args: Record<string, unknown>, cwd: string): ToolR
     try {
       const items = readdirSync(dir)
       for (const item of items) {
-        if (item.startsWith('.') && item !== '.orca.json') continue
+        if (item.startsWith('.') && item !== '.armature.json') continue
         const fullPath = join(dir, item)
         try {
           const stat = statSync(fullPath)
@@ -1052,9 +1052,9 @@ function executeCreatePlan(args: Record<string, unknown>, cwd: string): ToolResu
     steps: steps.map((s, i) => `${i + 1}. ${s}`),
     createdAt: new Date().toISOString(),
   }
-  // Save plan to .orca/plans/
+  // Save plan to .armature/plans/
   try {
-    const planDir = join(cwd, '.orca', 'plans')
+    const planDir = join(cwd, '.armature', 'plans')
     mkdirSync(planDir, { recursive: true })
     writeFileSync(join(planDir, `${plan.id}.json`), JSON.stringify(plan, null, 2), 'utf-8')
   } catch { /* ignore */ }
@@ -1103,8 +1103,8 @@ function executeWebSearch(args: Record<string, unknown>): ToolResult {
 function executeMcpListServers(cwd: string): ToolResult {
   const configPaths = [
     join(cwd, '.mcp.json'),
-    join(cwd, '.orca', 'mcp.json'),
-    join(process.env.HOME || '/tmp', '.orca', 'mcp.json'),
+    join(cwd, '.armature', 'mcp.json'),
+    join(process.env.HOME || '/tmp', '.armature', 'mcp.json'),
   ]
   const servers: string[] = []
   for (const p of configPaths) {
@@ -1120,7 +1120,7 @@ function executeMcpListServers(cwd: string): ToolResult {
     }
   }
   if (servers.length === 0) {
-    return { success: true, output: 'No MCP servers configured. Add servers to .mcp.json or .orca/mcp.json.' }
+    return { success: true, output: 'No MCP servers configured. Add servers to .mcp.json or .armature/mcp.json.' }
   }
   return { success: true, output: `MCP Servers:\n${servers.join('\n')}` }
 }

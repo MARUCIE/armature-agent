@@ -34,7 +34,7 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     expect(res!.result).toBeDefined()
     const result = res!.result as Record<string, unknown>
     expect(result.serverInfo).toEqual(
-      expect.objectContaining({ name: 'orca-cli' }),
+      expect.objectContaining({ name: 'armature-cli' }),
     )
     expect(result.capabilities).toBeDefined()
   })
@@ -69,7 +69,7 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     const result = res!.result as { content: Array<{ type: string; text: string }>; isError: boolean }
     expect(result.isError).toBe(false)
     expect(result.content[0].type).toBe('text')
-    expect(result.content[0].text).toContain('orca-cli')
+    expect(result.content[0].text).toContain('armature-cli')
   })
 
   it('24.4 tools/call with unknown tool returns isError=true', async () => {
@@ -278,12 +278,12 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
   })
 
   it('24.21 emits hook system messages to stderr instead of stdout', async () => {
-    const fixtureRoot = join(tmpdir(), `orca-hook-system-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    const fixtureRoot = join(tmpdir(), `armature-hook-system-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
     const projectDir = join(fixtureRoot, 'project')
     const homeDir = join(fixtureRoot, 'home')
-    mkdirSync(join(projectDir, '.orca'), { recursive: true })
+    mkdirSync(join(projectDir, '.armature'), { recursive: true })
     mkdirSync(homeDir, { recursive: true })
-    writeFileSync(join(projectDir, '.orca', 'hooks.json'), JSON.stringify({
+    writeFileSync(join(projectDir, '.armature', 'hooks.json'), JSON.stringify({
       PreToolUse: [{
         command: `printf '%s' '${JSON.stringify({ continue: true, systemMessage: 'watch stderr' })}'`,
         matcher: 'read_file',
@@ -291,13 +291,13 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     }))
 
     const previousHome = process.env.HOME
-    const previousTrust = process.env.ORCA_TRUST_PROJECT_HOOKS
+    const previousTrust = process.env.ARMATURE_TRUST_PROJECT_HOOKS
     const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
     const stderrMessages: string[] = []
 
     try {
       process.env.HOME = homeDir
-      process.env.ORCA_TRUST_PROJECT_HOOKS = '1'
+      process.env.ARMATURE_TRUST_PROJECT_HOOKS = '1'
       vi.resetModules()
       const { hooks } = await import('../src/hooks.js')
       const { runPreToolHook } = await import('../src/policy-executor.js')
@@ -315,8 +315,8 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
       stdoutSpy.mockRestore()
       if (previousHome === undefined) delete process.env.HOME
       else process.env.HOME = previousHome
-      if (previousTrust === undefined) delete process.env.ORCA_TRUST_PROJECT_HOOKS
-      else process.env.ORCA_TRUST_PROJECT_HOOKS = previousTrust
+      if (previousTrust === undefined) delete process.env.ARMATURE_TRUST_PROJECT_HOOKS
+      else process.env.ARMATURE_TRUST_PROJECT_HOOKS = previousTrust
       vi.resetModules()
       rmSync(fixtureRoot, { recursive: true, force: true })
     }
@@ -391,7 +391,7 @@ describe('ModeRegistry: behavioral profiles', () => {
   })
 
   it('25.10 loadFromFile adds custom modes', () => {
-    const tmpDir = join(tmpdir(), `orca-modes-${Date.now()}`)
+    const tmpDir = join(tmpdir(), `armature-modes-${Date.now()}`)
     mkdirSync(tmpDir, { recursive: true })
     const modesPath = join(tmpDir, 'modes.json')
     writeFileSync(modesPath, JSON.stringify([
@@ -413,7 +413,7 @@ describe('ModeRegistry: behavioral profiles', () => {
   })
 
   it('25.11 loadFromFile skips malformed entries', () => {
-    const tmpDir = join(tmpdir(), `orca-modes-bad-${Date.now()}`)
+    const tmpDir = join(tmpdir(), `armature-modes-bad-${Date.now()}`)
     mkdirSync(tmpDir, { recursive: true })
     const modesPath = join(tmpDir, 'modes.json')
     writeFileSync(modesPath, JSON.stringify([
@@ -431,7 +431,7 @@ describe('ModeRegistry: behavioral profiles', () => {
   })
 
   it('25.12 loadFromFile throws on non-array JSON', () => {
-    const tmpDir = join(tmpdir(), `orca-modes-obj-${Date.now()}`)
+    const tmpDir = join(tmpdir(), `armature-modes-obj-${Date.now()}`)
     mkdirSync(tmpDir, { recursive: true })
     const modesPath = join(tmpDir, 'modes.json')
     writeFileSync(modesPath, '{"not":"array"}')
@@ -442,7 +442,7 @@ describe('ModeRegistry: behavioral profiles', () => {
   })
 
   it('25.13 custom mode can override builtin mode', () => {
-    const tmpDir = join(tmpdir(), `orca-modes-override-${Date.now()}`)
+    const tmpDir = join(tmpdir(), `armature-modes-override-${Date.now()}`)
     mkdirSync(tmpDir, { recursive: true })
     const modesPath = join(tmpDir, 'modes.json')
     writeFileSync(modesPath, JSON.stringify([
@@ -467,7 +467,7 @@ describe('ModeRegistry: behavioral profiles', () => {
 import { discoverGuidance, formatGuidanceForPrompt } from '../src/agents-discovery.js'
 
 describe('discoverGuidance: hierarchical file discovery', () => {
-  const root = join(tmpdir(), `orca-discovery-${Date.now()}`)
+  const root = join(tmpdir(), `armature-discovery-${Date.now()}`)
   const child = join(root, 'sub', 'project')
 
   beforeAll(() => {
@@ -482,9 +482,9 @@ describe('discoverGuidance: hierarchical file discovery', () => {
 
     // Project level
     writeFileSync(join(child, 'AGENTS.md'), '# Project Agents\nProject-specific.')
-    mkdirSync(join(child, '.orca', 'rules'), { recursive: true })
-    writeFileSync(join(child, '.orca', 'rules', '01-style.md'), '# Style Rule\nUse tabs.')
-    writeFileSync(join(child, '.orca', 'rules', '02-safety.md'), '# Safety Rule\nNo force push.')
+    mkdirSync(join(child, '.armature', 'rules'), { recursive: true })
+    writeFileSync(join(child, '.armature', 'rules', '01-style.md'), '# Style Rule\nUse tabs.')
+    writeFileSync(join(child, '.armature', 'rules', '02-safety.md'), '# Safety Rule\nNo force push.')
   })
 
   afterAll(() => {
@@ -499,9 +499,9 @@ describe('discoverGuidance: hierarchical file discovery', () => {
     expect(agents!.content).toContain('Project-specific')
   })
 
-  it('25.16 discovers .orca/rules at cwd', () => {
+  it('25.16 discovers .armature/rules at cwd', () => {
     const results = discoverGuidance(child, 0)
-    const rules = results.filter(r => r.source === '.orca/rules')
+    const rules = results.filter(r => r.source === '.armature/rules')
     expect(rules.length).toBe(2)
     expect(rules[0].content).toContain('Style Rule')
     expect(rules[1].content).toContain('Safety Rule')
@@ -527,7 +527,7 @@ describe('discoverGuidance: hierarchical file discovery', () => {
   })
 
   it('25.20 empty directory returns empty array', () => {
-    const empty = join(tmpdir(), `orca-empty-${Date.now()}`)
+    const empty = join(tmpdir(), `armature-empty-${Date.now()}`)
     mkdirSync(empty, { recursive: true })
     const results = discoverGuidance(empty, 0)
     expect(results.length).toBe(0)
@@ -575,9 +575,9 @@ describe('formatGuidanceForPrompt: prompt formatting', () => {
     expect(output).toContain('../../')
   })
 
-  it('25.26 .orca/rules source shows rule filename in label', () => {
+  it('25.26 .armature/rules source shows rule filename in label', () => {
     const guidance = [
-      { path: '/project/.orca/rules/01-style.md', source: '.orca/rules' as const, content: 'tabs', depth: 0 },
+      { path: '/project/.armature/rules/01-style.md', source: '.armature/rules' as const, content: 'tabs', depth: 0 },
     ]
     const output = formatGuidanceForPrompt(guidance)
     expect(output).toContain('01-style.md')

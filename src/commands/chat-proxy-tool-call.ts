@@ -180,7 +180,7 @@ async function runWorkflowTool(
   const script = String(args.script || '')
   if (!script.trim()) return { success: false, output: 'script is required.' }
 
-  const { runWorkflow, OrcaWorkflowAgentRunner, WorkflowProgress, parseWorkflowScript } = await import('../workflow/index.js')
+  const { runWorkflow, ArmatureWorkflowAgentRunner, WorkflowProgress, parseWorkflowScript } = await import('../workflow/index.js')
 
   let workflowName = 'workflow'
   try {
@@ -198,7 +198,7 @@ async function runWorkflowTool(
   await hooks.run('SubagentStart', { event: 'SubagentStart', cwd, model: resolved.model })
   notify(`workflow ${workflowName}: starting`)
 
-  const runner = new OrcaWorkflowAgentRunner({
+  const runner = new ArmatureWorkflowAgentRunner({
     cwd,
     parent: { model: resolved.model, apiKey: resolved.apiKey, baseURL: resolved.baseURL },
   })

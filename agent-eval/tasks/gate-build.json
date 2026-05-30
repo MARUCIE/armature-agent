@@ -5,7 +5,7 @@
   "input": "Run `npm run build` from the repo root and require the dist output to compile successfully.",
   "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; npm run build'",
   "artifacts": [
-    "dist/bin/orca.js",
+    "dist/bin/armature.js",
     "dist/index.js"
   ],
   "graders": [

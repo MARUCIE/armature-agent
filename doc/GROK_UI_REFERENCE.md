@@ -1,11 +1,11 @@
-# Grok Build TUI — Visual Reference (for the orca-cli pixel-port)
+# Grok Build TUI — Visual Reference (for the armature-cli pixel-port)
 
 Reference target: **Grok Build v0.2.8** (xAI), installed at
 `~/.grok/downloads/grok-0.2.8-macos-aarch64`. Renderer = Rust crate
 `xai-grok-pager` (full-screen TUI). Palette + architecture extracted from the
 binary (`strings`) and `~/.grok/docs/user-guide/06-theming.md`.
 
-This doc is the canonical spec the ink port maps onto. orca-cli renders with
+This doc is the canonical spec the ink port maps onto. armature-cli renders with
 **ink** (React + Yoga flexbox), so we replicate grok's *visual language*, not its
 custom renderer. Renderer-engine features are listed as out-of-scope at the end.
 
@@ -175,14 +175,14 @@ heavy themed label band.
 
 ---
 
-## 3. orca → grok mapping (what changes in this port)
+## 3. armature → grok mapping (what changes in this port)
 
-| orca current ("Blackfin Signal / Pod") | grok target |
+| armature current ("Blackfin Signal / Pod") | grok target |
 |---|---|
-| Giant `ORCA-AGENT` ASCII wordmark + bordered signal deck | minimal welcome header, no wordmark |
+| Giant `ARMATURE-AGENT` ASCII wordmark + bordered signal deck | minimal welcome header, no wordmark |
 | amber/gold default theme `#F6C945` | GrokNight neutral-gray default |
 | full-border boxes per block (round/single) | left vertical accent line per block |
-| labels `POD BRIEF` / `ORCA POD` / `ECHO TOOL` / `POD HELM` | neutral, diamond bullet for tools |
+| labels `POD BRIEF` / `ARMATURE POD` / `ECHO TOOL` / `POD HELM` | neutral, diamond bullet for tools |
 | placeholder `Brief the pod…` | `Type a message…` |
 | spinner only | `Thinking…` header |
 

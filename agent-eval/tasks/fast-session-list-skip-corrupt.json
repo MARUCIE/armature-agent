@@ -1,8 +1,8 @@
 {
   "id": "fast-session-list-skip-corrupt",
   "title": "Session list hides corrupted files while still listing valid sessions",
-  "description": "Black-box smoke for `orca session list` when a newer matching session file is corrupted.",
-  "input": "Create one valid session plus one corrupted newer session file, run `orca session list`, and verify the valid session remains visible while the corrupted file does not appear.",
+  "description": "Black-box smoke for `armature session list` when a newer matching session file is corrupted.",
+  "input": "Create one valid session plus one corrupted newer session file, run `armature session list`, and verify the valid session remains visible while the corrupted file does not appear.",
   "command": "bash agent-eval/scripts/run-session-skip-corrupt.sh list",
   "artifacts": [],
   "graders": [

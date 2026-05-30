@@ -1,6 +1,6 @@
-# Orca CLI Agent Eval
+# Armature CLI Agent Eval
 
-本目录用于落盘 Orca CLI 的 black-box 评估资产（任务 + 评分器 + manifest + 过程记录 + 结果状态）。
+本目录用于落盘 Armature CLI 的 black-box 评估资产（任务 + 评分器 + manifest + 过程记录 + 结果状态）。
 
 ## 当前状态
 
@@ -35,7 +35,7 @@
   - `npm run lint`
   - `npm test`
   - `npm run build`
-  - `orca bench --json`
+  - `armature bench --json`
   - install-from-tarball smoke
   - recorded CLI journey artifact
 
@@ -57,7 +57,7 @@ npm run eval:release
 ## 目录结构
 
 - `AGENT_EVAL_PLAN.md`: 评估计划与 gate 目标
-- `tasks/*.json`: Orca-specific task definitions
+- `tasks/*.json`: Armature-specific task definitions
 - `graders/*.json`: reusable grader rules
 - `manifests/*.json`: gate bundle definitions
 - `runs/<run_id>/`: 每次评估的 transcript / outcome / grades / summary

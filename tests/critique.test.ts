@@ -139,7 +139,7 @@ describe('critique prompt and parsing', () => {
 
 describe('critique command', () => {
   it('supports dry-run JSON without a configured API key', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'orca-critique-'))
+    const dir = mkdtempSync(join(tmpdir(), 'armature-critique-'))
     const diffPath = join(dir, 'change.diff')
     writeFileSync(diffPath, ['--- a/a.ts', '+++ b/a.ts', '-old', '+new'].join('\n'))
     const messages: string[] = []
@@ -151,7 +151,7 @@ describe('critique command', () => {
       const command = createCritiqueCommand()
       await command.parseAsync([
         'node',
-        'orca',
+        'armature',
         'review current diff',
         '--diff-file',
         diffPath,
@@ -178,7 +178,7 @@ describe('critique command', () => {
 
 describe('automatic critique notices', () => {
   it('recommends one local checkpoint for a high-risk dirty workspace', () => {
-    const dir = createCommittedWorkspace('orca-auto-critique-')
+    const dir = createCommittedWorkspace('armature-auto-critique-')
     const state = createCritiqueAutoState()
 
     try {
@@ -209,7 +209,7 @@ describe('automatic critique notices', () => {
   })
 
   it('stays quiet for small diffs and explicit disablement', () => {
-    const dir = createCommittedWorkspace('orca-auto-critique-')
+    const dir = createCommittedWorkspace('armature-auto-critique-')
 
     try {
       writeFileSync(join(dir, 'large.txt'), 'baseline\nsmall edit\n')

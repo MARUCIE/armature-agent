@@ -5,19 +5,19 @@ import { tmpdir } from 'node:os'
 import { getLogPath, logError, logInfo, logWarning } from '../src/logger.js'
 
 describe('logger', () => {
-  const previousOrcaHome = process.env.ORCA_HOME
-  let orcaHome: string
+  const previousArmatureHome = process.env.ARMATURE_HOME
+  let armatureHome: string
 
   beforeEach(() => {
-    orcaHome = join(tmpdir(), `orca-logs-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    mkdirSync(orcaHome, { recursive: true })
-    process.env.ORCA_HOME = orcaHome
+    armatureHome = join(tmpdir(), `armature-logs-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    mkdirSync(armatureHome, { recursive: true })
+    process.env.ARMATURE_HOME = armatureHome
   })
 
   afterEach(() => {
-    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = previousOrcaHome
-    try { rmSync(orcaHome, { recursive: true, force: true }) } catch { /* ignore */ }
+    if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = previousArmatureHome
+    try { rmSync(armatureHome, { recursive: true, force: true }) } catch { /* ignore */ }
   })
 
   it('writes info/warn/error to agent log and warn/error to errors log', () => {

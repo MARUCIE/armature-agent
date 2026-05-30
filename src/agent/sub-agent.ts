@@ -1,7 +1,7 @@
 /**
  * Sub-agent process isolation.
  *
- * Forks a child process that runs a simplified Orca agent loop
+ * Forks a child process that runs a simplified Armature agent loop
  * with a restricted tool set. The child makes a single API call
  * and returns the result via IPC.
  */

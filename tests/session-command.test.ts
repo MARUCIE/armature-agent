@@ -5,12 +5,12 @@ import { tmpdir } from 'node:os'
 
 describe('session command recovery', () => {
   const previousHome = process.env.HOME
-  const previousOrcaHome = process.env.ORCA_HOME
+  const previousArmatureHome = process.env.ARMATURE_HOME
   let homeDir: string
-  let orcaHome: string
+  let armatureHome: string
 
   function writeSessionFile(name: string, content: string, mtimeMs: number): void {
-    const sessionFile = join(orcaHome, 'sessions', `${name}.json`)
+    const sessionFile = join(armatureHome, 'sessions', `${name}.json`)
     writeFileSync(sessionFile, content, 'utf-8')
     const mtime = new Date(mtimeMs)
     utimesSync(sessionFile, mtime, mtime)
@@ -32,12 +32,12 @@ describe('session command recovery', () => {
   }
 
   beforeEach(() => {
-    homeDir = join(tmpdir(), `orca-session-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    orcaHome = join(tmpdir(), `orca-session-store-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    mkdirSync(join(homeDir, '.orca'), { recursive: true })
-    mkdirSync(join(orcaHome, 'sessions'), { recursive: true })
+    homeDir = join(tmpdir(), `armature-session-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    armatureHome = join(tmpdir(), `armature-session-store-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    mkdirSync(join(homeDir, '.armature'), { recursive: true })
+    mkdirSync(join(armatureHome, 'sessions'), { recursive: true })
     process.env.HOME = homeDir
-    process.env.ORCA_HOME = orcaHome
+    process.env.ARMATURE_HOME = armatureHome
   })
 
   afterEach(() => {
@@ -45,10 +45,10 @@ describe('session command recovery', () => {
     vi.resetModules()
     if (previousHome === undefined) delete process.env.HOME
     else process.env.HOME = previousHome
-    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = previousOrcaHome
+    if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = previousArmatureHome
     try { rmSync(homeDir, { recursive: true, force: true }) } catch { /* ignore */ }
-    try { rmSync(orcaHome, { recursive: true, force: true }) } catch { /* ignore */ }
+    try { rmSync(armatureHome, { recursive: true, force: true }) } catch { /* ignore */ }
   })
 
   it('skips a corrupted latest session when resuming the most recent session', async () => {
@@ -63,7 +63,7 @@ describe('session command recovery', () => {
     expect(session?.session.model).toBe('gpt-5.4')
   })
 
-  it('uses ORCA_HOME-backed storage and skips malformed partial-id matches', async () => {
+  it('uses ARMATURE_HOME-backed storage and skips malformed partial-id matches', async () => {
     const now = Date.now()
     writeValidSession('alpha-good', now - 10_000)
     writeSessionFile('alpha-bad', '{ invalid json', now)
@@ -113,7 +113,7 @@ describe('session command recovery', () => {
 
     const { createSessionCommand } = await loadSessionModule()
     const command = createSessionCommand()
-    await command.parseAsync(['node', 'orca', 'session'])
+    await command.parseAsync(['node', 'armature', 'session'])
 
     const output = logs.join('\n')
     expect(output).toContain('Saved Sessions')
@@ -125,7 +125,7 @@ describe('session command recovery', () => {
   it('exports a saved session to a JSON file', async () => {
     const now = Date.now()
     writeValidSession('exportable-session', now)
-    const outFile = join(tmpdir(), `orca-session-export-${Date.now()}.json`)
+    const outFile = join(tmpdir(), `armature-session-export-${Date.now()}.json`)
 
     const { createSessionCommand } = await loadSessionModule()
     const command = createSessionCommand()
@@ -137,8 +137,8 @@ describe('session command recovery', () => {
     rmSync(outFile, { force: true })
   })
 
-  it('imports a saved session from JSON into ORCA_HOME storage', async () => {
-    const inFile = join(tmpdir(), `orca-session-import-${Date.now()}.json`)
+  it('imports a saved session from JSON into ARMATURE_HOME storage', async () => {
+    const inFile = join(tmpdir(), `armature-session-import-${Date.now()}.json`)
     writeFileSync(inFile, JSON.stringify({
       provider: 'openai',
       model: 'gpt-5.4',
@@ -173,7 +173,7 @@ describe('session command recovery', () => {
   it('exports a saved session as markdown', async () => {
     const now = Date.now()
     writeValidSession('markdown-session', now)
-    const outFile = join(tmpdir(), `orca-session-markdown-${Date.now()}.md`)
+    const outFile = join(tmpdir(), `armature-session-markdown-${Date.now()}.md`)
 
     const { createSessionCommand } = await loadSessionModule()
     const command = createSessionCommand()
@@ -193,8 +193,8 @@ describe('session command recovery', () => {
     const command = createSessionCommand()
     await command.parseAsync(['node', 'session', 'share', 'share-session'])
 
-    const sharePath = join(orcaHome, 'shares', 'session-share-session.md')
-    const metadataPath = join(orcaHome, 'shares', 'session-share-session.artifact.json')
+    const sharePath = join(armatureHome, 'shares', 'session-share-session.md')
+    const metadataPath = join(armatureHome, 'shares', 'session-share-session.artifact.json')
     expect(existsSync(sharePath)).toBe(true)
     expect(existsSync(metadataPath)).toBe(true)
     expect(readFileSync(sharePath, 'utf-8')).toContain('# Session: share-session')
@@ -214,8 +214,8 @@ describe('session command recovery', () => {
     const forked = getSessionById('handoff-copy')
     expect(forked?.name).toBe('handoff-copy')
 
-    const sharePath = join(orcaHome, 'shares', 'handoff-handoff-copy.md')
-    const metadataPath = join(orcaHome, 'shares', 'handoff-handoff-copy.artifact.json')
+    const sharePath = join(armatureHome, 'shares', 'handoff-handoff-copy.md')
+    const metadataPath = join(armatureHome, 'shares', 'handoff-handoff-copy.artifact.json')
     expect(existsSync(sharePath)).toBe(true)
     expect(existsSync(metadataPath)).toBe(true)
     const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'))

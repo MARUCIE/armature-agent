@@ -1,7 +1,7 @@
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { getOrcaHome } from './logger.js'
+import { getArmatureHome } from './logger.js'
 
 const SAFE_OBJECT_ID = /^[A-Za-z0-9._-]+$/
 
@@ -173,7 +173,7 @@ export type TaskRunLeaseClaimResult =
 const TERMINAL_TASK_RUN_STATUSES = new Set<TaskRunStatus>(['completed', 'failed', 'aborted'])
 
 export function getWorkSessionsRootDir(): string {
-  return join(getOrcaHome(), 'work-sessions')
+  return join(getArmatureHome(), 'work-sessions')
 }
 
 export function getWorkSessionsDir(): string {

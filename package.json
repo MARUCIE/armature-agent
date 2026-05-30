@@ -1,12 +1,12 @@
 {
-  "name": "orca-cli",
+  "name": "armature-cli",
   "version": "0.8.16",
-  "description": "Orca CLI — provider-neutral agent runtime with Claude Code depth",
+  "description": "Armature CLI — provider-neutral agent runtime with Claude Code depth",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "orca": "./dist/bin/orca.js"
+    "armature": "./dist/bin/armature.js"
   },
   "exports": {
     ".": {
@@ -30,7 +30,7 @@
     "test:matrix": "python3 agent-eval/scripts/run-test-matrix.py",
     "test:matrix:sync": "python3 agent-eval/scripts/sync-test-matrix.py --check",
     "dev": "tsc --watch",
-    "bench": "node dist/bin/orca.js bench",
+    "bench": "node dist/bin/armature.js bench",
     "eval:fast": "python3 agent-eval/scripts/run-gate.py --manifest fast",
     "eval:nightly": "python3 agent-eval/scripts/run-gate.py --manifest nightly",
     "eval:release": "python3 agent-eval/scripts/run-gate.py --manifest release",
@@ -65,7 +65,7 @@
     "cli",
     "agent",
     "coding-agent",
-    "orca",
+    "armature",
     "multi-model",
     "openai",
     "claude",
@@ -80,9 +80,9 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/MARUCIE/orca-cli.git"
+    "url": "https://github.com/MARUCIE/armature-cli.git"
   },
-  "homepage": "https://github.com/MARUCIE/orca-cli",
+  "homepage": "https://github.com/MARUCIE/armature-cli",
   "license": "MIT",
   "author": {
     "name": "Maurice",

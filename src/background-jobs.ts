@@ -3,7 +3,7 @@
  *
  * Hermes-inspired behavior:
  * - start detached background work from tool calls
- * - persist job metadata and log path under ~/.orca/background-jobs
+ * - persist job metadata and log path under ~/.armature/background-jobs
  * - surface completion notifications back into the REPL without polling commands
  */
 
@@ -32,8 +32,8 @@ export interface BackgroundJobRecord {
 }
 
 function getBackgroundJobsDir(): string {
-  const orcaHome = process.env.ORCA_HOME || join(process.env.HOME || homedir(), '.orca')
-  return join(orcaHome, 'background-jobs')
+  const armatureHome = process.env.ARMATURE_HOME || join(process.env.HOME || homedir(), '.armature')
+  return join(armatureHome, 'background-jobs')
 }
 
 function ensureBackgroundJobsDir(): string {

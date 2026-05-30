@@ -50,7 +50,7 @@ describe('layered test matrix runner', () => {
   })
 
   it('rejects manifests outside the trusted manifests directory', () => {
-    const tmpManifest = join(tmpdir(), 'orca-untrusted-manifest.json')
+    const tmpManifest = join(tmpdir(), 'armature-untrusted-manifest.json')
     writeFileSync(tmpManifest, JSON.stringify({
       id: 'untrusted',
       layers: [
@@ -126,8 +126,8 @@ describe('layered test matrix runner', () => {
 
 describe('secret scan helper', () => {
   it('ignores symlinks that point outside the scan root', () => {
-    const root = mkdtempSync(join(tmpdir(), 'orca-secret-scan-root-'))
-    const outside = mkdtempSync(join(tmpdir(), 'orca-secret-scan-outside-'))
+    const root = mkdtempSync(join(tmpdir(), 'armature-secret-scan-root-'))
+    const outside = mkdtempSync(join(tmpdir(), 'armature-secret-scan-outside-'))
     const outsideFile = join(outside, 'credentials.txt')
     const fakeToken = `ghp_${'ABCDEFGHIJKLMNOPQRSTUVWX123456'}`
     writeFileSync(outsideFile, fakeToken, 'utf-8')
@@ -146,7 +146,7 @@ describe('secret scan helper', () => {
   })
 
   it('still reports direct in-root secret matches', () => {
-    const root = mkdtempSync(join(tmpdir(), 'orca-secret-scan-root-'))
+    const root = mkdtempSync(join(tmpdir(), 'armature-secret-scan-root-'))
     const fakeToken = `ghp_${'ABCDEFGHIJKLMNOPQRSTUVWX123456'}`
     writeFileSync(join(root, 'token.txt'), fakeToken, 'utf-8')
 

@@ -83,7 +83,7 @@ export function Banner({ version, cwd, configFiles, toolCount, hookCount, model,
       >
         {/* Identity header — no box, no wordmark */}
         <Box>
-          <Text color={theme.accent} bold>Orca</Text>
+          <Text color={theme.accent} bold>Armature</Text>
           <Text color={theme.dim}>{`  v${version}`}</Text>
           {wide ? <Text color={theme.muted}>{'   provider-neutral agent runtime'}</Text> : null}
         </Box>

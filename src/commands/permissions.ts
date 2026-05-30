@@ -128,8 +128,8 @@ export function createPermissionsCommand(): Command {
     console.log(`  \x1b[90mProject:\x1b[0m  ${projectMode || '(unset)'}`)
     console.log(`  \x1b[90mGlobal:\x1b[0m   ${globalMode || '(unset)'}`)
     console.log(`  \x1b[90mRules:\x1b[0m    project=${projectRules.total} (legacy ${projectRules.unrecognized + projectRules.normalized})  global=${globalRules.total} (legacy ${globalRules.unrecognized + globalRules.normalized})`)
-    if (process.env.ORCA_PERMISSION_MODE) {
-      console.log(`  \x1b[90mEnv:\x1b[0m      ${process.env.ORCA_PERMISSION_MODE}`)
+    if (process.env.ARMATURE_PERMISSION_MODE) {
+      console.log(`  \x1b[90mEnv:\x1b[0m      ${process.env.ARMATURE_PERMISSION_MODE}`)
     }
     console.log()
     console.log('  \x1b[90mModes:\x1b[0m')
@@ -144,7 +144,7 @@ export function createPermissionsCommand(): Command {
   cmd.command('set')
     .argument('<mode>', 'yolo | auto | plan')
     .option('--scope <scope>', 'project or global', 'project')
-    .description('Persist a permission mode into Orca config')
+    .description('Persist a permission mode into Armature config')
     .action((mode: string, opts: { scope: 'project' | 'global' }) => {
       const replMode = assertReplMode(mode)
       const path = setStoredPermissionMode(opts.scope, process.cwd(), configPermissionModeFromRepl(replMode))

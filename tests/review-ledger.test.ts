@@ -66,7 +66,7 @@ function endpoint(model: string): ModelEndpoint {
 }
 
 function tempDir(): string {
-  return mkdtempSync(join(tmpdir(), 'orca-review-ledger-'))
+  return mkdtempSync(join(tmpdir(), 'armature-review-ledger-'))
 }
 
 describe('review ledger helpers', () => {

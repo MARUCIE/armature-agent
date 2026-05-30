@@ -6,16 +6,16 @@ This file is a historical release log. Version-specific counts and examples refl
 
 A `workflow` tool that lets the model write a small, deterministic JavaScript
 orchestration script which fans work out across many isolated sub-agents and
-synthesizes the results — Orca's port of Claude Code's dynamic workflows and the
+synthesizes the results — Armature's port of Claude Code's dynamic workflows and the
 `pi-dynamic-workflows` prototype.
 
 ### Added
-- **`src/workflow/`** — `parseWorkflowScript` (acorn-backed: determinism blocklist + literal `meta` validation), `runWorkflow` (vm sandbox with `agent`/`parallel`/`pipeline`/`phase`/`log`/`args`/`budget` globals), `OrcaWorkflowAgentRunner` (bridges each `agent()` onto `spawnSubAgent` with optional git-worktree isolation and a JSON output contract for `schema`), and a compact progress renderer.
+- **`src/workflow/`** — `parseWorkflowScript` (acorn-backed: determinism blocklist + literal `meta` validation), `runWorkflow` (vm sandbox with `agent`/`parallel`/`pipeline`/`phase`/`log`/`args`/`budget` globals), `ArmatureWorkflowAgentRunner` (bridges each `agent()` onto `spawnSubAgent` with optional git-worktree isolation and a JSON output contract for `schema`), and a compact progress renderer.
 - **`workflow` tool** registered in `TOOL_DEFINITIONS` and handled in `handleSpecialProxyTool` (yolo-only, like `delegate_task`, since sub-agents run unsupervised).
 - System-prompt authoring guide so the model knows the script shape and when to use it.
 - `acorn` dependency for literal `meta` validation.
 - Two-layer determinism enforcement: parse-time regex blocklist **plus** frozen runtime `Math`/`Date` stubs in the vm context, closing the bracket-access bypass (`Math['ra'+'ndom']()`, `Date['now']()`) the static scan cannot see.
-- Tests: `tests/workflow-parser.test.ts` (incl. adversarial edges), `tests/workflow-runtime.test.ts` (core/parallel/pipeline/budget/abort/determinism/robustness — stub runner, no LLM), `tests/workflow-runner.test.ts` (runner dispatch + real-git worktree isolation + structured-output edges), workflow block in `tests/chat-proxy-tool-call.test.ts`, and `tests/workflow-e2e-real.test.ts` — a real-LLM closure proof gated by `ORCA_E2E_REAL=1`.
+- Tests: `tests/workflow-parser.test.ts` (incl. adversarial edges), `tests/workflow-runtime.test.ts` (core/parallel/pipeline/budget/abort/determinism/robustness — stub runner, no LLM), `tests/workflow-runner.test.ts` (runner dispatch + real-git worktree isolation + structured-output edges), workflow block in `tests/chat-proxy-tool-call.test.ts`, and `tests/workflow-e2e-real.test.ts` — a real-LLM closure proof gated by `ARMATURE_E2E_REAL=1`.
 - Design doc: `doc/DYNAMIC_WORKFLOWS.md` (with threat model + closure-proof evidence).
 
 ### Notes
@@ -38,7 +38,7 @@ AI-Fleet documentation management system transplant + long task delivery.
 - Three-layer protection: PostToolUse 60% → Pre-Send 75% → 413 recovery
 
 ### Goal-Loop Execution
-- `orca run --done-when` now calls LLM via chatOnce per iteration
+- `armature run --done-when` now calls LLM via chatOnce per iteration
 - Criteria: "tests pass" / "/regex/" / "exit 0: cmd" / "typecheck passes"
 
 Tests: 732 pass / 47 files.
@@ -105,7 +105,7 @@ Three rounds of UX improvements based on 2-agent swarm audit
 - **Progress indicator**: chars/4 token estimation (was text.length), distinct Working spinner (◐◓◑◒)
 - **Tool display**: ms precision for sub-second (<1s shows "120ms"), error results in yellow
 - **StatusLine**: dot separator (·), cleaner effort tags, ANSI-aware right-alignment
-- **Banner**: 20 frames (was 54, ~1.2s vs ~4s), `ORCA_NO_ANIMATION=1` skip, cursor restore safety
+- **Banner**: 20 frames (was 54, ~1.2s vs ~4s), `ARMATURE_NO_ANIMATION=1` skip, cursor restore safety
 - **Cost**: model-based pricing in /cost, serve, run (was hardcoded or $0)
 - **Context monitor**: uses last API inputTokens (was cumulative), consistent with statusline
 - **MCP**: /mcp enable/disable per-server toggle
@@ -116,12 +116,12 @@ Three rounds of UX improvements based on 2-agent swarm audit
 - **Tool folding**: run_command shows first line + "(N lines)" for long output
 
 ### UX Round 3 — Polish
-- **Color themes**: `ORCA_THEME` env var with 5 presets (default/dark/ocean/warm/mono)
+- **Color themes**: `ARMATURE_THEME` env var with 5 presets (default/dark/ocean/warm/mono)
 - **/help**: dual-column layout ~20 lines (was 60+), includes !cmd and /thread
 - **Theme-aware**: statusline, banner, prompt icon use theme accent colors
 
 ### Fixes
-- Background job test isolation via ORCA_HOME (no more ~/.orca/ pollution)
+- Background job test isolation via ARMATURE_HOME (no more ~/.armature/ pollution)
 - TokenBudgetManager prefers API-reported inputTokens over chars/4 estimate
 - /cost uses actual model pricing table (was $3/$15 hardcoded)
 - serve.ts/run.ts compute costUsd from pricing (was always 0)
@@ -138,16 +138,16 @@ thread-based conversation persistence. 1 new module, 3 REPL integrations, 28 new
 - `/mode` lists all modes + shows active
 - `/mode <id>` switches mode, injects systemPromptPrefix into system prompt
 - Mode tool restrictions displayed on switch
-- Custom modes loaded from `.orca/modes.json` at startup
+- Custom modes loaded from `.armature/modes.json` at startup
 
 ### Guidance Auto-Injection (System Prompt)
 - `discoverGuidance()` called in `buildSystemPrompt()` — automatic, zero config
-- Scans cwd + 3 parent dirs for AGENTS.md, CLAUDE.md, CODEX.md, .orca/rules/*.md
+- Scans cwd + 3 parent dirs for AGENTS.md, CLAUDE.md, CODEX.md, .armature/rules/*.md
 - Discovered guidance appended to system prompt with truncation (2000 chars/file)
 
 ### Thread-based Memory (Conversation Persistence)
 - **ThreadManager** — create/list/load/append/search/delete threads
-- Threads saved as JSON in `~/.orca/threads/`
+- Threads saved as JSON in `~/.armature/threads/`
 - `/thread` slash command: list, save, load, search, delete subcommands
 - Keyword search across thread titles and message content
 
@@ -159,23 +159,23 @@ thread-based conversation persistence. 1 new module, 3 REPL integrations, 28 new
 
 ## v0.5.0 — MCP Server + Mode System + AGENTS.md Discovery (2026-04-12)
 
-Completes v0.5.0 scope: Orca as both MCP client AND server, behavioral mode system,
+Completes v0.5.0 scope: Armature as both MCP client AND server, behavioral mode system,
 and hierarchical guidance discovery. 3 new source modules, 42 new tests.
 
 ### MCP Server Hosting
-- **MCPServer** — stdio-based JSON-RPC 2.0 server exposing all Orca tools
-- `orca serve --mcp` starts MCP mode over stdio (initialize, tools/list, tools/call)
+- **MCPServer** — stdio-based JSON-RPC 2.0 server exposing all Armature tools
+- `armature serve --mcp` starts MCP mode over stdio (initialize, tools/list, tools/call)
 - Full error handling: -32700 (parse error), -32601 (method not found)
 - Notifications (no id) handled silently per MCP spec
 
 ### Mode System (Behavioral Profiles)
 - **ModeRegistry** — 5 builtin modes: default, code-review, debug, architect, docs
 - Each mode bundles: systemPromptPrefix, tool whitelist, instructions
-- `loadFromFile()` for custom modes from .orca/modes.json
+- `loadFromFile()` for custom modes from .armature/modes.json
 - Modes shape agent behavior without changing the underlying model
 
 ### AGENTS.md Auto-Discovery
-- **discoverGuidance()** — scans cwd + parent dirs for AGENTS.md, CLAUDE.md, CODEX.md, .orca/rules/*.md
+- **discoverGuidance()** — scans cwd + parent dirs for AGENTS.md, CLAUDE.md, CODEX.md, .armature/rules/*.md
 - **formatGuidanceForPrompt()** — formats discovered files into system prompt with truncation
 - Depth-first ordering: closest files appear first
 - Configurable maxDepth (default 3) and maxCharsPerFile (default 2000)
@@ -230,18 +230,18 @@ Complete closure of all 6 SOTA gap dimensions identified by 3-agent parallel res
 
 ---
 
-## v0.3.0 — Orca Brand + SOTA Hardening (2026-04-12)
+## v0.3.0 — Armature Brand + SOTA Hardening (2026-04-12)
 
-Complete brand rename from Armature/Forge to Orca. Animated orca ASCII art, dynamic hook display, and 38 new tests.
+Complete brand rename from Armature/Forge to Armature. Animated armature ASCII art, dynamic hook display, and 38 new tests.
 
 ### Brand Rename
-- **Armature SDK → Orca Agent SDK** (orca-agent-sdk)
-- **Forge CLI → Orca CLI** (orca-cli), global `orca` command
-- **AI-Fleet → OrcaOS** (L3 brand tier)
+- **Armature SDK → Armature Agent SDK** (armature-agent-sdk)
+- **Forge CLI → Armature CLI** (armature-cli), global `armature` command
+- **AI-Fleet → ArmatureOS** (L3 brand tier)
 - All source, tests, docs, config paths, and launcher updated
-- New GitHub repo: MARUCIE/orca-cli
+- New GitHub repo: MARUCIE/armature-cli
 
-### Animated Orca Banner
+### Animated Armature Banner
 - Unicode block character killer whale silhouette (dorsal fin, eye patch, belly, tail flukes)
 - Right-to-left swimming animation with body-wave undulation (per-line phase-shifted sine)
 - Damped ease-out drift, 54+8 frames at 75ms
@@ -306,7 +306,7 @@ self-evaluation benchmark, and 7-layer SOTA capability stack.
 - **YOLO mode default** — auto-approve all tools, --safe for permission prompts
 
 ### Self-Evaluation
-- **`orca bench`** — 10 standardized coding scenarios, reports pass/fail + score
+- **`armature bench`** — 10 standardized coding scenarios, reports pass/fail + score
 - **326 automated tests** across 20 files, 16 rounds
 - **CI pipeline** — GitHub Actions, Node 20+22 matrix, bench as quality gate
 
@@ -326,7 +326,7 @@ self-evaluation benchmark, and 7-layer SOTA capability stack.
 
 ### Architecture
 ```
-L0  Benchmark    orca bench (10 scenarios)
+L0  Benchmark    armature bench (10 scenarios)
 L1  Tools        41 tools + shellEscape
 L2  Context      Project auto-detection
 L3  Intelligence Auto-verify + Retry + Error hints

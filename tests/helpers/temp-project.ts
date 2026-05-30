@@ -12,7 +12,7 @@ export function createTempProject(structure: Record<string, string>): {
   dir: string
   cleanup: () => void
 } {
-  const tempDir = join(tmpdir(), `orca-test-${randomBytes(8).toString('hex')}`)
+  const tempDir = join(tmpdir(), `armature-test-${randomBytes(8).toString('hex')}`)
   mkdirSync(tempDir, { recursive: true })
 
   // Create directory structure and files

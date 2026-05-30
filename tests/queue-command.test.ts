@@ -5,17 +5,17 @@ import { tmpdir } from 'node:os'
 
 describe('queue command', () => {
   const previousHome = process.env.HOME
-  const previousOrcaHome = process.env.ORCA_HOME
+  const previousArmatureHome = process.env.ARMATURE_HOME
   let homeDir: string
-  let orcaHome: string
+  let armatureHome: string
 
   beforeEach(() => {
-    homeDir = join(tmpdir(), `orca-queue-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    orcaHome = join(tmpdir(), `orca-queue-store-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    homeDir = join(tmpdir(), `armature-queue-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    armatureHome = join(tmpdir(), `armature-queue-store-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
     mkdirSync(homeDir, { recursive: true })
-    mkdirSync(orcaHome, { recursive: true })
+    mkdirSync(armatureHome, { recursive: true })
     process.env.HOME = homeDir
-    process.env.ORCA_HOME = orcaHome
+    process.env.ARMATURE_HOME = armatureHome
   })
 
   afterEach(() => {
@@ -23,10 +23,10 @@ describe('queue command', () => {
     vi.resetModules()
     if (previousHome === undefined) delete process.env.HOME
     else process.env.HOME = previousHome
-    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = previousOrcaHome
+    if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = previousArmatureHome
     try { rmSync(homeDir, { recursive: true, force: true }) } catch { /* ignore */ }
-    try { rmSync(orcaHome, { recursive: true, force: true }) } catch { /* ignore */ }
+    try { rmSync(armatureHome, { recursive: true, force: true }) } catch { /* ignore */ }
   })
 
   it('lists task runs and filters by status', async () => {
@@ -242,7 +242,7 @@ describe('queue command', () => {
     expect(output).toContain(`TaskRun ${taskRun.id} resume plan`)
     expect(output).toContain('state: resumable')
     expect(output).toContain('saved session: auto-2026-04-29T10-00-00')
-    expect(output).toContain("orca chat --cwd '")
+    expect(output).toContain("armature chat --cwd '")
     expect(output).toContain("--continue auto-2026-04-29T10-00-00")
     expect(output).toContain('holder=operator-r')
 

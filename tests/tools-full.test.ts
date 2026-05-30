@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os'
 import { execSync } from 'node:child_process'
 import { createServer } from 'node:net'
 
-const testDir = join(tmpdir(), `orca-full-${Date.now()}`)
+const testDir = join(tmpdir(), `armature-full-${Date.now()}`)
 
 beforeAll(() => {
   mkdirSync(join(testDir, 'src'), { recursive: true })
@@ -63,7 +63,7 @@ describe('math', () => {
 
   // Init git repo for git tools
   try {
-    execSync('git init && git config user.email "orca-test@example.com" && git config user.name "Orca Test" && git add -A && git commit -m "init"', {
+    execSync('git init && git config user.email "armature-test@example.com" && git config user.name "Armature Test" && git add -A && git commit -m "init"', {
       cwd: testDir, encoding: 'utf-8', stdio: 'pipe',
     })
   } catch { /* ignore git errors in CI */ }
@@ -297,9 +297,9 @@ describe('Round 1: Git', () => {
 
 describe('Round 1: Execution', () => {
   it('run_command — echo', () => {
-    const r = executeTool('run_command', { command: 'echo "hello from orca"' }, testDir)
+    const r = executeTool('run_command', { command: 'echo "hello from armature"' }, testDir)
     expect(r.success).toBe(true)
-    expect(r.output).toContain('hello from orca')
+    expect(r.output).toContain('hello from armature')
   })
 
   it('run_command — cwd override', () => {

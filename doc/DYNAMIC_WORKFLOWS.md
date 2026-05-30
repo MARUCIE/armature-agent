@@ -1,14 +1,14 @@
-# Dynamic Workflows in Orca CLI
+# Dynamic Workflows in Armature CLI
 
 > A `workflow` tool that lets the model write a small, deterministic JavaScript
 > orchestration script which fans work out across many isolated sub-agents, then
-> synthesizes the results — the Orca port of Claude Code's *dynamic workflows*
+> synthesizes the results — the Armature port of Claude Code's *dynamic workflows*
 > and the [`pi-dynamic-workflows`](https://github.com/Michaelliv/pi-dynamic-workflows)
 > prototype.
 
 ## Why
 
-Orca already spawns **one** sub-agent per tool call (`spawn_agent` /
+Armature already spawns **one** sub-agent per tool call (`spawn_agent` /
 `delegate_task`, backed by `spawnSubAgent` → a forked child process running a
 full agentic loop). What it lacked was a *deterministic orchestration layer*:
 the ability for the model to express, in code, "run these 8 reviews in parallel,
@@ -17,18 +17,18 @@ synthesize." That control flow — loops, conditionals, fan-out, fan-in — belo
 in a script the model writes, not in prose it improvises turn by turn.
 
 This is the same primitive Anthropic shipped as *dynamic workflows in Claude
-Code* and that `pi-dynamic-workflows` ported to Pi. Orca now has it too.
+Code* and that `pi-dynamic-workflows` ported to Pi. Armature now has it too.
 
 ## What maps onto what
 
-| Reference (`pi-dynamic-workflows`) | Orca |
+| Reference (`pi-dynamic-workflows`) | Armature |
 | --- | --- |
-| `WorkflowAgent` — in-memory Pi subagent session per `agent()` | `OrcaWorkflowAgentRunner` — forked child process per `agent()` via `spawnSubAgent` (stronger isolation) |
+| `WorkflowAgent` — in-memory Pi subagent session per `agent()` | `ArmatureWorkflowAgentRunner` — forked child process per `agent()` via `spawnSubAgent` (stronger isolation) |
 | `createStructuredOutputTool` — terminating `structured_output` tool | JSON output-contract appended to the prompt + parsed/validated return (v1 adaptation; the worker IPC stays text) |
 | acorn AST literal validation of `meta` | identical (acorn) |
 | `vm` sandbox + whitelisted globals | identical |
 | `parallel` / `pipeline` / `phase` / `log` / `budget` | identical semantics |
-| `isolation: 'worktree'` | mapped to Orca's `WorktreeManager` |
+| `isolation: 'worktree'` | mapped to Armature's `WorktreeManager` |
 
 The engine is decoupled from the executor through a `WorkflowAgentRunner`
 interface, so `runWorkflow()` is unit-testable with a stub runner — no real LLM
@@ -56,7 +56,7 @@ model writes a workflow script
 | `parser.ts` | acorn-backed parser: determinism blocklist + literal `meta` validation + clean body extraction. Exports the shared types. |
 | `runtime.ts` | `runWorkflow()` — vm sandbox + `agent`/`parallel`/`pipeline`/`phase`/`log`/`budget` globals + concurrency limiter + JSON structured-output contract. |
 | `display.ts` | Workflow progress snapshot model + compact text renderer (phase groups, `✓`/`✗`/`⋯` agent lines). |
-| `runner.ts` | `WorkflowAgentRunner` interface + `OrcaWorkflowAgentRunner` bridge onto `spawnSubAgent` / `WorktreeManager`. |
+| `runner.ts` | `WorkflowAgentRunner` interface + `ArmatureWorkflowAgentRunner` bridge onto `spawnSubAgent` / `WorktreeManager`. |
 | `index.ts` | Barrel exports. |
 
 ### Integration points
@@ -96,7 +96,7 @@ binding, not the text scan.
 ## Threat model (what the sandbox is and is not)
 
 The `vm` is a **determinism guardrail and accident-preventer for a trusted,
-model-authored script** — not an adversarial sandbox. The script author is Orca's
+model-authored script** — not an adversarial sandbox. The script author is Armature's
 own model, and the real isolation boundary is the **forked sub-agent child
 process** that each `agent()` call crosses. In scope: blocking nondeterminism,
 hiding `require`/`import`/`fs`/network from casual scripts, capping concurrency
@@ -151,7 +151,7 @@ return { confirmed: results.flat().filter(Boolean).filter(f => f.verdict?.isReal
   schema; the runtime strips the fence and `JSON.parse`s it, then checks
   `required` keys. A malformed return surfaces as a parse error the model can
   react to. (Pi's terminating `structured_output` tool is stronger; adopting it
-  in Orca means extending the `sub-agent` IPC protocol — deferred.)
+  in Armature means extending the `sub-agent` IPC protocol — deferred.)
 - **No persisted or resumable runs**, and no `/workflows` manager UI yet. The
   determinism rules are already in place so resume can be added without a
   rewrite.
@@ -170,7 +170,7 @@ seeking disconfirming evidence rather than confirmation. Layers proven:
 | Determinism sandbox | runtime stubs block bracket-access `Math.random`/`Date` | green |
 | Runner dispatch + worktree | `tests/workflow-runner.test.ts` — mock `spawnSubAgent` + **real git** worktree create/cleanup | green |
 | Tool wiring (yolo gate, hooks, fan-out, context threading) | `tests/chat-proxy-tool-call.test.ts` workflow block | green |
-| **Real end-to-end closure** | `tests/workflow-e2e-real.test.ts` (gated by `ORCA_E2E_REAL=1`) drives real `spawnSubAgent` → real `poe/claude-opus-4.6` | **green** |
+| **Real end-to-end closure** | `tests/workflow-e2e-real.test.ts` (gated by `ARMATURE_E2E_REAL=1`) drives real `spawnSubAgent` → real `poe/claude-opus-4.6` | **green** |
 
 Two real-provider runs proved the riskiest paths the stubs cannot:
 
@@ -198,7 +198,7 @@ only a real run crossing the process boundary exposes the path coupling.
 
 ### Verification snapshot
 
-`npm test` → `97` files / `1776` tests green (+ 1 `ORCA_E2E_REAL`-gated test,
+`npm test` → `97` files / `1776` tests green (+ 1 `ARMATURE_E2E_REAL`-gated test,
 skipped by default). The one intermittent failure under full parallel load
 (`test-matrix-runner.test.ts`) is a pre-existing environmental flake — it passes
 8/8 in isolation and is unrelated to this feature. `release-evidence.test.ts`
@@ -208,7 +208,7 @@ and its 7 coupled doc surfaces were realigned to the new counts.
 
 - [x] A1. Add `acorn` dependency; confirm install + `tsc` clean baseline.
 - [x] A2. `src/workflow/parser.ts` — types + `parseWorkflowScript` (determinism + literal meta).
-- [x] A3. `src/workflow/runner.ts` — `WorkflowAgentRunner` interface + `OrcaWorkflowAgentRunner`.
+- [x] A3. `src/workflow/runner.ts` — `WorkflowAgentRunner` interface + `ArmatureWorkflowAgentRunner`.
 - [x] A4. `src/workflow/runtime.ts` — `runWorkflow` + globals + limiter + JSON structured output.
 - [x] A5. `src/workflow/display.ts` — snapshot + compact renderer.
 - [x] A6. `src/workflow/index.ts` — barrel.

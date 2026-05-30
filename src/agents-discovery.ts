@@ -3,7 +3,7 @@
  * and formats them into system prompt context.
  *
  * Walks from cwd upward, looking for: AGENTS.md, CLAUDE.md, CODEX.md,
- * and .orca/rules/*.md at each level. Closest files appear first.
+ * and .armature/rules/*.md at each level. Closest files appear first.
  */
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
@@ -13,7 +13,7 @@ import { join, dirname, resolve } from 'node:path'
 
 export interface DiscoveredGuidance {
   path: string
-  source: 'AGENTS.md' | 'CLAUDE.md' | '.orca/rules' | 'CODEX.md'
+  source: 'AGENTS.md' | 'CLAUDE.md' | '.armature/rules' | 'CODEX.md'
   content: string
   depth: number // 0 = cwd, 1 = parent, 2 = grandparent, etc.
 }
@@ -46,8 +46,8 @@ export function discoverGuidance(cwd: string, maxDepth = 3): DiscoveredGuidance[
       }
     }
 
-    // Check .orca/rules/*.md
-    const rulesDir = join(current, '.orca', 'rules')
+    // Check .armature/rules/*.md
+    const rulesDir = join(current, '.armature', 'rules')
     if (existsSync(rulesDir)) {
       try {
         const entries = readdirSync(rulesDir).sort()
@@ -56,7 +56,7 @@ export function discoverGuidance(cwd: string, maxDepth = 3): DiscoveredGuidance[
           const filePath = join(rulesDir, entry)
           const content = safeRead(filePath)
           if (content !== null) {
-            results.push({ path: filePath, source: '.orca/rules', content, depth })
+            results.push({ path: filePath, source: '.armature/rules', content, depth })
           }
         }
       } catch {
@@ -95,13 +95,13 @@ export function formatGuidanceForPrompt(
         : g.content
 
     // Build a relative-ish display path
-    const label = g.source === '.orca/rules'
-      ? `.orca/rules/${g.path.split('/').pop()}`
+    const label = g.source === '.armature/rules'
+      ? `.armature/rules/${g.path.split('/').pop()}`
       : g.source
 
     const depthHint = g.depth === 0 ? './' : '../'.repeat(g.depth)
 
-    sections.push(`\n### ${label} (${depthHint}${g.source === '.orca/rules' ? label : g.source})`)
+    sections.push(`\n### ${label} (${depthHint}${g.source === '.armature/rules' ? label : g.source})`)
     sections.push(truncated)
   }
 

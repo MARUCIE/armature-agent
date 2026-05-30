@@ -1,5 +1,5 @@
 /**
- * Dynamic workflows for Orca CLI.
+ * Dynamic workflows for Armature CLI.
  *
  * The `workflow` tool lets the model write a small, deterministic JavaScript
  * orchestration script that fans work out across isolated sub-agents and then
@@ -13,15 +13,15 @@ export { runWorkflow } from './runtime.js'
 export type { WorkflowRunOptions, WorkflowRunResult } from './runtime.js'
 
 export {
-  OrcaWorkflowAgentRunner,
+  ArmatureWorkflowAgentRunner,
   buildSchemaContract,
   parseSchemaResult,
 } from './runner.js'
 export type {
   WorkflowAgentRunner,
   WorkflowAgentRequest,
-  OrcaRunnerParentContext,
-  OrcaWorkflowAgentRunnerOptions,
+  ArmatureRunnerParentContext,
+  ArmatureWorkflowAgentRunnerOptions,
 } from './runner.js'
 
 export { WorkflowProgress } from './display.js'

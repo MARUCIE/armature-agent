@@ -1,9 +1,9 @@
 {
   "id": "fast-logs-errors",
   "title": "Logs command renders errors log entries",
-  "description": "Black-box smoke for `orca logs errors` with a preseeded errors log file.",
-  "input": "Create an `errors.log` file under an isolated ORCA_HOME, run `orca logs errors`, and verify the command renders the error log path and entry text.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home/.orca/logs\"; cat > \"$TMP_ROOT/home/.orca/logs/errors.log\" <<EOF\n[ERROR] boom from black-box logs\nEOF\nenv -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ORCA_HOME=\"$TMP_ROOT/home/.orca\" node dist/bin/orca.js logs errors'",
+  "description": "Black-box smoke for `armature logs errors` with a preseeded errors log file.",
+  "input": "Create an `errors.log` file under an isolated ARMATURE_HOME, run `armature logs errors`, and verify the command renders the error log path and entry text.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home/.armature/logs\"; cat > \"$TMP_ROOT/home/.armature/logs/errors.log\" <<EOF\n[ERROR] boom from black-box logs\nEOF\nenv -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ARMATURE_HOME=\"$TMP_ROOT/home/.armature\" node dist/bin/armature.js logs errors'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

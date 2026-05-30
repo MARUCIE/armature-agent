@@ -15,7 +15,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execSync } from 'node:child_process'
 
-const testDir = join(tmpdir(), `orca-e2e-${Date.now()}`)
+const testDir = join(tmpdir(), `armature-e2e-${Date.now()}`)
 
 beforeAll(() => {
   mkdirSync(join(testDir, 'src'), { recursive: true })
@@ -35,7 +35,7 @@ export class Calculator {
   writeFileSync(join(testDir, 'package.json'), '{"name":"e2e-test","version":"1.0.0"}\n')
 
   try {
-    execSync('git init && git config user.email "orca-test@example.com" && git config user.name "Orca Test" && git add -A && git commit -m "init: calculator"', {
+    execSync('git init && git config user.email "armature-test@example.com" && git config user.name "Armature Test" && git add -A && git commit -m "init: calculator"', {
       cwd: testDir, encoding: 'utf-8', stdio: 'pipe',
     })
   } catch { /* ignore */ }
@@ -131,7 +131,7 @@ describe('StreamMarkdown renderer', () => {
   it('8.7 JSON highlighting — keys and values colored', () => {
     const out = capture(sm => {
       sm.push('```json\n')
-      sm.push('{"name": "orca", "active": true}\n')
+      sm.push('{"name": "armature", "active": true}\n')
       sm.push('```\n')
     })
     // Keys should be cyan, strings green, booleans yellow

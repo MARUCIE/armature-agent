@@ -1,9 +1,9 @@
 /**
- * `orca stats` — Token usage and cost statistics.
+ * `armature stats` — Token usage and cost statistics.
  *
  * Usage:
- *   orca stats           Overview + model breakdown
- *   orca stats daily     Daily usage chart (last 14 days)
+ *   armature stats           Overview + model breakdown
+ *   armature stats daily     Daily usage chart (last 14 days)
  */
 
 import { Command } from 'commander'

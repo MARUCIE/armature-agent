@@ -1,17 +1,17 @@
 ---
-Title: Orca CLI Docs Index
+Title: Armature CLI Docs Index
 Scope: project docs index
 Owner: Maurice
 Status: Active
 LastUpdated: 2026-05-29
 ---
-# Orca CLI Docs Index
+# Armature CLI Docs Index
 
-This file is the canonical path index for the `Orca CLI` repository.
+This file is the canonical path index for the `Armature CLI` repository.
 
 ## Active Initiative
 
-- Initiative: `doc/00_project/initiative_orca/`
+- Initiative: `doc/00_project/initiative_armature/`
 - Scope: project-level governance, architecture, UX flow, delivery planning, and rolling requirements
 
 ## Path Index
@@ -19,8 +19,8 @@ This file is the canonical path index for the `Orca CLI` repository.
 <!-- AI-FLEET:PATH_INDEX:START -->
 | Area | Path | Notes |
 | --- | --- | --- |
-| Project root | `/Users/mauricewen/Projects/orca-cli` | Git root and canonical `PROJECT_DIR` |
-| CLI entry | `src/bin/orca.ts` | Node executable entry point |
+| Project root | `/Users/mauricewen/Projects/armature-cli` | Git root and canonical `PROJECT_DIR` |
+| CLI entry | `src/bin/armature.ts` | Node executable entry point |
 | Program assembly | `src/program.ts` | Registers all top-level commands |
 | Commands | `src/commands/` | `chat`, `doctor`, `run`, `multi`, `bench`, `logs`, `providers`, `stats`, `session`, `queue`, `permissions`, `pr`, `serve`, `init`, `evolve`, workflow presets |
 | Review ledger command | `src/commands/review-ledger.ts` | Multi-model PR/diff review entry that writes human-gated review artifacts |
@@ -48,7 +48,7 @@ This file is the canonical path index for the `Orca CLI` repository.
 ## Documentation Layout
 
 - `doc/00_project/index.md`: project initiative list
-- `doc/00_project/initiative_orca/`: active project docs and workflow assets
+- `doc/00_project/initiative_armature/`: active project docs and workflow assets
 - `doc/*.md`: legacy flat docs retained as references until intentionally migrated
 
 ## Notes

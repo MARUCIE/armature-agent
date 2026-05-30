@@ -2,10 +2,10 @@
  * Theme system for ink UI components.
  *
  * 30+ semantic color tokens organized by role (not by hue).
- * Dark/light mode auto-detection via COLORFGBG or ORCA_THEME env var.
+ * Dark/light mode auto-detection via COLORFGBG or ARMATURE_THEME env var.
  * Components use useTheme() to get the current theme's semantic colors.
  *
- * Themes: orca (blackfin amber/ocean), default (cyan/dark), light (cyan/light),
+ * Themes: armature (blackfin amber/ocean), default (cyan/dark), light (cyan/light),
  *         dark (green/dark), ocean (blue/dark), warm (yellow/dark), mono (white/dark)
  */
 
@@ -135,9 +135,9 @@ function darkTheme(name: string, accent: string, accentDim: string, prompt: stri
   }
 }
 
-function orcaTheme(): InkTheme {
+function armatureTheme(): InkTheme {
   return {
-    name: 'orca', mode: 'dark',
+    name: 'armature', mode: 'dark',
     accent: '#F6C945',
     accentDim: '#B8792F',
     prompt: '#F6C945',
@@ -270,8 +270,8 @@ const THEMES: Record<string, InkTheme> = {
   grokday:          grokDayTheme(),
   tokyonight:       tokyoNightTheme(),
   'rosepine-moon':  rosePineMoonTheme(),
-  // Orca legacy / extra themes
-  orca:     orcaTheme(),
+  // Armature legacy / extra themes
+  armature:     armatureTheme(),
   default:  darkTheme('default',  'cyan',   '#5F8787', 'cyan'),
   light:    lightTheme('light',   'blue',   '#5F87AF', 'blue'),
   dark:     darkTheme('dark',     'green',  '#5F875F', 'green'),
@@ -300,14 +300,14 @@ function readThemeFile(): string | null {
   try {
     const home = process.env.HOME || process.env.USERPROFILE || ''
     if (!home) return null
-    return readFileSync(`${home}/.orca/theme`, 'utf-8').trim().toLowerCase()
+    return readFileSync(`${home}/.armature/theme`, 'utf-8').trim().toLowerCase()
   } catch {
     return null
   }
 }
 
 function getConfiguredThemeId(): string | null {
-  const envTheme = canonicalThemeId((process.env.ORCA_THEME || '').toLowerCase())
+  const envTheme = canonicalThemeId((process.env.ARMATURE_THEME || '').toLowerCase())
   if (envTheme && THEMES[envTheme]) return envTheme
   const fileTheme = readThemeFile()
   if (fileTheme) {
@@ -354,7 +354,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }): Reac
 
   const setThemeId = useCallback((nextThemeId: string) => {
     if (!THEMES[nextThemeId]) return
-    process.env.ORCA_THEME = nextThemeId
+    process.env.ARMATURE_THEME = nextThemeId
     setThemeIdState(nextThemeId)
   }, [])
 

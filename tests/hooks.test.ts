@@ -10,21 +10,21 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSyn
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
-const testDir = join(tmpdir(), `orca-hooks-${Date.now()}`)
+const testDir = join(tmpdir(), `armature-hooks-${Date.now()}`)
 const previousHome = process.env.HOME
 
 beforeAll(() => {
   process.env.HOME = testDir
-  mkdirSync(join(testDir, '.orca'), { recursive: true })
+  mkdirSync(join(testDir, '.armature'), { recursive: true })
   mkdirSync(join(testDir, '.claude'), { recursive: true })
 })
 
 beforeEach(() => {
-  try { rmSync(join(testDir, '.orca', 'hooks.json'), { force: true }) } catch { /* ignore */ }
+  try { rmSync(join(testDir, '.armature', 'hooks.json'), { force: true }) } catch { /* ignore */ }
   try { rmSync(join(testDir, '.claude', 'settings.json'), { force: true }) } catch { /* ignore */ }
   try { rmSync(join(testDir, '.claude', 'hooks.json'), { force: true }) } catch { /* ignore */ }
   try { rmSync(join(testDir, '.codex', 'hooks.json'), { force: true }) } catch { /* ignore */ }
-  mkdirSync(join(testDir, '.orca'), { recursive: true })
+  mkdirSync(join(testDir, '.armature'), { recursive: true })
   mkdirSync(join(testDir, '.claude'), { recursive: true })
   mkdirSync(join(testDir, '.codex'), { recursive: true })
 })
@@ -51,10 +51,10 @@ function trustedProjectHooks(): HookManager {
 // ── Config Loading ──────────────────────────────────────────────
 
 describe('Hook config loading', () => {
-  it('5.1 loads hooks from .orca/hooks.json', () => {
-    const dir = join(testDir, 'orca-hooks')
-    mkdirSync(join(dir, '.orca'), { recursive: true })
-    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify({
+  it('5.1 loads hooks from .armature/hooks.json', () => {
+    const dir = join(testDir, 'armature-hooks')
+    mkdirSync(join(dir, '.armature'), { recursive: true })
+    writeFileSync(join(dir, '.armature', 'hooks.json'), JSON.stringify({
       PreToolUse: [{ command: 'echo ok', matcher: 'run_command' }],
     }))
 
@@ -65,9 +65,9 @@ describe('Hook config loading', () => {
   })
 
   it('5.1b does not load repo-local hooks without explicit project trust', () => {
-    const dir = join(testDir, 'untrusted-orca-hooks')
-    mkdirSync(join(dir, '.orca'), { recursive: true })
-    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify({
+    const dir = join(testDir, 'untrusted-armature-hooks')
+    mkdirSync(join(dir, '.armature'), { recursive: true })
+    writeFileSync(join(dir, '.armature', 'hooks.json'), JSON.stringify({
       SessionStart: [{ command: 'echo untrusted-startup' }],
     }))
 
@@ -77,10 +77,10 @@ describe('Hook config loading', () => {
     expect(manager.totalHooks).toBe(0)
   })
 
-  it('5.2 loads hooks from .orca.json (nested hooks key)', () => {
-    const dir = join(testDir, 'orca-json')
+  it('5.2 loads hooks from .armature.json (nested hooks key)', () => {
+    const dir = join(testDir, 'armature-json')
     mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, '.orca.json'), JSON.stringify({
+    writeFileSync(join(dir, '.armature.json'), JSON.stringify({
       hooks: {
         SessionStart: [{ command: 'echo startup' }],
         SessionEnd: [{ command: 'echo shutdown' }],
@@ -107,12 +107,12 @@ describe('Hook config loading', () => {
     expect(manager.totalHooks).toBe(1)
   })
 
-  it('5.3b loads hooks from HOME/.orca/hooks.json', () => {
-    const dir = join(testDir, 'global-orca-hooks')
+  it('5.3b loads hooks from HOME/.armature/hooks.json', () => {
+    const dir = join(testDir, 'global-armature-hooks')
     mkdirSync(dir, { recursive: true })
-    mkdirSync(join(testDir, '.orca'), { recursive: true })
-    writeFileSync(join(testDir, '.orca', 'hooks.json'), JSON.stringify({
-      UserPromptSubmit: [{ command: 'echo global-orca' }],
+    mkdirSync(join(testDir, '.armature'), { recursive: true })
+    writeFileSync(join(testDir, '.armature', 'hooks.json'), JSON.stringify({
+      UserPromptSubmit: [{ command: 'echo global-armature' }],
     }))
 
     const manager = trustedProjectHooks()
@@ -124,12 +124,12 @@ describe('Hook config loading', () => {
   it('5.3c loads trusted project hooks per cwd without leaking hooks across projects', async () => {
     const projectA = join(testDir, 'trusted-project-a')
     const projectB = join(testDir, 'trusted-project-b')
-    mkdirSync(join(projectA, '.orca'), { recursive: true })
-    mkdirSync(join(projectB, '.orca'), { recursive: true })
-    writeFileSync(join(projectA, '.orca', 'hooks.json'), JSON.stringify({
+    mkdirSync(join(projectA, '.armature'), { recursive: true })
+    mkdirSync(join(projectB, '.armature'), { recursive: true })
+    writeFileSync(join(projectA, '.armature', 'hooks.json'), JSON.stringify({
       SessionStart: [{ command: 'echo project-a' }],
     }))
-    writeFileSync(join(projectB, '.orca', 'hooks.json'), JSON.stringify({
+    writeFileSync(join(projectB, '.armature', 'hooks.json'), JSON.stringify({
       SessionStart: [{ command: 'echo project-b' }],
     }))
 
@@ -151,9 +151,9 @@ describe('Hook config loading', () => {
 describe('Hook execution', () => {
   it('5.4 PreToolUse receives tool name and input as JSON stdin', async () => {
     const dir = join(testDir, 'pre-tool-input')
-    mkdirSync(join(dir, '.orca'), { recursive: true })
+    mkdirSync(join(dir, '.armature'), { recursive: true })
     // Hook script reads stdin JSON and echoes the tool name from it
-    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify({
+    writeFileSync(join(dir, '.armature', 'hooks.json'), JSON.stringify({
       PreToolUse: [{
         command: 'cat | python3 -c "import sys,json; d=json.load(sys.stdin); print(json.dumps({\'continue\':True,\'additionalContext\':d.get(\'toolName\',\'\')}))"',
         matcher: '.*',
@@ -174,8 +174,8 @@ describe('Hook execution', () => {
 
   it('5.5 PreToolUse non-zero exit blocks tool execution', async () => {
     const dir = join(testDir, 'pre-tool-block')
-    mkdirSync(join(dir, '.orca'), { recursive: true })
-    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify({
+    mkdirSync(join(dir, '.armature'), { recursive: true })
+    writeFileSync(join(dir, '.armature', 'hooks.json'), JSON.stringify({
       PreToolUse: [{
         command: 'echo "BLOCKED: dangerous operation" >&2 && exit 1',
         matcher: 'run_command',
@@ -197,8 +197,8 @@ describe('Hook execution', () => {
 
   it('5.6 PostToolUse receives tool result', async () => {
     const dir = join(testDir, 'post-tool')
-    mkdirSync(join(dir, '.orca'), { recursive: true })
-    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify({
+    mkdirSync(join(dir, '.armature'), { recursive: true })
+    writeFileSync(join(dir, '.armature', 'hooks.json'), JSON.stringify({
       PostToolUse: [{
         command: 'cat | python3 -c "import sys,json; d=json.load(sys.stdin); print(json.dumps({\'continue\':True,\'additionalContext\':\'success=\'+str(d.get(\'toolSuccess\',\'\'))}))"',
         matcher: '.*',
@@ -220,8 +220,8 @@ describe('Hook execution', () => {
 
   it('5.7 SessionStart hook fires and returns context', async () => {
     const dir = join(testDir, 'session-start')
-    mkdirSync(join(dir, '.orca'), { recursive: true })
-    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify({
+    mkdirSync(join(dir, '.armature'), { recursive: true })
+    writeFileSync(join(dir, '.armature', 'hooks.json'), JSON.stringify({
       SessionStart: [{ command: 'echo "Session initialized"' }],
     }))
 
@@ -237,8 +237,8 @@ describe('Hook execution', () => {
 
   it('5.8 SessionEnd hook fires on clean exit', async () => {
     const dir = join(testDir, 'session-end')
-    mkdirSync(join(dir, '.orca'), { recursive: true })
-    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify({
+    mkdirSync(join(dir, '.armature'), { recursive: true })
+    writeFileSync(join(dir, '.armature', 'hooks.json'), JSON.stringify({
       SessionEnd: [{ command: 'echo "Goodbye"' }],
     }))
 
@@ -255,7 +255,7 @@ describe('Hook execution', () => {
   it('5.9 sync hooks execute inside the provided cwd', async () => {
     const dir = join(testDir, 'hook-cwd-sync')
     mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, '.orca.json'), JSON.stringify({
+    writeFileSync(join(dir, '.armature.json'), JSON.stringify({
       hooks: {
         SessionStart: [{ command: 'pwd' }],
       },
@@ -275,7 +275,7 @@ describe('Hook execution', () => {
   it('5.10 async hooks stay non-blocking, execute inside cwd, and still perform side effects', async () => {
     const dir = join(testDir, 'async-hook')
     mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, '.orca.json'), JSON.stringify({
+    writeFileSync(join(dir, '.armature.json'), JSON.stringify({
       hooks: {
         SessionStart: [{
           command: 'sleep 0.2; printf "$PWD" > async-hook.txt',
@@ -300,11 +300,11 @@ describe('Hook execution', () => {
     expect(realpathSync(readFileSync(outputPath, 'utf-8').trim())).toBe(realpathSync(dir))
   })
 
-  it('5.11 project Claude hooks execute relative commands from .claude while preserving ORCA_CWD', async () => {
+  it('5.11 project Claude hooks execute relative commands from .claude while preserving ARMATURE_CWD', async () => {
     const projectDir = join(testDir, 'project-claude-hook')
     const claudeDir = join(projectDir, '.claude')
     mkdirSync(join(claudeDir, 'hooks'), { recursive: true })
-    writeFileSync(join(claudeDir, 'hooks', 'echo-cwd.sh'), '#!/bin/sh\npwd\nprintf "\\n%s" "$ORCA_CWD"\n')
+    writeFileSync(join(claudeDir, 'hooks', 'echo-cwd.sh'), '#!/bin/sh\npwd\nprintf "\\n%s" "$ARMATURE_CWD"\n')
     writeFileSync(join(claudeDir, 'settings.json'), JSON.stringify({
       hooks: {
         SessionStart: [{
@@ -333,12 +333,12 @@ describe('Hook execution', () => {
     expect(realpathSync(targetDir!)).toBe(realpathSync(projectDir))
   })
 
-  it('5.12 project Orca hooks execute relative commands from .orca while preserving ORCA_CWD', async () => {
-    const projectDir = join(testDir, 'project-orca-hook')
-    const orcaDir = join(projectDir, '.orca')
-    mkdirSync(join(orcaDir, 'hooks'), { recursive: true })
-    writeFileSync(join(orcaDir, 'hooks', 'echo-cwd.sh'), '#!/bin/sh\npwd\nprintf "\\n%s" "$ORCA_CWD"\n')
-    writeFileSync(join(orcaDir, 'hooks.json'), JSON.stringify({
+  it('5.12 project Armature hooks execute relative commands from .armature while preserving ARMATURE_CWD', async () => {
+    const projectDir = join(testDir, 'project-armature-hook')
+    const armatureDir = join(projectDir, '.armature')
+    mkdirSync(join(armatureDir, 'hooks'), { recursive: true })
+    writeFileSync(join(armatureDir, 'hooks', 'echo-cwd.sh'), '#!/bin/sh\npwd\nprintf "\\n%s" "$ARMATURE_CWD"\n')
+    writeFileSync(join(armatureDir, 'hooks.json'), JSON.stringify({
       SessionStart: [{ command: 'sh hooks/echo-cwd.sh' }],
     }))
 
@@ -354,18 +354,18 @@ describe('Hook execution', () => {
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean)
-    expect(realpathSync(executionDir!)).toBe(realpathSync(orcaDir))
+    expect(realpathSync(executionDir!)).toBe(realpathSync(armatureDir))
     expect(realpathSync(targetDir!)).toBe(realpathSync(projectDir))
   })
 
-  it('5.13 global Claude hooks execute relative commands from HOME while preserving ORCA_CWD', async () => {
+  it('5.13 global Claude hooks execute relative commands from HOME while preserving ARMATURE_CWD', async () => {
     const projectDir = join(testDir, 'global-hook-project')
     const homeDir = join(testDir, 'global-hook-home')
     const claudeDir = join(homeDir, '.claude')
     const originalHome = process.env.HOME
     mkdirSync(projectDir, { recursive: true })
     mkdirSync(join(claudeDir, 'hooks'), { recursive: true })
-    writeFileSync(join(claudeDir, 'hooks', 'echo-cwd.sh'), '#!/bin/sh\npwd\nprintf "\\n%s" "$ORCA_CWD"\n')
+    writeFileSync(join(claudeDir, 'hooks', 'echo-cwd.sh'), '#!/bin/sh\npwd\nprintf "\\n%s" "$ARMATURE_CWD"\n')
     writeFileSync(join(claudeDir, 'settings.json'), JSON.stringify({
       hooks: {
         SessionStart: [{
@@ -400,11 +400,11 @@ describe('Hook execution', () => {
     }
   })
 
-  it('5.14 project Claude hook maps execute relative commands from .claude while preserving ORCA_CWD', async () => {
+  it('5.14 project Claude hook maps execute relative commands from .claude while preserving ARMATURE_CWD', async () => {
     const projectDir = join(testDir, 'project-claude-map-hook')
     const claudeDir = join(projectDir, '.claude')
     mkdirSync(join(claudeDir, 'hooks'), { recursive: true })
-    writeFileSync(join(claudeDir, 'hooks', 'echo-cwd.sh'), '#!/bin/sh\npwd\nprintf "\\n%s" "$ORCA_CWD"\n')
+    writeFileSync(join(claudeDir, 'hooks', 'echo-cwd.sh'), '#!/bin/sh\npwd\nprintf "\\n%s" "$ARMATURE_CWD"\n')
     writeFileSync(join(claudeDir, 'hooks.json'), JSON.stringify({
       SessionStart: [{ command: 'sh hooks/echo-cwd.sh' }],
     }))
@@ -425,14 +425,14 @@ describe('Hook execution', () => {
     expect(realpathSync(targetDir!)).toBe(realpathSync(projectDir))
   })
 
-  it('5.15 global Codex hooks execute relative commands from .codex while preserving ORCA_CWD', async () => {
+  it('5.15 global Codex hooks execute relative commands from .codex while preserving ARMATURE_CWD', async () => {
     const projectDir = join(testDir, 'global-codex-project')
     const homeDir = join(testDir, 'global-codex-home')
     const codexDir = join(homeDir, '.codex')
     const originalHome = process.env.HOME
     mkdirSync(projectDir, { recursive: true })
     mkdirSync(join(codexDir, 'hooks'), { recursive: true })
-    writeFileSync(join(codexDir, 'hooks', 'echo-cwd.sh'), '#!/bin/sh\npwd\nprintf "\\n%s" "$ORCA_CWD"\n')
+    writeFileSync(join(codexDir, 'hooks', 'echo-cwd.sh'), '#!/bin/sh\npwd\nprintf "\\n%s" "$ARMATURE_CWD"\n')
     writeFileSync(join(codexDir, 'hooks.json'), JSON.stringify({
       SessionStart: [{ command: 'sh hooks/echo-cwd.sh' }],
     }))
@@ -465,8 +465,8 @@ describe('Hook execution', () => {
 describe('Hook matching and env vars', () => {
   it('5.16 Matcher regex filters tool-specific hooks', async () => {
     const dir = join(testDir, 'matcher')
-    mkdirSync(join(dir, '.orca'), { recursive: true })
-    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify({
+    mkdirSync(join(dir, '.armature'), { recursive: true })
+    writeFileSync(join(dir, '.armature', 'hooks.json'), JSON.stringify({
       PreToolUse: [{
         command: 'echo "should not fire" && exit 1',
         matcher: 'delete_file',  // only matches delete_file
@@ -486,12 +486,12 @@ describe('Hook matching and env vars', () => {
     expect(result.decision).not.toBe('block')
   })
 
-  it('5.17 Env vars ORCA_HOOK_EVENT and ORCA_HOOK_TOOL are set', async () => {
+  it('5.17 Env vars ARMATURE_HOOK_EVENT and ARMATURE_HOOK_TOOL are set', async () => {
     const dir = join(testDir, 'env-vars')
-    mkdirSync(join(dir, '.orca'), { recursive: true })
-    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify({
+    mkdirSync(join(dir, '.armature'), { recursive: true })
+    writeFileSync(join(dir, '.armature', 'hooks.json'), JSON.stringify({
       PreToolUse: [{
-        command: 'echo "$ORCA_HOOK_EVENT:$ORCA_HOOK_TOOL"',
+        command: 'echo "$ARMATURE_HOOK_EVENT:$ARMATURE_HOOK_TOOL"',
         matcher: '.*',
       }],
     }))
@@ -508,10 +508,10 @@ describe('Hook matching and env vars', () => {
 
   it('5.17c Stop hooks receive the assistant response via env vars', async () => {
     const dir = join(testDir, 'stop-response-env')
-    mkdirSync(join(dir, '.orca'), { recursive: true })
-    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify({
+    mkdirSync(join(dir, '.armature'), { recursive: true })
+    writeFileSync(join(dir, '.armature', 'hooks.json'), JSON.stringify({
       Stop: [{
-        command: 'python3 -c "import os; print(os.environ.get(\'ORCA_RESPONSE\', \'\'))"',
+        command: 'python3 -c "import os; print(os.environ.get(\'ARMATURE_RESPONSE\', \'\'))"',
       }],
     }))
 
@@ -529,8 +529,8 @@ describe('Hook matching and env vars', () => {
   it('5.17b Hook env does not inherit provider API keys by default', async () => {
     const dir = join(testDir, 'env-key-redaction')
     const previousOpenAiKey = process.env.OPENAI_API_KEY
-    mkdirSync(join(dir, '.orca'), { recursive: true })
-    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify({
+    mkdirSync(join(dir, '.armature'), { recursive: true })
+    writeFileSync(join(dir, '.armature', 'hooks.json'), JSON.stringify({
       SessionStart: [{
         command: 'node -e "console.log(process.env.OPENAI_API_KEY || \\"missing\\")"',
       }],
@@ -568,8 +568,8 @@ describe('Hook matching and env vars', () => {
 
   it('5.19 Hook returning JSON result is parsed correctly', async () => {
     const dir = join(testDir, 'json-result')
-    mkdirSync(join(dir, '.orca'), { recursive: true })
-    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify({
+    mkdirSync(join(dir, '.armature'), { recursive: true })
+    writeFileSync(join(dir, '.armature', 'hooks.json'), JSON.stringify({
       UserPromptSubmit: [{
         command: 'echo \'{"continue": true, "systemMessage": "context injected"}\'',
       }],
@@ -588,8 +588,8 @@ describe('Hook matching and env vars', () => {
 
   it('5.23 getStatusSummary returns a renderer-agnostic hook summary', () => {
     const dir = join(testDir, 'print-status')
-    mkdirSync(join(dir, '.orca'), { recursive: true })
-    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify({
+    mkdirSync(join(dir, '.armature'), { recursive: true })
+    writeFileSync(join(dir, '.armature', 'hooks.json'), JSON.stringify({
       SessionStart: [{ command: 'echo startup' }],
       SessionEnd: [{ command: 'echo shutdown' }],
     }))
@@ -627,12 +627,12 @@ describe('Safety system', () => {
     ]
     // Create a config with all 11 events
     const dir = join(testDir, 'all-events')
-    mkdirSync(join(dir, '.orca'), { recursive: true })
+    mkdirSync(join(dir, '.armature'), { recursive: true })
     const config: Record<string, unknown[]> = {}
     for (const e of events) {
       config[e] = [{ command: 'echo ok' }]
     }
-    writeFileSync(join(dir, '.orca', 'hooks.json'), JSON.stringify(config))
+    writeFileSync(join(dir, '.armature', 'hooks.json'), JSON.stringify(config))
 
     const manager = trustedProjectHooks()
     manager.load(dir)

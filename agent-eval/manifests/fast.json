@@ -1,6 +1,6 @@
 {
   "id": "fast",
-  "title": "Orca CLI fast gate",
+  "title": "Armature CLI fast gate",
   "description": "Black-box operator smoke for the most failure-prone local CLI surfaces.",
   "tasks": [
     "fast-root-help",

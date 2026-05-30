@@ -1,6 +1,6 @@
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
-import { getOrcaHome } from './logger.js'
+import { getArmatureHome } from './logger.js'
 import type { ChatMessage } from './providers/openai-compat.js'
 
 const SAFE_SESSION_NAME = /^[A-Za-z0-9._-]+$/
@@ -49,7 +49,7 @@ export interface SavedSessionDetail {
 }
 
 export function getSessionsDir(): string {
-  return join(getOrcaHome(), 'sessions')
+  return join(getArmatureHome(), 'sessions')
 }
 
 export function listSessionFiles(): SavedSessionFile[] {
@@ -179,7 +179,7 @@ export function buildSessionHandoffMetadata(
 }
 
 export function writeSharedSessionArtifact(name: string, session: SavedSession, filePath?: string): SessionArtifactBundle {
-  const sharesDir = join(getOrcaHome(), 'shares')
+  const sharesDir = join(getArmatureHome(), 'shares')
   mkdirSync(sharesDir, { recursive: true })
   const target = filePath || join(sharesDir, `session-${sanitizeArtifactName(name)}.md`)
   const markdownPath = writeSessionMarkdownArtifact(name, session, target)
@@ -194,7 +194,7 @@ export function writeSessionHandoffArtifact(
   session: SavedSession,
   filePath?: string,
 ): SessionArtifactBundle {
-  const sharesDir = join(getOrcaHome(), 'shares')
+  const sharesDir = join(getArmatureHome(), 'shares')
   mkdirSync(sharesDir, { recursive: true })
   const target = filePath || join(sharesDir, `handoff-${sanitizeArtifactName(handoffName)}.md`)
   const markdownPath = writeSessionMarkdownArtifact(handoffName, session, target)

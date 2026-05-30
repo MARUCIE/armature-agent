@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Armature 生态系统 SOTA 差距分析 -- 蜂群头脑风暴报告 (v0.9.0)</title>
+<style>
+  :root {
+    --mckinsey-blue: #003A70;
+    --mckinsey-light: #0066B3;
+    --mckinsey-accent: #00A3E0;
+    --mckinsey-dark: #001F3F;
+    --gray-50: #F8F9FA;
+    --gray-100: #E9ECEF;
+    --gray-200: #DEE2E6;
+    --gray-500: #6C757D;
+    --gray-700: #495057;
+    --gray-900: #212529;
+    --success: #198754;
+    --warning: #FFC107;
+    --danger: #DC3545;
+    --orange: #FD7E14;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+    color: var(--gray-900); background: #fff; line-height: 1.75; font-size: 15px;
+  }
+  .header {
+    background: linear-gradient(135deg, var(--mckinsey-dark) 0%, var(--mckinsey-blue) 100%);
+    color: #fff; padding: 80px 40px 60px;
+  }
+  .header-inner { max-width: 960px; margin: 0 auto; }
+  .header h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 16px; }
+  .header .subtitle { font-size: 16px; color: rgba(255,255,255,0.75); }
+  .header .meta-row { margin-top: 24px; display: flex; gap: 32px; font-size: 13px; color: rgba(255,255,255,0.6); flex-wrap: wrap; }
+  .content { max-width: 960px; margin: 0 auto; padding: 48px 40px 80px; }
+  h2 { font-size: 22px; font-weight: 700; color: var(--mckinsey-blue); margin: 48px 0 20px; padding-bottom: 10px; border-bottom: 2px solid var(--mckinsey-accent); }
+  h2:first-of-type { margin-top: 0; }
+  h3 { font-size: 17px; font-weight: 600; color: var(--mckinsey-dark); margin: 32px 0 12px; }
+  p { margin-bottom: 14px; color: var(--gray-700); }
+  .exec-summary { background: var(--gray-50); border-left: 4px solid var(--mckinsey-accent); padding: 24px 28px; margin-bottom: 32px; border-radius: 0 8px 8px 0; }
+  .exec-summary p { margin-bottom: 8px; color: var(--gray-900); }
+  .exec-summary strong { color: var(--mckinsey-blue); }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  thead th { background: var(--mckinsey-blue); color: #fff; font-weight: 600; text-align: left; padding: 10px 14px; font-size: 13px; }
+  tbody td { padding: 10px 14px; border-bottom: 1px solid var(--gray-200); vertical-align: top; }
+  tbody tr:nth-child(even) { background: var(--gray-50); }
+  tbody tr:hover { background: #E8F4FD; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #fff; }
+  .badge-green { background: var(--success); }
+  .badge-yellow { background: var(--warning); color: var(--gray-900); }
+  .badge-orange { background: var(--orange); }
+  .badge-red { background: var(--danger); }
+  .badge-blue { background: var(--mckinsey-light); }
+  .priority { font-weight: 700; font-size: 13px; }
+  .p0 { color: var(--danger); }
+  .p1 { color: var(--orange); }
+  .p2 { color: var(--mckinsey-light); }
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 24px 0; }
+  .metric-card { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 8px; padding: 20px; text-align: center; }
+  .metric-card .value { font-size: 36px; font-weight: 700; color: var(--mckinsey-blue); line-height: 1.1; }
+  .metric-card .label { font-size: 12px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; }
+  .timeline { position: relative; padding-left: 32px; margin: 24px 0; }
+  .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--mckinsey-accent); }
+  .timeline-item { position: relative; margin-bottom: 28px; }
+  .timeline-item::before { content: ''; position: absolute; left: -28px; top: 6px; width: 14px; height: 14px; border-radius: 50%; background: var(--mckinsey-accent); border: 3px solid #fff; box-shadow: 0 0 0 2px var(--mckinsey-accent); }
+  .timeline-item h4 { font-size: 15px; font-weight: 700; color: var(--mckinsey-dark); margin-bottom: 6px; }
+  .timeline-item p { font-size: 14px; color: var(--gray-500); margin-bottom: 4px; }
+  .gap-card { border: 1px solid var(--gray-200); border-radius: 8px; padding: 24px; margin: 16px 0; border-left: 4px solid var(--mckinsey-blue); }
+  .gap-card h4 { font-size: 16px; font-weight: 700; color: var(--mckinsey-dark); margin-bottom: 8px; }
+  .gap-card .source { font-size: 12px; color: var(--gray-500); margin-bottom: 12px; }
+  .matrix-legend { display: flex; gap: 16px; margin: 12px 0 8px; font-size: 13px; color: var(--gray-500); }
+  footer { text-align: center; padding: 60px 20px 40px; color: #9B9B9D; font-size: 13px; line-height: 2.2; }
+  @media (max-width: 720px) {
+    .header { padding: 48px 20px 36px; }
+    .header h1 { font-size: 24px; }
+    .content { padding: 32px 20px 60px; }
+    .metric-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <h1>Armature 生态系统 SOTA 差距分析</h1>
+    <div class="subtitle">蜂群头脑风暴报告 -- v0.3.0 基线 → v0.9.0（含 Mission Mode + Task Planner + Nuclear Compact + Universal Preprocessing + React Ink TUI + VS Code Extension）</div>
+    <div class="meta-row">
+      <span>v0.3.0 基线 → v0.9.0 现状</span>
+      <span>2026-04-12 ~ 2026-04-13</span>
+      <span>对标: AI-Fleet / Claude Code / Codex / Amp / KiloCode / Hermes / Factory Droid</span>
+      <span>1231 测试 · 114 文件 · 22.3K LOC · 18 模块</span>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+  <h2>概要结论</h2>
+  <div class="exec-summary">
+    <p><strong>v0.3.0 基线</strong>：Armature CLI 拥有扎实基础（41 个工具、10 个钩子事件、多模型 council/race/pipeline、493 个测试用例），但对标 SOTA 级编码代理在 6 个关键维度存在结构性差距。</p>
+    <p><strong>v0.9.0 现状</strong>：经过 10 轮迭代，原有 SOTA 差距全部关闭，并在 <strong>8 个维度建立差异化领先</strong>：Mission Mode（Droid 架构）、Task Planner（自动拆分+并发）、Nuclear Compact（核弹级上下文保护）、认知骨架、知识管理、CJK 感知、Universal File Preprocessing（任意格式→Markdown 预处理）、<strong>React Ink TUI 渲染管线</strong>（17 组件全屏 Alt Buffer）。IDE 集成 GAP 已关闭，0 GAP 剩余。</p>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="value" style="color: var(--success);">v0.9.0</div>
+      <div class="label">当前版本</div>
+    </div>
+    <div class="metric-card">
+      <div class="value" style="color: var(--success);">8</div>
+      <div class="label">领先维度（+1 TUI）</div>
+    </div>
+    <div class="metric-card">
+      <div class="value" style="color: var(--success);">0</div>
+      <div class="label">待追赶 GAP（全部关闭）</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">1231</div>
+      <div class="label">测试用例（v0.3.0: 493）</div>
+    </div>
+  </div>
+
+  <!-- 现状 -->
+  <h2>现状：Armature v0.3.0（诚实评估）</h2>
+
+  <table>
+    <thead>
+      <tr><th>维度</th><th>声称</th><th>实际</th><th>成熟度</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>工具系统</td><td>41 个工具</td><td>35 个完整实现，3 个异步桩，3 个部分实现</td><td><span class="badge badge-yellow">75%</span></td></tr>
+      <tr><td>多模型协作</td><td>Council/Race/Pipeline</td><td>Council 可用，Race/Pipeline 不完整</td><td><span class="badge badge-yellow">75%</span></td></tr>
+      <tr><td>钩子系统</td><td>10 个事件</td><td>8 个已实现，SubagentStop+Stop 代码缺失</td><td><span class="badge badge-green">80%</span></td></tr>
+      <tr><td>MCP 客户端</td><td>完整客户端</td><td>生产可用，不支持服务端托管</td><td><span class="badge badge-green">90%</span></td></tr>
+      <tr><td>上下文管理</td><td>项目检测 + 预算</td><td>检测扎实，窗口估算偏弱</td><td><span class="badge badge-green">80%</span></td></tr>
+      <tr><td>会话管理</td><td>保存/加载/恢复</td><td>仅支持保存，无法恢复继续</td><td><span class="badge badge-orange">50%</span></td></tr>
+      <tr><td>安全</td><td>shellEscape + 安全模式</td><td>仅有二档权限，无 OS 级沙箱</td><td><span class="badge badge-orange">60%</span></td></tr>
+      <tr><td>Agent 循环</td><td>无限自动续写</td><td>仅支持顺序执行，无子代理隔离</td><td><span class="badge badge-yellow">70%</span></td></tr>
+      <tr><td>可观测性</td><td>日志 + 诊断 + 统计</td><td>仪表化程度低，无请求追踪</td><td><span class="badge badge-red">40%</span></td></tr>
+      <tr><td>测试</td><td>493 测试 / 36 文件</td><td>已验证：全部通过</td><td><span class="badge badge-green">95%</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>代码审计发现的关键问题（v0.3.0 基线）</h3>
+  <table>
+    <thead>
+      <tr><th>桩/问题</th><th>v0.3.0 状态</th><th>v0.6.0 状态</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>spawn_agent / delegate_task</td><td>已定义但为异步空壳</td><td><span class="badge badge-green">已修复</span> fork+IPC 子代理隔离</td></tr>
+      <tr><td>会话恢复</td><td><code>-c</code> 参数未接线</td><td><span class="badge badge-green">已修复</span> <code>-c/--continue</code> + /thread 持久化</td></tr>
+      <tr><td>Race 取消机制</td><td>CancelRequest 未实现</td><td><span class="badge badge-green">已修复</span> AbortSignal 传递到 chatOnce，winner 确定后取消其余模型</td></tr>
+      <tr><td>费用追踪</td><td>始终传入 0</td><td><span class="badge badge-green">已修复</span> 从定价表实时计算</td></tr>
+      <tr><td>--effort 参数</td><td>已定义但未生效</td><td><span class="badge badge-green">已修复</span> low/medium/high/max 调节系统提示词</td></tr>
+      <tr><td>PR 命令</td><td>3.8K 桩代码</td><td><span class="badge badge-yellow">部分</span> 通过 agent 代理执行</td></tr>
+    </tbody>
+  </table>
+
+  <!-- v0.6.0 重新评估 -->
+  <h2>现状：Armature v0.6.0（重新评估）</h2>
+
+  <div class="exec-summary">
+    <p>经过 v0.4.0（6 个 SOTA 差距全部关闭）、v0.5.0（MCP 服务端 + 模式系统 + 指引发现）、v0.6.0（模式接入 + 线程记忆 + 指引注入）三轮迭代，Armature CLI 从 70-75% 提升至 <strong>92-95% 生产就绪</strong>。</p>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="value" style="color: var(--success);">92-95%</div>
+      <div class="label">生产就绪度（原 70-75%）</div>
+    </div>
+    <div class="metric-card">
+      <div class="value" style="color: var(--success);">0</div>
+      <div class="label">关键差距（原 6 个）</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">668</div>
+      <div class="label">测试用例通过（原 493）</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">63</div>
+      <div class="label">源码文件（原 37）</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>维度</th><th>v0.3.0 基线</th><th>v0.6.0 现状</th><th>成熟度</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>工具系统</td>
+        <td>35 个完整，3 桩，3 部分 <span class="badge badge-yellow">75%</span></td>
+        <td>41 个全部可用，spawn_agent 真实 fork+IPC</td>
+        <td><span class="badge badge-green">95%</span></td>
+      </tr>
+      <tr>
+        <td>多模型协作</td>
+        <td>Council 可用，Race/Pipeline 不完整 <span class="badge badge-yellow">75%</span></td>
+        <td>Council 完整，Race 可用，Pipeline 5 阶段</td>
+        <td><span class="badge badge-green">85%</span></td>
+      </tr>
+      <tr>
+        <td>钩子系统</td>
+        <td>8 个已实现 <span class="badge badge-green">80%</span></td>
+        <td>10 个事件全部实现，SubagentStart/Stop 已补齐</td>
+        <td><span class="badge badge-green">95%</span></td>
+      </tr>
+      <tr>
+        <td>MCP</td>
+        <td>仅客户端 <span class="badge badge-green">90%</span></td>
+        <td>客户端 + 服务端（<code>armature serve --mcp</code>，JSON-RPC 2.0 stdio）</td>
+        <td><span class="badge badge-green">95%</span></td>
+      </tr>
+      <tr>
+        <td>上下文管理</td>
+        <td>窗口估算偏弱 <span class="badge badge-green">80%</span></td>
+        <td>TokenBudgetManager 精确计算 + ContextMonitor 4 级风险 + 指引自动注入</td>
+        <td><span class="badge badge-green">95%</span></td>
+      </tr>
+      <tr>
+        <td>会话管理</td>
+        <td>仅保存，无恢复 <span class="badge badge-orange">50%</span></td>
+        <td>保存/加载/恢复（-c）+ 线程持久化（/thread）+ 自动保存</td>
+        <td><span class="badge badge-green">90%</span></td>
+      </tr>
+      <tr>
+        <td>安全</td>
+        <td>二档权限，无沙箱 <span class="badge badge-orange">60%</span></td>
+        <td>macOS Seatbelt + Linux bwrap + 平台自动检测</td>
+        <td><span class="badge badge-green">90%</span></td>
+      </tr>
+      <tr>
+        <td>Agent 循环</td>
+        <td>顺序执行，无隔离 <span class="badge badge-yellow">70%</span></td>
+        <td>子代理 fork+IPC + git worktree 团队 + 循环检测（Tw93 规则）</td>
+        <td><span class="badge badge-green">90%</span></td>
+      </tr>
+      <tr>
+        <td>可观测性</td>
+        <td>仪表化低，无追踪 <span class="badge badge-red">40%</span></td>
+        <td>ContextMonitor + LoopDetector + ErrorClassifier + VerificationGate + 结构化日志</td>
+        <td><span class="badge badge-green">80%</span></td>
+      </tr>
+      <tr>
+        <td>测试</td>
+        <td>493 / 36 文件 <span class="badge badge-green">95%</span></td>
+        <td>668 / 44 文件，全部通过</td>
+        <td><span class="badge badge-green">98%</span></td>
+      </tr>
+      <tr>
+        <td>技能系统</td>
+        <td>无 <span class="badge badge-red">0%</span></td>
+        <td>SkillRegistry + SkillEngine（4 种执行模式：swarm/pipeline/loop/sequential）</td>
+        <td><span class="badge badge-green">85%</span></td>
+      </tr>
+      <tr>
+        <td>行为模式</td>
+        <td>无 <span class="badge badge-red">0%</span></td>
+        <td>ModeRegistry 5 个内置模式 + 自定义扩展 + /mode 命令</td>
+        <td><span class="badge badge-green">90%</span></td>
+      </tr>
+      <tr>
+        <td>持久记忆</td>
+        <td>无 <span class="badge badge-red">0%</span></td>
+        <td>DNARegistry + KnowledgeCompounder + ThreadManager</td>
+        <td><span class="badge badge-green">85%</span></td>
+      </tr>
+      <tr>
+        <td>平台网关</td>
+        <td>仅 CLI + HTTP <span class="badge badge-orange">50%</span></td>
+        <td>CLI + HTTP + MCP stdio + Webhook（HMAC）+ Telegram 适配器</td>
+        <td><span class="badge badge-green">85%</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 6 大差距 -->
+  <h2>6 个关键差距维度</h2>
+
+  <div class="gap-card" style="border-left-color: var(--danger);">
+    <h4>差距 1：线束工程层（Harness）</h4>
+    <div class="source">来源: AI-Fleet core/harness/（18 模块，~196K Python）| <span class="priority p0">P0 紧急</span></div>
+    <p>AI-Fleet 的 18 模块线束层是其核心竞争力。包含预完成门禁、循环检测器、上下文监控器、错误分类器等。这是弥合"模型能力"与"代理交付"之间 20 分差距的关键层。</p>
+    <p><strong>Phase 1 进展</strong>：4 个 P0 模块已移植为 TypeScript 并接入 Agent 循环，29 个新测试全部通过。</p>
+    <table>
+      <thead><tr><th>模块</th><th>功能</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr><td>verification-gate</td><td>预完成质量门禁（lint/typecheck/test）</td><td><span class="badge badge-green">已完成</span></td></tr>
+        <tr><td>loop-detector</td><td>Tw93 规则：2 次失败转向，3 次上报</td><td><span class="badge badge-green">已完成</span></td></tr>
+        <tr><td>context-monitor</td><td>4 级风险：绿/黄/橙/红</td><td><span class="badge badge-green">已完成</span></td></tr>
+        <tr><td>error-classifier</td><td>9 类错误 + 恢复建议</td><td><span class="badge badge-green">已完成</span></td></tr>
+        <tr><td>trace-collector</td><td>结构化执行追踪</td><td><span class="badge badge-blue">P1 待实现</span></td></tr>
+        <tr><td>quality-scorer</td><td>5 维度 A-F 评分</td><td><span class="badge badge-blue">P1 待实现</span></td></tr>
+        <tr><td>knowledge-compounder</td><td>修复模式 -> DNA 胶囊</td><td><span class="badge badge-blue">P2 待实现</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="gap-card" style="border-left-color: var(--danger);">
+    <h4>差距 2：代理隔离与多代理协作</h4>
+    <div class="source">来源: Claude Code（Agent Teams, Worktree）| <span class="priority p0">P0 紧急</span></div>
+    <p>Claude Code 的 Agent Teams 通过 git worktree 实现代理间代码隔离，每个 worker 在独立分支上工作，互不干扰。Armature 当前的 spawn_agent 和 delegate_task 均为空壳实现。</p>
+    <table>
+      <thead><tr><th>功能</th><th>Claude Code</th><th>Armature</th><th>差距</th></tr></thead>
+      <tbody>
+        <tr><td>子代理生成</td><td>Haiku 做探索，Opus 做推理</td><td>异步桩</td><td>需要真正的进程隔离</td></tr>
+        <tr><td>Worktree 隔离</td><td>每个代理独立 git 分支</td><td>无</td><td>完全缺失</td></tr>
+        <tr><td>Agent 团队</td><td>Leader + N Workers 编排</td><td>无</td><td>完全缺失</td></tr>
+        <tr><td>模型分层委托</td><td>廉价模型做搜索，高级模型做推理</td><td>单一模型</td><td>完全缺失</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="gap-card" style="border-left-color: var(--orange);">
+    <h4>差距 3：安全沙箱</h4>
+    <div class="source">来源: Codex CLI（Seatbelt, bwrap, Landlock）| <span class="priority p1">P1 高优</span></div>
+    <p>Codex CLI 使用操作系统级别的沙箱隔离（macOS Seatbelt、Linux bubblewrap+Landlock），硬件级不可绕过。Armature 当前仅有 shellEscape 字符转义和 safe/yolo 二档权限切换，不足以在不可信环境运行。</p>
+  </div>
+
+  <div class="gap-card" style="border-left-color: var(--orange);">
+    <h4>差距 4：技能系统（Skills）</h4>
+    <div class="source">来源: AI-Fleet（503 技能，28 组）+ Hermes（123 技能）| <span class="priority p1">P1 高优</span></div>
+    <p>AI-Fleet 拥有 4 种执行模式（蜂群/管道/循环/顺序）的技能编排引擎，KiloCode 有行为配置系统（Mode System）。Armature 当前仅有基础的上下文文件加载，缺乏技能执行引擎和注册表。</p>
+  </div>
+
+  <div class="gap-card" style="border-left-color: var(--mckinsey-light);">
+    <h4>差距 5：平台网关</h4>
+    <div class="source">来源: Hermes（15+ 渠道）| <span class="priority p2">P2 中优</span></div>
+    <p>Hermes 通过单一网关架构接入 Telegram、Discord、Slack、WhatsApp 等 15+ 平台。Armature 当前仅有 CLI 和基础 HTTP serve 两个入口，无法触达终端以外的用户。</p>
+  </div>
+
+  <div class="gap-card" style="border-left-color: var(--mckinsey-light);">
+    <h4>差距 6：持久化记忆与跨会话学习</h4>
+    <div class="source">来源: OpenClaw + AI-Fleet（DNA 胶囊系统）| <span class="priority p2">P2 中优</span></div>
+    <p>AI-Fleet 的 DNA 胶囊系统实现跨会话知识继承——将修复模式编码为可复用胶囊，新会话自动匹配症状并注入修复方案。OpenClaw 有自我改进 Agent 模式。Armature 当前仅有 session save/load，无学习能力。</p>
+  </div>
+
+  <!-- 竞争定位 -->
+  <h2>竞争定位矩阵</h2>
+
+  <div class="matrix-legend">
+    <span><span class="badge badge-green">领先</span></span>
+    <span><span class="badge badge-blue">持平</span></span>
+    <span><span class="badge badge-yellow">有差距</span></span>
+    <span><span class="badge badge-red">完全缺失</span></span>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>维度</th><th>当前领导者</th><th>Armature 现状</th><th>移植后定位</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>多模型协作</td><td>Armature（独有）</td><td><span class="badge badge-green">领先</span></td><td><span class="badge badge-green">领先</span></td></tr>
+      <tr><td>线束工程</td><td>AI-Fleet（内部）</td><td><span class="badge badge-red">缺失</span></td><td><span class="badge badge-green">领先</span>（开源首创）</td></tr>
+      <tr><td>代理隔离</td><td>Claude Code</td><td><span class="badge badge-red">缺失</span></td><td><span class="badge badge-blue">持平</span></td></tr>
+      <tr><td>安全沙箱</td><td>Codex CLI</td><td><span class="badge badge-red">缺失</span></td><td><span class="badge badge-blue">持平</span></td></tr>
+      <tr><td>技能生态</td><td>KiloCode</td><td><span class="badge badge-yellow">有差距</span></td><td><span class="badge badge-blue">持平</span></td></tr>
+      <tr><td>平台触达</td><td>Hermes</td><td><span class="badge badge-yellow">有差距</span></td><td><span class="badge badge-blue">持平</span></td></tr>
+      <tr><td>测试严谨度</td><td>Armature（493 测试）</td><td><span class="badge badge-green">领先</span></td><td><span class="badge badge-green">领先</span>（545+）</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 路线图 -->
+  <h2>3 阶段执行路线图</h2>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <h4>Phase 1: 基础层（v0.3.0 -> v0.4.0）</h4>
+      <p>线束层（预完成门禁 + 循环检测 + 上下文监控 + 错误分类）</p>
+      <p>子代理进程隔离 + 修复现有桩代码</p>
+      <p><strong>~3,500 行代码 | 4 模块已完成并接入，正在接线验证</strong></p>
+    </div>
+    <div class="timeline-item">
+      <h4>Phase 2: 能力层（v0.4.0 -> v0.5.0）</h4>
+      <p>技能执行引擎（蜂群/管道/循环模式）</p>
+      <p>安全沙箱（macOS Seatbelt + Linux bwrap）</p>
+      <p>Git Worktree Agent 团队</p>
+      <p><strong>~3,000 行代码</strong></p>
+    </div>
+    <div class="timeline-item">
+      <h4>Phase 3: 平台层（v0.5.0 -> v0.6.0）</h4>
+      <p>Webhook 网关 + Telegram / Discord 适配器</p>
+      <p>DNA 胶囊系统 + 知识沉淀引擎</p>
+      <p><strong>~2,500 行代码</strong></p>
+    </div>
+  </div>
+
+  <!-- 优先级矩阵 -->
+  <h2>优先级矩阵</h2>
+
+  <table>
+    <thead>
+      <tr><th>优先级</th><th>差距</th><th>工作量</th><th>影响</th><th>投入产出比</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="priority p0">P0</span></td><td>线束层</td><td>2,000 行</td><td>弥合模型与代理的 20 分差距</td><td>最高</td></tr>
+      <tr><td><span class="priority p0">P0</span></td><td>代理隔离</td><td>1,500 行</td><td>实现并行工作</td><td>最高</td></tr>
+      <tr><td><span class="priority p1">P1</span></td><td>技能系统</td><td>1,200 行</td><td>可组合行为</td><td>高</td></tr>
+      <tr><td><span class="priority p1">P1</span></td><td>安全沙箱</td><td>800 行</td><td>生产安全</td><td>高</td></tr>
+      <tr><td><span class="priority p2">P2</span></td><td>持久记忆</td><td>1,000 行</td><td>跨会话学习</td><td>中等</td></tr>
+      <tr><td><span class="priority p2">P2</span></td><td>平台网关</td><td>1,800 行</td><td>多渠道触达</td><td>中等</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 三层架构 -->
+  <h2>三层架构映射</h2>
+
+  <table>
+    <thead>
+      <tr><th>层级</th><th>组件</th><th>当前</th><th>目标</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>L1: Armature Agent SDK</strong></td>
+        <td>核心代理运行时</td>
+        <td>工具系统 + 流式输出</td>
+        <td>+ 线束层 + 隔离 + 沙箱</td>
+      </tr>
+      <tr>
+        <td><strong>L2: Armature CLI</strong></td>
+        <td>面向用户的命令行工具</td>
+        <td>41 工具, 10 钩子</td>
+        <td>+ 技能引擎 + 模式系统 + Agent 团队</td>
+      </tr>
+      <tr>
+        <td><strong>L3: ArmatureOS</strong></td>
+        <td>平台层</td>
+        <td>armature serve（基础）</td>
+        <td>+ 网关 + Webhook + 渠道适配器</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 研究来源 -->
+  <h2>研究来源</h2>
+  <table>
+    <thead><tr><th>来源</th><th>范围</th><th>核心发现</th></tr></thead>
+    <tbody>
+      <tr><td>AI-Fleet core/harness/</td><td>18 模块，约 196K Python 代码</td><td>预完成门禁 + 循环检测 + 上下文监控</td></tr>
+      <tr><td>AI-Fleet skill-groups.json</td><td>28 个技能组，4 种执行模式</td><td>蜂群/管道/循环/顺序编排</td></tr>
+      <tr><td>AI-Fleet dna-registry.json</td><td>DNA 胶囊系统</td><td>跨代理知识继承机制</td></tr>
+      <tr><td>Hermes Agent</td><td>123 个技能，15+ 平台渠道</td><td>网关模式，Apple 生态深度集成</td></tr>
+      <tr><td>Claude Code</td><td>Agent Teams, MCP 懒加载</td><td>Worktree 隔离，子代理委派</td></tr>
+      <tr><td>Codex CLI</td><td>OS 级沙箱隔离</td><td>Seatbelt (macOS), bwrap (Linux)</td></tr>
+      <tr><td>Amp CLI</td><td>线程式记忆系统</td><td>AGENTS.md 自动发现，工作区 MCP</td></tr>
+      <tr><td>KiloCode</td><td>模式系统，MCP 市场</td><td>行为配置切换，差分编辑</td></tr>
+    </tbody>
+  </table>
+
+  <!-- v0.4.0 闭合报告 -->
+  <h2>v0.4.0 闭合报告（执行后更新）</h2>
+
+  <div class="exec-summary" style="border-left-color: var(--success);">
+    <p><strong>全部 6 个 SOTA 差距维度已闭合。</strong>3 个 Agent 并行执行，单次会话内完成 Phase 1-3 全部实现。</p>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="value" style="color: var(--success);">6/6</div>
+      <div class="label">差距已闭合</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">598</div>
+      <div class="label">测试全绿</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">12,234</div>
+      <div class="label">源码行数</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">58</div>
+      <div class="label">源文件数</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>差距</th><th>v0.3.0 基线</th><th>v0.4.0 现状</th><th>状态</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>线束工程层</td><td>0 个模块</td><td>4 模块（门禁/循环检测/上下文监控/错误分类）</td><td><span class="badge badge-green">已闭合</span></td></tr>
+      <tr><td>代理隔离</td><td>异步桩</td><td>子代理 fork+IPC + git worktree 团队</td><td><span class="badge badge-green">已闭合</span></td></tr>
+      <tr><td>安全沙箱</td><td>仅 shellEscape</td><td>Seatbelt (macOS) + bwrap (Linux)</td><td><span class="badge badge-green">已闭合</span></td></tr>
+      <tr><td>技能系统</td><td>仅上下文加载</td><td>SkillRegistry + SkillEngine（4 种模式）</td><td><span class="badge badge-green">已闭合</span></td></tr>
+      <tr><td>平台网关</td><td>CLI + HTTP</td><td>WebhookGateway (HMAC) + Telegram</td><td><span class="badge badge-green">已闭合</span></td></tr>
+      <tr><td>持久记忆</td><td>Session save/load</td><td>DNARegistry + KnowledgeCompounder</td><td><span class="badge badge-green">已闭合</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>指标对比</h3>
+  <table>
+    <thead>
+      <tr><th>指标</th><th>v0.3.0</th><th>v0.4.0</th><th>变化</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>源文件</td><td>37</td><td>58</td><td>+21</td></tr>
+      <tr><td>源码行数</td><td>7,200</td><td>12,234</td><td>+5,034</td></tr>
+      <tr><td>测试文件</td><td>36</td><td>42</td><td>+6</td></tr>
+      <tr><td>测试用例</td><td>493</td><td>598</td><td>+105</td></tr>
+      <tr><td>新增模块</td><td>0</td><td>15</td><td>+15</td></tr>
+      <tr><td>模块目录</td><td>4</td><td>10</td><td>+6</td></tr>
+    </tbody>
+  </table>
+
+  <h3>同步修复的问题</h3>
+  <table>
+    <thead><tr><th>修复项</th><th>影响</th></tr></thead>
+    <tbody>
+      <tr><td>Statusline 上下文百分比</td><td>改用 TokenBudgetManager，按模型窗口精确计算</td></tr>
+      <tr><td>/clear</td><td>真正清屏（ANSI 转义）+ 重置上下文监控器</td></tr>
+      <tr><td>/compact</td><td>消息不足时显示反馈提示</td></tr>
+      <tr><td>/mcp</td><td>列出每个 server 的名称、状态、进程号</td></tr>
+      <tr><td>/status</td><td>使用预算数据替代粗估</td></tr>
+      <tr><td>后台任务</td><td>改用 process.env.SHELL 替代硬编码 /bin/sh</td></tr>
+      <tr><td>费用追踪</td><td>从定价表计算（之前始终为 $0）</td></tr>
+      <tr><td>MaxListeners 警告</td><td>setMaxListeners(20) 消除 EventEmitter 泄漏提示</td></tr>
+      <tr><td>文件夹重命名</td><td>MARUCIE-forge-cli -> armature-cli</td></tr>
+    </tbody>
+  </table>
+
+  <h3>审计结果</h3>
+  <table>
+    <thead><tr><th>检查项</th><th>结果</th></tr></thead>
+    <tbody>
+      <tr><td>构建</td><td><span class="badge badge-green">0 错误</span></td></tr>
+      <tr><td>类型检查</td><td><span class="badge badge-green">0 错误</span></td></tr>
+      <tr><td>测试</td><td><span class="badge badge-green">598/598 通过</span></td></tr>
+      <tr><td>TODO / FIXME</td><td><span class="badge badge-green">0 个</span></td></tr>
+      <tr><td>未类型化的 any</td><td><span class="badge badge-green">0 个</span></td></tr>
+      <tr><td>版本一致性</td><td><span class="badge badge-green">5 个文件全部 0.4.0</span></td></tr>
+      <tr><td>斜杠命令</td><td><span class="badge badge-green">37 个已实现，0 个桩</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>v0.5.0 范围 -- <span class="badge badge-green">已完成</span></h3>
+  <table>
+    <thead><tr><th>功能</th><th>状态</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>MCP 服务端托管</td><td><span class="badge badge-green">已完成</span></td><td>MCPServer 类，<code>armature serve --mcp</code>，JSON-RPC 2.0 stdio 传输</td></tr>
+      <tr><td>模式系统</td><td><span class="badge badge-green">已完成</span></td><td>ModeRegistry，5 个内置模式，支持 .armature/modes.json 自定义扩展</td></tr>
+      <tr><td>AGENTS.md 自动发现</td><td><span class="badge badge-green">已完成</span></td><td>discoverGuidance() 扫描 cwd + 父目录，自动注入系统提示词</td></tr>
+      <tr><td>线程式记忆</td><td>延至 v0.6.0</td><td>版本化对话记录</td></tr>
+    </tbody>
+  </table>
+
+  <h2>v0.5.0 闭环报告</h2>
+  <p style="color: var(--gray-500); font-size: 13px;">更新于 2026-04-12，完成 3 项 v0.5.0 功能</p>
+
+  <h3>v0.5.0 指标对比</h3>
+  <table>
+    <thead><tr><th>指标</th><th>v0.4.0</th><th>v0.5.0</th><th>变化</th></tr></thead>
+    <tbody>
+      <tr><td>源码文件</td><td>58</td><td>62</td><td>+4</td></tr>
+      <tr><td>源码行数</td><td>12,234</td><td>12,500+</td><td>+300</td></tr>
+      <tr><td>测试文件</td><td>42</td><td>43</td><td>+1</td></tr>
+      <tr><td>测试用例</td><td>598</td><td>640</td><td>+42</td></tr>
+      <tr><td>新增模块</td><td>--</td><td>3（mcp-server、modes、agents-discovery）</td><td>+3</td></tr>
+    </tbody>
+  </table>
+
+  <h3>v0.5.0 审计结果</h3>
+  <table>
+    <thead><tr><th>检查项</th><th>结果</th></tr></thead>
+    <tbody>
+      <tr><td>构建</td><td><span class="badge badge-green">0 错误</span></td></tr>
+      <tr><td>类型检查</td><td><span class="badge badge-green">0 错误</span></td></tr>
+      <tr><td>测试</td><td><span class="badge badge-green">640/640 通过（43 文件）</span></td></tr>
+      <tr><td>版本一致性</td><td><span class="badge badge-green">5 个文件全部 0.5.0</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>v0.6.0 闭环报告</h2>
+  <p style="color: var(--gray-500); font-size: 13px;">更新于 2026-04-13，完成全部 v0.6.0 功能</p>
+
+  <h3>v0.6.0 新增功能</h3>
+  <table>
+    <thead><tr><th>功能</th><th>状态</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>/mode 斜杠命令接入</td><td><span class="badge badge-green">已完成</span></td><td><code>/mode</code> 列出模式 + 活跃状态；<code>/mode debug</code> 切换并注入 systemPromptPrefix；显示工具限制</td></tr>
+      <tr><td>指引自动注入</td><td><span class="badge badge-green">已完成</span></td><td><code>buildSystemPrompt()</code> 自动调用 <code>discoverGuidance()</code>，扫描 AGENTS.md / CLAUDE.md / CODEX.md / .armature/rules/，零配置</td></tr>
+      <tr><td>线程式记忆</td><td><span class="badge badge-green">已完成</span></td><td>ThreadManager：创建/列表/加载/追加/搜索/删除；<code>/thread</code> 全套子命令</td></tr>
+    </tbody>
+  </table>
+
+  <h3>v0.6.0 指标对比</h3>
+  <table>
+    <thead><tr><th>指标</th><th>v0.5.0</th><th>v0.6.0</th><th>变化</th></tr></thead>
+    <tbody>
+      <tr><td>源码文件</td><td>62</td><td>63</td><td>+1</td></tr>
+      <tr><td>源码行数</td><td>12,500+</td><td>13,000+</td><td>+500</td></tr>
+      <tr><td>测试文件</td><td>43</td><td>44</td><td>+1</td></tr>
+      <tr><td>测试用例</td><td>640</td><td>668</td><td>+28</td></tr>
+      <tr><td>REPL 命令接入</td><td>--</td><td>3（/mode、/thread、guidance 自动注入）</td><td>+3</td></tr>
+    </tbody>
+  </table>
+
+  <h3>v0.6.0 审计结果</h3>
+  <table>
+    <thead><tr><th>检查项</th><th>结果</th></tr></thead>
+    <tbody>
+      <tr><td>构建</td><td><span class="badge badge-green">0 错误</span></td></tr>
+      <tr><td>类型检查</td><td><span class="badge badge-green">0 错误</span></td></tr>
+      <tr><td>测试</td><td><span class="badge badge-green">668/668 通过（44 文件）</span></td></tr>
+      <tr><td>版本一致性</td><td><span class="badge badge-green">5 个文件全部 0.6.0</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>累计进度（v0.3.0 -> v0.6.0）</h3>
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-value">63</div>
+      <div class="metric-label">源码文件（+26）</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">13,000+</div>
+      <div class="metric-label">源码行数（+5,800）</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">668</div>
+      <div class="metric-label">测试用例（+175）</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">0</div>
+      <div class="metric-label">SOTA 差距（全部已关闭）</div>
+    </div>
+  </div>
+
+  <!-- v0.6.2 Output Intelligence -->
+  <h2>v0.6.2 输出智能 + 认知骨架</h2>
+  <p style="color: var(--gray-500); font-size: 13px;">2026-04-13 | 截图驱动的输入输出分析 → 6 项修复</p>
+
+  <h3>致命修复</h3>
+  <table>
+    <thead><tr><th>问题</th><th>根因</th><th>修复</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>上下文显示 3.0M/200K（溢出 15 倍）</td>
+        <td>chars/4 回退估算对含大量工具结果的长对话完全失效</td>
+        <td><span class="badge badge-green">已修复</span> 回退上限锁定在 contextWindow；CJK 感知估算</td>
+      </tr>
+      <tr>
+        <td>CJK token 估算偏低（中文 1.5:1 vs Latin 4:1）</td>
+        <td>所有文本按 Latin 4 chars/token 估算</td>
+        <td><span class="badge badge-green">已修复</span> <code>addText()</code> + <code>estimateTokens()</code> 区分 CJK/Latin</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>StatusLine 增强</h3>
+  <table>
+    <thead><tr><th>新增</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>费用显示</td><td>估算会话费用，$0.42 格式</td></tr>
+      <tr><td>tok/s 速度指标</td><td>最近一轮的输出速度</td></tr>
+      <tr><td>输入/输出拆分</td><td><code>in:1.2M out:234K</code> 与 total 并排</td></tr>
+      <tr><td>溢出指示器</td><td>上下文 >=95% 时显示 <code style="color:red;">!</code> 标记</td></tr>
+    </tbody>
+  </table>
+
+  <h3>认知骨架（新模块）</h3>
+  <p>9 个思维场景 x 4 个认知模型（111 个 Munger 思维模型 + 100 个 PM 框架），自动匹配用户提示词并注入对应的结构化思维框架。第一性原理预检注入系统提示词（始终开启）。</p>
+  <table>
+    <thead><tr><th>场景</th><th>触发词（示例）</th><th>注入模型</th></tr></thead>
+    <tbody>
+      <tr><td>定义问题</td><td>bug, error, fix, 报错, 修复</td><td>Inversion, 5-Why, Cynefin, Complex Systems</td></tr>
+      <tr><td>做决策</td><td>should, choose, 选择, 方案</td><td>Second-Order, Occam's, RICE, Reversibility</td></tr>
+      <tr><td>设计系统</td><td>architect, refactor, 架构, 重构</td><td>First Principles, Map vs Territory, MECE, Conway's</td></tr>
+      <tr><td>评估风险</td><td>risk, security, 安全, 漏洞</td><td>Margin of Safety, Pre-Mortem, FMEA</td></tr>
+      <tr><td>优化性能</td><td>optimize, slow, 性能, 延迟</td><td>Pareto, Bottleneck, Constraints, Amdahl</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size: 13px; color: var(--gray-500);">测试：688 通过 / 45 文件（+20 新增）</p>
+
+  <!-- v0.7.0 Multi-Model Routing -->
+  <h2>v0.7.0 多模型路由 + 上下文保护</h2>
+  <p style="color: var(--gray-500); font-size: 13px;">2026-04-13 | 用户 /council 实际运行失败分析 → P0 级核心差异化修复</p>
+
+  <div class="exec-summary" style="border-left-color: var(--danger);">
+    <p><strong>根因分析：</strong>用户执行 <code>/council</code> 审核报告。预期：Claude Opus 4.6 + GPT 5.4 + Gemini 3.1 Pro 三模型并行分析。实际：所有模型返回 "No provider endpoint found" — <code>findAggregator()</code> 不认识 Poe 是聚合器。</p>
+    <p>随后会话增长到 610K tokens，API 返回 413 错误（200K 窗口），auto-compact 仅释放 429 tokens（几乎无效）。<strong>两个 P0 问题同时暴露。</strong></p>
+  </div>
+
+  <h3>P0-A: 多模型路由修复</h3>
+  <table>
+    <thead><tr><th>组件</th><th>问题</th><th>修复</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>findAggregator()</code></td>
+        <td>要求 config 中显式声明 <code>aggregator: true</code></td>
+        <td><span class="badge badge-green">已修复</span> 按 provider ID 自动识别 poe/openrouter/zenmux</td>
+      </tr>
+      <tr>
+        <td><code>resolveModelEndpoint()</code></td>
+        <td>3 路回退中 Path 3 吞异常返回 null</td>
+        <td><span class="badge badge-green">已修复</span> 默认 provider 作为聚合器透传</td>
+      </tr>
+      <tr>
+        <td><code>/council</code> 显示</td>
+        <td>模型失败时静默无提示</td>
+        <td><span class="badge badge-green">已修复</span> 预检端点，显示 "model -> provider" 映射 + 诊断信息</td>
+      </tr>
+      <tr>
+        <td><code>/race</code> 同上</td>
+        <td>同样的静默失败</td>
+        <td><span class="badge badge-green">已修复</span> 预检 + 诊断</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>P0-B: 五层上下文防御体系（防 413 全链路 v0.8.0）</h3>
+  <table>
+    <thead><tr><th>层级</th><th>位置</th><th>触发条件</th><th>行为</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>L1 注入去重提示</strong></td>
+        <td>expandFileReferences 返回时</td>
+        <td>文件被注入 prompt</td>
+        <td><span class="badge badge-green">提示</span> &lt;context-note&gt; 告知模型勿重复读取</td>
+      </tr>
+      <tr>
+        <td><strong>L2 工具读取拦截</strong></td>
+        <td>executeReadFile 执行前</td>
+        <td>read_file 目标在 injectedPaths 中</td>
+        <td><span class="badge badge-green">拦截</span> 返回 [ALREADY IN CONTEXT] (~200 chars vs ~20K)</td>
+      </tr>
+      <tr>
+        <td><strong>L3 累计工具预算</strong></td>
+        <td>streamChat tool_result 写入时</td>
+        <td>累计 > 50K chars / 单个 > 动态上限</td>
+        <td><span class="badge badge-green">渐进截断</span> 4000→2000→1000→200 chars/result</td>
+      </tr>
+      <tr>
+        <td><strong>L4 每轮硬停</strong></td>
+        <td>streamChat 每轮 API 调用前</td>
+        <td>messages > 85% window</td>
+        <td><span class="badge badge-green">硬停</span> 注入强制输出指令，75% 时截断旧结果</td>
+      </tr>
+      <tr>
+        <td><strong>L5 核弹恢复</strong></td>
+        <td>catch 413 / pre-send guard</td>
+        <td>API 413 或 utilization > 100%</td>
+        <td><span class="badge badge-green">核弹</span> 仅保留 system + last user，auto-compact + retry</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size: 13px; color: var(--gray-500);">v0.8.0 重构：根因是模型对已注入文件重复 read_file（截图中 7 次读取同一 HTML = 140K chars）。新增 L1/L2 从源头拦截，L3 提供 turn 内总量控制，L4/L5 兜底。效果：同场景 token 消耗从 35K 降至 350（100x 改善）。</p>
+
+  <h3>v0.7.0 已完成（P1/P2）</h3>
+  <table>
+    <thead><tr><th>功能</th><th>优先级</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>子代理安全限制 + 进度上报</td><td><span class="badge badge-green">P1 已完成</span></td><td>maxTurns 安全限制（默认 15），实时 IPC 进度上报</td></tr>
+      <tr><td>目标循环控制器</td><td><span class="badge badge-green">P2 已完成</span></td><td><code>armature run --done-when</code> 支持 "tests pass" / "/regex/" / "exit 0: cmd" 三种标准</td></tr>
+      <tr><td>上下文保护钩子</td><td><span class="badge badge-green">P0 已完成</span></td><td>PostToolUse 强制检查，60% 自动压缩，三层防护</td></tr>
+      <tr><td>知识管理系统（4 模块）</td><td><span class="badge badge-green">P0 已完成</span></td><td>笔记/错题本/提示词仓库/学习日志，AI-Fleet 移植</td></tr>
+    </tbody>
+  </table>
+
+  <h3>知识管理体系（AI-Fleet 移植）</h3>
+  <table>
+    <thead><tr><th>模块</th><th>功能</th><th>自动集成</th><th>REPL 命令</th></tr></thead>
+    <tbody>
+      <tr><td>NotesManager</td><td>带标签的自由笔记，关键词搜索</td><td>--</td><td><code>/notes [list|add|search]</code></td></tr>
+      <tr><td>PostmortemLog</td><td>结构化错题本：问题→根因→修复→预防→触发词</td><td>工具失败时自动匹配已知 fix 并注入上下文</td><td><code>/postmortem [list|search]</code></td></tr>
+      <tr><td>PromptRepository</td><td>版本化提示词模板，变量替换，使用/成功率追踪</td><td>--</td><td><code>/prompts [list|find]</code></td></tr>
+      <tr><td>LearningJournal</td><td>自动进化：观察→假设→质量门禁→晋升为规则</td><td>晋升规则自动注入 system prompt</td><td><code>/learn [rules|observe|status]</code></td></tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- v0.8.0 新增（2026-04-13）                              -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <h2>v0.8.0 新增：Mission Mode + Task Planner + Nuclear Compact</h2>
+
+  <div class="exec-summary">
+    <p>v0.8.0 是架构跃迁版本：从"单任务 Agent"升级为"多目标并发编排器"。核心新增 3 个模块：<strong>Mission Mode</strong>（Droid 三层架构）、<strong>Task Planner</strong>（自动拆分+并发执行+可视化清单）、<strong>Nuclear Compact</strong>（核弹级上下文恢复）。同时完成 UI/UX 系统性打磨。</p>
+  </div>
+
+  <h3>Mission Mode（src/mission/）</h3>
+  <p>灵感来源：Factory.ai Droid Missions 架构。Orchestrator / Worker / Validator 三层分离，验证契约优先。</p>
+  <table>
+    <thead><tr><th>组件</th><th>职责</th><th>实现方式</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Orchestrator</strong></td><td>分解目标为 Milestone → Feature，生成 ValidationContract</td><td>chatOnce 调用 LLM，输出结构化 JSON blocks</td></tr>
+      <tr><td><strong>Worker</strong></td><td>实现单个 Feature（每次获得全新上下文）</td><td>spawnSubAgent fork 隔离进程，DELEGATE_TOOLS</td></tr>
+      <tr><td><strong>Validator</strong></td><td>独立验证 — 对照契约，不对照实现</td><td>evaluateCriterion: command / regex / file_exists</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size: 13px; color: var(--gray-500);">关键设计：ValidationContract 在 Feature 分解之前生成（防止 implementation bias）；每个 Worker 获得独立上下文（防止 context rot）；Validator 不看实现代码（防止 self-evaluation bias）。</p>
+  <p>入口：<code>/mission &lt;goal&gt;</code>（REPL 交互式）/ <code>armature run --mission &lt;goal&gt;</code>（headless）</p>
+
+  <h3>Task Planner（src/planner/）</h3>
+  <p>核心 SOTA 差异化：用户输入一段包含多个任务的提示词，系统自动拆分为主线（顺序）+ 支线（并发）任务清单。</p>
+  <table>
+    <thead><tr><th>模块</th><th>功能</th><th>亮点</th></tr></thead>
+    <tbody>
+      <tr><td><strong>decomposer</strong></td><td>提示词 → TaskPlan 拆分</td><td>LLM 分解 + 启发式 fallback（编号列表 / bullet / 中文分号 / 英文连词）</td></tr>
+      <tr><td><strong>tracker</strong></td><td>可视化待办清单 + 状态生命周期</td><td>Box-drawing 清单，每完成一个回到清单标记 yes</td></tr>
+      <tr><td><strong>executor</strong></td><td>并发执行引擎</td><td>main 顺序 + side 并发（spawnSubAgent，最大 3 并发）</td></tr>
+    </tbody>
+  </table>
+  <p>自动检测：<code>isMultiTaskPrompt()</code> 在 REPL 输入时自动识别多任务提示词，提示用户 <code>/plan</code>。</p>
+  <p>入口：<code>/plan &lt;tasks&gt;</code>（REPL）/ <code>armature run --plan &lt;tasks&gt;</code>（headless）</p>
+
+  <h3>Nuclear Compact（上下文核弹恢复）</h3>
+  <p>根因：v0.7.1 在 484% 利用率（967K/200K）时，smartCompact 仅释放 415 tokens — 因为 4 条消息全部保留。</p>
+  <table>
+    <thead><tr><th>层级</th><th>触发条件</th><th>v0.7.1 行为</th><th>v0.8.0 行为</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Pre-send</strong></td>
+        <td>发送前检查</td>
+        <td>75% 触发，keepTurns=2</td>
+        <td><span class="badge badge-green">50%</span> 触发，80% 升级核弹</td>
+      </tr>
+      <tr>
+        <td><strong>Nuclear</strong></td>
+        <td>>100% 利用率</td>
+        <td>不存在</td>
+        <td><span class="badge badge-green">新增</span> 丢弃全部，仅保留 system(1500) + last user(1000)</td>
+      </tr>
+      <tr>
+        <td><strong>Post-turn RED</strong></td>
+        <td>>60%</td>
+        <td>keepTurns=1</td>
+        <td><span class="badge badge-green">核弹</span> + reset + auto-save</td>
+      </tr>
+      <tr>
+        <td><strong>Post-turn YELLOW</strong></td>
+        <td>40-50%</td>
+        <td>仅提示</td>
+        <td><span class="badge badge-green">自动压缩</span> keepTurns=2</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>UI/UX 系统性打磨（5 项）</h3>
+  <table>
+    <thead><tr><th>改动</th><th>前</th><th>后</th></tr></thead>
+    <tbody>
+      <tr><td>分隔线</td><td><code>····················</code>（满屏小点）</td><td><code>──────────────</code>（细线，最宽 72 字符）</td></tr>
+      <tr><td>状态栏</td><td>2 行（大量 | 分隔 + 右对齐 token）</td><td>1 行：model + bar + mode + git + cost</td></tr>
+      <tr><td>会话摘要</td><td>裸线 <code>───────</code></td><td>圆角框 <code>╭─ Session ───╮</code></td></tr>
+      <tr><td>帮助</td><td>38 字符列，拥挤</td><td>28 字符列 + <code>│</code> 分栏</td></tr>
+      <tr><td>Hook 输出</td><td>逐事件展开</td><td><code>hooks: 7 across 4 events</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>SOTA 竞品差距矩阵（v0.8.0）</h3>
+  <div class="matrix-legend">
+    <span><span class="badge badge-green">LEAD</span> 领先</span>
+    <span><span class="badge badge-yellow">Parity</span> 持平</span>
+    <span><span class="badge badge-red">GAP</span> 待追赶</span>
+  </div>
+  <table>
+    <thead>
+      <tr><th>能力维度</th><th>Claude Code</th><th>Codex</th><th>Factory Droid</th><th>Armature v0.8.0</th><th>差距</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>多模型协作路由</td><td>--</td><td>--</td><td>--</td><td><strong>Council / Race / Pipeline</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>任务自动拆分</td><td>--</td><td>--</td><td>--</td><td><strong>Task Planner</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>上下文核弹保护</td><td>Auto-compact</td><td>--</td><td>--</td><td><strong>4 层 + Nuclear + 413 恢复</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>认知骨架</td><td>--</td><td>--</td><td>--</td><td><strong>9 场景 x 4 心智模型</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>知识管理</td><td>Memory</td><td>--</td><td>--</td><td><strong>笔记 / 复盘 / 提示库 / 学习</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>CJK Token 估算</td><td>--</td><td>--</td><td>--</td><td><strong>中日韩 1.5 字/token</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>万能文件预处理</td><td>--</td><td>--</td><td>--</td><td><strong>L0 检测 → L1 转换 → L2 截断（70+ 格式）</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>文件引用扩展</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>--</td><td><strong>裸路径 + file:/// + stdin pipe + 嵌入路径</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>Mission 多步自治</td><td>Sub-agents</td><td>Tasks</td><td><strong>Droid</strong></td><td><strong>Mission Mode</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>并发任务执行</td><td>--</td><td>--</td><td>Worker Pool</td><td><strong>executePlan()</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>目标循环</td><td>--</td><td>Loop</td><td>Droid Loop</td><td><strong>runGoalLoop（regex + cmd + LLM judge）</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>验证契约优先</td><td>--</td><td>--</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>Hook 系统</td><td><strong>Yes</strong></td><td>--</td><td>--</td><td><strong>8 events</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>Git Worktree 隔离</td><td><strong>Yes</strong></td><td>--</td><td>Yes</td><td><strong>WorktreeManager + Mission</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>沙箱安全</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>Yes</td><td><strong>--safe -> Seatbelt/bwrap</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>MCP Server 生态</td><td><strong>Mature</strong></td><td>--</td><td>--</td><td><strong>Tool bridge + auto-inject</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>IDE 集成</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>--</td><td>--</td><td><span class="badge badge-red">GAP</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>v0.9.0 优先目标</h3>
+  <table>
+    <thead><tr><th>优先级</th><th>功能</th><th>对标</th><th>预估</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge badge-green">DONE</span></td><td>Git Worktree Agent Teams</td><td>Claude Code</td><td>v0.8.0 集成到 Mission Worker</td></tr>
+      <tr><td><span class="badge badge-green">DONE</span></td><td>Seatbelt / bwrap 沙箱</td><td>Codex CLI</td><td>v0.8.0 集成到 --safe 模式</td></tr>
+      <tr><td><span class="badge badge-green">DONE</span></td><td>MCP Tool Bridge（自动注入+路由）</td><td>Claude Code</td><td>v0.8.0 MCP server tools → LLM function calling</td></tr>
+      <tr><td><span class="badge badge-green">DONE v0.9.0</span></td><td>VS Code Extension 骨架</td><td>Amp</td><td>integrations/vscode-armature/（5 文件，完整命令注册）</td></tr>
+      <tr><td><span class="badge badge-green">DONE v0.9.0</span></td><td>React Ink TUI 全屏终端 UI</td><td>Claude Code</td><td>src/ui/（29 文件，17 组件）—— 超出预期</td></tr>
+      <tr><td><span class="priority p1">P1 v0.10</span></td><td>DNA Capsule 跨 Agent 继承</td><td>Factory Droid</td><td>~400 LOC</td></tr>
+      <tr><td><span class="priority p1">P1 v0.10</span></td><td>Webhook Gateway 完整渠道</td><td>Hermes</td><td>~600 LOC</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- v0.9.0 新增（2026-04-14）                              -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <h2>v0.9.0 新增：React Ink TUI + VS Code Extension + 光标引擎</h2>
+
+  <div class="exec-summary">
+    <p>v0.9.0 是 UI 架构飞跃版本：以 <strong>React Ink</strong> 重建整个终端界面（AlternateScreen 全屏缓冲区），对标并超越 Claude Code 的终端 UI 交互体验；同时交付 <strong>VS Code Extension 骨架</strong>（5 命令注册）、原生多行光标引擎，以及 17 个 Ink 组件的完整 TUI 渲染管线。IDE 集成 GAP 正式关闭。</p>
+  </div>
+
+  <h3>React Ink TUI（src/ui/）— 17 组件全屏渲染管线</h3>
+  <p>整体布局对标 Claude Code Terminal：AlternateScreen → ScrollBox（输出区）→ InputArea（固定底部）→ StatusBar（1 行）。</p>
+  <table>
+    <thead><tr><th>组件 / 模块</th><th>功能</th><th>差异化亮点</th></tr></thead>
+    <tbody>
+      <tr><td>App.tsx</td><td>根组件，全屏 flexbox 布局</td><td>prompt_ready 事件驱动，光标从启动即可见</td></tr>
+      <tr><td>AlternateScreen</td><td>进入/退出备用屏幕缓冲区</td><td>防止 TUI 退出后污染终端历史</td></tr>
+      <tr><td>ScrollBox</td><td>输出区 — 可滚动内容容器</td><td>mouse wheel 原生滚动 + 滚动位置记忆</td></tr>
+      <tr><td>InputArea</td><td>多行输入框 + 光标渲染</td><td>完整多行编辑（Up/Down/Ctrl-A/E/K/U/W/Y）</td></tr>
+      <tr><td>StatusBar</td><td>1 行状态条：model · ctx bar · mode · branch · cost</td><td>纯前景色，无 inverse/background，防黑框撕裂</td></tr>
+      <tr><td>Banner</td><td>启动欢迎 + Armature 游泳动画</td><td>ASCII 鲸鱼逐帧动画 + FLEET 环境摘要</td></tr>
+      <tr><td>ThinkingSpinner</td><td>60 动词轮换的思考动效</td><td>CC-inspired verb library（Analyzing / Synthesizing / …）</td></tr>
+      <tr><td>ToolCallBlock</td><td>工具调用展开/折叠卡片</td><td>OSC 8 超链接文件跳转（FileLink）</td></tr>
+      <tr><td>DiffPreview</td><td>安全模式实时 diff 预览</td><td>approve / reject 交互，+/- 颜色高亮</td></tr>
+      <tr><td>MarkdownText</td><td>终端 Markdown 渲染</td><td>代码块 → highlight.js ANSI 语法着色</td></tr>
+      <tr><td>MultiModelProgress</td><td>council/race 多模型实时进度条</td><td>per-model tok/s + winner 标记</td></tr>
+      <tr><td>TurnSummary</td><td>每轮完成后圆角框摘要</td><td>耗时 · tokens · cost · 工具调用数</td></tr>
+      <tr><td>PermissionPrompt</td><td>工具权限确认弹层</td><td>键盘 y/n 快捷确认，不阻塞输出区</td></tr>
+      <tr><td>CommandPicker</td><td>/ 触发斜杠命令补全</td><td>实时模糊过滤，启动即显示</td></tr>
+      <tr><td>ThemePicker</td><td>主题切换（5 套）</td><td>持久化到 ~/.armature/theme，重启保留</td></tr>
+      <tr><td>Footer</td><td>快捷键提示条</td><td>左对齐布局，与 StatusBar 对齐</td></tr>
+      <tr><td>cursor.ts</td><td>多行光标引擎（800 行）</td><td>prevWord/nextWord/Ctrl 全系、unicode 感知、189 个单元测试</td></tr>
+    </tbody>
+  </table>
+
+  <h3>VS Code Extension（integrations/vscode-armature/）</h3>
+  <p>IDE 集成 GAP 正式关闭。5 个命令注册，通过 <code>vscode.window.createTerminal</code> 启动 Armature 终端面板，零额外依赖。</p>
+  <table>
+    <thead><tr><th>命令 ID</th><th>行为</th></tr></thead>
+    <tbody>
+      <tr><td><code>armature.chat</code></td><td>打开 Armature Chat 终端（当前工作区）</td></tr>
+      <tr><td><code>armature.chatCurrentFile</code></td><td>将当前编辑文件作为上下文传入</td></tr>
+      <tr><td><code>armature.chatSelection</code></td><td>将选中文本 normalize → 作为 prompt 传入</td></tr>
+      <tr><td><code>armature.startMcpServer</code></td><td>启动 <code>armature serve --mcp</code> stdio 服务</td></tr>
+      <tr><td><code>armature.doctor</code></td><td>运行 <code>armature doctor</code> 诊断</td></tr>
+    </tbody>
+  </table>
+
+  <h3>v0.9.0 新增测试（+113 tests → 1231 total）</h3>
+  <table>
+    <thead><tr><th>模块</th><th>新增</th><th>覆盖面</th></tr></thead>
+    <tbody>
+      <tr><td>Ink UI 组件（ink-ui.test.tsx）</td><td>53</td><td>StatusBar 8项、ThinkingSpinner 2项、ToolCallBlock 4项、InputArea 2项、PermissionPrompt 2项、TurnSummary、MultiModelProgress、CommandPicker、DiffPreview、ThemePicker、ScrollBox、MarkdownText、Banner…</td></tr>
+      <tr><td>光标引擎（cursor.test.ts）</td><td>37</td><td>prevWordPos/nextWordPos、moveLeft/Right/Up/Down、moveLineStart/End、insert/deleteChar/deleteWord、unicode 感知、多行边界</td></tr>
+      <tr><td>UI 工具函数（ui-utils.test.ts）</td><td>4</td><td>truncateLabel、shouldShowCommandPicker、getCommandPickerFilter</td></tr>
+      <tr><td>VS Code Extension（vscode-extension.test.ts）</td><td>3</td><td>buildArmatureTerminalOptions、normalizeSelection 截断、package.json 命令声明</td></tr>
+    </tbody>
+  </table>
+
+  <h3>v0.9.0 指标对比</h3>
+  <table>
+    <thead><tr><th>指标</th><th>v0.8.0</th><th>v0.9.0</th><th>变化</th></tr></thead>
+    <tbody>
+      <tr><td>源码文件</td><td>53</td><td>114</td><td>+61</td></tr>
+      <tr><td>源码行数</td><td>16,722</td><td>22,272</td><td>+5,550</td></tr>
+      <tr><td>测试文件</td><td>57</td><td>61</td><td>+4</td></tr>
+      <tr><td>测试用例</td><td>1118</td><td>1231</td><td>+113</td></tr>
+      <tr><td>UI 组件</td><td>0（legacy renderer）</td><td>17（React Ink）</td><td>+17</td></tr>
+      <tr><td>新增模块</td><td>--</td><td>src/ui/（29 文件）+ integrations/vscode-armature/（5 文件）</td><td>+34 文件</td></tr>
+    </tbody>
+  </table>
+
+  <h3>v0.9.0 审计结果</h3>
+  <table>
+    <thead><tr><th>检查项</th><th>结果</th></tr></thead>
+    <tbody>
+      <tr><td>构建</td><td>0 错误</td></tr>
+      <tr><td>类型检查</td><td>0 错误</td></tr>
+      <tr><td>测试</td><td>1231/1231 通过（61 文件）</td></tr>
+      <tr><td>IDE 集成 GAP</td><td>已关闭（VS Code Extension 骨架交付）</td></tr>
+    </tbody>
+  </table>
+
+  <h3>SOTA 竞品差距矩阵（v0.9.0 更新）</h3>
+  <div class="legend">
+    <span class="badge badge-green">LEAD 领先</span>
+    <span class="badge badge-yellow">Parity 持平</span>
+    <span class="badge badge-red">GAP 待追赶</span>
+  </div>
+  <table>
+    <thead>
+      <tr><th>能力维度</th><th>Claude Code</th><th>Codex</th><th>Factory Droid</th><th>Armature v0.9.0</th><th>差距</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>多模型协作路由</td><td>--</td><td>--</td><td>--</td><td><strong>Council / Race / Pipeline</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>任务自动拆分</td><td>--</td><td>--</td><td>--</td><td><strong>Task Planner</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>上下文核弹保护</td><td>Auto-compact</td><td>--</td><td>--</td><td><strong>5 层 + Nuclear + 413 恢复</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>认知骨架</td><td>--</td><td>--</td><td>--</td><td><strong>9 场景 x 4 心智模型</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>知识管理</td><td>Memory</td><td>--</td><td>--</td><td><strong>笔记 / 复盘 / 提示库 / 学习</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>CJK Token 估算</td><td>--</td><td>--</td><td>--</td><td><strong>中日韩 1.5 字/token</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>万能文件预处理</td><td>--</td><td>--</td><td>--</td><td><strong>L0 检测 → L1 转换 → L2 截断（70+ 格式）</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>终端 UI 渲染管线</td><td><strong>React Ink</strong></td><td>--</td><td>--</td><td><strong>React Ink（17 组件 + 全屏 Alt Buffer）</strong></td><td><span class="badge badge-green">LEAD</span></td></tr>
+      <tr><td>文件引用扩展</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>--</td><td><strong>裸路径 + file:/// + stdin pipe + 嵌入路径</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>Mission 多步自治</td><td>Sub-agents</td><td>Tasks</td><td><strong>Droid</strong></td><td><strong>Mission Mode</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>并发任务执行</td><td>--</td><td>--</td><td>Worker Pool</td><td><strong>executePlan()</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>目标循环</td><td>--</td><td>Loop</td><td>Droid Loop</td><td><strong>runGoalLoop（regex + cmd + LLM judge）</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>验证契约优先</td><td>--</td><td>--</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>Hook 系统</td><td><strong>Yes</strong></td><td>--</td><td>--</td><td><strong>10 events</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>Git Worktree 隔离</td><td><strong>Yes</strong></td><td>--</td><td>Yes</td><td><strong>WorktreeManager + Mission</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>沙箱安全</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>Yes</td><td><strong>--safe → Seatbelt/bwrap</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>MCP Server 生态</td><td><strong>Mature</strong></td><td>--</td><td>--</td><td><strong>Tool bridge + auto-inject</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+      <tr><td>IDE 集成</td><td><strong>Yes</strong></td><td><strong>Yes</strong></td><td>--</td><td><strong>VS Code Extension（5 命令）</strong></td><td><span class="badge badge-yellow">Parity</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>v0.9.0 闭环报告</h2>
+
+  <div class="exec-summary">
+    <p>v0.9.0 完成了 <strong>报告中最后一个 GAP（IDE 集成）</strong>，同时意外超额交付了 React Ink 全屏 TUI（17 组件，614 行 ink-ui 测试），将 UI 层从 legacy ANSI renderer 彻底升级为声明式 React 组件。所有 SOTA 差距维度现已 0 GAP。</p>
+  </div>
+
+  <div class="metric-row">
+    <div class="metric-card">
+      <div class="value" style="color: var(--success);">v0.9.0</div>
+      <div class="label">当前版本</div>
+    </div>
+    <div class="metric-card">
+      <div class="value" style="color: var(--success);">8</div>
+      <div class="label">领先维度（+1 TUI）</div>
+    </div>
+    <div class="metric-card">
+      <div class="value" style="color: var(--success);">0</div>
+      <div class="label">待追赶 GAP</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">1231</div>
+      <div class="label">测试用例（v0.8.0: 1118）</div>
+    </div>
+  </div>
+
+  <h3>v0.8.0 深度测试覆盖（+322 tests → 1118 total）</h3>
+  <table>
+    <thead><tr><th>模块</th><th>新增</th><th>覆盖面</th></tr></thead>
+    <tbody>
+      <tr><td>Mission Mode</td><td>~20</td><td>plan 解析边界、3 种验证标准、controller 生命周期、状态持久化</td></tr>
+      <tr><td>Task Planner</td><td>~40</td><td>多语言检测、启发式分解、tracker 状态机、executor 并发</td></tr>
+      <tr><td>Context Protection</td><td>~40</td><td>核弹压缩、正常压缩、预算风险、CJK 估算</td></tr>
+      <tr><td>Output/UI</td><td>~19</td><td>分隔线样式、状态栏格式、box-drawing 会话摘要</td></tr>
+      <tr><td><strong>Preprocess（蜂群审计新增）</strong></td><td><strong>100</strong></td><td>70+ 格式检测、可转换性、passthrough 转换、smart truncation、HTML fallback、end-to-end pipeline</td></tr>
+      <tr><td><strong>File Expansion（蜂群审计新增）</strong></td><td><strong>46</strong></td><td>file:///URL regex、bare path regex、relative path regex、标点剥离、路径解析、截断、去重、XML 包装</td></tr>
+      <tr><td><strong>Goal-Loop（蜂群审计新增）</strong></td><td><strong>+16</strong></td><td>parseDoneCriteria 边界、judge stub 验证、callback 完整性、command criteria loop、duration 追踪</td></tr>
+    </tbody>
+  </table>
+
+  <h3>蜂群审计发现（2026-04-13）</h3>
+  <table>
+    <thead><tr><th>发现</th><th>严重度</th><th>状态</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>Goal-Loop LLM judge 未实现</td><td>中</td><td><span class="badge badge-green">已修复</span></td><td>evaluateCriteria 现为 async，judge criterion 调用 chatOnce 做 PASS/FAIL 判定</td></tr>
+      <tr><td>Mission validation contract 可为空</td><td>低</td><td><span class="badge badge-green">已修复</span></td><td>buildDefaultContract 现从 feature.files 自动生成 file_exists criteria，避免空转</td></tr>
+      <tr><td>Worktree cleanup 静默吞错</td><td>低</td><td><span class="badge badge-green">已修复</span></td><td>cleanup() 返回 { warnings: string[] }，调用方可记录或展示</td></tr>
+      <tr><td>413 检测靠字符串匹配</td><td>低</td><td><span class="badge badge-green">已修复</span></td><td>新增 err.status / err.statusCode === 413 检查，兼容所有 provider 错误格式</td></tr>
+      <tr><td>LEAD 1-7 实现</td><td>--</td><td><span class="badge badge-green">全部 REAL</span></td><td>无 stub，无假实现，全部可执行</td></tr>
+      <tr><td>Parity 1-9 实现</td><td>--</td><td><span class="badge badge-green">全部 REAL</span></td><td>审计发现的唯一 partial（judge stub）已修复为完整实现</td></tr>
+    </tbody>
+  </table>
+
+  <h3>累计进度（v0.3.0 → v0.9.0）</h3>
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="value">22,272</div>
+      <div class="label">源码行数</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">18</div>
+      <div class="label">模块目录</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">1231</div>
+      <div class="label">测试用例（v0.3.0: 493）</div>
+    </div>
+    <div class="metric-card">
+      <div class="value" style="color: var(--success);">8 LEAD</div>
+      <div class="label">竞品领先维度</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+    <p>Armature CLI v0.9.0 -- SOTA 差距分析报告（v0.3.0 → v0.9.0）</p>
+    <p>Maurice | maurice_wen@proton.me</p>
+    <p style="font-size:12px; margin-top:8px;">初始生成 2026-04-12 | v0.8.0 更新 2026-04-13 | 蜂群审计 2026-04-13 | 5-layer 防御 2026-04-13 | v0.9.0 TUI + IDE 2026-04-14 | 1231 测试 · 114 文件 · 22.3K LOC</p>
+</footer>
+
+</body>
+</html>

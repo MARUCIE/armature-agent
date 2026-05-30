@@ -1,4 +1,4 @@
-import type { OrcaConfig } from '../config.js'
+import type { ArmatureConfig } from '../config.js'
 import { findAggregator, resolveModelEndpoint, resolveProvider } from '../config.js'
 import { hooks } from '../hooks.js'
 import { getPricingForModel } from '../model-catalog.js'
@@ -23,7 +23,7 @@ interface AsyncSlashSession {
 interface HandleAsyncReplSlashCommandOptions {
   command: AsyncReplSlashCommand
   input: string
-  config: OrcaConfig
+  config: ArmatureConfig
   cwd: string
   currentModel: string
   useInk: boolean
@@ -77,7 +77,7 @@ async function handleMultiModelSlashCommand({
 }: {
   command: 'council' | 'race' | 'pipeline'
   input: string
-  config: OrcaConfig
+  config: ArmatureConfig
   cwd: string
   currentModel: string
   useInk: boolean
@@ -132,7 +132,7 @@ async function runCouncilSlashCommand({
     console.log(`\x1b[31m  council: no models with available endpoints.\x1b[0m`)
     console.log(`\x1b[33m  tried: ${models.join(', ')}\x1b[0m`)
     console.log(`\x1b[33m  hint: set multiple API keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY)`)
-    console.log(`        or configure an aggregator provider (poe, openrouter) in .orca.json\x1b[0m\n`)
+    console.log(`        or configure an aggregator provider (poe, openrouter) in .armature.json\x1b[0m\n`)
     return
   }
   if (unavailable.length > 0) {
@@ -402,7 +402,7 @@ async function handleMissionSlashCommand({
   session,
 }: {
   input: string
-  config: OrcaConfig
+  config: ArmatureConfig
   cwd: string
   useInk: boolean
   session?: AsyncSlashSession
@@ -531,7 +531,7 @@ async function handlePlanSlashCommand({
   cwd,
 }: {
   input: string
-  config: OrcaConfig
+  config: ArmatureConfig
   cwd: string
 }): Promise<void> {
   const planPrompt = input.replace(/^\/plan\s*/, '').trim()

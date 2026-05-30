@@ -62,7 +62,7 @@ export function PermissionPrompt({ toolName, preview, onResolve, active }: Props
     <Box marginTop={1}>
       <PickerFrame
         title={`TRUST GATE · ${toolName}`}
-        subtitle="Orca needs approval before this tool crosses the boundary"
+        subtitle="Armature needs approval before this tool crosses the boundary"
         borderColor={theme.warning}
         footer="y once · n deny · 1-4 choose · arrows · enter confirm · esc deny"
       >

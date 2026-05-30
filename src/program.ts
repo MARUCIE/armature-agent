@@ -1,5 +1,5 @@
 /**
- * Orca CLI program assembly.
+ * Armature CLI program assembly.
  *
  * Creates the Commander program with all subcommands registered.
  */
@@ -23,7 +23,7 @@ import { createServeCommand } from './commands/serve.js'
 import { createEvolveCommand } from './commands/evolve.js'
 import { createCritiqueCommand } from './commands/critique.js'
 import { createReviewLedgerCommand } from './commands/review-ledger.js'
-import { ORCA_VERSION } from './version.js'
+import { ARMATURE_VERSION } from './version.js'
 
 export function createProgram(): Command {
   const workflowPresetHelp = listWorkflowPresets()
@@ -31,22 +31,22 @@ export function createProgram(): Command {
     .join('\n')
 
   const program = new Command()
-    .name('orca')
-    .version(ORCA_VERSION)
+    .name('armature')
+    .version(ARMATURE_VERSION)
     .enablePositionalOptions()
     .passThroughOptions()
     .description(
-      'Orca — provider-neutral agent runtime. 42 tools · 11 models · multi-model collaboration.\n\n' +
+      'Armature — provider-neutral agent runtime. 42 tools · 11 models · multi-model collaboration.\n\n' +
        'Commands:\n' +
        '  chat              Interactive REPL or one-shot query\n' +
        `${workflowPresetHelp}\n` +
-       '  doctor            Run local Orca diagnostics\n' +
+       '  doctor            Run local Armature diagnostics\n' +
       '  run               Execute an agent task\n' +
       '  council           Ask N models, judge synthesizes (multi-model)\n' +
       '  race              First model to answer wins (speed race)\n' +
       '  pipeline           Plan → Code → Review chain across models\n' +
       '  bench             Run agent benchmark (self-evaluation)\n' +
-      '  logs              Show local Orca runtime logs\n' +
+      '  logs              Show local Armature runtime logs\n' +
        '  stats             Token usage and cost statistics\n' +
        '  evolve            Inspect gated self-evolution candidates\n' +
        '  session           Manage saved sessions\n' +
@@ -94,8 +94,8 @@ export function createProgram(): Command {
   program.option('--effort <level>', 'Thinking effort: low, medium, high, max')
   program.option('-c, --continue [id]', 'Resume the most recent saved session, or a specific session by id')
   program.action(async (prompt: string[], opts: Record<string, string | boolean | undefined>) => {
-    // Delegate to chat command: orca "prompt" → orca chat "prompt"
-    const args = ['node', 'orca', 'chat']
+    // Delegate to chat command: armature "prompt" → armature chat "prompt"
+    const args = ['node', 'armature', 'chat']
     if (opts.model) args.push('-m', String(opts.model))
     if (opts.provider) args.push('-p', String(opts.provider))
     if (opts.apiKey) args.push('-k', String(opts.apiKey))

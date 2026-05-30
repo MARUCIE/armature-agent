@@ -70,7 +70,7 @@ describe('HookManager - Claude Code Compatibility', () => {
       expect(manager.totalHooks).toBeGreaterThan(0)
     })
 
-    it('sets both CLAUDE_HOOK_EVENT and ORCA_HOOK_EVENT env vars', async () => {
+    it('sets both CLAUDE_HOOK_EVENT and ARMATURE_HOOK_EVENT env vars', async () => {
       isolated({})
 
       // Test would run actual hook, which we're just testing setup here
@@ -84,7 +84,7 @@ describe('HookManager - Claude Code Compatibility', () => {
   describe('Hook event recognition', () => {
     it('recognizes Stop event as valid hook event', () => {
       isolated({
-        '.orca.json': JSON.stringify({
+        '.armature.json': JSON.stringify({
           hooks: {
             Stop: [{ command: 'echo stopped' }],
           },
@@ -98,7 +98,7 @@ describe('HookManager - Claude Code Compatibility', () => {
 
     it('recognizes SubagentStop event as valid hook event', () => {
       isolated({
-        '.orca.json': JSON.stringify({
+        '.armature.json': JSON.stringify({
           hooks: {
             SubagentStop: [{ command: 'echo subagent-stopped' }],
           },
@@ -112,7 +112,7 @@ describe('HookManager - Claude Code Compatibility', () => {
 
     it('recognizes MultiModelStart event as valid hook event', () => {
       isolated({
-        '.orca.json': JSON.stringify({
+        '.armature.json': JSON.stringify({
           hooks: {
             MultiModelStart: [{ command: 'echo multi-model-start' }],
           },
@@ -128,9 +128,9 @@ describe('HookManager - Claude Code Compatibility', () => {
   describe('Config merging', () => {
     it('merges hooks from multiple config sources', () => {
       isolated({
-        '.orca.json': JSON.stringify({
+        '.armature.json': JSON.stringify({
           hooks: {
-            PreToolUse: [{ command: 'echo from-orca' }],
+            PreToolUse: [{ command: 'echo from-armature' }],
           },
         }),
         '.claude/settings.json': JSON.stringify({
@@ -173,7 +173,7 @@ describe('HookManager - Claude Code Compatibility', () => {
       expect(manager.hasHooks('PreToolUse')).toBe(true)
     })
 
-    it('converts Claude Code matcher "Edit|Write" to include both Orca and Claude names', () => {
+    it('converts Claude Code matcher "Edit|Write" to include both Armature and Claude names', () => {
       isolated({
         '.claude/settings.json': JSON.stringify({
           hooks: {
@@ -238,7 +238,7 @@ describe('HookManager - Claude Code Compatibility', () => {
   describe('Idempotency', () => {
     it('load() can be called multiple times safely', () => {
       isolated({
-        '.orca.json': JSON.stringify({
+        '.armature.json': JSON.stringify({
           hooks: {
             PreToolUse: [{ command: 'echo test' }],
           },

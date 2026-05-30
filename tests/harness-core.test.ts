@@ -211,7 +211,7 @@ describe('ErrorClassifier: categorization and recovery', () => {
 
 describe('VerificationGate: pre-completion checks', () => {
   it('18.26 runs git_clean check on a temp directory', () => {
-    const dir = join(tmpdir(), `orca-vgate-${Date.now()}`)
+    const dir = join(tmpdir(), `armature-vgate-${Date.now()}`)
     mkdirSync(dir, { recursive: true })
 
     const result = runVerificationGate(dir, ['git_clean'])
@@ -224,7 +224,7 @@ describe('VerificationGate: pre-completion checks', () => {
   })
 
   it('18.27 returns score 1.0 when all checks pass or skip', () => {
-    const dir = join(tmpdir(), `orca-vgate-empty-${Date.now()}`)
+    const dir = join(tmpdir(), `armature-vgate-empty-${Date.now()}`)
     mkdirSync(dir, { recursive: true })
 
     // With no recognizable project, lint/typecheck/test will be skipped
@@ -237,7 +237,7 @@ describe('VerificationGate: pre-completion checks', () => {
   })
 
   it('18.28 provides remediation hints on failure', () => {
-    const dir = join(tmpdir(), `orca-vgate-fail-${Date.now()}`)
+    const dir = join(tmpdir(), `armature-vgate-fail-${Date.now()}`)
     mkdirSync(dir, { recursive: true })
 
     const result = runVerificationGate(dir, ['git_clean'])
@@ -250,7 +250,7 @@ describe('VerificationGate: pre-completion checks', () => {
     try { rmSync(dir, { recursive: true, force: true }) } catch { /* */ }
   })
 
-  it('18.29 runs on actual Orca project directory', { timeout: 30_000 }, () => {
+  it('18.29 runs on actual Armature project directory', { timeout: 30_000 }, () => {
     const projectDir = join(__dirname, '..')
     const result = runVerificationGate(projectDir, ['typecheck'])
 

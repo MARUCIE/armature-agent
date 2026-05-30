@@ -1,12 +1,12 @@
 /**
- * `orca queue` - TaskRun queue inspection.
+ * `armature queue` - TaskRun queue inspection.
  *
  * Usage:
- *   orca queue
- *   orca queue list --status running
- *   orca queue show <task-run-id>
- *   orca queue follow <task-run-id>
- *   orca queue evidence <task-run-id>
+ *   armature queue
+ *   armature queue list --status running
+ *   armature queue show <task-run-id>
+ *   armature queue follow <task-run-id>
+ *   armature queue evidence <task-run-id>
  */
 
 import { Command } from 'commander'
@@ -137,7 +137,7 @@ function parseDurationMs(value: string | undefined): number {
 }
 
 function resolveLeaseHolder(value: string | undefined): string {
-  return value?.trim() || process.env.ORCA_OPERATOR || process.env.USER || process.env.LOGNAME || 'operator'
+  return value?.trim() || process.env.ARMATURE_OPERATOR || process.env.USER || process.env.LOGNAME || 'operator'
 }
 
 function formatDateTime(value: string): string {
@@ -226,7 +226,7 @@ function renderTaskRunList(options: QueueListOptions): void {
     console.log(formatTaskRunRow(summary))
   }
   console.log()
-  console.log(`  \x1b[90m${summaries.length} task run(s) shown - inspect: orca queue show <task-run-id>\x1b[0m`)
+  console.log(`  \x1b[90m${summaries.length} task run(s) shown - inspect: armature queue show <task-run-id>\x1b[0m`)
   console.log()
 }
 
@@ -284,7 +284,7 @@ export function buildTaskRunResumePlan(taskRun: TaskRun): TaskRunResumePlan {
         state: 'monitor',
         reason: `Background job ${job.id} is still running`,
         cwd: taskRun.cwd,
-        command: `orca queue follow ${quoteShellArg(taskRun.id)}`,
+        command: `armature queue follow ${quoteShellArg(taskRun.id)}`,
         backgroundJobId: job.id,
       }
     }
@@ -297,7 +297,7 @@ export function buildTaskRunResumePlan(taskRun: TaskRun): TaskRunResumePlan {
       state: 'resumable',
       reason: `Saved chat session ${workSession.savedSessionId} can be continued`,
       cwd: taskRun.cwd,
-      command: `orca chat --cwd ${quoteShellArg(taskRun.cwd)} --continue ${quoteShellArg(workSession.savedSessionId)}`,
+      command: `armature chat --cwd ${quoteShellArg(taskRun.cwd)} --continue ${quoteShellArg(workSession.savedSessionId)}`,
       savedSessionId: workSession.savedSessionId,
     }
   }

@@ -1,9 +1,9 @@
 {
   "id": "fast-logs-empty",
   "title": "Logs command shows a clear empty state",
-  "description": "Black-box smoke for `orca logs` when the runtime log file does not exist yet.",
-  "input": "Run `orca logs` in an isolated empty ORCA_HOME and verify the command shows the empty-state message instead of crashing.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home\"; env -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ORCA_HOME=\"$TMP_ROOT/home/.orca\" node dist/bin/orca.js logs'",
+  "description": "Black-box smoke for `armature logs` when the runtime log file does not exist yet.",
+  "input": "Run `armature logs` in an isolated empty ARMATURE_HOME and verify the command shows the empty-state message instead of crashing.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home\"; env -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ARMATURE_HOME=\"$TMP_ROOT/home/.armature\" node dist/bin/armature.js logs'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

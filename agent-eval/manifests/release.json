@@ -1,6 +1,6 @@
 {
   "id": "release",
-  "title": "Orca CLI release gate",
+  "title": "Armature CLI release gate",
   "description": "Full local release bundle: deterministic verification, benchmark, black-box eval pack, and a recorded CLI journey artifact.",
   "tasks": [
     "gate-lint",

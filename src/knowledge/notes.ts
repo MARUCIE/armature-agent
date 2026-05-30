@@ -4,13 +4,13 @@
  * Notes are lightweight observations captured during work.
  * They feed into the LearningJournal for promotion to rules.
  *
- * Storage: ~/.orca/knowledge/notes/
+ * Storage: ~/.armature/knowledge/notes/
  * Format: { id, content, tags[], source, createdAt }
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
-import { getOrcaHome } from '../logger.js'
+import { getArmatureHome } from '../logger.js'
 
 export interface Note {
   id: string
@@ -25,7 +25,7 @@ export class NotesManager {
   private dir: string
 
   constructor() {
-    this.dir = join(getOrcaHome(), 'knowledge', 'notes')
+    this.dir = join(getArmatureHome(), 'knowledge', 'notes')
     mkdirSync(this.dir, { recursive: true })
   }
 

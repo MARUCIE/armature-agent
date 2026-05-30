@@ -1,9 +1,9 @@
 {
   "id": "fast-doctor-json",
   "title": "Doctor JSON returns structured diagnostics",
-  "description": "Black-box smoke for the structured doctor surface using an isolated temporary ORCA_HOME.",
-  "input": "Run `orca doctor --json` with a temporary local environment and verify the output still includes project, provider, and git diagnostics.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ORCA_HOME=\"$TMP_HOME/.orca\" ORCA_PROVIDER=openai OPENAI_API_KEY=test-openai-key node dist/bin/orca.js doctor --json'",
+  "description": "Black-box smoke for the structured doctor surface using an isolated temporary ARMATURE_HOME.",
+  "input": "Run `armature doctor --json` with a temporary local environment and verify the output still includes project, provider, and git diagnostics.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ARMATURE_HOME=\"$TMP_HOME/.armature\" ARMATURE_PROVIDER=openai OPENAI_API_KEY=test-openai-key node dist/bin/armature.js doctor --json'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

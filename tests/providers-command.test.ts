@@ -7,14 +7,14 @@ import { createProvidersCommand } from '../src/commands/providers.js'
 describe('providers command', () => {
   const envSnapshot = {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-    ORCA_PROVIDER: process.env.ORCA_PROVIDER,
+    ARMATURE_PROVIDER: process.env.ARMATURE_PROVIDER,
     HOME: process.env.HOME,
-    ORCA_HOME: process.env.ORCA_HOME,
+    ARMATURE_HOME: process.env.ARMATURE_HOME,
   }
 
   beforeEach(() => {
     process.env.OPENAI_API_KEY = 'test-openai-key'
-    process.env.ORCA_PROVIDER = 'openai'
+    process.env.ARMATURE_PROVIDER = 'openai'
   })
 
   afterEach(() => {
@@ -22,14 +22,14 @@ describe('providers command', () => {
     if (envSnapshot.OPENAI_API_KEY === undefined) delete process.env.OPENAI_API_KEY
     else process.env.OPENAI_API_KEY = envSnapshot.OPENAI_API_KEY
 
-    if (envSnapshot.ORCA_PROVIDER === undefined) delete process.env.ORCA_PROVIDER
-    else process.env.ORCA_PROVIDER = envSnapshot.ORCA_PROVIDER
+    if (envSnapshot.ARMATURE_PROVIDER === undefined) delete process.env.ARMATURE_PROVIDER
+    else process.env.ARMATURE_PROVIDER = envSnapshot.ARMATURE_PROVIDER
 
     if (envSnapshot.HOME === undefined) delete process.env.HOME
     else process.env.HOME = envSnapshot.HOME
 
-    if (envSnapshot.ORCA_HOME === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = envSnapshot.ORCA_HOME
+    if (envSnapshot.ARMATURE_HOME === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = envSnapshot.ARMATURE_HOME
   })
 
   it('lists provider metadata including context and pricing', async () => {
@@ -39,7 +39,7 @@ describe('providers command', () => {
     })
 
     const command = createProvidersCommand()
-    await command.parseAsync(['node', 'orca', 'providers'])
+    await command.parseAsync(['node', 'armature', 'providers'])
 
     const output = logs.join('\n')
     expect(output).toContain('Configured Providers')
@@ -51,11 +51,11 @@ describe('providers command', () => {
   })
 
   it('shows disabled providers as inactive instead of active', async () => {
-    const tmpRoot = mkdtempSync(join(tmpdir(), 'orca-providers-disabled-'))
+    const tmpRoot = mkdtempSync(join(tmpdir(), 'armature-providers-disabled-'))
     try {
       process.env.HOME = tmpRoot
-      process.env.ORCA_HOME = join(tmpRoot, '.orca')
-      writeFileSync(join(tmpRoot, '.orca.json'), JSON.stringify({
+      process.env.ARMATURE_HOME = join(tmpRoot, '.armature')
+      writeFileSync(join(tmpRoot, '.armature.json'), JSON.stringify({
         providers: {
           openai: {
             apiKey: 'test-openai-key',
@@ -73,7 +73,7 @@ describe('providers command', () => {
       })
 
       const command = createProvidersCommand()
-      await command.parseAsync(['node', 'orca', 'providers'])
+      await command.parseAsync(['node', 'armature', 'providers'])
 
       const output = logs.join('\n')
       expect(output).toContain('disabled')

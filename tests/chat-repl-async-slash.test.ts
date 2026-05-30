@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { OrcaConfig } from '../src/config.js'
+import type { ArmatureConfig } from '../src/config.js'
 import { handleAsyncReplSlashCommand } from '../src/commands/chat-repl-async-slash.js'
 
 const configMocks = vi.hoisted(() => ({
@@ -95,7 +95,7 @@ vi.mock('../src/mission/index.js', async (importOriginal) => {
 })
 
 describe('handleAsyncReplSlashCommand', () => {
-  const baseConfig = { providers: {}, defaultProvider: 'openai', defaultModel: 'gpt-5.4' } as unknown as OrcaConfig
+  const baseConfig = { providers: {}, defaultProvider: 'openai', defaultModel: 'gpt-5.4' } as unknown as ArmatureConfig
   const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
   const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
   const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)

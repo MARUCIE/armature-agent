@@ -572,7 +572,7 @@ export function warn(message: string): void { log('warn', message) }
         path: 'src/config.ts',
         content: `export const config = {
   logLevel: process.env.LOG_LEVEL || 'info',
-  appName: 'orca-app',
+  appName: 'armature-app',
   version: '1.0.0',
 }
 `,

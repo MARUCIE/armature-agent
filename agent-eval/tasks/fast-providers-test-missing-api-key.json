@@ -1,9 +1,9 @@
 {
   "id": "fast-providers-test-missing-api-key",
   "title": "Providers test reports missing API key for unknown provider IDs",
-  "description": "Black-box smoke for `orca providers test <id>` when the requested provider is not configured and therefore has no API key.",
-  "input": "Run `orca providers test missing` from a config that only contains `openai`, and verify the CLI reports the missing provider API-key requirement with exit code 1.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home\"; cat > \"$TMP_ROOT/.orca.json\" <<EOF\n{\n  \"providers\": {\n    \"openai\": {\n      \"apiKey\": \"test-openai-key\",\n      \"baseURL\": \"https://api.openai.com/v1/\",\n      \"defaultModel\": \"gpt-5.4\"\n    }\n  },\n  \"defaultProvider\": \"openai\"\n}\nEOF\nOUTPUT=$(cd \"$TMP_ROOT\" && env -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ORCA_HOME=\"$TMP_ROOT/home/.orca\" node \"$REPO_ROOT/dist/bin/orca.js\" providers test missing 2>&1; STATUS=$?; printf \"status=%s\\n%s\\n\" \"$STATUS\" \"$OUTPUT\"); printf \"%s\\n\" \"$OUTPUT\"; printf \"%s\" \"$OUTPUT\" | grep -q \"status=1\"'",
+  "description": "Black-box smoke for `armature providers test <id>` when the requested provider is not configured and therefore has no API key.",
+  "input": "Run `armature providers test missing` from a config that only contains `openai`, and verify the CLI reports the missing provider API-key requirement with exit code 1.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home\"; cat > \"$TMP_ROOT/.armature.json\" <<EOF\n{\n  \"providers\": {\n    \"openai\": {\n      \"apiKey\": \"test-openai-key\",\n      \"baseURL\": \"https://api.openai.com/v1/\",\n      \"defaultModel\": \"gpt-5.4\"\n    }\n  },\n  \"defaultProvider\": \"openai\"\n}\nEOF\nOUTPUT=$(cd \"$TMP_ROOT\" && env -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ARMATURE_HOME=\"$TMP_ROOT/home/.armature\" node \"$REPO_ROOT/dist/bin/armature.js\" providers test missing 2>&1; STATUS=$?; printf \"status=%s\\n%s\\n\" \"$STATUS\" \"$OUTPUT\"); printf \"%s\\n\" \"$OUTPUT\"; printf \"%s\" \"$OUTPUT\" | grep -q \"status=1\"'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

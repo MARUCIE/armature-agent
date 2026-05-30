@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { expandFileReferences, isStandalonePathPrompt, resolveFilePath } from '../src/commands/chat-input.js'
 
-const TMP_DIR = join(tmpdir(), `orca-chat-fileexp-${Date.now()}`)
+const TMP_DIR = join(tmpdir(), `armature-chat-fileexp-${Date.now()}`)
 
 beforeEach(() => {
   mkdirSync(TMP_DIR, { recursive: true })

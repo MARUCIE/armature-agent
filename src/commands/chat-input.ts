@@ -373,7 +373,7 @@ function tryExpandDirectory(prompt: string, home: string, cwd: string): string |
         '-not', '-path', '*/.git/*',
         '-not', '-path', '*/dist/*',
         '-not', '-path', '*/__pycache__/*',
-        '-not', '-path', '*/.orca-worktrees/*',
+        '-not', '-path', '*/.armature-worktrees/*',
       ],
       { encoding: 'utf-8', timeout: 5_000 },
     )

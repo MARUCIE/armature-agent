@@ -201,7 +201,7 @@ describe('chat internal regressions', () => {
   })
 
   it('repairs false local save claims when the model returns no file tool call', async () => {
-    const path = join(tmpdir(), `orca-chat-false-save-${process.pid}-${Date.now()}.md`)
+    const path = join(tmpdir(), `armature-chat-false-save-${process.pid}-${Date.now()}.md`)
     const history = [{ role: 'system' as const, content: 'system prompt' }]
     chatMocks.handleProxyToolCall.mockResolvedValueOnce({ success: true, output: `Created ${path}` })
     chatMocks.streamChat.mockImplementation(async function* (_base: unknown, _prompt: unknown, _history: unknown, _runtime: unknown, tools: Array<Record<string, unknown>>) {
@@ -244,7 +244,7 @@ describe('chat internal regressions', () => {
   })
 
   it('writes a requested local markdown artifact when the model returns content without a file tool call', async () => {
-    const path = join(tmpdir(), `orca-chat-generated-artifact-${process.pid}-${Date.now()}.md`)
+    const path = join(tmpdir(), `armature-chat-generated-artifact-${process.pid}-${Date.now()}.md`)
     const history = [{ role: 'system' as const, content: 'system prompt' }]
     chatMocks.handleProxyToolCall.mockResolvedValueOnce({ success: true, output: `Created ${path}` })
     chatMocks.streamChat.mockImplementation(async function* () {
@@ -285,7 +285,7 @@ describe('chat internal regressions', () => {
   })
 
   it('marks a local file request incomplete when the model refuses instead of using file tools', async () => {
-    const path = join(tmpdir(), `orca-chat-refused-artifact-${process.pid}-${Date.now()}.md`)
+    const path = join(tmpdir(), `armature-chat-refused-artifact-${process.pid}-${Date.now()}.md`)
     const history = [{ role: 'system' as const, content: 'system prompt' }]
     chatMocks.streamChat.mockImplementation(async function* () {
       yield { type: 'text', text: `无法在你的本地创建文件。你可以自己保存到 \`${path}\`。` }
@@ -389,17 +389,17 @@ describe('chat internal regressions', () => {
   })
 
   it('injects active provider and model into the runtime identity block', () => {
-    const prompt = upsertRuntimeIdentityPrompt('You are Orca.', 'anthropic', 'claude-opus-4.6')
-    expect(prompt).toContain('## Orca Runtime Identity')
+    const prompt = upsertRuntimeIdentityPrompt('You are Armature.', 'anthropic', 'claude-opus-4.6')
+    expect(prompt).toContain('## Armature Runtime Identity')
     expect(prompt).toContain('Active provider: anthropic')
     expect(prompt).toContain('Active model: claude-opus-4.6')
     expect(prompt).toContain('answer with these exact runtime values')
   })
 
   it('replaces an existing runtime identity block instead of appending duplicates', () => {
-    const first = upsertRuntimeIdentityPrompt('You are Orca.', 'openai', 'gpt-5.4')
+    const first = upsertRuntimeIdentityPrompt('You are Armature.', 'openai', 'gpt-5.4')
     const second = upsertRuntimeIdentityPrompt(first, 'anthropic', 'claude-opus-4.6')
-    expect(second.match(/## Orca Runtime Identity/g)).toHaveLength(1)
+    expect(second.match(/## Armature Runtime Identity/g)).toHaveLength(1)
     expect(second).toContain('Active provider: anthropic')
     expect(second).toContain('Active model: claude-opus-4.6')
     expect(second).not.toContain('Active provider: openai')

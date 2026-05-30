@@ -2,7 +2,7 @@
  * ThinkingSpinner — Grok Build-style thinking indicator.
  *
  * Renders a spinner + "Thinking" header in accent_thinking, with an elapsed
- * timer. Keeps orca's stalled-intensity color shift (accent → warning → error)
+ * timer. Keeps armature's stalled-intensity color shift (accent → warning → error)
  * on the spinner as wait grows, and respects reduced motion.
  * See doc/GROK_UI_REFERENCE.md §2 (thinking block).
  */

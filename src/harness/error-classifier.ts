@@ -36,7 +36,7 @@ interface ErrorPattern {
 
 const PATTERNS: ErrorPattern[] = [
   // Auth errors
-  { pattern: /401|unauthorized|invalid.?api.?key|authentication/i, category: 'auth', suggestion: 'Check your API key. Run `orca doctor` to verify provider configuration.', retryable: false },
+  { pattern: /401|unauthorized|invalid.?api.?key|authentication/i, category: 'auth', suggestion: 'Check your API key. Run `armature doctor` to verify provider configuration.', retryable: false },
   { pattern: /403|forbidden|access.?denied/i, category: 'permission', suggestion: 'You do not have permission for this operation. Check file permissions or API access level.', retryable: false },
 
   // Rate limiting

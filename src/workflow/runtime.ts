@@ -7,7 +7,7 @@
  * so the orchestration engine stays independent of how sub-agents are executed.
  *
  * Ported from pi-dynamic-workflows (MIT); the in-memory subagent is replaced by
- * Orca's runner abstraction, and progress is surfaced through callbacks.
+ * Armature's runner abstraction, and progress is surfaced through callbacks.
  */
 
 import vm from 'node:vm'

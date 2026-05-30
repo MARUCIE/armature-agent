@@ -13,7 +13,7 @@ const runMocks = vi.hoisted(() => ({
   missionGetState: vi.fn(),
 }))
 
-vi.mock('@orca/sdk', () => ({
+vi.mock('@armature/sdk', () => ({
   createAgent: runMocks.createAgent,
 }), { virtual: true })
 
@@ -28,9 +28,9 @@ vi.mock('../src/planner/index.js', () => ({
 
 describe('run command work-session integration', () => {
   const previousHome = process.env.HOME
-  const previousOrcaHome = process.env.ORCA_HOME
+  const previousArmatureHome = process.env.ARMATURE_HOME
   let homeDir: string
-  let orcaHome: string
+  let armatureHome: string
   let projectDir: string
 
   beforeEach(() => {
@@ -86,29 +86,29 @@ describe('run command work-session integration', () => {
       },
     })
 
-    homeDir = join(tmpdir(), `orca-run-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    orcaHome = join(tmpdir(), `orca-run-orca-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    projectDir = join(tmpdir(), `orca-run-project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    homeDir = join(tmpdir(), `armature-run-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    armatureHome = join(tmpdir(), `armature-run-armature-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    projectDir = join(tmpdir(), `armature-run-project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
     mkdirSync(homeDir, { recursive: true })
-    mkdirSync(orcaHome, { recursive: true })
+    mkdirSync(armatureHome, { recursive: true })
     mkdirSync(projectDir, { recursive: true })
     writeFileSync(join(projectDir, 'package.json'), JSON.stringify({ name: 'run-work-session-test' }), 'utf-8')
 
     process.env.HOME = homeDir
-    process.env.ORCA_HOME = orcaHome
+    process.env.ARMATURE_HOME = armatureHome
   })
 
   afterEach(() => {
     if (previousHome === undefined) delete process.env.HOME
     else process.env.HOME = previousHome
-    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = previousOrcaHome
+    if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = previousArmatureHome
     try { rmSync(homeDir, { recursive: true, force: true }) } catch { /* ignore */ }
-    try { rmSync(orcaHome, { recursive: true, force: true }) } catch { /* ignore */ }
+    try { rmSync(armatureHome, { recursive: true, force: true }) } catch { /* ignore */ }
     try { rmSync(projectDir, { recursive: true, force: true }) } catch { /* ignore */ }
   })
 
-  it('creates and completes a work session plus task run for default orca run execution', { timeout: 15_000 }, async () => {
+  it('creates and completes a work session plus task run for default armature run execution', { timeout: 15_000 }, async () => {
     const { createRunCommand } = await import('../src/commands/run.js')
     const workSessionStore = await import('../src/work-session-store.js')
 
@@ -181,7 +181,7 @@ describe('run command work-session integration', () => {
     })
     expect(taskRun?.taskRun.evidence).toContainEqual({
       label: 'mission-state',
-      path: join(projectDir, '.orca', 'missions', 'mission-test', 'state.json'),
+      path: join(projectDir, '.armature', 'missions', 'mission-test', 'state.json'),
     })
   })
 

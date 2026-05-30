@@ -3,7 +3,7 @@
  *
  * Manages isolated git worktrees for parallel agent tasks.
  * Each agent gets its own branch and working directory under
- * <repo>/.orca-worktrees/<id>.
+ * <repo>/.armature-worktrees/<id>.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -29,8 +29,8 @@ export class WorktreeManager {
   /** Create a new worktree for an agent task. */
   create(cwd: string, task: string, baseBranch?: string): WorktreeAgent {
     const id = randomUUID().slice(0, 8)
-    const branch = `orca-agent-${id}`
-    const worktreePath = join(cwd, '.orca-worktrees', id)
+    const branch = `armature-agent-${id}`
+    const worktreePath = join(cwd, '.armature-worktrees', id)
     const base = baseBranch ?? 'HEAD'
 
     try {

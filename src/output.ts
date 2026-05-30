@@ -1,5 +1,5 @@
 /**
- * Orca CLI output formatting.
+ * Armature CLI output formatting.
  *
  * Supports two modes:
  *   - streaming (interactive terminal): real-time token output with spinners
@@ -10,13 +10,13 @@ import chalk from 'chalk'
 import { logError, logWarning } from './logger.js'
 import { getFleetSummaryLine } from './fleet-env.js'
 import { formatModelCapacity, getPricingForModelOrDefault } from './model-metadata.js'
-import { ORCA_VERSION } from './version.js'
+import { ARMATURE_VERSION } from './version.js'
 
 export type OutputMode = 'streaming' | 'json'
 
 // ── Theme ──────────────────────────────────────────────────────────
 
-interface OrcaTheme {
+interface ArmatureTheme {
   accent: string    // ANSI color code for primary accent
   prompt: string    // prompt icon color
   success: string   // success color
@@ -24,7 +24,7 @@ interface OrcaTheme {
   name: string
 }
 
-const THEMES: Record<string, OrcaTheme> = {
+const THEMES: Record<string, ArmatureTheme> = {
   default: { accent: '\x1b[36m', prompt: '\x1b[36m', success: '\x1b[32m', dim: '\x1b[90m', name: 'default' },
   dark:    { accent: '\x1b[32m', prompt: '\x1b[32m', success: '\x1b[32m', dim: '\x1b[90m', name: 'dark' },
   ocean:   { accent: '\x1b[34m', prompt: '\x1b[34m', success: '\x1b[36m', dim: '\x1b[90m', name: 'ocean' },
@@ -32,17 +32,17 @@ const THEMES: Record<string, OrcaTheme> = {
   mono:    { accent: '\x1b[37m', prompt: '\x1b[37m', success: '\x1b[37m', dim: '\x1b[90m', name: 'mono' },
 }
 
-const themeId = (process.env.ORCA_THEME || 'default').toLowerCase()
-export const theme: OrcaTheme = THEMES[themeId] || THEMES['default']!
+const themeId = (process.env.ARMATURE_THEME || 'default').toLowerCase()
+export const theme: ArmatureTheme = THEMES[themeId] || THEMES['default']!
 const RST = '\x1b[0m'
 
 // ── Banner ──────────────────────────────────────────────────────────
 
-const VERSION = ORCA_VERSION
+const VERSION = ARMATURE_VERSION
 
-// Orca — cute killer whale with dorsal fin, eye patch, body, belly, and iconic tail flukes
+// Armature — cute killer whale with dorsal fin, eye patch, body, belly, and iconic tail flukes
 // Tail section: body narrows → peduncle → flukes fork up/down (whale signature)
-const ORCA_ART = [
+const ARMATURE_ART = [
   '\x1b[36m                   ▄▄\x1b[0m',
   '\x1b[36m                 ▄████▄\x1b[0m',
   '\x1b[36m                ████████\x1b[0m',
@@ -74,8 +74,8 @@ function stripAnsi(s: string): string {
 }
 
 /**
- * Rich startup banner with swimming orca animation.
- * The orca swims left-right across the terminal, then settles at center.
+ * Rich startup banner with swimming armature animation.
+ * The armature swims left-right across the terminal, then settles at center.
  */
 export async function printRichBanner(opts: {
   provider: string
@@ -91,8 +91,8 @@ export async function printRichBanner(opts: {
   const { provider, model, cwd, configFiles, toolCount, hookCount, mode, loadingPromise } = opts
   const shortCwd = abbreviatePath(cwd)
   const cols = process.stdout.columns || 80
-  const artHeight = ORCA_ART.length
-  const maxVisWidth = Math.max(...ORCA_ART.map(l => stripAnsi(l).length))
+  const artHeight = ARMATURE_ART.length
+  const maxVisWidth = Math.max(...ARMATURE_ART.map(l => stripAnsi(l).length))
 
   // Starting position (right side, clamped to prevent overflow) and ending position (left side)
   const maxPad = Math.max(0, cols - maxVisWidth - 2)
@@ -100,13 +100,13 @@ export async function printRichBanner(opts: {
   const endPad = 2
   const amplitude = Math.min(Math.floor(maxPad / 4), 12)
 
-  // Only animate if terminal is wide enough and interactive (skip with ORCA_NO_ANIMATION=1)
-  const canAnimate = process.stdout.isTTY && amplitude > 2 && cols > maxVisWidth + 10 && !process.env.ORCA_NO_ANIMATION
+  // Only animate if terminal is wide enough and interactive (skip with ARMATURE_NO_ANIMATION=1)
+  const canAnimate = process.stdout.isTTY && amplitude > 2 && cols > maxVisWidth + 10 && !process.env.ARMATURE_NO_ANIMATION
 
   if (!canAnimate) {
     // Static fallback
     console.log()
-    for (const line of ORCA_ART) console.log(`  ${line}`)
+    for (const line of ARMATURE_ART) console.log(`  ${line}`)
   } else {
     // Hide cursor during animation (restored in finally block)
     process.stdout.write('\x1b[?25l')
@@ -114,7 +114,7 @@ export async function printRichBanner(opts: {
     console.log()
 
     // Print initial frame (start from right side)
-    for (const line of ORCA_ART) {
+    for (const line of ARMATURE_ART) {
       const pad = ' '.repeat(startPad)
       console.log(`${pad}${line}`)
     }
@@ -150,13 +150,13 @@ export async function printRichBanner(opts: {
 
       process.stdout.write(`\x1b[${artHeight}A`)
 
-      for (let i = 0; i < ORCA_ART.length; i++) {
+      for (let i = 0; i < ARMATURE_ART.length; i++) {
         const baseShift = Math.round(drift + globalWave)
         const tailFactor = 0.3 + (i / artHeight) * 0.7
         const bodyWave = Math.round(Math.sin(t + i * phaseSpread) * bodyWaveAmp * tailFactor)
         const totalShift = Math.max(0, Math.min(maxPad, baseShift + bodyWave))
         const pad = ' '.repeat(totalShift)
-        process.stdout.write(`\x1b[2K${pad}${ORCA_ART[i]}\n`)
+        process.stdout.write(`\x1b[2K${pad}${ARMATURE_ART[i]}\n`)
       }
 
       await new Promise(r => setTimeout(r, frameDuration))
@@ -168,18 +168,18 @@ export async function printRichBanner(opts: {
     for (let f = 0; f < settleFrames; f++) {
       const sp = f / settleFrames
       process.stdout.write(`\x1b[${artHeight}A`)
-      for (let i = 0; i < ORCA_ART.length; i++) {
+      for (let i = 0; i < ARMATURE_ART.length; i++) {
         const tailFactor = 0.3 + (i / artHeight) * 0.7
         const residual = Math.round(Math.sin(i * phaseSpread) * bodyWaveAmp * tailFactor * (1 - sp))
         const pad = ' '.repeat(Math.max(0, endPad + residual))
-        process.stdout.write(`\x1b[2K${pad}${ORCA_ART[i]}\n`)
+        process.stdout.write(`\x1b[2K${pad}${ARMATURE_ART[i]}\n`)
       }
       await new Promise(r => setTimeout(r, 60))
     }
 
     // Final static frame: perfectly still
     process.stdout.write(`\x1b[${artHeight}A`)
-    for (const line of ORCA_ART) {
+    for (const line of ARMATURE_ART) {
       const pad = ' '.repeat(endPad)
       process.stdout.write(`\x1b[2K${pad}${line}\n`)
     }
@@ -195,7 +195,7 @@ export async function printRichBanner(opts: {
   const reset = RST
   const accent = theme.accent
   console.log()
-  console.log(`  \x1b[1;37mOrca\x1b[0m \x1b[90mv${VERSION}\x1b[0m  ${label}provider-neutral agent runtime${reset}`)
+  console.log(`  \x1b[1;37mArmature\x1b[0m \x1b[90mv${VERSION}\x1b[0m  ${label}provider-neutral agent runtime${reset}`)
   console.log(`  ${accent}▸${reset} ${label}${shortCwd}${reset}`)
   if (configFiles && configFiles.length > 0) {
     console.log(`  ${label}config  ${configFiles.join(', ')}${reset}`)
@@ -215,7 +215,7 @@ export async function printRichBanner(opts: {
 /** Simple banner for non-interactive / one-shot mode */
 export function printBanner(toolCount?: number): void {
   const tools = toolCount ? `${toolCount} tools` : 'multi-model'
-  console.log(chalk.blue.bold(`\n  orca`) + chalk.gray(` v${VERSION}`) + chalk.gray(` — provider-neutral agent runtime`))
+  console.log(chalk.blue.bold(`\n  armature`) + chalk.gray(` v${VERSION}`) + chalk.gray(` — provider-neutral agent runtime`))
   console.log(chalk.gray(`  multi-model · ${tools}\n`))
 }
 
@@ -274,7 +274,7 @@ function classifyError(message: string): ClassifiedError {
   if (lower.includes('401') || lower.includes('unauthorized') || lower.includes('invalid api key')) {
     return {
       message,
-      suggestion: 'Check your API key. Set ORCA_API_KEY or POE_API_KEY environment variable.',
+      suggestion: 'Check your API key. Set ARMATURE_API_KEY or POE_API_KEY environment variable.',
     }
   }
   if (lower.includes('429') || lower.includes('rate limit') || lower.includes('too many requests')) {

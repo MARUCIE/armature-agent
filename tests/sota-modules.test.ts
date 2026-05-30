@@ -18,7 +18,7 @@ import { tmpdir } from 'node:os'
 // ── 1. Skills Registry + Engine ─────────────────────────────────
 
 describe('SkillRegistry: trigger-based routing', () => {
-  const skillDir = join(tmpdir(), `orca-skills-${Date.now()}`)
+  const skillDir = join(tmpdir(), `armature-skills-${Date.now()}`)
   const registryPath = join(skillDir, 'skill-groups.json')
 
   beforeAll(() => {
@@ -429,7 +429,7 @@ describe('DNARegistry: capsule management', () => {
     registry.loadCapsules([
       { id: 'c1', type: 'fix-pattern', triggers: ['err'], content: 'fix', evidence: [], createdAt: '' },
     ])
-    const savePath = join(tmpdir(), `orca-dna-save-${Date.now()}.json`)
+    const savePath = join(tmpdir(), `armature-dna-save-${Date.now()}.json`)
     registry.saveToFile(savePath)
     expect(existsSync(savePath)).toBe(true)
     const data = JSON.parse(readFileSync(savePath, 'utf-8'))
@@ -439,7 +439,7 @@ describe('DNARegistry: capsule management', () => {
 
   it('23.8 loadFromFile reads JSON capsule registry', async () => {
     const { DNARegistry } = await import('../src/memory/index.js')
-    const filePath = join(tmpdir(), `orca-dna-load-${Date.now()}.json`)
+    const filePath = join(tmpdir(), `armature-dna-load-${Date.now()}.json`)
     writeFileSync(filePath, JSON.stringify({
       capsules: [
         { id: 'file-c', type: 'error-recovery', triggers: ['disk'], content: 'check disk', evidence: [], createdAt: '' },

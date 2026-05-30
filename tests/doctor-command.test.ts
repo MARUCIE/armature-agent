@@ -8,27 +8,27 @@ import { vi } from 'vitest'
 
 describe('doctor command diagnostics', () => {
   const previousHome = process.env.HOME
-  const previousOrcaHome = process.env.ORCA_HOME
+  const previousArmatureHome = process.env.ARMATURE_HOME
   let homeDir: string
   let projectDir: string
 
   beforeEach(() => {
-    homeDir = join(tmpdir(), `orca-doctor-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    projectDir = join(tmpdir(), `orca-doctor-project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    homeDir = join(tmpdir(), `armature-doctor-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    projectDir = join(tmpdir(), `armature-doctor-project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
     mkdirSync(homeDir, { recursive: true })
     mkdirSync(projectDir, { recursive: true })
     process.env.HOME = homeDir
-    process.env.ORCA_HOME = join(homeDir, '.orca')
+    process.env.ARMATURE_HOME = join(homeDir, '.armature')
 
-    mkdirSync(join(projectDir, '.orca'), { recursive: true })
-    mkdirSync(join(homeDir, '.orca', 'sessions'), { recursive: true })
-    mkdirSync(join(homeDir, '.orca', 'background-jobs'), { recursive: true })
+    mkdirSync(join(projectDir, '.armature'), { recursive: true })
+    mkdirSync(join(homeDir, '.armature', 'sessions'), { recursive: true })
+    mkdirSync(join(homeDir, '.armature', 'background-jobs'), { recursive: true })
     writeFileSync(join(projectDir, 'package.json'), JSON.stringify({
       name: 'doctor-test',
       dependencies: { express: '^4.0.0' },
       devDependencies: { vitest: '^1.0.0' },
     }))
-    writeFileSync(join(projectDir, '.orca', 'hooks.json'), JSON.stringify({
+    writeFileSync(join(projectDir, '.armature', 'hooks.json'), JSON.stringify({
       SessionStart: [{ command: 'echo hello' }],
     }))
     writeFileSync(join(projectDir, '.mcp.json'), JSON.stringify({
@@ -36,23 +36,23 @@ describe('doctor command diagnostics', () => {
         demo: { command: 'node', args: ['-e', 'process.exit(0)'] },
       },
     }))
-    writeFileSync(join(homeDir, '.orca', 'sessions', 'one.json'), JSON.stringify({
+    writeFileSync(join(homeDir, '.armature', 'sessions', 'one.json'), JSON.stringify({
       model: 'gpt-5.4',
       history: [],
       stats: { turns: 1, inputTokens: 1, outputTokens: 1 },
       savedAt: new Date().toISOString(),
     }))
     process.env.OPENAI_API_KEY = 'test-openai-key'
-    process.env.ORCA_PROVIDER = 'openai'
+    process.env.ARMATURE_PROVIDER = 'openai'
   })
 
   afterEach(() => {
     if (previousHome === undefined) delete process.env.HOME
     else process.env.HOME = previousHome
-    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = previousOrcaHome
+    if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = previousArmatureHome
     delete process.env.OPENAI_API_KEY
-    delete process.env.ORCA_PROVIDER
+    delete process.env.ARMATURE_PROVIDER
     try { rmSync(homeDir, { recursive: true, force: true }) } catch { /* ignore */ }
     try { rmSync(projectDir, { recursive: true, force: true }) } catch { /* ignore */ }
   })
@@ -64,12 +64,12 @@ describe('doctor command diagnostics', () => {
     expect(report.hooksConfigured).toBe(1)
     expect(report.mcpConfigured).toBe(1)
     expect(report.sessionsSaved).toBe(1)
-    expect(report.logs.agentPath).toContain('.orca')
+    expect(report.logs.agentPath).toContain('.armature')
     expect(report.configPaths.projectExists).toBe(false)
   })
 
   it('reports malformed config files in doctor diagnostics', () => {
-    writeFileSync(join(projectDir, '.orca.json'), '{ invalid json')
+    writeFileSync(join(projectDir, '.armature.json'), '{ invalid json')
     const report = gatherDoctorReport(projectDir)
     const projectConfig = report.configDiagnostics.find((entry) => entry.kind === 'project-config')
     expect(projectConfig?.exists).toBe(true)
@@ -78,7 +78,7 @@ describe('doctor command diagnostics', () => {
   })
 
   it('prints config issues in human-readable doctor output', async () => {
-    writeFileSync(join(projectDir, '.orca.json'), '{ invalid json')
+    writeFileSync(join(projectDir, '.armature.json'), '{ invalid json')
     const lines: string[] = []
     vi.spyOn(console, 'log').mockImplementation((...args) => { lines.push(args.join(' ')) })
 

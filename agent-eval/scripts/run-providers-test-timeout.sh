@@ -18,7 +18,7 @@ trap cleanup EXIT
 PORT="$(node -e 'const net=require("node:net"); const s=net.createServer(); s.listen(0,"127.0.0.1",()=>{console.log(s.address().port); s.close();});')"
 mkdir -p "$TMP_ROOT/home"
 
-cat > "$TMP_ROOT/.orca.json" <<EOF
+cat > "$TMP_ROOT/.armature.json" <<EOF
 {
   "providers": {
     "local": {
@@ -52,8 +52,8 @@ STUB_PID=$!
 
 OUTPUT="$(
   cd "$TMP_ROOT" &&
-  env -i PATH="$PATH" HOME="$TMP_ROOT/home" ORCA_HOME="$TMP_ROOT/home/.orca" \
-    node "$REPO_ROOT/dist/bin/orca.js" providers test local
+  env -i PATH="$PATH" HOME="$TMP_ROOT/home" ARMATURE_HOME="$TMP_ROOT/home/.armature" \
+    node "$REPO_ROOT/dist/bin/armature.js" providers test local
 )"
 printf '%s\n' "$OUTPUT"
 

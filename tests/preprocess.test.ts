@@ -20,7 +20,7 @@ import { preprocessFile } from '../src/preprocess/pipeline.js'
 
 // ── Test Fixtures ──────────────────────────────────────────────────
 
-const TMP_DIR = join(tmpdir(), `orca-preprocess-test-${Date.now()}`)
+const TMP_DIR = join(tmpdir(), `armature-preprocess-test-${Date.now()}`)
 
 beforeEach(() => {
   mkdirSync(TMP_DIR, { recursive: true })

@@ -1,9 +1,9 @@
 {
   "id": "fast-logs-errors-lines-limit",
   "title": "Logs errors honors the --lines limit",
-  "description": "Black-box smoke for `orca logs errors --lines <n>` with a preseeded errors log.",
-  "input": "Seed an errors log with three lines, run `orca logs errors --lines 1`, and verify the output only includes the newest errors entry.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home/.orca/logs\"; cat > \"$TMP_ROOT/home/.orca/logs/errors.log\" <<EOF\n[ERROR] one\n[ERROR] two\n[ERROR] three\nEOF\nOUTPUT=$(env -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ORCA_HOME=\"$TMP_ROOT/home/.orca\" node dist/bin/orca.js logs errors --lines 1); printf \"%s\\n\" \"$OUTPUT\"; ! printf \"%s\" \"$OUTPUT\" | grep -q \"\\[ERROR\\] one\"; ! printf \"%s\" \"$OUTPUT\" | grep -q \"\\[ERROR\\] two\"; printf \"logs-errors-lines-ok\\n\"'",
+  "description": "Black-box smoke for `armature logs errors --lines <n>` with a preseeded errors log.",
+  "input": "Seed an errors log with three lines, run `armature logs errors --lines 1`, and verify the output only includes the newest errors entry.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home/.armature/logs\"; cat > \"$TMP_ROOT/home/.armature/logs/errors.log\" <<EOF\n[ERROR] one\n[ERROR] two\n[ERROR] three\nEOF\nOUTPUT=$(env -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ARMATURE_HOME=\"$TMP_ROOT/home/.armature\" node dist/bin/armature.js logs errors --lines 1); printf \"%s\\n\" \"$OUTPUT\"; ! printf \"%s\" \"$OUTPUT\" | grep -q \"\\[ERROR\\] one\"; ! printf \"%s\" \"$OUTPUT\" | grep -q \"\\[ERROR\\] two\"; printf \"logs-errors-lines-ok\\n\"'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

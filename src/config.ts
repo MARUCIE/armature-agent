@@ -1,10 +1,10 @@
 /**
- * Orca CLI configuration system.
+ * Armature CLI configuration system.
  *
  * Three-tier config resolution (highest priority wins):
  *   1. CLI flags + environment variables (runtime)
- *   2. Project-local .orca.json (project)
- *   3. Global ~/.orca/config.json (global)
+ *   2. Project-local .armature.json (project)
+ *   3. Global ~/.armature/config.json (global)
  *
  * Provider architecture (v2):
  *   - Each provider is an independent config block with apiKey, baseURL, models
@@ -42,7 +42,7 @@ const ProviderConfigSchema = z.object({
 
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>
 
-const OrcaConfigSchema = z.object({
+const ArmatureConfigSchema = z.object({
   // v2: per-provider config blocks
   providers: z.record(z.string(), ProviderConfigSchema).default({}),
   defaultProvider: z.string().default('auto'),
@@ -73,8 +73,8 @@ const OrcaConfigSchema = z.object({
   baseURL: z.string().optional(),
 })
 
-export type OrcaConfig = z.infer<typeof OrcaConfigSchema>
-export type ConfigPermissionMode = OrcaConfig['permissionMode']
+export type ArmatureConfig = z.infer<typeof ArmatureConfigSchema>
+export type ConfigPermissionMode = ArmatureConfig['permissionMode']
 export type ReplPermissionMode = 'yolo' | 'auto' | 'plan'
 export type PermissionModeSource = 'session' | 'project' | 'global' | 'env' | 'flag' | 'default'
 export type PermissionRuleStatus = 'canonical' | 'normalized' | 'unrecognized'
@@ -84,9 +84,9 @@ export type Provider = string
 
 // ── Paths ───────────────────────────────────────────────────────────
 
-const GLOBAL_DIR = join(homedir(), '.orca')
+const GLOBAL_DIR = join(homedir(), '.armature')
 const GLOBAL_CONFIG = join(GLOBAL_DIR, 'config.json')
-const PROJECT_CONFIG = '.orca.json'
+const PROJECT_CONFIG = '.armature.json'
 
 export function getGlobalDir(): string {
   return GLOBAL_DIR
@@ -310,13 +310,13 @@ function migrateV1Config(raw: Record<string, unknown>): Record<string, unknown> 
 function loadEnvOverrides(): Record<string, unknown> {
   const env: Record<string, unknown> = {}
 
-  if (process.env.ORCA_PROVIDER) env.defaultProvider = process.env.ORCA_PROVIDER
-  if (process.env.ORCA_MODEL) env.defaultModel = process.env.ORCA_MODEL
-  if (process.env.ORCA_MAX_TURNS) env.maxTurns = parseInt(process.env.ORCA_MAX_TURNS, 10)
-  if (process.env.ORCA_MAX_BUDGET) env.maxBudgetUsd = parseFloat(process.env.ORCA_MAX_BUDGET)
-  if (process.env.ORCA_PERMISSION_MODE) env.permissionMode = process.env.ORCA_PERMISSION_MODE
-  if (process.env.ORCA_SYSTEM_PROMPT) env.systemPrompt = process.env.ORCA_SYSTEM_PROMPT
-  if (process.env.ORCA_BASE_URL) env.baseURL = process.env.ORCA_BASE_URL
+  if (process.env.ARMATURE_PROVIDER) env.defaultProvider = process.env.ARMATURE_PROVIDER
+  if (process.env.ARMATURE_MODEL) env.defaultModel = process.env.ARMATURE_MODEL
+  if (process.env.ARMATURE_MAX_TURNS) env.maxTurns = parseInt(process.env.ARMATURE_MAX_TURNS, 10)
+  if (process.env.ARMATURE_MAX_BUDGET) env.maxBudgetUsd = parseFloat(process.env.ARMATURE_MAX_BUDGET)
+  if (process.env.ARMATURE_PERMISSION_MODE) env.permissionMode = process.env.ARMATURE_PERMISSION_MODE
+  if (process.env.ARMATURE_SYSTEM_PROMPT) env.systemPrompt = process.env.ARMATURE_SYSTEM_PROMPT
+  if (process.env.ARMATURE_BASE_URL) env.baseURL = process.env.ARMATURE_BASE_URL
 
   return env
 }
@@ -325,14 +325,14 @@ function loadEnvOverrides(): Record<string, unknown> {
 
 export interface ResolveConfigOptions {
   cwd?: string
-  flags?: Partial<OrcaConfig>
+  flags?: Partial<ArmatureConfig>
 }
 
 /**
  * Resolve configuration from all three tiers.
  * Priority: flags > env > project > global > defaults
  */
-export function resolveConfig(options: ResolveConfigOptions = {}): OrcaConfig {
+export function resolveConfig(options: ResolveConfigOptions = {}): ArmatureConfig {
   const { cwd = process.cwd(), flags = {} } = options
 
   const global = migrateV1Config(loadGlobalConfig())
@@ -380,7 +380,7 @@ export function resolveConfig(options: ResolveConfigOptions = {}): OrcaConfig {
   }
 
   try {
-    return OrcaConfigSchema.parse(merged)
+    return ArmatureConfigSchema.parse(merged)
   } catch (err) {
     if (err instanceof z.ZodError) {
       const issues = err.issues.map(i => `  - ${i.path.join('.')}: ${i.message}`).join('\n')
@@ -449,7 +449,7 @@ export function readEffectivePermissionAllowlist(cwd = process.cwd()): string[] 
 }
 
 export function detectPermissionModeSource(cwd = process.cwd()): PermissionModeSource {
-  if (process.env.ORCA_PERMISSION_MODE) return 'env'
+  if (process.env.ARMATURE_PERMISSION_MODE) return 'env'
   if (readStoredPermissionMode('project', cwd)) return 'project'
   if (readStoredPermissionMode('global', cwd)) return 'global'
   return 'default'
@@ -691,9 +691,9 @@ export function configPermissionModeFromRepl(mode: ReplPermissionMode): ConfigPe
  *   3. If no configured provider has a key, scan well-known env vars
  *   4. Fill in defaults from WELL_KNOWN_PROVIDERS
  *
- * The sdkProvider is always 'openai' — Orca uses a single SDK.
+ * The sdkProvider is always 'openai' — Armature uses a single SDK.
  */
-export function resolveProvider(config: OrcaConfig): {
+export function resolveProvider(config: ArmatureConfig): {
   provider: string
   apiKey: string
   model: string
@@ -725,12 +725,12 @@ export function resolveProvider(config: OrcaConfig): {
     ]) || requestedModel
     : requestedModel
 
-  // Resolve apiKey: config (with env template) > well-known env var > v1 compat apiKey > ORCA_API_KEY
+  // Resolve apiKey: config (with env template) > well-known env var > v1 compat apiKey > ARMATURE_API_KEY
   const apiKey =
     explicitProviderKey ||
     (isCloudflareAggregator(providerId) ? inferRequestKeyForModel(effectiveModel) : undefined) ||
     config.apiKey ||  // v1 compat: flat apiKey from flags
-    process.env.ORCA_API_KEY
+    process.env.ARMATURE_API_KEY
 
   if (!apiKey) {
     const envHint = isCloudflareAggregator(providerId)
@@ -738,7 +738,7 @@ export function resolveProvider(config: OrcaConfig): {
       : wellKnown ? wellKnown.envKey : `${providerId.toUpperCase()}_API_KEY`
     throw new Error(
       `No API key for provider "${providerId}". ` +
-      `Set ${envHint}, or configure providers.${providerId}.apiKey in ~/.orca/config.json`
+      `Set ${envHint}, or configure providers.${providerId}.apiKey in ~/.armature/config.json`
     )
   }
 
@@ -750,7 +750,7 @@ export function resolveProvider(config: OrcaConfig): {
     resolveEnvTemplate(providerConfig.baseURL) ||
     getWellKnownBaseURL(wellKnown)
 
-  // Orca always uses OpenAI-compatible protocol
+  // Armature always uses OpenAI-compatible protocol
   const sdkProvider = 'openai' as const
 
   // Resolve extra headers (with env template expansion)
@@ -773,7 +773,7 @@ export function resolveProvider(config: OrcaConfig): {
  *   1. Configured providers with resolvable apiKey (in config order)
  *   2. Well-known env vars (anthropic > openai > google > poe)
  */
-function detectProvider(config: OrcaConfig): string {
+function detectProvider(config: ArmatureConfig): string {
   // Check model name hint first (v2 defaultModel or v1 compat model)
   const modelHint = config.defaultModel || config.model
   if (modelHint) {
@@ -803,7 +803,7 @@ function detectProvider(config: OrcaConfig): string {
   return 'anthropic' // ultimate default
 }
 
-// ── Provider Listing (for `orca providers` command) ────────────────
+// ── Provider Listing (for `armature providers` command) ────────────────
 
 export interface ProviderInfo {
   id: string
@@ -817,7 +817,7 @@ export interface ProviderInfo {
 /**
  * List all available providers (configured + well-known with env keys).
  */
-export function listProviders(config: OrcaConfig): ProviderInfo[] {
+export function listProviders(config: ArmatureConfig): ProviderInfo[] {
   const result: ProviderInfo[] = []
   const seen = new Set<string>()
 
@@ -933,7 +933,7 @@ function detectProviderForModel(model: string, providers?: Record<string, { apiK
  */
 export function resolveModelEndpoint(
   model: string,
-  config: OrcaConfig,
+  config: ArmatureConfig,
   aggregatorId?: string,
 ): ModelEndpoint | null {
   // Path 1: Aggregator available — use it for everything
@@ -1008,7 +1008,7 @@ const PREFERRED_AGGREGATOR_ORDER = ['poe', 'cloudflare', 'claudeflare', 'openrou
  *   3. Known aggregator by ID (poe, openrouter, zenmux) even without explicit flag
  *   4. Check env vars for well-known aggregator keys
  */
-export function findAggregator(config: OrcaConfig): string | undefined {
+export function findAggregator(config: ArmatureConfig): string | undefined {
   // Path 1: Explicit multiModel.provider
   const explicit = config.multiModel?.provider
   if (explicit) {

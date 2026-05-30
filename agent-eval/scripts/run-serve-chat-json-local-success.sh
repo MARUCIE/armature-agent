@@ -15,7 +15,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$TMP_ROOT/home" "$TMP_ROOT/bin" "${ORCA_EVAL_RUN_DIR:?ORCA_EVAL_RUN_DIR is required}/artifacts"
+mkdir -p "$TMP_ROOT/home" "$TMP_ROOT/bin" "${ARMATURE_EVAL_RUN_DIR:?ARMATURE_EVAL_RUN_DIR is required}/artifacts"
 
 cat > "$TMP_ROOT/bin/scutil" <<'EOF'
 #!/usr/bin/env bash
@@ -25,11 +25,11 @@ chmod +x "$TMP_ROOT/bin/scutil"
 
 PROVIDER_PORT="$(node -e 'const net=require("node:net"); const s=net.createServer(); s.listen(0,"127.0.0.1",()=>{console.log(s.address().port); s.close();});')"
 SERVE_PORT="$(node -e 'const net=require("node:net"); const s=net.createServer(); s.listen(0,"127.0.0.1",()=>{console.log(s.address().port); s.close();});')"
-REQUEST_PATH="$ORCA_EVAL_RUN_DIR/artifacts/fast-serve-chat-json-request.json"
+REQUEST_PATH="$ARMATURE_EVAL_RUN_DIR/artifacts/fast-serve-chat-json-request.json"
 RESPONSE_BODY="$TMP_ROOT/serve-json-body.txt"
 RESPONSE_STATUS="$TMP_ROOT/serve-json-status.txt"
 
-cat > "$TMP_ROOT/.orca.json" <<EOF
+cat > "$TMP_ROOT/.armature.json" <<EOF
 {
   "providers": {
     "local": {
@@ -87,8 +87,8 @@ bash agent-eval/scripts/wait-for-http.sh "http://127.0.0.1:$PROVIDER_PORT/v1/mod
 
 (
   cd "$TMP_ROOT"
-  env -i PATH="$TMP_ROOT/bin:$PATH" HOME="$TMP_ROOT/home" ORCA_HOME="$TMP_ROOT/home/.orca" \
-    node "$REPO_ROOT/dist/bin/orca.js" serve --provider local --port "$SERVE_PORT" > "$TMP_ROOT/orca-serve.out" 2>&1
+  env -i PATH="$TMP_ROOT/bin:$PATH" HOME="$TMP_ROOT/home" ARMATURE_HOME="$TMP_ROOT/home/.armature" \
+    node "$REPO_ROOT/dist/bin/armature.js" serve --provider local --port "$SERVE_PORT" > "$TMP_ROOT/armature-serve.out" 2>&1
 ) &
 SERVE_PID=$!
 

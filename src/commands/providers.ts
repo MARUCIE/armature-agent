@@ -1,9 +1,9 @@
 /**
- * `orca providers` — List and test configured providers.
+ * `armature providers` — List and test configured providers.
  *
  * Usage:
- *   orca providers             List all configured providers with status
- *   orca providers test [id]   Test connectivity to a specific provider
+ *   armature providers             List all configured providers with status
+ *   armature providers test [id]   Test connectivity to a specific provider
  */
 
 import { Command } from 'commander'
@@ -54,7 +54,7 @@ export function createProvidersCommand(): Command {
     console.log()
 
     if (providers.length === 0) {
-      console.log('  \x1b[90m(none) — configure providers in ~/.orca/config.json\x1b[0m')
+      console.log('  \x1b[90m(none) — configure providers in ~/.armature/config.json\x1b[0m')
       console.log()
       return
     }
@@ -97,7 +97,7 @@ export function createProvidersCommand(): Command {
     } else if (config.defaultProvider && config.defaultProvider !== 'auto') {
       console.log(`  \x1b[90mDefault provider: ${config.defaultProvider} (inactive)\x1b[0m`)
     }
-    console.log(`  \x1b[90mConfig: ~/.orca/config.json\x1b[0m`)
+    console.log(`  \x1b[90mConfig: ~/.armature/config.json\x1b[0m`)
     console.log()
   })
 

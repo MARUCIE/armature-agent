@@ -1,12 +1,12 @@
 <div align="center">
 
-# Orca CLI
+# Armature CLI
 
 ### The only coding agent that races Claude, GPT, and Gemini on the same question.
 
 Ask three frontier models at once. Have a judge pick the winner. Or chain them as specialists — Claude plans, GPT codes, Gemini reviews. No single-vendor CLI can do this.
 
-[![npm](https://img.shields.io/npm/v/orca-cli.svg)](https://www.npmjs.com/package/orca-cli)
+[![npm](https://img.shields.io/npm/v/armature-cli.svg)](https://www.npmjs.com/package/armature-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/Node-%3E%3D18-green.svg)](https://nodejs.org)
 [![Tests](https://img.shields.io/badge/tests-1776%20passing-brightgreen.svg)](#release-quality-gates)
@@ -14,17 +14,17 @@ Ask three frontier models at once. Have a judge pick the winner. Or chain them a
 </div>
 
 ```bash
-npm install -g orca-cli
+npm install -g armature-cli
 ```
 
 ```bash
 # One key, eleven models. Then:
-orca council "is this code thread-safe?" -n 3   # 3 models answer, a judge picks the winner
-orca race "write a CSV parser"                  # all models race, fastest good answer wins
-orca pipeline "build auth middleware"           # Claude plans -> GPT codes -> Gemini reviews
+armature council "is this code thread-safe?" -n 3   # 3 models answer, a judge picks the winner
+armature race "write a CSV parser"                  # all models race, fastest good answer wins
+armature pipeline "build auth middleware"           # Claude plans -> GPT codes -> Gemini reviews
 ```
 
-> **Why this exists:** every other coding CLI locks you to one vendor's model. Orca treats
+> **Why this exists:** every other coding CLI locks you to one vendor's model. Armature treats
 > models as interchangeable workers. For a hard question, one model is a guess — three models
 > with a judge is an answer. Works with any OpenAI-compatible provider; one aggregator key
 > (Poe / OpenRouter / Cloudflare AI Gateway) unlocks all of them.
@@ -32,7 +32,7 @@ orca pipeline "build auth middleware"           # Claude plans -> GPT codes -> G
 ## 30-second demo
 
 ```
-$ orca council "is this code thread-safe?" -n 3
+$ armature council "is this code thread-safe?" -n 3
 
 ● claude-opus-4.6 ... 4.2s
 ● gpt-5.4 ........... 2.1s
@@ -43,7 +43,7 @@ $ orca council "is this code thread-safe?" -n 3
   before the write completes. Confidence: HIGH (3/3 agree).
 ```
 
-> Replace this block with a 10-second terminal-recording GIF of `orca council` before launch —
+> Replace this block with a 10-second terminal-recording GIF of `armature council` before launch —
 > it is the single highest-leverage asset for stars.
 
 ## What you get
@@ -54,9 +54,9 @@ $ orca council "is this code thread-safe?" -n 3
 - **Runs anywhere**: terminal REPL, one-shot, headless HTTP server, or MCP server over stdio
 - **Production-hardened**: 1776 tests, shell-injection protection, fail-closed permissions, auditable release gates
 
-## How Orca compares
+## How Armature compares
 
-|  | **Orca** | Claude Code | Codex CLI | aider |
+|  | **Armature** | Claude Code | Codex CLI | aider |
 |---|:---:|:---:|:---:|:---:|
 | Providers | **11 (any OpenAI-compat)** | Anthropic only | OpenAI only | many |
 | Council — N models + a judge vote | **✅** | ❌ | ❌ | ❌ |
@@ -65,19 +65,19 @@ $ orca council "is this code thread-safe?" -n 3
 | Goal-loop (`--done-when`) | ✅ | ✅ | ✅ | ❌ |
 | MCP host + MCP server | ✅ | ✅ | partial | ❌ |
 
-The top three rows are the wedge. Everything else is table stakes — Orca just also has them.
+The top three rows are the wedge. Everything else is table stakes — Armature just also has them.
 
 ## Multi-model collaboration — the part nobody else has
 
-Orca reaches 11 models from 9 vendors through one API key. Three ways to put them to work:
+Armature reaches 11 models from 9 vendors through one API key. Three ways to put them to work:
 
-### Council — `orca council`
+### Council — `armature council`
 
 Ask N models the same question. A judge synthesizes the best answer.
 
 ```bash
-orca council "is this code thread-safe?" -n 3
-orca council "review for security issues" -n 5 -j claude-opus-4.6
+armature council "is this code thread-safe?" -n 3
+armature council "review for security issues" -n 5 -j claude-opus-4.6
 ```
 
 ```
@@ -92,20 +92,20 @@ orca council "review for security issues" -n 5 -j claude-opus-4.6
 ─ 3 models · 12.1s · agreement: high ─
 ```
 
-### Race — `orca race`
+### Race — `armature race`
 
 N models race. First good answer wins, the rest are cancelled.
 
 ```bash
-orca race "write a quicksort in Python" -n 5
+armature race "write a quicksort in Python" -n 5
 ```
 
-### Pipeline — `orca pipeline`
+### Pipeline — `armature pipeline`
 
 Chain models as specialists. Each stage feeds the next.
 
 ```bash
-orca pipeline "build auth middleware" --plan claude-opus-4.6 --code gpt-5.4 --review gemini-3.1-pro
+armature pipeline "build auth middleware" --plan claude-opus-4.6 --code gpt-5.4 --review gemini-3.1-pro
 ```
 
 | Stage | Default | Role |
@@ -116,12 +116,12 @@ orca pipeline "build auth middleware" --plan claude-opus-4.6 --code gpt-5.4 --re
 | Fix | gpt-5.4 | Address review findings |
 | Verify | claude-opus-4.6 | Confirm the fix matches the plan |
 
-For large PRs, `orca review-ledger` runs independent model reviews, synthesizes a deduplicated
+For large PRs, `armature review-ledger` runs independent model reviews, synthesizes a deduplicated
 Critical/High/Medium ledger, and gates every fix behind an explicit human decision.
 
 ## Providers — one key unlocks all
 
-Works with any OpenAI-compatible endpoint. Configure in `~/.orca/config.json`.
+Works with any OpenAI-compatible endpoint. Configure in `~/.armature/config.json`.
 
 ```bash
 # A single aggregator key gets you every vendor:
@@ -146,19 +146,19 @@ is aggregator-first with per-model direct fallback.
 ## Common commands
 
 ```bash
-orca chat                                       # interactive REPL
-orca chat "explain this codebase"               # one-shot
-orca run "fix the failing tests" --done-when "tests pass"   # goal-loop until criteria met
-orca reflect "why is this test flaky?"          # Socratic root-cause pass
-orca review "review the changed files"          # code-review preset
-orca council "SQL or NoSQL here?" -n 5          # multi-model council
-orca race "write a CSV parser"                  # multi-model race
-orca pipeline "build a REST API" --stages 5     # specialist pipeline
-orca serve --mcp                                # expose Orca as an MCP server over stdio
-orca doctor                                     # runtime / config diagnostics
+armature chat                                       # interactive REPL
+armature chat "explain this codebase"               # one-shot
+armature run "fix the failing tests" --done-when "tests pass"   # goal-loop until criteria met
+armature reflect "why is this test flaky?"          # Socratic root-cause pass
+armature review "review the changed files"          # code-review preset
+armature council "SQL or NoSQL here?" -n 5          # multi-model council
+armature race "write a CSV parser"                  # multi-model race
+armature pipeline "build a REST API" --stages 5     # specialist pipeline
+armature serve --mcp                                # expose Armature as an MCP server over stdio
+armature doctor                                     # runtime / config diagnostics
 ```
 
-Run `orca --help` or `/help` inside the REPL for the full surface (28 commands, session
+Run `armature --help` or `/help` inside the REPL for the full surface (28 commands, session
 management, queue/lease control, permission rules, stats, and logs).
 
 ## Release quality gates
@@ -179,7 +179,7 @@ performance layers. `npm run test:matrix` writes a fresh evidence bundle under `
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Orca CLI  v0.8.16  ·  TypeScript ESM  ·  1776 tests │
+│  Armature CLI  v0.8.16  ·  TypeScript ESM  ·  1776 tests │
 ├─────────────────────────────────────────────────────┤
 │  Command Layer   chat · run · council · race ·       │
 │                  pipeline · serve                    │
@@ -193,15 +193,15 @@ performance layers. `npm run test:matrix` writes a fresh evidence bundle under `
 └─────────────────────────────────────────────────────┘
 ```
 
-Resolution order: `CLI flags > ENV vars > .orca.json > ~/.orca/config.json`.
+Resolution order: `CLI flags > ENV vars > .armature.json > ~/.armature/config.json`.
 
 ## Contributing
 
 Contributions welcome. Open an issue to discuss before submitting large PRs.
 
 ```bash
-git clone https://github.com/MARUCIE/orca-cli.git
-cd orca-cli && npm install && npm run build && npm test && npm run eval:fast
+git clone https://github.com/MARUCIE/armature-cli.git
+cd armature-cli && npm install && npm run build && npm test && npm run eval:fast
 ```
 
 ## License

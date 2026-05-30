@@ -14,14 +14,14 @@ import { tmpdir } from 'node:os'
 import { executeTool } from '../src/tools.js'
 import { consumeCompletedBackgroundJobs } from '../src/background-jobs.js'
 
-const testDir = join(tmpdir(), `orca-hermes-${Date.now()}`)
-const orcaHome = join(tmpdir(), `orca-hermes-home-${Date.now()}`)
-const previousOrcaHome = process.env.ORCA_HOME
+const testDir = join(tmpdir(), `armature-hermes-${Date.now()}`)
+const armatureHome = join(tmpdir(), `armature-hermes-home-${Date.now()}`)
+const previousArmatureHome = process.env.ARMATURE_HOME
 
 beforeAll(() => {
-  process.env.ORCA_HOME = orcaHome
+  process.env.ARMATURE_HOME = armatureHome
   mkdirSync(join(testDir, 'src'), { recursive: true })
-  mkdirSync(orcaHome, { recursive: true })
+  mkdirSync(armatureHome, { recursive: true })
   writeFileSync(join(testDir, 'src', 'sample.ts'), 'line1\nline2\nline3\n')
   writeFileSync(
     join(testDir, 'src', 'large.ts'),
@@ -37,11 +37,11 @@ beforeAll(() => {
 })
 
 afterAll(() => {
-  if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-  else process.env.ORCA_HOME = previousOrcaHome
+  if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+  else process.env.ARMATURE_HOME = previousArmatureHome
 
   try { rmSync(testDir, { recursive: true, force: true }) } catch { /* ignore */ }
-  try { rmSync(orcaHome, { recursive: true, force: true }) } catch { /* ignore */ }
+  try { rmSync(armatureHome, { recursive: true, force: true }) } catch { /* ignore */ }
 })
 
 describe('Hermes runtime: tool arg coercion', () => {

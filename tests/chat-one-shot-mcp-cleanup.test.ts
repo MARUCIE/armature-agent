@@ -70,7 +70,7 @@ function runGit(cwd: string, args: string[]): void {
 }
 
 function createDirtyWorkspace(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'orca-one-shot-critique-'))
+  const dir = mkdtempSync(join(tmpdir(), 'armature-one-shot-critique-'))
   runGit(dir, ['init'])
   runGit(dir, ['config', 'user.email', 'test@example.com'])
   runGit(dir, ['config', 'user.name', 'Test User'])
@@ -177,7 +177,7 @@ describe('chat one-shot MCP cleanup', () => {
         reasoningEffort: 'xhigh',
       },
       {
-        systemPrompt: 'You are Orca.',
+        systemPrompt: 'You are Armature.',
         maxTurns: 25,
         permissionMode: 'bypassPermissions',
       } as never,
@@ -191,9 +191,9 @@ describe('chat one-shot MCP cleanup', () => {
   })
 
   it('loads one-shot hooks and injects UserPromptSubmit context before the model call', async () => {
-    const home = mkdtempSync(join(tmpdir(), 'orca-one-shot-hooks-home-'))
-    mkdirSync(join(home, '.orca'), { recursive: true })
-    writeFileSync(join(home, '.orca', 'hooks.json'), JSON.stringify({
+    const home = mkdtempSync(join(tmpdir(), 'armature-one-shot-hooks-home-'))
+    mkdirSync(join(home, '.armature'), { recursive: true })
+    writeFileSync(join(home, '.armature', 'hooks.json'), JSON.stringify({
       UserPromptSubmit: [{
         command: 'printf "%s" "review claims before answering"',
       }],
@@ -232,19 +232,19 @@ describe('chat one-shot MCP cleanup', () => {
       )
 
       expect(String(capturedPrompt)).toContain('review claims before answering')
-      expect(String(capturedPrompt)).toContain('orca_hook_context')
+      expect(String(capturedPrompt)).toContain('armature_hook_context')
     } finally {
       rmSync(home, { recursive: true, force: true })
     }
   })
 
   it('fires Stop hooks for one-shot proxy responses with response evidence', async () => {
-    const home = mkdtempSync(join(tmpdir(), 'orca-one-shot-stop-home-'))
-    const hookDir = join(home, '.orca')
+    const home = mkdtempSync(join(tmpdir(), 'armature-one-shot-stop-home-'))
+    const hookDir = join(home, '.armature')
     mkdirSync(hookDir, { recursive: true })
-    writeFileSync(join(home, '.orca', 'hooks.json'), JSON.stringify({
+    writeFileSync(join(home, '.armature', 'hooks.json'), JSON.stringify({
       Stop: [{
-        command: 'python3 -c "import os, pathlib; pathlib.Path(\'stop-response.txt\').write_text(os.environ.get(\'ORCA_RESPONSE\', \'\'))"',
+        command: 'python3 -c "import os, pathlib; pathlib.Path(\'stop-response.txt\').write_text(os.environ.get(\'ARMATURE_RESPONSE\', \'\'))"',
       }],
     }))
     process.env.HOME = home

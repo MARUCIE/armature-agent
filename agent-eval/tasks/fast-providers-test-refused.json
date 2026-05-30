@@ -1,9 +1,9 @@
 {
   "id": "fast-providers-test-refused",
   "title": "Providers test surfaces transport failures clearly",
-  "description": "Black-box smoke for `orca providers test local` against a closed local port.",
-  "input": "Create a temporary local provider config that points at an unused localhost port, run `orca providers test local`, and verify the CLI reports a FAIL transport error instead of crashing.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; PORT=$(node -e '\"'\"'const net=require(\"node:net\"); const s=net.createServer(); s.listen(0,\"127.0.0.1\",()=>{console.log(s.address().port); s.close();});'\"'\"'); mkdir -p \"$TMP_ROOT/home\"; cat > \"$TMP_ROOT/.orca.json\" <<EOF\n{\n  \"providers\": {\n    \"local\": {\n      \"apiKey\": \"test-local-key\",\n      \"baseURL\": \"http://127.0.0.1:$PORT/v1\",\n      \"defaultModel\": \"qwen3:32b\"\n    }\n  },\n  \"defaultProvider\": \"local\"\n}\nEOF\n(cd \"$TMP_ROOT\" && env -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ORCA_HOME=\"$TMP_ROOT/home/.orca\" node \"$REPO_ROOT/dist/bin/orca.js\" providers test local)'",
+  "description": "Black-box smoke for `armature providers test local` against a closed local port.",
+  "input": "Create a temporary local provider config that points at an unused localhost port, run `armature providers test local`, and verify the CLI reports a FAIL transport error instead of crashing.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; PORT=$(node -e '\"'\"'const net=require(\"node:net\"); const s=net.createServer(); s.listen(0,\"127.0.0.1\",()=>{console.log(s.address().port); s.close();});'\"'\"'); mkdir -p \"$TMP_ROOT/home\"; cat > \"$TMP_ROOT/.armature.json\" <<EOF\n{\n  \"providers\": {\n    \"local\": {\n      \"apiKey\": \"test-local-key\",\n      \"baseURL\": \"http://127.0.0.1:$PORT/v1\",\n      \"defaultModel\": \"qwen3:32b\"\n    }\n  },\n  \"defaultProvider\": \"local\"\n}\nEOF\n(cd \"$TMP_ROOT\" && env -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ARMATURE_HOME=\"$TMP_ROOT/home/.armature\" node \"$REPO_ROOT/dist/bin/armature.js\" providers test local)'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

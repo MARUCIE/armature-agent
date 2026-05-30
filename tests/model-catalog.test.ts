@@ -13,11 +13,11 @@ import {
   listModelChoices,
   modelChoiceKey,
 } from '../src/model-catalog.js'
-import type { OrcaConfig } from '../src/config.js'
+import type { ArmatureConfig } from '../src/config.js'
 import { TokenBudgetManager } from '../src/token-budget.js'
 
 describe('model catalog', () => {
-  const baseConfig: OrcaConfig = {
+  const baseConfig: ArmatureConfig = {
     providers: {
       openai: {
         apiKey: 'test-openai',

@@ -1,12 +1,12 @@
 /**
- * `orca serve` — Headless agent server.
+ * `armature serve` — Headless agent server.
  *
- * Exposes Orca as an HTTP API with SSE streaming.
+ * Exposes Armature as an HTTP API with SSE streaming.
  * Attach from another terminal with: curl -N http://localhost:PORT/chat -d '{"prompt":"..."}'
  *
  * Usage:
- *   orca serve                  Start on random port
- *   orca serve --port 9100      Start on specific port
+ *   armature serve                  Start on random port
+ *   armature serve --port 9100      Start on specific port
  */
 
 import { Command } from 'commander'
@@ -16,7 +16,7 @@ import { streamChat, chatOnce } from '../providers/openai-compat.js'
 import { buildSystemPrompt } from '../system-prompt.js'
 import { isAuthorizedRequest, resolveServeAuthToken } from '../policy-executor.js'
 import { recordUsage } from '../usage-db.js'
-import type { OrcaConfig } from '../config.js'
+import type { ArmatureConfig } from '../config.js'
 import { getModelChoice, formatContextWindow, formatPricing, getPricingForModel } from '../model-catalog.js'
 import { gatherDoctorReport } from '../doctor.js'
 import { EvolutionStore } from '../evolution/store.js'
@@ -43,13 +43,13 @@ export const MAX_CHAT_BODY_BYTES = 1024 * 1024
 const LOOKUP_ID_PATTERN = /^[A-Za-z0-9._-]+$/
 
 export interface ServerState {
-  config: OrcaConfig
+  config: ArmatureConfig
   resolved: ReturnType<typeof resolveProvider>
   cwd: string
   authToken?: string
 }
 
-export function resolveServeAuthTokenForHost(host: string, envToken = process.env.ORCA_SERVE_TOKEN): string | undefined {
+export function resolveServeAuthTokenForHost(host: string, envToken = process.env.ARMATURE_SERVE_TOKEN): string | undefined {
   return resolveServeAuthToken(isLoopbackHost, host, envToken)
 }
 
@@ -423,7 +423,7 @@ async function handleChat(req: IncomingMessage, res: ServerResponse, state: Serv
   res.end()
 }
 
-export function createOrcaHttpServer(state: ServerState) {
+export function createArmatureHttpServer(state: ServerState) {
   return createServer(async (req, res) => {
     // CORS preflight
     if (req.method === 'OPTIONS') {
@@ -626,14 +626,14 @@ export function createServeCommand(): Command {
           allowedTools: config.tools,
           isPermissionGranted: (ruleKey) => persistedPermissionAllowlist.has(ruleKey),
         })
-        process.stderr.write('Orca MCP server started (stdio mode)\n')
+        process.stderr.write('Armature MCP server started (stdio mode)\n')
         mcp.start()
         return
       }
 
       const authToken = resolveServeAuthTokenForHost(opts.host)
       const state: ServerState = { config, resolved, cwd, authToken }
-      const server = createOrcaHttpServer(state)
+      const server = createArmatureHttpServer(state)
 
       const port = parseInt(opts.port, 10) || 0
       server.listen(port, opts.host, () => {
@@ -641,7 +641,7 @@ export function createServeCommand(): Command {
         const actualPort = typeof addr === 'object' ? addr?.port : port
         logInfo('serve server started', { host: opts.host, port: actualPort, provider: resolved.provider, model: resolved.model })
         console.log()
-        console.log(`  \x1b[1mOrca Server\x1b[0m`)
+        console.log(`  \x1b[1mArmature Server\x1b[0m`)
         console.log(`  \x1b[90m${resolved.provider}/${resolved.model}\x1b[0m`)
         const metadata = getServeModelMetadata(resolved.provider, resolved.model)
         console.log(`  \x1b[90mctx ${metadata.contextLabel} · ${metadata.pricingLabel}/1M in/out${metadata.caution ? ` · caution` : ''}\x1b[0m`)

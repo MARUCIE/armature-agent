@@ -5,20 +5,20 @@ import { tmpdir } from 'node:os'
 
 describe('permissions command', () => {
   const previousHome = process.env.HOME
-  const previousOrcaHome = process.env.ORCA_HOME
+  const previousArmatureHome = process.env.ARMATURE_HOME
   let homeDir: string
-  let orcaHome: string
+  let armatureHome: string
   let projectDir: string
 
   beforeEach(() => {
-    homeDir = join(tmpdir(), `orca-permissions-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    orcaHome = join(tmpdir(), `orca-permissions-store-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    projectDir = join(tmpdir(), `orca-permissions-project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    homeDir = join(tmpdir(), `armature-permissions-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    armatureHome = join(tmpdir(), `armature-permissions-store-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    projectDir = join(tmpdir(), `armature-permissions-project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
     mkdirSync(homeDir, { recursive: true })
-    mkdirSync(orcaHome, { recursive: true })
+    mkdirSync(armatureHome, { recursive: true })
     mkdirSync(projectDir, { recursive: true })
     process.env.HOME = homeDir
-    process.env.ORCA_HOME = orcaHome
+    process.env.ARMATURE_HOME = armatureHome
   })
 
   afterEach(() => {
@@ -26,10 +26,10 @@ describe('permissions command', () => {
     vi.resetModules()
     if (previousHome === undefined) delete process.env.HOME
     else process.env.HOME = previousHome
-    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = previousOrcaHome
+    if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = previousArmatureHome
     try { rmSync(homeDir, { recursive: true, force: true }) } catch {}
-    try { rmSync(orcaHome, { recursive: true, force: true }) } catch {}
+    try { rmSync(armatureHome, { recursive: true, force: true }) } catch {}
     try { rmSync(projectDir, { recursive: true, force: true }) } catch {}
   })
 
@@ -43,7 +43,7 @@ describe('permissions command', () => {
       const command = createPermissionsCommand()
       await command.parseAsync(['node', 'permissions', 'set', 'plan', '--scope', 'project'])
 
-      const projectConfig = readFileSync(join(projectDir, '.orca.json'), 'utf-8')
+      const projectConfig = readFileSync(join(projectDir, '.armature.json'), 'utf-8')
       expect(projectConfig).toContain('"permissionMode": "plan"')
       expect(logs.join('\n')).toContain('updated project permission mode -> plan')
     } finally {
@@ -133,7 +133,7 @@ describe('permissions command', () => {
       const command = createPermissionsCommand()
       await command.parseAsync(['node', 'permissions', 'revoke', 'project', 'run_command::run: echo hello'])
 
-      const projectConfig = readFileSync(join(projectDir, '.orca.json'), 'utf-8')
+      const projectConfig = readFileSync(join(projectDir, '.armature.json'), 'utf-8')
       expect(projectConfig).not.toContain('run_command::run: echo hello')
       expect(logs.join('\n')).toContain('removed project rule')
     } finally {
@@ -162,7 +162,7 @@ describe('permissions command', () => {
       const command = createPermissionsCommand()
       await command.parseAsync(['node', 'permissions', 'revoke', 'project'])
 
-      const projectConfig = readFileSync(join(projectDir, '.orca.json'), 'utf-8')
+      const projectConfig = readFileSync(join(projectDir, '.armature.json'), 'utf-8')
       expect(projectConfig).toContain('run_command::run: echo hello')
       expect(projectConfig).not.toContain('write_file::write: src/index.ts')
       expect(logs.join('\n')).toContain('Select project rule to remove')
@@ -193,7 +193,7 @@ describe('permissions command', () => {
       const command = createPermissionsCommand()
       await command.parseAsync(['node', 'permissions', 'revoke', 'project'])
 
-      const projectConfig = readFileSync(join(projectDir, '.orca.json'), 'utf-8')
+      const projectConfig = readFileSync(join(projectDir, '.armature.json'), 'utf-8')
       expect(projectConfig).toContain('run_command::run: echo hello')
       expect(projectConfig).not.toContain('write_file::write: src/index.ts')
       expect(logs.join('\n')).toContain('filter:')
@@ -217,7 +217,7 @@ describe('permissions command', () => {
       const command = createPermissionsCommand()
       await command.parseAsync(['node', 'permissions', 'clear', 'project'])
 
-      const projectConfig = readFileSync(join(projectDir, '.orca.json'), 'utf-8')
+      const projectConfig = readFileSync(join(projectDir, '.armature.json'), 'utf-8')
       expect(projectConfig).toContain('"permissionAllowlist": []')
       expect(logs.join('\n')).toContain('cleared 2 project rule(s)')
     } finally {
@@ -239,7 +239,7 @@ describe('permissions command', () => {
       const command = createPermissionsCommand()
       await command.parseAsync(['node', 'permissions', 'normalize', 'project'])
 
-      const projectConfig = readFileSync(join(projectDir, '.orca.json'), 'utf-8')
+      const projectConfig = readFileSync(join(projectDir, '.armature.json'), 'utf-8')
       expect(projectConfig).toContain('write_file|path=src/index.ts')
       expect(projectConfig).toContain('run_command|command=echo hello')
       expect(logs.join('\n')).toContain('normalized project: 2 changed, 0 unresolved, 2 total')
@@ -259,7 +259,7 @@ describe('permissions command', () => {
       const command = createPermissionsCommand()
       await command.parseAsync(['node', 'permissions', 'normalize', 'project'])
 
-      const projectConfig = readFileSync(join(projectDir, '.orca.json'), 'utf-8')
+      const projectConfig = readFileSync(join(projectDir, '.armature.json'), 'utf-8')
       expect(projectConfig).toContain('run_command|command=echo hello')
       expect(projectConfig).not.toContain('run_command::run: echo hello')
     } finally {

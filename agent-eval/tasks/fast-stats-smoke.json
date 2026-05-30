@@ -1,8 +1,8 @@
 {
   "id": "fast-stats-smoke",
   "title": "Stats shows usage, runtime health, and recent errors",
-  "description": "Black-box smoke for `orca stats` with a seeded usage database and errors log.",
-  "input": "Seed one usage row plus one errors.log line, run `orca stats`, and verify the output includes overview, cost/tokens, runtime health, and recent errors.",
+  "description": "Black-box smoke for `armature stats` with a seeded usage database and errors log.",
+  "input": "Seed one usage row plus one errors.log line, run `armature stats`, and verify the output includes overview, cost/tokens, runtime health, and recent errors.",
   "command": "bash agent-eval/scripts/run-stats-smoke.sh",
   "artifacts": [],
   "graders": [

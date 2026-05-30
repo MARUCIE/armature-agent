@@ -2,7 +2,7 @@ import { hooks, type HookResult } from '../hooks.js'
 import { messageContentToText, type PromptContent } from '../providers/openai-compat.js'
 
 function appendTextContext(prompt: PromptContent, label: string, context: string): PromptContent {
-  const block = `\n\n<orca_hook_context source="${label}">\n${context.trim()}\n</orca_hook_context>`
+  const block = `\n\n<armature_hook_context source="${label}">\n${context.trim()}\n</armature_hook_context>`
   if (typeof prompt === 'string') return `${prompt}${block}`
   return [...prompt, { type: 'text' as const, text: block }]
 }

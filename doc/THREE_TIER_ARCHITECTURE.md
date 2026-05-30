@@ -1,4 +1,4 @@
-# Three-Tier Architecture — Orca Ecosystem
+# Three-Tier Architecture — Armature Ecosystem
 
 Historical architecture snapshot. Some repository/package identifiers and counts may describe the architecture state at the time of writing rather than the current working tree.
 
@@ -12,15 +12,15 @@ Historical architecture snapshot. Some repository/package identifiers and counts
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Layer 3: OrcaOS (AI-OS)                     │
+│                    Layer 3: ArmatureOS (AI-OS)                     │
 │  Launcher · 112 Skills · 38 Core Modules · 16 Harness Modules   │
 │  53 Start Functions · Skill Groups · DNA Capsules · Cron Jobs    │
 ├─────────────────────────────────────────────────────────────────┤
-│                    Layer 2: Orca CLI (Product)                   │
+│                    Layer 2: Armature CLI (Product)                   │
 │  REPL · 3 Commands · 13 Slash Commands · 5 Agent Tools          │
 │  Multi-Model · Poe/OpenRouter Proxy · Streaming · Cost Tracking  │
 ├─────────────────────────────────────────────────────────────────┤
-│                  Layer 1: Orca Agent SDK (Foundation)            │
+│                  Layer 1: Armature Agent SDK (Foundation)            │
 │  Agent Engine · 51 Built-in Tools · 12 Core Contracts           │
 │  2 Provider Adapters · Eval Framework · MCP Client (7 transports)│
 └─────────────────────────────────────────────────────────────────┘
@@ -29,7 +29,7 @@ Historical architecture snapshot. Some repository/package identifiers and counts
 ### Dependency Direction
 
 ```
-OrcaOS ──depends-on──→ Orca CLI ──optional-dep──→ Orca Agent SDK
+ArmatureOS ──depends-on──→ Armature CLI ──optional-dep──→ Armature Agent SDK
                               │
                               └──direct-dep──→ OpenAI SDK (Poe proxy)
 ```
@@ -38,23 +38,23 @@ OrcaOS ──depends-on──→ Orca CLI ──optional-dep──→ Orca Agent
 
 | Layer | Repo | URL | Language | Tests |
 |-------|------|-----|----------|-------|
-| L1: SDK | `orca-agent-sdk` | github.com/MARUCIE/orca-agent-sdk | TypeScript | 170 / 27 files |
-| L2: CLI | `orca-cli` | github.com/MARUCIE/orca-cli | TypeScript | 22 / 3 files |
+| L1: SDK | `armature-agent-sdk` | github.com/MARUCIE/armature-agent-sdk | TypeScript | 170 / 27 files |
+| L2: CLI | `armature-cli` | github.com/MARUCIE/armature-cli | TypeScript | 22 / 3 files |
 | L3: AI-OS | `00-AI-Fleet` | local (private) | Python + Bash | Harness-gated |
 
 ---
 
-## 2. Layer 1: Orca Agent SDK (Foundation)
+## 2. Layer 1: Armature Agent SDK (Foundation)
 
 ### 2.1 Package Structure
 
 | Package | Purpose | Files | Exports |
 |---------|---------|-------|---------|
-| `@orca/sdk` | Agent engine entry point | 2000+ src files | `createAgent`, `Agent`, `query`, 50+ tools |
-| `@orca/core` | Provider-neutral IR | 13 modules | 12 contracts + types |
-| `@orca/provider-anthropic` | Anthropic codec | 2 modules | Adapter factory + codec |
-| `@orca/provider-openai` | OpenAI codec | 2 modules | Adapter factory + codec |
-| `@orca/eval` | Quality evaluation | 6 modules | Trajectory + tool validation + golden |
+| `@armature/sdk` | Agent engine entry point | 2000+ src files | `createAgent`, `Agent`, `query`, 50+ tools |
+| `@armature/core` | Provider-neutral IR | 13 modules | 12 contracts + types |
+| `@armature/provider-anthropic` | Anthropic codec | 2 modules | Adapter factory + codec |
+| `@armature/provider-openai` | OpenAI codec | 2 modules | Adapter factory + codec |
+| `@armature/eval` | Quality evaluation | 6 modules | Trajectory + tool validation + golden |
 
 ### 2.2 Core Contracts (packages/core — 12 modules)
 
@@ -241,15 +241,15 @@ OrcaOS ──depends-on──→ Orca CLI ──optional-dep──→ Orca Agent
 
 ---
 
-## 3. Layer 2: Orca CLI (Product)
+## 3. Layer 2: Armature CLI (Product)
 
 ### 3.1 Module Structure
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `bin/orca.ts` | 23 | Entry point with SIGINT/SIGTERM handlers |
+| `bin/armature.ts` | 23 | Entry point with SIGINT/SIGTERM handlers |
 | `commands/chat.ts` | 780+ | REPL + one-shot chat + multi-turn + slash commands |
-| `commands/init.ts` | 40 | Initialize .orca/ config |
+| `commands/init.ts` | 40 | Initialize .armature/ config |
 | `commands/run.ts` | 170 | Task execution with acceptEdits default |
 | `config.ts` | 240 | 3-tier config resolver + Zod schema + provider auto-detect |
 | `output.ts` | 260 | Streaming output + tool display + cost + errors + session summary |
@@ -264,9 +264,9 @@ OrcaOS ──depends-on──→ Orca CLI ──optional-dep──→ Orca Agent
 
 | Command | Description | Modes |
 |---------|-------------|-------|
-| `orca chat [prompt]` | Interactive REPL or one-shot query | Streaming, JSON |
-| `orca run <task>` | Execute task with agent tools | acceptEdits default |
-| `orca init` | Create ~/.orca/ + .orca.json | Global + project |
+| `armature chat [prompt]` | Interactive REPL or one-shot query | Streaming, JSON |
+| `armature run <task>` | Execute task with agent tools | acceptEdits default |
+| `armature init` | Create ~/.armature/ + .armature.json | Global + project |
 
 ### 3.3 Slash Commands (13)
 
@@ -329,9 +329,9 @@ OrcaOS ──depends-on──→ Orca CLI ──optional-dep──→ Orca Agent
 | Tier | Source | Format | Scope |
 |------|--------|--------|-------|
 | 1 (highest) | CLI flags | `--provider poe --model GPT-4o` | Runtime |
-| 2 | Environment | `POE_API_KEY`, `ORCA_PROVIDER`, `ORCA_MODEL` | Process |
-| 3 | Project | `.orca.json` | Per-directory |
-| 4 (lowest) | Global | `~/.orca/config.json` | User-wide |
+| 2 | Environment | `POE_API_KEY`, `ARMATURE_PROVIDER`, `ARMATURE_MODEL` | Process |
+| 3 | Project | `.armature.json` | Per-directory |
+| 4 (lowest) | Global | `~/.armature/config.json` | User-wide |
 
 ### 3.8 Cost Estimation (12 pricing tiers)
 
@@ -351,7 +351,7 @@ OrcaOS ──depends-on──→ Orca CLI ──optional-dep──→ Orca Agent
 
 ---
 
-## 4. Layer 3: OrcaOS (AI-OS)
+## 4. Layer 3: ArmatureOS (AI-OS)
 
 ### 4.1 Core Statistics
 
@@ -374,7 +374,7 @@ OrcaOS ──depends-on──→ Orca CLI ──optional-dep──→ Orca Agent
 | Gemini CLI | `ai gemini` or `ai` → `3` | `start_gemini` |
 | Amp CLI | `ai amp` or `ai` → `4` | `start_amp` |
 | Droid | `ai droid` or `ai` → `5` | `start_droid` |
-| **Orca CLI** | **`ai orca` or `ai` → `6`** | **Inline (node dist/bin/orca.js)** |
+| **Armature CLI** | **`ai armature` or `ai` → `6`** | **Inline (node dist/bin/armature.js)** |
 
 ### 4.3 Harness Engineering Layer (16 modules)
 
@@ -397,19 +397,19 @@ OrcaOS ──depends-on──→ Orca CLI ──optional-dep──→ Orca Agent
 | `goal_loop_cron.py` | Cron-scheduled goal loop execution |
 | `__init__.py` | Package initialization |
 
-### 4.4 Orca CLI Integration in AI-Fleet
+### 4.4 Armature CLI Integration in AI-Fleet
 
 ```bash
 # Direct command
-ai orca chat -p poe -m GPT-4o "analyze this project"
+ai armature chat -p poe -m GPT-4o "analyze this project"
 
 # Interactive menu → 6
 ai
 > 6
-启动 Orca CLI (Orca Agent SDK)...
+启动 Armature CLI (Armature Agent SDK)...
 
 # Inline from menu
-> orca what is this project about?
+> armature what is this project about?
 ```
 
 Features:
@@ -445,7 +445,7 @@ Features:
 
 ## 6. Data Flow
 
-### 6.1 Poe Proxy Path (orca chat -p poe)
+### 6.1 Poe Proxy Path (armature chat -p poe)
 
 ```
 User Input
@@ -478,7 +478,7 @@ History Update (user + assistant messages appended)
 Next Prompt
 ```
 
-### 6.2 SDK Native Path (orca chat --provider anthropic)
+### 6.2 SDK Native Path (armature chat --provider anthropic)
 
 ```
 User Input
@@ -487,7 +487,7 @@ User Input
 REPL → Config → Provider Router
     │
     ▼
-@orca/sdk createAgent()
+@armature/sdk createAgent()
     │
     ▼
 QueryEngine → styleRouter → providerSelection
@@ -514,8 +514,8 @@ Result
 | 2026-04-03 | SDK extracted from Claude Code engine | Phase 1-2 complete |
 | 2026-04-03 | 5-way swarm audit: 14 SOTA gaps identified | Architecture direction |
 | 2026-04-03 | SOTA Sprint 1-4: all 14 gaps closed | 170 tests, 12 contracts |
-| 2026-04-03 | Renamed to Orca; repo: orca-agent-sdk | Brand established |
-| 2026-04-04 | Orca CLI created (Sprint A-F) | REPL + tools + multi-model |
+| 2026-04-03 | Renamed to Armature; repo: armature-agent-sdk | Brand established |
+| 2026-04-04 | Armature CLI created (Sprint A-F) | REPL + tools + multi-model |
 | 2026-04-04 | Poe API integration verified | Claude + GPT + Gemini E2E |
 | 2026-04-04 | 3-round code audit passed | Security + arch + DX |
 | 2026-04-04 | User journey E2E: 6 scenarios passed | All tools verified |

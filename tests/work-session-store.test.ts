@@ -5,26 +5,26 @@ import { tmpdir } from 'node:os'
 
 describe('work-session store', () => {
   const previousHome = process.env.HOME
-  const previousOrcaHome = process.env.ORCA_HOME
+  const previousArmatureHome = process.env.ARMATURE_HOME
   let homeDir: string
-  let orcaHome: string
+  let armatureHome: string
 
   beforeEach(() => {
-    homeDir = join(tmpdir(), `orca-work-session-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    orcaHome = join(tmpdir(), `orca-work-session-store-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    homeDir = join(tmpdir(), `armature-work-session-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    armatureHome = join(tmpdir(), `armature-work-session-store-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
     mkdirSync(homeDir, { recursive: true })
-    mkdirSync(orcaHome, { recursive: true })
+    mkdirSync(armatureHome, { recursive: true })
     process.env.HOME = homeDir
-    process.env.ORCA_HOME = orcaHome
+    process.env.ARMATURE_HOME = armatureHome
   })
 
   afterEach(() => {
     if (previousHome === undefined) delete process.env.HOME
     else process.env.HOME = previousHome
-    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = previousOrcaHome
+    if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = previousArmatureHome
     try { rmSync(homeDir, { recursive: true, force: true }) } catch { /* ignore */ }
-    try { rmSync(orcaHome, { recursive: true, force: true }) } catch { /* ignore */ }
+    try { rmSync(armatureHome, { recursive: true, force: true }) } catch { /* ignore */ }
   })
 
   it('returns the latest valid work session when the newest record is corrupt', async () => {

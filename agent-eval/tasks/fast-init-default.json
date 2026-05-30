@@ -1,9 +1,9 @@
 {
   "id": "fast-init-default",
   "title": "Init creates global and project config by default",
-  "description": "Black-box smoke for `orca init` in a clean temporary project and home.",
-  "input": "Run `orca init` in an empty temporary project with an isolated HOME, verify both config files are created, and confirm the user-facing next steps are printed.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); TMP_PROJECT=$(mktemp -d); trap \"rm -rf $TMP_HOME $TMP_PROJECT\" EXIT; OUTPUT=$(cd \"$TMP_PROJECT\" && env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ORCA_HOME=\"$TMP_HOME/.orca\" node \"$REPO_ROOT/dist/bin/orca.js\" init); printf \"%s\\n\" \"$OUTPUT\"; test -f \"$TMP_HOME/.orca/config.json\"; test -f \"$TMP_PROJECT/.orca.json\"; printf \"init-created-ok\\n\"'",
+  "description": "Black-box smoke for `armature init` in a clean temporary project and home.",
+  "input": "Run `armature init` in an empty temporary project with an isolated HOME, verify both config files are created, and confirm the user-facing next steps are printed.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); TMP_PROJECT=$(mktemp -d); trap \"rm -rf $TMP_HOME $TMP_PROJECT\" EXIT; OUTPUT=$(cd \"$TMP_PROJECT\" && env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ARMATURE_HOME=\"$TMP_HOME/.armature\" node \"$REPO_ROOT/dist/bin/armature.js\" init); printf \"%s\\n\" \"$OUTPUT\"; test -f \"$TMP_HOME/.armature/config.json\"; test -f \"$TMP_PROJECT/.armature.json\"; printf \"init-created-ok\\n\"'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

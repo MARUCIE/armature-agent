@@ -3,8 +3,8 @@
  *
  * The runtime ({@link runWorkflow}) is decoupled from how a sub-agent is
  * actually executed through the {@link WorkflowAgentRunner} interface. This file
- * provides the production bridge — {@link OrcaWorkflowAgentRunner} — which maps
- * each `agent()` call onto Orca's process-isolated `spawnSubAgent`, with optional
+ * provides the production bridge — {@link ArmatureWorkflowAgentRunner} — which maps
+ * each `agent()` call onto Armature's process-isolated `spawnSubAgent`, with optional
  * git-worktree isolation and a JSON output contract for structured `schema`
  * returns. Tests can swap in a stub runner with no LLM call.
  */
@@ -32,15 +32,15 @@ export interface WorkflowAgentRunner {
   run(req: WorkflowAgentRequest): Promise<unknown>
 }
 
-export interface OrcaRunnerParentContext {
+export interface ArmatureRunnerParentContext {
   model: string
   apiKey: string
   baseURL?: string | null
 }
 
-export interface OrcaWorkflowAgentRunnerOptions {
+export interface ArmatureWorkflowAgentRunnerOptions {
   cwd: string
-  parent: OrcaRunnerParentContext
+  parent: ArmatureRunnerParentContext
   /** Per-agent wall-clock cap (ms). Default 180s — workflows fan out long tasks. */
   timeoutMs?: number
   maxTurns?: number
@@ -48,14 +48,14 @@ export interface OrcaWorkflowAgentRunnerOptions {
 
 // ── Production bridge ────────────────────────────────────────────
 
-export class OrcaWorkflowAgentRunner implements WorkflowAgentRunner {
+export class ArmatureWorkflowAgentRunner implements WorkflowAgentRunner {
   private readonly cwd: string
-  private readonly parent: OrcaRunnerParentContext
+  private readonly parent: ArmatureRunnerParentContext
   private readonly timeoutMs: number
   private readonly maxTurns: number
   private readonly worktrees = new WorktreeManager()
 
-  constructor(options: OrcaWorkflowAgentRunnerOptions) {
+  constructor(options: ArmatureWorkflowAgentRunnerOptions) {
     this.cwd = options.cwd
     this.parent = options.parent
     this.timeoutMs = options.timeoutMs ?? 180_000

@@ -18,7 +18,7 @@ import type { DNACapsule } from '../src/memory/dna.js'
 
 // ── Setup ──────────────────────────────────────────────────────────
 
-const TMP = join(tmpdir(), `orca-memory-test-${randomBytes(6).toString('hex')}`)
+const TMP = join(tmpdir(), `armature-memory-test-${randomBytes(6).toString('hex')}`)
 
 function setup() {
   mkdirSync(TMP, { recursive: true })

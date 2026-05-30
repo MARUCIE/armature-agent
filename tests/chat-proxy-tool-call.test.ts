@@ -122,7 +122,7 @@ describe('chat proxy tool helper', () => {
   it('blocks dangerous tools when auto permission mode is denied', async () => {
     mockState.askPermission.mockResolvedValue({ allowed: false, scope: 'once' })
 
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     const approvals: ToolApprovalEventInput[] = []
     const result = await handleProxyToolCall({
       ...baseParams,
@@ -149,7 +149,7 @@ describe('chat proxy tool helper', () => {
   it('requires approval for fetch_url in auto permission mode', async () => {
     mockState.askPermission.mockResolvedValue({ allowed: false, scope: 'once' })
 
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     const result = await handleProxyToolCall({
       ...baseParams,
       cwd,
@@ -165,23 +165,23 @@ describe('chat proxy tool helper', () => {
   it('requires approval for web_search in auto permission mode', async () => {
     mockState.askPermission.mockResolvedValue({ allowed: false, scope: 'once' })
 
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     const result = await handleProxyToolCall({
       ...baseParams,
       cwd,
       name: 'web_search',
-      args: { query: 'orca cli' },
+      args: { query: 'armature cli' },
       permissionMode: 'auto',
     })
 
     expect(result).toEqual({ success: false, output: 'User denied permission.' })
-    expect(mockState.askPermission).toHaveBeenCalledWith('web_search', expect.stringContaining('orca cli'))
+    expect(mockState.askPermission).toHaveBeenCalledWith('web_search', expect.stringContaining('armature cli'))
   })
 
   it('does not update undo state when auto-mode write is denied', async () => {
     mockState.askPermission.mockResolvedValue({ allowed: false, scope: 'once' })
 
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     const onFileWrite = vi.fn()
     const result = await handleProxyToolCall({
       ...baseParams,
@@ -199,7 +199,7 @@ describe('chat proxy tool helper', () => {
   it('remembers approved tools for the current session after a successful execution', async () => {
     mockState.askPermission.mockResolvedValueOnce({ allowed: true, scope: 'session' })
 
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     writeFileSync(join(cwd, 'note.txt'), 'hello session permissions\n')
     const sessionRules = new Set<string>()
     const approvals: ToolApprovalEventInput[] = []
@@ -240,7 +240,7 @@ describe('chat proxy tool helper', () => {
   it('persists approved tools into the project allowlist', async () => {
     mockState.askPermission.mockResolvedValueOnce({ allowed: true, scope: 'project' })
 
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     writeFileSync(join(cwd, 'note.txt'), 'hello project permissions\n')
     const params = {
       ...baseParams,
@@ -264,7 +264,7 @@ describe('chat proxy tool helper', () => {
   it('does not persist approved project grants when the tool execution fails', async () => {
     mockState.askPermission.mockResolvedValueOnce({ allowed: true, scope: 'project' })
 
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     const params = {
       ...baseParams,
       cwd,
@@ -287,7 +287,7 @@ describe('chat proxy tool helper', () => {
   it('uses stable path-based permission keys for file writes', async () => {
     mockState.askPermission.mockResolvedValueOnce({ allowed: true, scope: 'session' })
 
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     const sessionRules = new Set<string>()
 
     await handleProxyToolCall({
@@ -319,8 +319,8 @@ describe('chat proxy tool helper', () => {
   })
 
   it('uses stable repo-based permission keys for git commits', () => {
-    const firstRepo = mkdtempSync(join(tmpdir(), 'orca-git-commit-a-'))
-    const secondRepo = mkdtempSync(join(tmpdir(), 'orca-git-commit-b-'))
+    const firstRepo = mkdtempSync(join(tmpdir(), 'armature-git-commit-a-'))
+    const secondRepo = mkdtempSync(join(tmpdir(), 'armature-git-commit-b-'))
     initGitRepo(firstRepo)
     initGitRepo(secondRepo)
     const firstRepoRoot = getRepoRoot(firstRepo)
@@ -546,7 +546,7 @@ describe('chat proxy tool helper', () => {
   })
 
   it('adds retry and classifier hints to failed tool executions', async () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     const result = await handleProxyToolCall({
       ...baseParams,
       cwd,
@@ -565,7 +565,7 @@ describe('chat proxy tool helper', () => {
   })
 
   it('does not update undo state for failed file edits', async () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     writeFileSync(join(cwd, 'existing.ts'), 'const value = 1\n', 'utf-8')
     const onFileWrite = vi.fn()
 
@@ -596,7 +596,7 @@ describe('chat proxy tool helper', () => {
       },
     })
 
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     const onFileWrite = vi.fn()
     const result = await handleProxyToolCall({
       ...baseParams,
@@ -617,7 +617,7 @@ describe('chat proxy tool helper', () => {
   })
 
   it('blocks delegate_task outside yolo mode', async () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     const result = await handleProxyToolCall({
       ...baseParams,
       cwd,
@@ -636,7 +636,7 @@ describe('chat proxy tool helper', () => {
   it('prompts for non-dangerous tools in plan mode', async () => {
     mockState.askPermission.mockResolvedValue({ allowed: false, scope: 'once' })
 
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     const result = await handleProxyToolCall({
       ...baseParams,
       cwd,
@@ -650,7 +650,7 @@ describe('chat proxy tool helper', () => {
   })
 
   it('enforces allowedTools before executing the tool', async () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     writeFileSync(join(cwd, 'note.txt'), 'hello\n', 'utf-8')
 
     const result = await handleProxyToolCall({
@@ -668,7 +668,7 @@ describe('chat proxy tool helper', () => {
 
   it('fires PostToolUse for delegate_task', async () => {
     mockState.hasHooks.mockImplementation((hook) => hook === 'PostToolUse')
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
 
     const result = await handleProxyToolCall({
       ...baseParams,
@@ -696,7 +696,7 @@ describe('chat proxy tool helper', () => {
   it('appends auto-verify output after successful file writes', async () => {
     mockState.formatVerifyOutput.mockReturnValue('\n[auto-verify] ok')
 
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-proxy-tool-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-proxy-tool-'))
     const onFileWrite = vi.fn()
     const result = await handleProxyToolCall({
       ...baseParams,
@@ -722,7 +722,7 @@ describe('chat proxy tool — workflow', () => {
   const FANOUT = `export const meta = { name: 'fan', description: 'd' }\nreturn await parallel([0,1,2].map(i => () => agent('t'+i, { label: 'a'+i })))`
 
   it('blocks workflow outside yolo mode', async () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-wf-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-wf-'))
     const result = await handleProxyToolCall({
       ...baseParams,
       cwd,
@@ -737,7 +737,7 @@ describe('chat proxy tool — workflow', () => {
 
   it('runs a workflow in yolo mode and returns progress + result', async () => {
     mockState.spawnSubAgent.mockResolvedValue({ success: true, output: 'inspection report', duration: 5, tokensUsed: 9 })
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-wf-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-wf-'))
     const result = await handleProxyToolCall({
       ...baseParams,
       cwd,
@@ -752,7 +752,7 @@ describe('chat proxy tool — workflow', () => {
   })
 
   it('surfaces a script parse error without spawning any sub-agent', async () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-wf-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-wf-'))
     const result = await handleProxyToolCall({
       ...baseParams,
       cwd,
@@ -767,7 +767,7 @@ describe('chat proxy tool — workflow', () => {
 
   it('fans out one sub-agent per parallel branch', async () => {
     mockState.spawnSubAgent.mockResolvedValue({ success: true, output: 'ok', duration: 1, tokensUsed: 1 })
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-wf-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-wf-'))
     const result = await handleProxyToolCall({
       ...baseParams,
       cwd,
@@ -781,7 +781,7 @@ describe('chat proxy tool — workflow', () => {
 
   it('threads the resolved model/apiKey/baseURL into each sub-agent', async () => {
     mockState.spawnSubAgent.mockResolvedValue({ success: true, output: 'ok', duration: 1, tokensUsed: 1 })
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-wf-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-wf-'))
     await handleProxyToolCall({
       ...baseParams,
       cwd,
@@ -797,7 +797,7 @@ describe('chat proxy tool — workflow', () => {
 
   it('fires SubagentStart and SubagentStop hooks around the run', async () => {
     mockState.spawnSubAgent.mockResolvedValue({ success: true, output: 'ok', duration: 1, tokensUsed: 1 })
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-wf-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-wf-'))
     await handleProxyToolCall({
       ...baseParams,
       cwd,

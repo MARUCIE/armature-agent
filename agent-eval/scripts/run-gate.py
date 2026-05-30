@@ -292,7 +292,7 @@ def summarize(results: list[dict[str, Any]], run_id: str, manifest_path: Path, m
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run an Orca CLI agent-eval manifest.")
+    parser = argparse.ArgumentParser(description="Run an Armature CLI agent-eval manifest.")
     parser.add_argument("--project-dir", default=str(Path(__file__).resolve().parents[2]), help="Project root")
     parser.add_argument("--manifest", default="fast", help="Manifest name (fast/nightly/release) or path")
     parser.add_argument("--run-id", default=now_utc_compact(), help="Override run id")
@@ -335,10 +335,10 @@ def main() -> int:
             task_env = {
                 **dict(os.environ),
                 "PROJECT_DIR": str(project_dir),
-                "ORCA_EVAL_PROJECT_DIR": str(project_dir),
-                "ORCA_EVAL_RUN_ID": run_id,
-                "ORCA_EVAL_RUN_DIR": str(run_dir),
-                "ORCA_EVAL_TASK_ID": task_id,
+                "ARMATURE_EVAL_PROJECT_DIR": str(project_dir),
+                "ARMATURE_EVAL_RUN_ID": run_id,
+                "ARMATURE_EVAL_RUN_DIR": str(run_dir),
+                "ARMATURE_EVAL_TASK_ID": task_id,
             }
 
             proc = subprocess.run(

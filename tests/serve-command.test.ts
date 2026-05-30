@@ -25,11 +25,11 @@ vi.mock('openai', () => ({
 
 import {
   MAX_CHAT_BODY_BYTES,
-  createOrcaHttpServer,
+  createArmatureHttpServer,
   resolveServeAuthTokenForHost,
   type ServerState,
 } from '../src/commands/serve.js'
-import type { OrcaConfig } from '../src/config.js'
+import type { ArmatureConfig } from '../src/config.js'
 import { EvolutionStore } from '../src/evolution/store.js'
 import {
   createTaskRun,
@@ -45,8 +45,8 @@ async function* makeOpenAIStream(chunks: Array<Record<string, unknown>>) {
 
 describe('serve command http server', () => {
   const previousHome = process.env.HOME
-  const previousOrcaHome = process.env.ORCA_HOME
-  const previousOrcaProvider = process.env.ORCA_PROVIDER
+  const previousArmatureHome = process.env.ARMATURE_HOME
+  const previousArmatureProvider = process.env.ARMATURE_PROVIDER
   const previousOpenAIKey = process.env.OPENAI_API_KEY
   let homeDir: string
   let projectDir: string
@@ -54,25 +54,25 @@ describe('serve command http server', () => {
   beforeEach(() => {
     mockOpenAI.responses.length = 0
     mockOpenAI.params.length = 0
-    homeDir = join(tmpdir(), `orca-serve-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    projectDir = join(tmpdir(), `orca-serve-project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    homeDir = join(tmpdir(), `armature-serve-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    projectDir = join(tmpdir(), `armature-serve-project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
     mkdirSync(homeDir, { recursive: true })
     mkdirSync(projectDir, { recursive: true })
     process.env.HOME = homeDir
-    process.env.ORCA_HOME = join(homeDir, '.orca')
-    process.env.ORCA_PROVIDER = 'openai'
+    process.env.ARMATURE_HOME = join(homeDir, '.armature')
+    process.env.ARMATURE_PROVIDER = 'openai'
     process.env.OPENAI_API_KEY = 'test-openai-key'
-    mkdirSync(join(homeDir, '.orca', 'sessions'), { recursive: true })
+    mkdirSync(join(homeDir, '.armature', 'sessions'), { recursive: true })
     writeFileSync(join(projectDir, 'package.json'), JSON.stringify({ name: 'serve-test', devDependencies: { vitest: '^1.0.0' } }))
   })
 
   afterEach(() => {
     if (previousHome === undefined) delete process.env.HOME
     else process.env.HOME = previousHome
-    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = previousOrcaHome
-    if (previousOrcaProvider === undefined) delete process.env.ORCA_PROVIDER
-    else process.env.ORCA_PROVIDER = previousOrcaProvider
+    if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = previousArmatureHome
+    if (previousArmatureProvider === undefined) delete process.env.ARMATURE_PROVIDER
+    else process.env.ARMATURE_PROVIDER = previousArmatureProvider
     if (previousOpenAIKey === undefined) delete process.env.OPENAI_API_KEY
     else process.env.OPENAI_API_KEY = previousOpenAIKey
     try { rmSync(homeDir, { recursive: true, force: true }) } catch { /* ignore */ }
@@ -80,7 +80,7 @@ describe('serve command http server', () => {
   })
 
   it('serves health, providers, and doctor metadata', async () => {
-    const config: OrcaConfig = {
+    const config: ArmatureConfig = {
       providers: {
         openai: {
           apiKey: 'test-openai-key',
@@ -110,7 +110,7 @@ describe('serve command http server', () => {
       cwd: projectDir,
     }
 
-    const server = createOrcaHttpServer(state)
+    const server = createArmatureHttpServer(state)
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
     const address = server.address()
     const port = typeof address === 'object' && address ? address.port : 0
@@ -136,7 +136,7 @@ describe('serve command http server', () => {
   })
 
   it('does not grant wildcard CORS to non-loopback origins', async () => {
-    const config: OrcaConfig = {
+    const config: ArmatureConfig = {
       providers: {
         openai: {
           apiKey: 'test-openai-key',
@@ -166,7 +166,7 @@ describe('serve command http server', () => {
       cwd: projectDir,
     }
 
-    const server = createOrcaHttpServer(state)
+    const server = createArmatureHttpServer(state)
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
     const address = server.address()
     const port = typeof address === 'object' && address ? address.port : 0
@@ -182,7 +182,7 @@ describe('serve command http server', () => {
   })
 
   it('serves saved session summaries through dedicated continuity endpoints', async () => {
-    writeFileSync(join(homeDir, '.orca', 'sessions', 'session-a.json'), JSON.stringify({
+    writeFileSync(join(homeDir, '.armature', 'sessions', 'session-a.json'), JSON.stringify({
       provider: 'openai',
       model: 'gpt-5.4',
       modeId: 'review',
@@ -191,7 +191,7 @@ describe('serve command http server', () => {
       savedAt: '2026-04-21T00:00:00.000Z',
     }))
 
-    const config: OrcaConfig = {
+    const config: ArmatureConfig = {
       providers: {
         openai: {
           apiKey: 'test-openai-key',
@@ -221,7 +221,7 @@ describe('serve command http server', () => {
       cwd: projectDir,
     }
 
-    const server = createOrcaHttpServer(state)
+    const server = createArmatureHttpServer(state)
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
     const address = server.address()
     const port = typeof address === 'object' && address ? address.port : 0
@@ -275,7 +275,7 @@ describe('serve command http server', () => {
       evidence: { sessionId: 'session-b' },
     })
 
-    const config: OrcaConfig = {
+    const config: ArmatureConfig = {
       providers: {
         openai: {
           apiKey: 'test-openai-key',
@@ -305,7 +305,7 @@ describe('serve command http server', () => {
       cwd: projectDir,
     }
 
-    const server = createOrcaHttpServer(state)
+    const server = createArmatureHttpServer(state)
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
     const address = server.address()
     const port = typeof address === 'object' && address ? address.port : 0
@@ -329,7 +329,7 @@ describe('serve command http server', () => {
   })
 
   it('returns 404 for a missing saved-session detail lookup', async () => {
-    const config: OrcaConfig = {
+    const config: ArmatureConfig = {
       providers: {
         openai: {
           apiKey: 'test-openai-key',
@@ -359,7 +359,7 @@ describe('serve command http server', () => {
       cwd: projectDir,
     }
 
-    const server = createOrcaHttpServer(state)
+    const server = createArmatureHttpServer(state)
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
     const address = server.address()
     const port = typeof address === 'object' && address ? address.port : 0
@@ -402,7 +402,7 @@ describe('serve command http server', () => {
       },
     })
 
-    const config: OrcaConfig = {
+    const config: ArmatureConfig = {
       providers: {
         openai: {
           apiKey: 'test-openai-key',
@@ -432,7 +432,7 @@ describe('serve command http server', () => {
       cwd: projectDir,
     }
 
-    const server = createOrcaHttpServer(state)
+    const server = createArmatureHttpServer(state)
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
     const address = server.address()
     const port = typeof address === 'object' && address ? address.port : 0
@@ -490,7 +490,7 @@ describe('serve command http server', () => {
   })
 
   it('returns 404 for missing work-session and task-run lookups', async () => {
-    const config: OrcaConfig = {
+    const config: ArmatureConfig = {
       providers: {
         openai: {
           apiKey: 'test-openai-key',
@@ -520,7 +520,7 @@ describe('serve command http server', () => {
       cwd: projectDir,
     }
 
-    const server = createOrcaHttpServer(state)
+    const server = createArmatureHttpServer(state)
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
     const address = server.address()
     const port = typeof address === 'object' && address ? address.port : 0
@@ -553,7 +553,7 @@ describe('serve command http server', () => {
       usage: { prompt_tokens: 7, completion_tokens: 3 },
     }))
 
-    const config: OrcaConfig = {
+    const config: ArmatureConfig = {
       providers: {
         openai: {
           apiKey: 'test-openai-key',
@@ -583,7 +583,7 @@ describe('serve command http server', () => {
       cwd: projectDir,
     }
 
-    const server = createOrcaHttpServer(state)
+    const server = createArmatureHttpServer(state)
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
     const address = server.address()
     const port = typeof address === 'object' && address ? address.port : 0
@@ -638,7 +638,7 @@ describe('serve command http server', () => {
       { choices: [{ delta: {}, finish_reason: 'stop' }], usage: { prompt_tokens: 5, completion_tokens: 2 } },
     ]))
 
-    const config: OrcaConfig = {
+    const config: ArmatureConfig = {
       providers: {
         openai: {
           apiKey: 'test-openai-key',
@@ -668,7 +668,7 @@ describe('serve command http server', () => {
       cwd: projectDir,
     }
 
-    const server = createOrcaHttpServer(state)
+    const server = createArmatureHttpServer(state)
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
     const address = server.address()
     const port = typeof address === 'object' && address ? address.port : 0
@@ -706,7 +706,7 @@ describe('serve command http server', () => {
   })
 
   it('returns explicit errors for malformed and incomplete chat requests', async () => {
-    const config: OrcaConfig = {
+    const config: ArmatureConfig = {
       providers: {
         openai: {
           apiKey: 'test-openai-key',
@@ -736,7 +736,7 @@ describe('serve command http server', () => {
       cwd: projectDir,
     }
 
-    const server = createOrcaHttpServer(state)
+    const server = createArmatureHttpServer(state)
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
     const address = server.address()
     const port = typeof address === 'object' && address ? address.port : 0
@@ -773,8 +773,8 @@ describe('serve command http server', () => {
     }
   })
 
-  it('requires a bearer token when the server is configured with ORCA_SERVE_TOKEN', async () => {
-    const config: OrcaConfig = {
+  it('requires a bearer token when the server is configured with ARMATURE_SERVE_TOKEN', async () => {
+    const config: ArmatureConfig = {
       providers: {
         openai: {
           apiKey: 'test-openai-key',
@@ -805,7 +805,7 @@ describe('serve command http server', () => {
       authToken: 'serve-secret',
     }
 
-    const server = createOrcaHttpServer(state)
+    const server = createArmatureHttpServer(state)
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()))
     const address = server.address()
     const port = typeof address === 'object' && address ? address.port : 0
@@ -824,8 +824,8 @@ describe('serve command http server', () => {
     }
   })
 
-  it('requires ORCA_SERVE_TOKEN for non-loopback bindings', () => {
-    expect(() => resolveServeAuthTokenForHost('0.0.0.0', undefined)).toThrow('Remote serve requires ORCA_SERVE_TOKEN')
+  it('requires ARMATURE_SERVE_TOKEN for non-loopback bindings', () => {
+    expect(() => resolveServeAuthTokenForHost('0.0.0.0', undefined)).toThrow('Remote serve requires ARMATURE_SERVE_TOKEN')
     expect(resolveServeAuthTokenForHost('0.0.0.0', 'token-123')).toBe('token-123')
     expect(resolveServeAuthTokenForHost('127.0.0.1', undefined)).toBeUndefined()
   })

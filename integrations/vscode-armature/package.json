@@ -1,0 +1,47 @@
+{
+  "name": "armature-vscode",
+  "displayName": "Armature CLI",
+  "description": "VS Code terminal integration for Armature CLI.",
+  "version": "0.1.0",
+  "publisher": "marucie",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "type": "commonjs",
+  "main": "./extension.js",
+  "activationEvents": [
+    "onCommand:armature.chat",
+    "onCommand:armature.chatCurrentFile",
+    "onCommand:armature.chatSelection",
+    "onCommand:armature.startMcpServer",
+    "onCommand:armature.doctor"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "armature.chat",
+        "title": "Armature: Open Chat"
+      },
+      {
+        "command": "armature.chatCurrentFile",
+        "title": "Armature: Analyze Current File"
+      },
+      {
+        "command": "armature.chatSelection",
+        "title": "Armature: Review Selection"
+      },
+      {
+        "command": "armature.startMcpServer",
+        "title": "Armature: Start MCP Server"
+      },
+      {
+        "command": "armature.doctor",
+        "title": "Armature: Run Doctor"
+      }
+    ]
+  }
+}

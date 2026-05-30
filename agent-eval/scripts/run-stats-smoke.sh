@@ -12,9 +12,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$TMP_HOME/.orca/logs"
+mkdir -p "$TMP_HOME/.armature/logs"
 
-HOME="$TMP_HOME" ORCA_HOME="$TMP_HOME/.orca" node --input-type=module - <<'EOF'
+HOME="$TMP_HOME" ARMATURE_HOME="$TMP_HOME/.armature" node --input-type=module - <<'EOF'
 import { recordUsage } from './dist/usage-db.js'
 
 recordUsage({
@@ -29,13 +29,13 @@ recordUsage({
 })
 EOF
 
-cat > "$TMP_HOME/.orca/logs/errors.log" <<EOF
+cat > "$TMP_HOME/.armature/logs/errors.log" <<EOF
 [ERROR] stats smoke error
 EOF
 
 OUTPUT="$(
-  env -i PATH="$PATH" HOME="$TMP_HOME" ORCA_HOME="$TMP_HOME/.orca" ORCA_PROVIDER=openai OPENAI_API_KEY=test-openai-key \
-    node dist/bin/orca.js stats
+  env -i PATH="$PATH" HOME="$TMP_HOME" ARMATURE_HOME="$TMP_HOME/.armature" ARMATURE_PROVIDER=openai OPENAI_API_KEY=test-openai-key \
+    node dist/bin/armature.js stats
 )"
 printf '%s\n' "$OUTPUT"
 

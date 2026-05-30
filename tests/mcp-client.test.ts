@@ -106,9 +106,9 @@ describe('MCPClient', () => {
       expect(client.configuredCount).toBe(1)
     })
 
-    it('reads .orca.json with mcpServers key', () => {
+    it('reads .armature.json with mcpServers key', () => {
       setupIsolated({
-        '.orca.json': JSON.stringify({
+        '.armature.json': JSON.stringify({
           mcpServers: {
             'server-b': { command: 'python', args: ['serve.py'] },
           },
@@ -245,7 +245,7 @@ enabled = false
       })
 
       const globalTemp = createTempProject({
-        '.orca/mcp.json': JSON.stringify({
+        '.armature/mcp.json': JSON.stringify({
           'home-server': { command: 'node' },
         }),
       })
@@ -322,7 +322,7 @@ enabled = false
 
       const globalTemp = createTempProject({})
       const homeMarker = join(globalTemp.dir, 'home.marker')
-      writeJsonFile(globalTemp.dir, '.orca/mcp.json', {
+      writeJsonFile(globalTemp.dir, '.armature/mcp.json', {
         'home-safe': buildNodeServerConfig(scriptPath, homeMarker),
       })
 

@@ -1,5 +1,5 @@
 /**
- * Independent configuration diagnostics for Orca doctor.
+ * Independent configuration diagnostics for Armature doctor.
  *
  * Purpose:
  * - inspect config files without mutating runtime behavior
@@ -42,10 +42,10 @@ export function gatherConfigDiagnostics(cwdInput: string): ConfigDiagnostic[] {
 
   return [
     checkJsonFile('global-config', getGlobalConfigPath()),
-    checkJsonFile('project-config', join(cwd, '.orca.json')),
+    checkJsonFile('project-config', join(cwd, '.armature.json')),
     checkJsonFile('project-mcp', join(cwd, '.mcp.json')),
-    checkJsonFile('project-hooks', join(cwd, '.orca', 'hooks.json')),
+    checkJsonFile('project-hooks', join(cwd, '.armature', 'hooks.json')),
     checkJsonFile('claude-settings', join(cwd, '.claude', 'settings.json')),
-    checkJsonFile('global-mcp', join(home, '.orca', 'mcp.json')),
+    checkJsonFile('global-mcp', join(home, '.armature', 'mcp.json')),
   ]
 }

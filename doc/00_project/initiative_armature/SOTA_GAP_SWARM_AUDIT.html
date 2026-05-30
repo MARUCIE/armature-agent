@@ -1,0 +1,463 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Armature CLI SOTA Swarm Audit</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; max-height:calc(100vh - 32px); overflow:auto; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } .content { padding:22px; } }</style></head><body><header><h1>Armature CLI SOTA Swarm Audit</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#scope">Scope</a><a href="#executive-verdict">Executive Verdict</a><a href="#swarm-findings">Swarm Findings</a><a href="#milestone-plan">Milestone Plan</a><a href="#atomic-task-queue">Atomic Task Queue</a><a href="#pdca-execution-log">PDCA Execution Log</a><a href="#remaining-risks">Remaining Risks</a></aside><article class="content markdown-body"><h1>Armature CLI SOTA Swarm Audit</h1>
+<ul>
+<li>Initiative: <code>armature</code></li>
+<li>Date: <code>2026-04-29</code></li>
+<li>Project dir: <code>/Users/mauricewen/Projects/armature-cli</code></li>
+<li>Baseline: dirty working tree audit; existing user changes were preserved</li>
+<li>Report route: <code>html-style-router</code> -&gt; <code>html-economist-style</code></li>
+<li>Verification baseline before fixes: <code>npm run lint</code>, <code>npm test</code> (<code>85</code> files / <code>1583</code> tests), <code>npm run build</code></li>
+<li>Final verification after PDCA tranche: <code>npm run lint</code>, <code>npm run build</code>, <code>npm test</code> (<code>97</code> files / <code>1776</code> tests)</li>
+</ul>
+<h2 id="scope">Scope</h2>
+<p>This audit compared Armature against current coding-agent SOTA patterns, then executed the first PDCA tranche against the highest-risk gaps.</p>
+<p>Swarm lanes:</p>
+<ol>
+<li>Architecture and runtime continuity</li>
+<li>Security and trust boundaries</li>
+<li>Operator UX and TUI review surface</li>
+<li>Verification, gates, and release readiness</li>
+<li>Documentation governance and evidence drift</li>
+</ol>
+<p>External official references checked for this report:</p>
+<ul>
+<li>OpenAI Codex app and automations:<ul>
+<li><a href="https://openai.com/index/introducing-the-codex-app/">https://openai.com/index/introducing-the-codex-app/</a></li>
+<li><a href="https://openai.com/academy/codex-automations">https://openai.com/academy/codex-automations</a></li>
+</ul>
+</li>
+<li>GitHub Copilot coding agent:<ul>
+<li><a href="https://docs.github.com/en/copilot/concepts/about-copilot-coding-agent">https://docs.github.com/en/copilot/concepts/about-copilot-coding-agent</a></li>
+</ul>
+</li>
+<li>Cursor background agents:<ul>
+<li><a href="https://docs.cursor.com/background-agent/api/overview">https://docs.cursor.com/background-agent/api/overview</a></li>
+</ul>
+</li>
+<li>Claude Code permissions:<ul>
+<li><a href="https://code.claude.com/docs/en/permissions">https://code.claude.com/docs/en/permissions</a></li>
+</ul>
+</li>
+<li>OpenCode agents and permissions:<ul>
+<li><a href="https://opencode.ai/docs/agents/">https://opencode.ai/docs/agents/</a></li>
+<li><a href="https://opencode.ai/docs/permissions/">https://opencode.ai/docs/permissions/</a></li>
+</ul>
+</li>
+<li>Amp permissions and review surface:<ul>
+<li><a href="https://ampcode.com/manual">https://ampcode.com/manual</a></li>
+<li><a href="https://ampcode.com/notes/permissions">https://ampcode.com/notes/permissions</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="executive-verdict">Executive Verdict</h2>
+<p>Armature has moved beyond basic CLI parity. The strongest areas are provider-neutral execution, multi-model collaboration, workflow presets, saved sessions, and a growing continuity spine.</p>
+<p>The remaining SOTA gap is now sharper:</p>
+<ol>
+<li>A single canonical execution contract is now in place for <code>chat</code>, <code>run</code>, mission, planner, and <code>serve /chat</code>; model-routing metadata drift is now closed through the model catalog SSoT tranche.</li>
+<li>Async work is visible and leaseable; queue resume/schedule now produces concrete chat continuation or monitor commands when replay metadata exists.</li>
+<li>Review-before-apply now has CLI and Ink TaskRun evidence entry points plus persisted approval timeline semantics.</li>
+<li>Trust boundaries were inconsistent around repo-local hooks and network-capable tools.</li>
+<li>CI and docs still under-enforce the gate claims already described in project documentation.</li>
+</ol>
+<p>The first PDCA tranche has been executed against item 4 and the queue visibility part of item 2.</p>
+<h2 id="swarm-findings">Swarm Findings</h2>
+<h3 id="critical-repo-local-hooks-could-execute-on-startup-without-explicit-trust">Critical - Repo-local hooks could execute on startup without explicit trust</h3>
+<p>Before the fix, Armature loaded <code>.armature/hooks.json</code>, <code>.armature.json</code>, <code>.claude/hooks.json</code>, and <code>.claude/settings.json</code> from the current repository during startup. <code>SessionStart</code> hooks could run shell commands with inherited process environment.</p>
+<p>Evidence:</p>
+<ul>
+<li><code>src/hooks.ts</code></li>
+<li><code>src/commands/chat.ts</code></li>
+<li><code>tests/hooks.test.ts</code></li>
+</ul>
+<p>PDCA action executed:</p>
+<ul>
+<li>Project hooks now require explicit trust via <code>HookManager({ trustProjectHooks: true })</code> or <code>ARMATURE_TRUST_PROJECT_HOOKS=1</code>.</li>
+<li>Global operator hooks remain startup-safe.</li>
+<li>Hook subprocess env is now allowlisted instead of inheriting provider API keys wholesale.</li>
+<li>Doctor diagnostics may still inspect project hooks without executing them.</li>
+</ul>
+<h3 id="high-network-tools-bypassed-the-dangerous-tool-approval-lane">High - Network tools bypassed the dangerous-tool approval lane</h3>
+<p><code>fetch_url</code> and <code>web_search</code> can exfiltrate context or hit internal endpoints. They were not in <code>DANGEROUS_TOOLS</code>, and <code>fetch_url</code> did not block loopback/private/link-local hosts.</p>
+<p>Evidence:</p>
+<ul>
+<li><code>src/tools.ts</code></li>
+<li><code>src/policy-executor.ts</code></li>
+<li><code>tests/chat-proxy-tool-call.test.ts</code></li>
+</ul>
+<p>PDCA action executed:</p>
+<ul>
+<li><code>fetch_url</code> and <code>web_search</code> now require approval in <code>auto</code> mode.</li>
+<li><code>fetch_url</code> only accepts absolute HTTP(S) URLs.</li>
+<li><code>fetch_url</code> blocks loopback, private IPv4 ranges, link-local hosts, carrier-grade NAT, benchmarking ranges, multicast, and common IPv6 local ranges by default.</li>
+</ul>
+<h3 id="high-runtime-execution-paths-are-split">High - Runtime execution paths are split</h3>
+<p><code>run</code> has durable <code>WorkSession</code> / <code>TaskRun</code> objects, while <code>serve</code> remains closer to a prompt proxy. Mission and planner paths still carry their own in-memory orchestration.</p>
+<p>Evidence:</p>
+<ul>
+<li><code>src/commands/run.ts</code></li>
+<li><code>src/commands/serve.ts</code></li>
+<li><code>src/work-session-store.ts</code></li>
+<li><code>src/mission/controller.ts</code></li>
+<li><code>src/planner/executor.ts</code></li>
+</ul>
+<p>Recommended next tranche:</p>
+<ul>
+<li>Define one <code>ExecutionRun</code> contract that every surface writes.</li>
+<li>Move <code>serve</code> from <code>/chat</code> proxy to a headless run surface.</li>
+<li>Keep <code>WorkSession</code> / <code>TaskRun</code> as the SSoT for queue and evidence inspection.</li>
+</ul>
+<h3 id="high-queue-visibility-existed-in-data-but-not-in-cli-ergonomics">High - Queue visibility existed in data but not in CLI ergonomics</h3>
+<p>TaskRun summaries existed, and <code>serve</code> exposed metadata endpoints, but the operator had no top-level queue inspection command.</p>
+<p>PDCA action executed:</p>
+<ul>
+<li>Added <code>armature queue</code>.</li>
+<li>Added <code>armature queue list --status &lt;status&gt; --work-session &lt;id&gt; --limit &lt;n&gt;</code>.</li>
+<li>Added <code>armature queue show &lt;task-run-id&gt;</code>.</li>
+<li>Added <code>armature queue follow &lt;task-run-id&gt;</code> for live evidence tails and terminal-state exit.</li>
+<li>Added <code>armature queue takeover &lt;task-run-id&gt;</code> for explicit operator leases.</li>
+<li>Added <code>armature queue evidence &lt;task-run-id&gt;</code> as a TaskRun evidence drawer for logs, diffs, data, reports, missing artifacts, and capped previews.</li>
+<li>Regression coverage verifies status filtering and evidence display.</li>
+</ul>
+<h3 id="medium-high-review-before-apply-is-too-compressed">Medium-High - Review-before-apply is too compressed</h3>
+<p>The TUI has useful prompt, status, tool, and permission components, but diff/evidence views are still constrained by line caps and preview text.</p>
+<p>Evidence:</p>
+<ul>
+<li><code>src/ui/components/DiffPreview.tsx</code></li>
+<li><code>src/ui/session.ts</code></li>
+<li><code>src/commands/chat-proxy-tool-call.ts</code></li>
+<li><code>src/ui/components/App.tsx</code></li>
+</ul>
+<p>PDCA action executed:</p>
+<ul>
+<li><code>armature queue evidence &lt;task-run-id&gt;</code> opens a terminal evidence drawer keyed by <code>TaskRun</code>.</li>
+<li>Drawer entries classify logs/diffs/data/reports/artifacts, resolve relative paths, show size and update time, mark missing files, and preview capped tails.</li>
+<li><code>/evidence &lt;task-run-id&gt;</code> opens the same evidence drawer model inside the Ink <code>DetailPanel</code>.</li>
+<li>Approval timeline is now part of the same TaskRun evidence drawer; queue leases now feed <code>resume</code> and <code>schedule</code> plans, while richer per-file review bundles remain future work.</li>
+</ul>
+<h3 id="high-ci-gate-claims-are-broader-than-enforced-gates">High - CI gate claims are broader than enforced gates</h3>
+<p>Earlier, <code>package.json</code> exposed <code>test:static</code>, <code>test:security</code>, <code>test:performance</code>, <code>test:matrix</code>, and eval gates while CI ran a narrower subset.</p>
+<p>Evidence:</p>
+<ul>
+<li><code>.github/workflows/ci.yml</code></li>
+<li><code>package.json</code></li>
+<li><code>agent-eval/manifests/</code></li>
+<li><code>agent-eval/graders/</code></li>
+</ul>
+<p>Atomic follow-up:</p>
+<p>PDCA action executed:</p>
+<ul>
+<li>Replaced the stale benchmark-only CI job with a <code>gate-integrity</code> job that runs matrix sync, static, security, performance, and fast agent-eval gates.</li>
+<li>Added <code>agent-eval/manifests/test-matrix.json</code> plus a repo-owned runner and sync checker so package scripts and generated entrypoints stay aligned with the manifest.</li>
+<li>Added matrix runner and sync tests that cover package script wiring, safe manifest execution, path traversal rejection, generated entrypoints, and helper script presence.</li>
+</ul>
+<h3 id="medium-slash-command-discovery-could-drift-across-ui-surfaces">Medium - Slash-command discovery could drift across UI surfaces</h3>
+<p>Before the fix, slash-command metadata was repeated across REPL tab completion, Ink command picker, future HomePanel hints, and <code>/help</code> output.</p>
+<p>PDCA action executed:</p>
+<ul>
+<li>Added <code>src/slash-commands.ts</code> as the shared slash-command registry.</li>
+<li>REPL completion, Ink command picker, and <code>/help</code> sections now read from that registry; HomePanel descriptions are present in the registry for the pending UI-baseline split.</li>
+<li>Regression coverage verifies registry uniqueness, picker/completer alignment, help sections, and alias description lookup.</li>
+</ul>
+<h3 id="medium-readme-and-active-pdca-docs-could-drift-from-current-verification-evidence">Medium - README and active PDCA docs could drift from current verification evidence</h3>
+<p>Before the fix, README and active PDCA documents relied on manually copied test counts.</p>
+<p>PDCA action executed:</p>
+<ul>
+<li>Added <code>doc/00_project/initiative_armature/verification_snapshot.json</code> as the active release evidence snapshot.</li>
+<li>Added <code>tests/release-evidence.test.ts</code> to guard package version, README evidence strings, test file count, and active PDCA docs against the snapshot.</li>
+<li>Updated README and active PDCA docs to <code>v0.8.7</code>, <code>88</code> test files, and <code>1609</code> tests.</li>
+</ul>
+<h2 id="milestone-plan">Milestone Plan</h2>
+<table>
+<thead>
+<tr>
+<th>Milestone</th>
+<th>Goal</th>
+<th>Exit Criteria</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>M0 Trust Hardening</td>
+<td>Close immediate repo-trust and network-tool risks</td>
+<td>Repo-local hooks require explicit trust; network tools approval-gated; targeted security tests pass</td>
+</tr>
+<tr>
+<td>M1 Queue Visibility</td>
+<td>Make current TaskRun state inspectable</td>
+<td><code>armature queue list/show/follow/takeover/evidence</code> shipped; status filtering, evidence streaming, leases, and evidence drawer covered</td>
+</tr>
+<tr>
+<td>M2 Unified Execution Contract</td>
+<td>One run object across CLI, serve, mission, planner</td>
+<td>Done: chat REPL, <code>run</code> default/goal-loop/mission/plan, and <code>serve /chat</code> create/update canonical records</td>
+</tr>
+<tr>
+<td>M3 Evidence Console</td>
+<td>Review-before-apply becomes inspectable</td>
+<td>Done: CLI evidence drawer and Ink <code>/evidence</code> detail panel show TaskRun logs/diffs/artifacts plus approval timelines</td>
+</tr>
+<tr>
+<td>M3b Slash Command Surface</td>
+<td>Command discovery cannot drift across REPL and Ink</td>
+<td>Shared registry feeds completion, picker, and <code>/help</code>; HomePanel metadata is prepared but not staged into the dirty UI baseline</td>
+</tr>
+<tr>
+<td>M3c Release Evidence Snapshot</td>
+<td>README/doc verification evidence cannot silently drift</td>
+<td>Snapshot and release-evidence test guard README plus active PDCA docs</td>
+</tr>
+<tr>
+<td>M4 Gate Integrity</td>
+<td>CI enforces documented gates</td>
+<td>CI runs matrix sync, static, security, performance, and fast agent-eval gates</td>
+</tr>
+<tr>
+<td>M4e Scheduler / Resume Semantics</td>
+<td>Queue leases become actionable recovery plans</td>
+<td><code>armature queue resume</code> and <code>armature queue schedule</code> claim leases and print chat continue or monitor commands</td>
+</tr>
+<tr>
+<td>M5 Model Catalog SSoT</td>
+<td>Provider routing metadata stops drifting</td>
+<td>Done: one metadata source powers runtime budget, provider defaults, output labels, catalog, docs, and tests</td>
+</tr>
+</tbody></table>
+<h2 id="atomic-task-queue">Atomic Task Queue</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Priority</th>
+<th>Task</th>
+<th>Owner Lane</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ARMATURE-SWARM-001</td>
+<td>P0</td>
+<td>Require explicit trust before loading repo-local hooks</td>
+<td>security</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-002</td>
+<td>P0</td>
+<td>Stop inheriting provider API keys into hook subprocess env</td>
+<td>security</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-003</td>
+<td>P0</td>
+<td>Approval-gate <code>fetch_url</code> and <code>web_search</code> in auto mode</td>
+<td>security</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-004</td>
+<td>P0</td>
+<td>Block private/loopback/link-local targets in <code>fetch_url</code></td>
+<td>security</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-005</td>
+<td>P1</td>
+<td>Add <code>armature queue list/show</code> over <code>TaskRun</code> records</td>
+<td>runtime</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-006</td>
+<td>P1</td>
+<td>Add <code>queue follow</code> for live log/evidence streaming</td>
+<td>runtime</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-007</td>
+<td>P1</td>
+<td>Add <code>queue takeover</code> lease model</td>
+<td>architecture</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-008</td>
+<td>P1</td>
+<td>Convert <code>serve /chat</code> into a canonical run endpoint</td>
+<td>architecture</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-009</td>
+<td>P1</td>
+<td>Add evidence drawer for TaskRun logs/diffs/artifacts</td>
+<td>UX</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-010</td>
+<td>P1</td>
+<td>Centralize slash-command registry so HomePanel/completer/TUI cannot drift</td>
+<td>UX</td>
+<td>core done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-011</td>
+<td>P2</td>
+<td>Align README/doc test counts to current suite evidence</td>
+<td>docs</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-012</td>
+<td>P2</td>
+<td>Add CI matrix/security/performance/eval enforcement</td>
+<td>verification</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-013</td>
+<td>P1</td>
+<td>Record <code>armature run</code> default/goal-loop/mission/plan executions as canonical TaskRuns</td>
+<td>runtime</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-014</td>
+<td>P1</td>
+<td>Restore clean-index build for workflow, permissions, evolve, and git-root command surfaces</td>
+<td>build</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-015</td>
+<td>P1</td>
+<td>Promote chat operator controls for sessions, permissions, models, command output, and Ink home/detail surfaces</td>
+<td>UX</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-016</td>
+<td>P1</td>
+<td>Record chat REPL turns as canonical WorkSession / TaskRun records</td>
+<td>runtime</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-017</td>
+<td>P1</td>
+<td>Expose TaskRun evidence in Ink DetailPanel through <code>/evidence</code></td>
+<td>UX</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-018</td>
+<td>P1</td>
+<td>Add review-before-apply approval timeline over TaskRun evidence</td>
+<td>UX</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-019</td>
+<td>P1</td>
+<td>Make Ink submitted prompts visible and assistant markdown structurally rendered</td>
+<td>UX</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-020</td>
+<td>P1</td>
+<td>Extend TaskRun leases into true scheduler / resume semantics</td>
+<td>runtime</td>
+<td>done</td>
+</tr>
+<tr>
+<td>ARMATURE-SWARM-021</td>
+<td>P1</td>
+<td>Continue model-routing evidence and catalog SSoT</td>
+<td>runtime</td>
+<td>done</td>
+</tr>
+</tbody></table>
+<h2 id="pdca-execution-log">PDCA Execution Log</h2>
+<h3 id="plan">Plan</h3>
+<ul>
+<li>Rank swarm findings by operator risk and blast radius.</li>
+<li>Execute small, reversible slices first.</li>
+<li>Avoid refactoring the already-dirty worktree outside the current boundary.</li>
+</ul>
+<h3 id="do">Do</h3>
+<p>Changed in the first tranche:</p>
+<ul>
+<li><code>src/hooks.ts</code></li>
+<li><code>src/tools.ts</code></li>
+<li><code>src/doctor.ts</code></li>
+<li><code>src/commands/queue.ts</code></li>
+<li><code>src/program.ts</code></li>
+<li><code>tests/hooks.test.ts</code></li>
+<li><code>tests/hooks-compat.test.ts</code></li>
+<li><code>tests/tools.test.ts</code></li>
+<li><code>tests/chat-proxy-tool-call.test.ts</code></li>
+<li><code>tests/queue-command.test.ts</code></li>
+<li><code>tests/program.test.ts</code></li>
+<li><code>tests/command-contracts.test.ts</code></li>
+<li><code>tests/v030-harness.test.ts</code></li>
+<li><code>tests/v050-modules.test.ts</code></li>
+</ul>
+<h3 id="check">Check</h3>
+<p>Verification executed:</p>
+<ul>
+<li><code>npm test -- tests/hooks.test.ts tests/hooks-compat.test.ts tests/tools.test.ts tests/chat-proxy-tool-call.test.ts tests/v030-harness.test.ts tests/v050-modules.test.ts</code> -&gt; <code>153</code> tests passed</li>
+<li><code>npm test -- tests/queue-command.test.ts tests/program.test.ts tests/command-contracts.test.ts tests/work-session-store.test.ts</code> -&gt; <code>37</code> tests passed</li>
+<li>Combined targeted regression pack -&gt; <code>190</code> tests passed</li>
+<li><code>npm run lint</code> -&gt; pass</li>
+<li><code>npm run build</code> -&gt; pass</li>
+<li>Final <code>npm test</code> -&gt; <code>89</code> files / <code>1642</code> tests passed</li>
+<li>Gate integrity targeted tests cover manifest/script/sync behavior.</li>
+<li>CI now executes <code>test:matrix:sync</code>, <code>test:static</code>, <code>test:security</code>, <code>test:performance</code>, and <code>test:ai-eval-fast</code>.</li>
+<li><code>node dist/bin/armature.js --version</code> -&gt; <code>0.8.16</code></li>
+<li><code>npm test -- tests/work-session-store.test.ts tests/queue-command.test.ts tests/chat-proxy-tool-call.test.ts</code> -&gt; <code>40</code> tests passed</li>
+<li><code>npm test -- tests/chat-repl-turn.test.ts tests/work-session-store.test.ts</code> -&gt; <code>19</code> tests passed</li>
+<li><code>npm test -- tests/run-work-session.test.ts tests/work-session-store.test.ts tests/queue-command.test.ts</code> -&gt; <code>14</code> tests passed</li>
+<li><code>npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts</code> -&gt; <code>11</code> tests passed</li>
+<li>Clean staged-index <code>npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts</code> -&gt; <code>11</code> tests passed</li>
+<li><code>npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx</code> -&gt; <code>98</code> tests passed</li>
+<li>Clean staged-index <code>npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx</code> -&gt; <code>98</code> tests passed</li>
+<li><code>npm test -- tests/release-evidence.test.ts</code> -&gt; <code>3</code> tests passed</li>
+<li><code>git diff --cached --check</code> -&gt; pass</li>
+<li><code>armature queue evidence &lt;task-run-id&gt;</code> -&gt; evidence drawer renders typed entries, metadata, missing files, and tail previews</li>
+<li><code>/evidence &lt;task-run-id&gt;</code> -&gt; Ink detail panel renders the shared TaskRun evidence drawer model</li>
+<li>Review-before-apply approvals -&gt; prompted, preapproved, policy-blocked, and hook-blocked decisions append to <code>TaskRun.approvals</code> and render above file evidence</li>
+<li>Ink transcript visibility -&gt; submitted prompts render as <code>You</code> blocks and assistant markdown renders as structured <code>ORCA</code> panels</li>
+<li><code>ai check</code> attempted -&gt; failed on existing generic harness/doc gates: missing <code>tests/test_all.py</code>, legacy docs without required frontmatter/changelog, and historical no-emoji hits; evidence at <code>outputs/check/20260429-044244-b917cb00</code></li>
+<li><code>node dist/bin/armature.js queue takeover &lt;fixture-task-run&gt; --holder smoke --ttl 30s</code> -&gt; acquired a TaskRun lease</li>
+<li><code>npm test -- tests/work-session-store.test.ts tests/queue-command.test.ts</code> -&gt; <code>17</code> tests passed</li>
+<li><code>armature queue resume &lt;chat-task-run&gt; --holder &lt;name&gt;</code> -&gt; claims a lease and prints the saved-session continue command</li>
+<li><code>armature queue schedule --holder &lt;name&gt;</code> -&gt; skips active leases and unsupported replay records, then claims the next resumable chat TaskRun</li>
+<li><code>POST /chat</code> in serve mode -&gt; returns or emits <code>workSessionId</code> and <code>taskRunId</code>, then closes TaskRun status on completion/failure</li>
+<li><code>node dist/bin/armature.js --help</code> -&gt; <code>queue</code> command visible</li>
+<li><code>node dist/bin/armature.js queue list --limit 3</code> -&gt; empty-state renders successfully</li>
+</ul>
+<p>Pre-fix baseline evidence:</p>
+<ul>
+<li><code>npm run lint</code> -&gt; pass</li>
+<li><code>npm test</code> -&gt; <code>85</code> files / <code>1583</code> tests passed</li>
+<li><code>npm run build</code> -&gt; pass</li>
+</ul>
+<h3 id="act">Act</h3>
+<p>Next queue items should proceed in this order:</p>
+<ol>
+<li>Continue M5 model catalog single-source routing metadata.</li>
+<li>Attach richer structured evidence bundles to serve/background TaskRuns.</li>
+<li>Store replay-safe argv/prompt metadata for non-chat TaskRuns before claiming full arbitrary-run resume.</li>
+</ol>
+<h2 id="remaining-risks">Remaining Risks</h2>
+<ul>
+<li>DNS names that resolve to private IPs are not yet resolved and blocked before <code>curl</code>; only literal private hosts and localhost-style names are blocked in this tranche.</li>
+<li>Repo-local hooks now have an env trust switch, but a first-class <code>armature hooks trust</code> UX does not exist yet.</li>
+<li><code>armature queue resume</code> supports chat saved-session continuation and running background-job monitoring; non-chat <code>run</code> replay remains unsupported until replay-safe argv/prompt metadata is persisted.</li>
+<li>Approval timeline records policy decisions, but richer per-file review bundles remain separate work.</li>
+<li>Slash command discovery now has one registry, but command execution handlers still live in the read-only and mutating slash switches.</li>
+<li>HomePanel registry consumption remains blocked by the existing uncommitted UI baseline and should be split before claiming full ARMATURE-SWARM-010 closure.</li>
+</ul>
+</article></main><!-- <tr><td>ARMATURE-SWARM-011</td><td>P2</td><td>README/doc 测试计数漂移清理</td><td>Done</td></tr> --></body></html>

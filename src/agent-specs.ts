@@ -3,7 +3,7 @@ import { join } from 'node:path'
 
 export interface AgentSpec {
   name: string
-  source: 'claude' | 'codex' | 'orca'
+  source: 'claude' | 'codex' | 'armature'
   path: string
   description: string
 }
@@ -41,7 +41,7 @@ export function discoverAgentSpecs(cwd: string): AgentSpec[] {
     { path: join(home, '.claude', 'agents'), source: 'claude' },
     { path: join(cwd, '.codex', 'agents'), source: 'codex' },
     { path: join(home, '.codex', 'agents'), source: 'codex' },
-    { path: join(cwd, '.orca', 'agents'), source: 'orca' },
+    { path: join(cwd, '.armature', 'agents'), source: 'armature' },
   ]
   const seen = new Set<string>()
   const specs: AgentSpec[] = []

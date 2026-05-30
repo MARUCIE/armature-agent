@@ -1,6 +1,6 @@
 {
   "id": "nightly",
-  "title": "Orca CLI nightly gate",
+  "title": "Armature CLI nightly gate",
   "description": "Deterministic repo verification plus the local black-box eval pack.",
   "tasks": [
     "gate-lint",

@@ -12,4 +12,4 @@ export function readPackageVersion(): string {
   }
 }
 
-export const ORCA_VERSION = readPackageVersion()
+export const ARMATURE_VERSION = readPackageVersion()

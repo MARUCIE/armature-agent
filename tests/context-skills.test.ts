@@ -158,14 +158,14 @@ This is a very long description that exceeds one hundred and twenty characters i
     globalTemp.cleanup()
   })
 
-  it('loads from .orca/skills/ directory', () => {
+  it('loads from .armature/skills/ directory', () => {
     isolated({
-      '.orca/skills/orca-skill/SKILL.md': '# Orca Skill\n\nNative format.',
+      '.armature/skills/armature-skill/SKILL.md': '# Armature Skill\n\nNative format.',
     })
 
     const skills = loadSkills(tempProject.dir)
 
-    expect(skills.some(s => s.name === 'orca-skill' && s.source === 'orca')).toBe(
+    expect(skills.some(s => s.name === 'armature-skill' && s.source === 'armature')).toBe(
       true
     )
   })

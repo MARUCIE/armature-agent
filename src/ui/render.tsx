@@ -44,11 +44,11 @@ function isDisabled(value: string | undefined): boolean {
 }
 
 export function shouldUseNoFlickerRenderer(env: NodeJS.ProcessEnv = process.env): boolean {
-  if (isDisabled(env.ORCA_TUI) || isDisabled(env.ORCA_NO_FLICKER) || isDisabled(env.ORCA_ALT_SCREEN)) return false
+  if (isDisabled(env.ARMATURE_TUI) || isDisabled(env.ARMATURE_NO_FLICKER) || isDisabled(env.ARMATURE_ALT_SCREEN)) return false
   if (isDisabled(env.CLAUDE_CODE_NO_FLICKER)) return false
-  return isEnabled(env.ORCA_TUI)
-    || isEnabled(env.ORCA_NO_FLICKER)
-    || isEnabled(env.ORCA_ALT_SCREEN)
+  return isEnabled(env.ARMATURE_TUI)
+    || isEnabled(env.ARMATURE_NO_FLICKER)
+    || isEnabled(env.ARMATURE_ALT_SCREEN)
     || isEnabled(env.CLAUDE_CODE_NO_FLICKER)
 }
 
@@ -63,7 +63,7 @@ export function renderInkApp(
   const origStderrWrite = process.stderr.write.bind(process.stderr)
 
   // Filter out startup noise that's already rendered by the Banner component
-  const STARTUP_NOISE = /^(hooks:|\/help|config |Orca v|\d+ tools|▸ |MCP:|provider:|hint:)/
+  const STARTUP_NOISE = /^(hooks:|\/help|config |Armature v|\d+ tools|▸ |MCP:|provider:|hint:)/
   const shouldFilter = (text: string): boolean => STARTUP_NOISE.test(text)
 
   // Intercept console.log → emit as system_message (info)

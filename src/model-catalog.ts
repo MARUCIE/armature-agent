@@ -1,5 +1,5 @@
 /**
- * Hermes-inspired model catalog for Orca CLI.
+ * Hermes-inspired model catalog for Armature CLI.
  *
  * Purpose:
  * - Replace hard-coded `/models` lists with provider-aware choices
@@ -7,7 +7,7 @@
  * - Warn when a model looks weak for multi-step agentic coding workflows
  */
 
-import type { OrcaConfig } from './config.js'
+import type { ArmatureConfig } from './config.js'
 import { listProviders } from './config.js'
 import {
   getContextWindowForModel,
@@ -120,7 +120,7 @@ export function findModelChoice(
   return choices.find((choice) => choice.model === modelOrKey)
 }
 
-export function listModelChoices(config: OrcaConfig, currentModel?: string, currentProvider = 'current'): ModelChoice[] {
+export function listModelChoices(config: ArmatureConfig, currentModel?: string, currentProvider = 'current'): ModelChoice[] {
   const choices: ModelChoice[] = []
   const seen = new Set<string>()
 

@@ -1,5 +1,5 @@
 ---
-Title: Orca Project Initiatives
+Title: Armature Project Initiatives
 Scope: project initiative index
 Owner: Maurice
 Status: Active
@@ -9,7 +9,7 @@ LastUpdated: 2026-05-29
 
 ## Active
 
-- [initiative_orca](./initiative_orca/index.md)
+- [initiative_armature](./initiative_armature/index.md)
 
 ## Changelog
 

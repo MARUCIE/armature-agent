@@ -17,18 +17,18 @@ import { tmpdir } from 'node:os'
 
 describe('usage-db: SQLite persistent tracking', () => {
   let usageHome: string
-  const previousOrcaHome = process.env.ORCA_HOME
+  const previousArmatureHome = process.env.ARMATURE_HOME
 
   beforeAll(() => {
-    usageHome = join(tmpdir(), `orca-usage-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    process.env.ORCA_HOME = usageHome
+    usageHome = join(tmpdir(), `armature-usage-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    process.env.ARMATURE_HOME = usageHome
     vi.resetModules()
   })
 
   afterAll(() => {
     vi.resetModules()
-    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = previousOrcaHome
+    if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = previousArmatureHome
     try { rmSync(usageHome, { recursive: true, force: true }) } catch { /* ignore */ }
   })
 
@@ -132,12 +132,12 @@ describe('config-diagnostics: independent file validation', () => {
   const previousHome = process.env.HOME
 
   beforeEach(() => {
-    projectDir = join(tmpdir(), `orca-diag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    mkdirSync(join(projectDir, '.orca'), { recursive: true })
+    projectDir = join(tmpdir(), `armature-diag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    mkdirSync(join(projectDir, '.armature'), { recursive: true })
     mkdirSync(join(projectDir, '.claude'), { recursive: true })
     // Isolate HOME to avoid global config interference
-    const fakeHome = join(tmpdir(), `orca-diag-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    mkdirSync(join(fakeHome, '.orca'), { recursive: true })
+    const fakeHome = join(tmpdir(), `armature-diag-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    mkdirSync(join(fakeHome, '.armature'), { recursive: true })
     process.env.HOME = fakeHome
   })
 
@@ -147,7 +147,7 @@ describe('config-diagnostics: independent file validation', () => {
   })
 
   it('17.7 reports all files as non-existent in clean directory', async () => {
-    const emptyDir = join(tmpdir(), `orca-diag-empty-${Date.now()}`)
+    const emptyDir = join(tmpdir(), `armature-diag-empty-${Date.now()}`)
     mkdirSync(emptyDir, { recursive: true })
 
     const { gatherConfigDiagnostics } = await import('../src/config-diagnostics.js')
@@ -164,7 +164,7 @@ describe('config-diagnostics: independent file validation', () => {
   })
 
   it('17.8 reports valid JSON files as valid', async () => {
-    writeFileSync(join(projectDir, '.orca.json'), JSON.stringify({ model: 'gpt-5.4' }))
+    writeFileSync(join(projectDir, '.armature.json'), JSON.stringify({ model: 'gpt-5.4' }))
     writeFileSync(join(projectDir, '.mcp.json'), JSON.stringify({ mcpServers: {} }))
 
     const { gatherConfigDiagnostics } = await import('../src/config-diagnostics.js')
@@ -181,7 +181,7 @@ describe('config-diagnostics: independent file validation', () => {
   })
 
   it('17.9 reports malformed JSON with error message', async () => {
-    writeFileSync(join(projectDir, '.orca.json'), '{ broken json }}}')
+    writeFileSync(join(projectDir, '.armature.json'), '{ broken json }}}')
 
     const { gatherConfigDiagnostics } = await import('../src/config-diagnostics.js')
     const results = gatherConfigDiagnostics(projectDir)
@@ -192,8 +192,8 @@ describe('config-diagnostics: independent file validation', () => {
     expect(projectConfig?.error).toBeTruthy()
   })
 
-  it('17.10 checks hooks.json in .orca directory', async () => {
-    writeFileSync(join(projectDir, '.orca', 'hooks.json'), JSON.stringify({
+  it('17.10 checks hooks.json in .armature directory', async () => {
+    writeFileSync(join(projectDir, '.armature', 'hooks.json'), JSON.stringify({
       PreToolUse: [{ command: 'echo test' }],
     }))
 
@@ -236,12 +236,12 @@ describe('config-diagnostics: independent file validation', () => {
 // ── 3. Session Management ───────────────────────────────────────
 
 describe('session file management', () => {
-  const sessionHome = join(tmpdir(), `orca-session-${Date.now()}`)
-  const sessionsDir = join(sessionHome, '.orca', 'sessions')
-  const previousOrcaHome = process.env.ORCA_HOME
+  const sessionHome = join(tmpdir(), `armature-session-${Date.now()}`)
+  const sessionsDir = join(sessionHome, '.armature', 'sessions')
+  const previousArmatureHome = process.env.ARMATURE_HOME
 
   beforeAll(() => {
-    process.env.ORCA_HOME = join(sessionHome, '.orca')
+    process.env.ARMATURE_HOME = join(sessionHome, '.armature')
     mkdirSync(sessionsDir, { recursive: true })
 
     // Create test session files
@@ -261,8 +261,8 @@ describe('session file management', () => {
   })
 
   afterAll(() => {
-    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = previousOrcaHome
+    if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = previousArmatureHome
     try { rmSync(sessionHome, { recursive: true, force: true }) } catch { /* */ }
   })
 
@@ -298,15 +298,15 @@ describe('init command: project initialization', () => {
     expect(cmd.name()).toBe('init')
   })
 
-  it('17.17 initProjectConfig creates .orca.json', async () => {
+  it('17.17 initProjectConfig creates .armature.json', async () => {
     const { initProjectConfig } = await import('../src/config.js')
-    const initDir = join(tmpdir(), `orca-init-${Date.now()}`)
+    const initDir = join(tmpdir(), `armature-init-${Date.now()}`)
     mkdirSync(initDir, { recursive: true })
 
     initProjectConfig(initDir)
 
-    expect(existsSync(join(initDir, '.orca.json'))).toBe(true)
-    const content = JSON.parse(readFileSync(join(initDir, '.orca.json'), 'utf-8'))
+    expect(existsSync(join(initDir, '.armature.json'))).toBe(true)
+    const content = JSON.parse(readFileSync(join(initDir, '.armature.json'), 'utf-8'))
     expect(content).toHaveProperty('defaultProvider')
     expect(content).toHaveProperty('systemPrompt')
 
@@ -315,13 +315,13 @@ describe('init command: project initialization', () => {
 
   it('17.18 initProjectConfig does not overwrite existing config', async () => {
     const { initProjectConfig } = await import('../src/config.js')
-    const initDir = join(tmpdir(), `orca-init-exist-${Date.now()}`)
+    const initDir = join(tmpdir(), `armature-init-exist-${Date.now()}`)
     mkdirSync(initDir, { recursive: true })
-    writeFileSync(join(initDir, '.orca.json'), '{"custom": true}')
+    writeFileSync(join(initDir, '.armature.json'), '{"custom": true}')
 
     initProjectConfig(initDir)
 
-    const content = JSON.parse(readFileSync(join(initDir, '.orca.json'), 'utf-8'))
+    const content = JSON.parse(readFileSync(join(initDir, '.armature.json'), 'utf-8'))
     expect(content.custom).toBe(true) // Original preserved
 
     try { rmSync(initDir, { recursive: true, force: true }) } catch { /* */ }

@@ -8,7 +8,7 @@
  *   2. evaluate the `meta` literal without executing arbitrary code,
  *   3. strip the export so the remaining body can run inside a vm sandbox.
  *
- * Ported from pi-dynamic-workflows (MIT), adapted to Orca's module layout.
+ * Ported from pi-dynamic-workflows (MIT), adapted to Armature's module layout.
  */
 
 import { parse } from 'acorn'

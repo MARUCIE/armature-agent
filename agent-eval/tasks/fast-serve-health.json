@@ -1,9 +1,9 @@
 {
   "id": "fast-serve-health",
   "title": "Serve can start locally and answer health checks",
-  "description": "Black-box smoke for `orca serve` using a temporary isolated ORCA_HOME and a dynamically selected local port.",
-  "input": "Start `orca serve` on a free local port, fetch `/health`, and verify the returned JSON still advertises an OK status and model metadata.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); PORT=$(node -e \"const net=require(\\\"node:net\\\"); const s=net.createServer(); s.listen(0,\\\"127.0.0.1\\\",()=>{console.log(s.address().port); s.close();});\"); env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ORCA_HOME=\"$TMP_HOME/.orca\" ORCA_PROVIDER=openai OPENAI_API_KEY=test-openai-key node dist/bin/orca.js serve --port \"$PORT\" >\"$TMP_HOME/serve.out\" 2>&1 & SERVER_PID=$!; trap \"kill $SERVER_PID 2>/dev/null\" EXIT; bash agent-eval/scripts/wait-for-http.sh \"http://127.0.0.1:$PORT/health\" \"^(200)$\" 50 0.1; curl -sf \"http://127.0.0.1:$PORT/health\"'",
+  "description": "Black-box smoke for `armature serve` using a temporary isolated ARMATURE_HOME and a dynamically selected local port.",
+  "input": "Start `armature serve` on a free local port, fetch `/health`, and verify the returned JSON still advertises an OK status and model metadata.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); PORT=$(node -e \"const net=require(\\\"node:net\\\"); const s=net.createServer(); s.listen(0,\\\"127.0.0.1\\\",()=>{console.log(s.address().port); s.close();});\"); env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ARMATURE_HOME=\"$TMP_HOME/.armature\" ARMATURE_PROVIDER=openai OPENAI_API_KEY=test-openai-key node dist/bin/armature.js serve --port \"$PORT\" >\"$TMP_HOME/serve.out\" 2>&1 & SERVER_PID=$!; trap \"kill $SERVER_PID 2>/dev/null\" EXIT; bash agent-eval/scripts/wait-for-http.sh \"http://127.0.0.1:$PORT/health\" \"^(200)$\" 50 0.1; curl -sf \"http://127.0.0.1:$PORT/health\"'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

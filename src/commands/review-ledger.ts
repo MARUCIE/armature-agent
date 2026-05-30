@@ -1,5 +1,5 @@
 /**
- * `orca review-ledger` — multi-model PR review ledger.
+ * `armature review-ledger` — multi-model PR review ledger.
  *
  * Runs independent model reports, synthesizes common issues, and writes the
  * human-gated fix/review/E2E artifacts used for large PR review loops.
@@ -9,7 +9,7 @@ import { Command } from 'commander'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
-import { resolveConfig, resolveModelEndpoint, findAggregator, type OrcaConfig } from '../config.js'
+import { resolveConfig, resolveModelEndpoint, findAggregator, type ArmatureConfig } from '../config.js'
 import { pickDiverseModels } from '../multi-model.js'
 import { printError } from '../output.js'
 import {
@@ -76,7 +76,7 @@ export function createReviewLedgerCommand(): Command {
           if (!canRoute) {
             printError(
               'Cannot route any review model. Configure an aggregator provider or pass --provider/--api-key.\n' +
-              '  Example: orca review-ledger --provider poe --models claude-opus-4.6,gpt-5.4,gemini-3.1-pro'
+              '  Example: armature review-ledger --provider poe --models claude-opus-4.6,gpt-5.4,gemini-3.1-pro'
             )
             process.exit(1)
           }
@@ -216,9 +216,9 @@ function defaultReviewOutputDir(source: ReviewSource): string {
   return join('doc', 'reviews', `${stamp}-${slugifyReviewLabel(title).slice(0, 72)}`)
 }
 
-function buildReviewFlags(opts: ReviewLedgerCommandOptions): Partial<OrcaConfig> {
-  const flags: Partial<OrcaConfig> = {}
-  if (opts.provider) flags.provider = opts.provider as OrcaConfig['provider']
+function buildReviewFlags(opts: ReviewLedgerCommandOptions): Partial<ArmatureConfig> {
+  const flags: Partial<ArmatureConfig> = {}
+  if (opts.provider) flags.provider = opts.provider as ArmatureConfig['provider']
   if (opts.apiKey) flags.apiKey = opts.apiKey
   return flags
 }

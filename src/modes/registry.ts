@@ -4,7 +4,7 @@
  *
  * Modes shape agent behavior without changing the underlying model.
  * Built-in modes cover common workflows; custom modes can be loaded
- * from .orca/modes.json.
+ * from .armature/modes.json.
  */
 
 import { readFileSync } from 'node:fs'
@@ -220,7 +220,7 @@ export class ModeRegistry {
     this.activeMode = this.modes.get('default')!
   }
 
-  /** Load custom modes from a JSON file (e.g., .orca/modes.json) */
+  /** Load custom modes from a JSON file (e.g., .armature/modes.json) */
   loadFromFile(path: string): void {
     const raw = readFileSync(path, 'utf-8')
     const parsed: unknown = JSON.parse(raw)

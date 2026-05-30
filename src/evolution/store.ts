@@ -1,7 +1,7 @@
 import { closeSync, constants, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
 import { homedir } from 'node:os'
-import { getOrcaHome } from '../logger.js'
+import { getArmatureHome } from '../logger.js'
 import { LearningJournal } from '../knowledge/learning.js'
 import { PromptRepository } from '../knowledge/prompts.js'
 
@@ -287,7 +287,7 @@ export class EvolutionStore {
   private readonly observationsDir: string
   private readonly candidatesDir: string
 
-  constructor(rootDir = join(getOrcaHome(), 'evolution')) {
+  constructor(rootDir = join(getArmatureHome(), 'evolution')) {
     this.rootDir = rootDir
     this.observationsDir = ensureDir(join(rootDir, 'observations'))
     this.candidatesDir = ensureDir(join(rootDir, 'candidates'))

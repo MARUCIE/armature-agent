@@ -3,7 +3,7 @@
  *
  * Shows all available themes in a list. User navigates with arrows,
  * sees a live color preview for each theme. Press Enter to confirm.
- * Saves choice to ORCA_THEME in ~/.orca/config or env hint file.
+ * Saves choice to ARMATURE_THEME in ~/.armature/config or env hint file.
  */
 
 import React, { useState } from 'react'
@@ -23,7 +23,7 @@ const THEMES: ThemeOption[] = [
   { id: 'grokday', label: 'GrokDay', accent: '#6C3EB2', mode: 'light', description: 'Light theme for bright terminals' },
   { id: 'tokyonight', label: 'TokyoNight', accent: '#BB9AF7', mode: 'dark', description: 'Blue-tinted Tokyo Night palette' },
   { id: 'rosepine-moon', label: 'RosePineMoon', accent: '#C4A7E7', mode: 'dark', description: 'Warm muted Rose Pine palette' },
-  { id: 'orca', label: 'Blackfin', accent: '#F6C945', mode: 'dark', description: 'Orca legacy amber echolocation accents' },
+  { id: 'armature', label: 'Blackfin', accent: '#F6C945', mode: 'dark', description: 'Armature legacy amber echolocation accents' },
   { id: 'default', label: 'Default', accent: 'cyan', mode: 'dark', description: 'Cyan accents on dark background' },
   { id: 'dark', label: 'Dark', accent: 'green', mode: 'dark', description: 'Matrix green on dark background' },
   { id: 'ocean', label: 'Ocean', accent: 'blue', mode: 'dark', description: 'Deep blue on dark background' },

@@ -5,17 +5,17 @@ import { tmpdir } from 'node:os'
 
 describe('stats command', () => {
   const previousHome = process.env.HOME
-  const previousOrcaHome = process.env.ORCA_HOME
-  const previousProvider = process.env.ORCA_PROVIDER
+  const previousArmatureHome = process.env.ARMATURE_HOME
+  const previousProvider = process.env.ARMATURE_PROVIDER
   const previousOpenAIKey = process.env.OPENAI_API_KEY
   let homeDir: string
 
   beforeEach(() => {
-    homeDir = join(tmpdir(), `orca-stats-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    homeDir = join(tmpdir(), `armature-stats-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
     mkdirSync(homeDir, { recursive: true })
     process.env.HOME = homeDir
-    process.env.ORCA_HOME = join(homeDir, '.orca')
-    process.env.ORCA_PROVIDER = 'openai'
+    process.env.ARMATURE_HOME = join(homeDir, '.armature')
+    process.env.ARMATURE_PROVIDER = 'openai'
     process.env.OPENAI_API_KEY = 'test-openai-key'
     vi.resetModules()
   })
@@ -24,10 +24,10 @@ describe('stats command', () => {
     vi.restoreAllMocks()
     if (previousHome === undefined) delete process.env.HOME
     else process.env.HOME = previousHome
-    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = previousOrcaHome
-    if (previousProvider === undefined) delete process.env.ORCA_PROVIDER
-    else process.env.ORCA_PROVIDER = previousProvider
+    if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = previousArmatureHome
+    if (previousProvider === undefined) delete process.env.ARMATURE_PROVIDER
+    else process.env.ARMATURE_PROVIDER = previousProvider
     if (previousOpenAIKey === undefined) delete process.env.OPENAI_API_KEY
     else process.env.OPENAI_API_KEY = previousOpenAIKey
     try { rmSync(homeDir, { recursive: true, force: true }) } catch { /* ignore */ }

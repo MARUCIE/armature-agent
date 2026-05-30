@@ -1,0 +1,568 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Armature CLI PDCA Execution Plan</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; max-height:calc(100vh - 32px); overflow:auto; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } .content { padding:22px; } }</style></head><body><header><h1>Armature CLI PDCA Execution Plan</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#2026-05-02-model-catalog-ssot-runtime-consolidation-pdca">2026-05-02 - Model Catalog SSoT Runtime Consolidation PDCA</a><a href="#2026-05-02-terminal-operability-hardening-pdca">2026-05-02 - Terminal Operability Hardening PDCA</a><a href="#2026-05-02-rubber-duck-critique-quality-gate-pdca">2026-05-02 - Rubber Duck Critique Quality Gate PDCA</a><a href="#2026-05-01-pod-helm-footer-ui-ux-pdca">2026-05-01 - Pod Helm Footer UI/UX PDCA</a><a href="#2026-05-01-pod-council-runway-ui-ux-pdca">2026-05-01 - Pod Council Runway UI/UX PDCA</a><a href="#2026-05-01-pod-evidence-drawer-ui-ux-pdca">2026-05-01 - Pod Evidence Drawer UI/UX PDCA</a><a href="#2026-05-01-pod-trust-gate-ui-ux-pdca">2026-05-01 - Pod Trust Gate UI/UX PDCA</a><a href="#2026-05-01-pod-proof-wake-ui-ux-pdca">2026-05-01 - Pod Proof Wake UI/UX PDCA</a><a href="#2026-05-01-pod-status-rail-ui-ux-pdca">2026-05-01 - Pod Status Rail UI/UX PDCA</a><a href="#2026-05-01-pod-transcript-flow-ui-ux-pdca">2026-05-01 - Pod Transcript Flow UI/UX PDCA</a><a href="#2026-05-01-pod-command-surface-ui-ux-pdca">2026-05-01 - Pod Command Surface UI/UX PDCA</a><a href="#2026-05-01-cute-armature-mascot-ui-ux-pdca">2026-05-01 - Cute Armature Mascot UI/UX PDCA</a><a href="#2026-05-01-killer-whale-ocean-joint-motif-correction">2026-05-01 - Killer-Whale / Ocean Joint Motif Correction</a><a href="#2026-04-30-visual-system-pdca-execution">2026-04-30 - Visual System PDCA Execution</a><a href="#2026-04-29-queue-and-swarm-pdca-execution">2026-04-29 - Queue and Swarm PDCA Execution</a><a href="#plan">Plan</a><a href="#do">Do</a><a href="#check">Check</a><a href="#act">Act</a></aside><article class="content markdown-body"><h1>Armature CLI PDCA Execution Plan</h1>
+<h2>2026-05-03 - Claude Code Parity UX Audit PDCA</h2>
+<ul>
+<li>Plan:<ul>
+<li>Close user-reported Claude Code parity gaps in active-turn cancellation, slash command clearing, command aliases, capability inspection, and command menu discoverability.</li>
+<li>Keep the work scoped to terminal UX and read-only discovery surfaces; leave IDE/desktop/web parity as product-surface follow-up.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>Added Claude-style keybinding metadata, Esc/Ctrl-C abort propagation, and slash input clearing after command dispatch.</li>
+<li>Added Claude-compatible aliases and daily commands: <code>/usage</code>, <code>/settings</code>, <code>/resume</code>, <code>/tasks</code>, <code>/bashes</code>, <code>/reset</code>, <code>/new</code>, <code>/context</code>, <code>/export</code>, <code>/copy</code>, and <code>/rewind</code>.</li>
+<li>Added <code>/memory</code>, <code>/skills</code>, and <code>/agents</code> read-only detail panels.</li>
+<li>Added dynamic <code>/</code> picker entries for discovered project/user skills, custom agent specs, and configured MCP servers.</li>
+<li>Prioritized project-local skills before user-global skills.</li>
+<li>Added read-only <code>/mcp &lt;name&gt;</code> server details without changing default MCP startup safety.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li><code>npm test -- tests/mcp-client.test.ts tests/slash-picker-items.test.ts tests/chat-slash-mutations.test.ts tests/chat-slash-readonly.test.ts</code> -&gt; <code>111</code> tests passed.</li>
+<li><code>npm run lint</code> -&gt; pass.</li>
+<li><code>npm run build</code> -&gt; pass.</li>
+<li><code>npm test</code> -&gt; <code>92</code> files / <code>1696</code> tests passed.</li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated Claude parity audit report, task plan, PDCA checklist, rolling ledger, README, release evidence snapshot, and SOTA evidence pointers.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-05-02 - Model Catalog SSoT Runtime Consolidation PDCA</h2>
+<ul>
+<li>Plan:<ul>
+<li>Close the remaining model-routing evidence drift risk by giving runtime, provider, output, and picker surfaces one metadata source.</li>
+<li>Keep the tranche scoped to metadata consolidation and regression guards, not a provider-routing redesign.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>Added <code>src/model-metadata.ts</code> for canonical context windows, max output defaults, pricing tiers, and formatting helpers.</li>
+<li>Updated <code>src/model-catalog.ts</code> to re-export metadata helpers while preserving provider-aware choices and caution rules.</li>
+<li>Updated <code>src/token-budget.ts</code> to use canonical context/max-output metadata.</li>
+<li>Updated <code>src/providers/openai-compat.ts</code> to use canonical context guard and max-token defaults.</li>
+<li>Updated <code>src/output.ts</code> to use canonical capacity labels and pricing for usage/session cost estimates.</li>
+<li>Added regression coverage that blocks reintroduced metadata tables in runtime consumers.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li><code>npm test -- tests/model-catalog.test.ts tests/context-protection.test.ts tests/agent-intelligence.test.ts tests/openai-compat-multimodal.test.ts</code> -&gt; <code>86</code> tests passed.</li>
+<li><code>npm run lint</code> -&gt; pass.</li>
+<li><code>npm run build</code> -&gt; pass.</li>
+<li><code>npm test</code> -&gt; <code>91</code> files / <code>1663</code> tests passed.</li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated PRD, architecture, UX map, optimization plan, task plan, notes, deliverable, rolling ledger, README, release evidence snapshot, and HTML companions.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-05-02 - Terminal Operability Hardening PDCA</h2>
+<ul>
+<li>Plan:<ul>
+<li>Fix Armature&#39;s Ink terminal behavior so default output is copyable and does not flicker through alternate-screen startup.</li>
+<li>Make tool calls stable from launcher/home/random directories by resolving a durable project cwd.</li>
+<li>Repair MCP tool routing for underscore/hyphen server names and add a local file-opening tool for Markdown/PDF/image workflows.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>Made <code>AlternateScreen</code> opt-in through <code>ARMATURE_ALT_SCREEN=1</code>.</li>
+<li>Made mouse tracking opt-in through <code>ARMATURE_MOUSE=1</code>.</li>
+<li>Added workspace cwd resolution and last-workspace memory in <code>chat-support</code>.</li>
+<li>Forwarded root <code>armature --cwd &lt;dir&gt;</code> into <code>armature chat</code>.</li>
+<li>Added <code>parseMcpToolName()</code> and widened Codex TOML MCP server-name parsing.</li>
+<li>Added <code>open_file</code> as the 42nd built-in tool and marked it dangerous for permission policy.</li>
+<li>Refreshed README, tests, and release evidence snapshot.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li>Targeted regression pack -&gt; <code>250</code> tests passed.</li>
+<li><code>npm run build</code> -&gt; pass.</li>
+<li><code>node dist/bin/armature.js --help</code> -&gt; <code>42 tools</code>, <code>--cwd</code>, and <code>critique</code> visible.</li>
+<li><code>node dist/bin/armature.js doctor</code> -&gt; provider OK and <code>14</code> MCP configs discovered.</li>
+<li>Live Poe one-shot tool smoke -&gt; model used <code>read_file</code>; tool result succeeded; final answer <code>Armature CLI</code>.</li>
+<li><code>npm test</code> -&gt; <code>91</code> files / <code>1663</code> tests passed.</li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated PRD, architecture, UX map, optimization plan, task plan, notes, deliverable, rolling ledger, README, and release evidence snapshot.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-05-02 - Rubber Duck Critique Quality Gate PDCA</h2>
+<ul>
+<li>Plan:<ul>
+<li>Add the report-derived read-only critique gate as a separate workflow from <code>reflect</code>.</li>
+<li>Keep implementation bounded to critique service, command surface, tests, README, and active docs.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>Added <code>src/critique.ts</code> for checkpoints, weighted risk scoring, complementary reviewer selection, prompt assembly, and JSON parsing.</li>
+<li>Added <code>src/critique-workspace.ts</code> to share workspace diff/risk/prompt inspection across CLI and slash entrypoints.</li>
+<li>Added <code>src/commands/critique.ts</code> for <code>armature critique</code> with dry-run, JSON, plan/log/diff inputs, and risk flags.</li>
+<li>Added <code>/critique</code> in <code>src/commands/chat-slash-readonly.ts</code> with legacy output and Ink detail panel rendering.</li>
+<li>Added <code>src/critique-auto.ts</code> and REPL pre-send integration for one-shot local dirty-diff hints that recommend <code>/critique</code> without model calls.</li>
+<li>Exposed <code>armature chat --no-auto-critique</code> and <code>armature chat --auto-critique-threshold &lt;score&gt;</code> for session-scoped automatic hint control.</li>
+<li>Extended the automatic local hint to one-shot <code>armature chat &quot;prompt&quot;</code> streaming runs while preserving clean <code>--json</code> output.</li>
+<li>Registered the command and slash discovery surfaces; added focused unit, slash, registry, and contract coverage.</li>
+<li>Fixed hook trust evaluation at <code>HookManager.load()</code> after full-suite verification exposed a project-hook singleton env drift.</li>
+<li>Refreshed <code>verification_snapshot.json</code> and README/PDCA counts after the new tests changed full-suite evidence.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li><code>npm test -- tests/critique.test.ts tests/program.test.ts tests/command-contracts.test.ts</code> -&gt; <code>42</code> tests passed.</li>
+<li><code>npm test -- tests/critique.test.ts tests/chat-slash-readonly.test.ts tests/command-picker.test.ts tests/slash-commands.test.ts tests/program.test.ts tests/command-contracts.test.ts</code> -&gt; <code>70</code> tests passed.</li>
+<li><code>npm test -- tests/critique.test.ts tests/chat-repl-turn.test.ts</code> -&gt; <code>25</code> tests passed.</li>
+<li><code>npm test -- tests/chat-one-shot-mcp-cleanup.test.ts tests/chat-repl-turn.test.ts tests/command-contracts.test.ts</code> -&gt; <code>33</code> tests passed.</li>
+<li><code>npm test -- tests/v050-modules.test.ts</code> -&gt; <code>47</code> tests passed.</li>
+<li><code>npm run lint</code> -&gt; pass.</li>
+<li><code>npm run build</code> -&gt; pass.</li>
+<li><code>npm test -- tests/release-evidence.test.ts</code> -&gt; <code>3</code> tests passed after snapshot refresh.</li>
+<li><code>npm test</code> -&gt; <code>89</code> files / <code>1642</code> tests passed.</li>
+<li><code>node dist/bin/armature.js critique --dry-run --json &quot;review current diff&quot;</code> -&gt; valid JSON.</li>
+<li>Scoped <code>git diff --check -- &lt;tracked critique tranche files&gt;</code> -&gt; pass.</li>
+<li>New-file trailing whitespace scan for <code>src/critique.ts</code>, <code>src/commands/critique.ts</code>, and <code>tests/critique.test.ts</code> -&gt; pass.</li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated PRD, architecture, UX map, optimization plan, task plan, notes, deliverable, rolling ledger, README, and HTML companions.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-05-01 - Pod Helm Footer UI/UX PDCA</h2>
+<ul>
+<li>Plan:<ul>
+<li>Extend the Armature killer-whale / pod identity into the persistent shortcut footer.</li>
+<li>Keep the change bounded to Footer rendering, focused tests, and active docs.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>Added <code>POD HELM</code> to the footer rail.</li>
+<li>Changed generating copy to <code>interrupt echo</code>.</li>
+<li>Changed active and idle labels to <code>send brief</code> and <code>pod commands</code>.</li>
+<li>Preserved <code>enter</code>, <code>ctrl+j</code>, <code>/help</code>, <code>shift+tab</code>, permission-mode, and permission-source visibility.</li>
+<li>Used terminal width to keep ordinary-width footers compact and avoid broken text wrapping.</li>
+<li>Replaced dim-only footer styling with active theme semantic tokens.</li>
+<li>Updated focused Ink UI tests.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li><code>npm test -- tests/ink-ui.test.tsx</code> -&gt; <code>79</code> tests passed.</li>
+<li><code>npm run lint</code> -&gt; pass.</li>
+<li><code>npm run build</code> -&gt; pass.</li>
+<li><code>npm test -- tests/release-evidence.test.ts</code> -&gt; <code>3</code> tests passed.</li>
+<li><code>npm test</code> -&gt; <code>88</code> files / <code>1627</code> tests passed.</li>
+<li><code>ARMATURE_THEME=armature node dist/bin/armature.js --version</code> -&gt; <code>0.8.16</code>.</li>
+<li><code>git diff --check -- &lt;changed tranche files&gt;</code> -&gt; pass.</li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated PRD, architecture, UX map, optimization plan, task plan, visual plan, notes, deliverable, and rolling ledger.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-05-01 - Pod Council Runway UI/UX PDCA</h2>
+<ul>
+<li>Plan:<ul>
+<li>Extend the Armature killer-whale / pod intelligence identity into live multi-model progress.</li>
+<li>Keep the change bounded to MultiModelProgress rendering, focused tests, and active docs.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>Changed the progress header to <code>POD COUNCIL · &lt;command&gt;</code>.</li>
+<li>Changed model count copy to <code>voices</code>.</li>
+<li>Changed completed row copy from <code>ok</code> to <code>surfaced</code>.</li>
+<li>Added <code>sonar</code> copy beside the active spinner.</li>
+<li>Replaced hard-coded <code>cyan</code> and <code>green</code> colors with theme semantic tokens.</li>
+<li>Preserved <code>ModelProgress</code>, council/race/pipeline runtime behavior, spinner dependency behavior, model names, and elapsed time.</li>
+<li>Updated focused Ink UI tests.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li><code>npm test -- tests/ink-ui.test.tsx</code> -&gt; <code>79</code> tests passed.</li>
+<li><code>npm run lint</code> -&gt; pass.</li>
+<li><code>npm run build</code> -&gt; pass.</li>
+<li><code>npm test -- tests/release-evidence.test.ts</code> -&gt; <code>3</code> tests passed.</li>
+<li><code>npm test</code> -&gt; <code>88</code> files / <code>1627</code> tests passed.</li>
+<li><code>ARMATURE_THEME=armature node dist/bin/armature.js --version</code> -&gt; <code>0.8.16</code>.</li>
+<li><code>git diff --check -- &lt;changed tranche files&gt;</code> -&gt; pass.</li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated PRD, architecture, UX map, optimization plan, task plan, visual plan, notes, deliverable, and rolling ledger.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-05-01 - Pod Evidence Drawer UI/UX PDCA</h2>
+<ul>
+<li>Plan:<ul>
+<li>Extend the Armature killer-whale / pod identity into detail panels that surface status, permission, notes, thread, and TaskRun evidence.</li>
+<li>Keep the change bounded to DetailPanel rendering, focused tests, and active docs.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>Changed detail panel title rendering to <code>EVIDENCE DRAWER · &lt;title&gt;</code>.</li>
+<li>Added <code>pod scan</code> subtitle context while preserving original subtitle metadata.</li>
+<li>Replaced hard-coded <code>cyan</code>, <code>yellow</code>, and <code>red</code> panel borders with theme semantic tokens.</li>
+<li>Preserved <code>DetailPanelInfo</code>, slash-command behavior, evidence body construction, and MarkdownText rendering.</li>
+<li>Updated focused Ink UI tests.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li><code>npm test -- tests/ink-ui.test.tsx</code> -&gt; <code>79</code> tests passed.</li>
+<li><code>npm run lint</code> -&gt; pass.</li>
+<li><code>npm run build</code> -&gt; pass.</li>
+<li><code>npm test -- tests/release-evidence.test.ts</code> -&gt; <code>3</code> tests passed.</li>
+<li><code>npm test</code> -&gt; <code>88</code> files / <code>1627</code> tests passed.</li>
+<li><code>ARMATURE_THEME=armature node dist/bin/armature.js --version</code> -&gt; <code>0.8.16</code>.</li>
+<li><code>git diff --check -- &lt;changed tranche files&gt;</code> -&gt; pass.</li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated PRD, architecture, UX map, optimization plan, task plan, visual plan, notes, deliverable, and rolling ledger.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-05-01 - Pod Trust Gate UI/UX PDCA</h2>
+<ul>
+<li>Plan:<ul>
+<li>Extend the Armature killer-whale / pod identity into approval and write-review boundaries.</li>
+<li>Keep the change bounded to PermissionPrompt rendering, DiffPreview rendering, focused tests, and active docs.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>Changed permission prompt title to <code>TRUST GATE · &lt;tool&gt;</code>.</li>
+<li>Grouped the approval preview under <code>SCAN</code>.</li>
+<li>Retuned approval choice descriptions to explain once/session/project trust scope and deny posture.</li>
+<li>Changed write diff preview header to <code>ECHO DIFF</code>.</li>
+<li>Preserved approval keybindings, decision payload semantics, diff algorithm, and runtime event contracts.</li>
+<li>Updated focused Ink UI tests.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li><code>npm test -- tests/ink-ui.test.tsx</code> -&gt; <code>79</code> tests passed.</li>
+<li><code>npm run lint</code> -&gt; pass.</li>
+<li><code>npm run build</code> -&gt; pass.</li>
+<li><code>npm test -- tests/release-evidence.test.ts</code> -&gt; <code>3</code> tests passed.</li>
+<li><code>npm test</code> -&gt; <code>88</code> files / <code>1627</code> tests passed.</li>
+<li><code>ARMATURE_THEME=armature node dist/bin/armature.js --version</code> -&gt; <code>0.8.16</code>.</li>
+<li><code>git diff --check -- &lt;changed tranche files&gt;</code> -&gt; pass.</li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated PRD, architecture, UX map, optimization plan, task plan, visual plan, notes, deliverable, and rolling ledger.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-05-01 - Pod Proof Wake UI/UX PDCA</h2>
+<ul>
+<li>Plan:<ul>
+<li>Extend the Armature killer-whale / pod identity into the compact post-turn summary.</li>
+<li>Keep the change bounded to TurnSummary rendering, focused tests, and active docs.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>Changed the post-turn label to <code>PROOF WAKE</code>.</li>
+<li>Replaced <code>r/d/u</code> shorthand with explicit <code>time</code>, <code>in</code>, <code>out</code>, <code>tools</code>, cost, and <code>tok/s</code>.</li>
+<li>Preserved the existing <code>TurnSummaryInfo</code> shape and accounting calculations.</li>
+<li>Updated focused Ink UI tests.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li><code>npm test -- tests/ink-ui.test.tsx</code> -&gt; <code>79</code> tests passed.</li>
+<li><code>npm run lint</code> -&gt; pass.</li>
+<li><code>npm run build</code> -&gt; pass.</li>
+<li><code>npm test -- tests/release-evidence.test.ts</code> -&gt; <code>3</code> tests passed.</li>
+<li><code>npm test</code> -&gt; <code>88</code> files / <code>1627</code> tests passed.</li>
+<li><code>ARMATURE_THEME=armature node dist/bin/armature.js --version</code> -&gt; <code>0.8.16</code>.</li>
+<li><code>git diff --check -- &lt;changed tranche files&gt;</code> -&gt; pass.</li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated PRD, architecture, UX map, optimization plan, task plan, visual plan, notes, deliverable, and rolling ledger.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-05-01 - Pod Status Rail UI/UX PDCA</h2>
+<ul>
+<li>Plan:<ul>
+<li>Extend the Armature killer-whale / pod identity into the fixed StatusBar.</li>
+<li>Keep the change bounded to status rendering, focused tests, and active docs.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>Added <code>sonar</code> context language to the first status line while preserving <code>ARMATURE POD</code>, model, context bar, percentage, and branch.</li>
+<li>Prefixed available metrics with <code>signal:</code> while preserving cost, throughput, turns, session id, policy summaries, output style, and sparkline.</li>
+<li>Changed permission posture copy to <code>trust:</code> and retuned guidance to <code>shift+tab cycles trust</code>.</li>
+<li>Updated focused Ink UI tests.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li><code>npm test -- tests/ink-ui.test.tsx</code> -&gt; <code>79</code> tests passed.</li>
+<li><code>npm run lint</code> -&gt; pass.</li>
+<li><code>npm run build</code> -&gt; pass.</li>
+<li><code>npm test -- tests/release-evidence.test.ts</code> -&gt; <code>3</code> tests passed.</li>
+<li><code>npm test</code> -&gt; <code>88</code> files / <code>1627</code> tests passed.</li>
+<li><code>ARMATURE_THEME=armature node dist/bin/armature.js --version</code> -&gt; <code>0.8.16</code>.</li>
+<li><code>git diff --check -- &lt;changed tranche files&gt;</code> -&gt; pass.</li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated PRD, architecture, UX map, optimization plan, task plan, visual plan, notes, deliverable, and rolling ledger.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-05-01 - Pod Transcript Flow UI/UX PDCA</h2>
+<ul>
+<li>Plan:<ul>
+<li>Extend the Armature killer-whale / pod identity into live transcript roles, tool rails, and thinking feedback.</li>
+<li>Keep the change bounded to Ink rendering components, focused tests, and active docs.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>Changed user prompt blocks to <code>POD BRIEF</code>.</li>
+<li>Changed assistant response panels to <code>ARMATURE POD</code> and streaming copy to <code>echoing</code>.</li>
+<li>Added <code>ECHO TOOL</code> to active and completed tool rails.</li>
+<li>Replaced broad generic thinking verbs with compact Armature / pod / proof-oriented verbs.</li>
+<li>Updated focused Ink UI tests.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li><code>npm test -- tests/ink-ui.test.tsx</code> -&gt; <code>78</code> tests passed.</li>
+<li><code>npm run lint</code> -&gt; pass.</li>
+<li><code>npm run build</code> -&gt; pass.</li>
+<li><code>npm test -- tests/release-evidence.test.ts</code> -&gt; <code>3</code> tests passed.</li>
+<li><code>npm test</code> -&gt; <code>88</code> files / <code>1626</code> tests passed.</li>
+<li><code>ARMATURE_THEME=armature node dist/bin/armature.js --version</code> -&gt; <code>0.8.16</code>.</li>
+<li><code>git diff --check -- &lt;changed tranche files&gt;</code> -&gt; pass.</li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated PRD, architecture, UX map, optimization plan, task plan, visual plan, notes, deliverable, and rolling ledger.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-05-01 - Pod Command Surface UI/UX PDCA</h2>
+<ul>
+<li>Plan:<ul>
+<li>Extend the Armature killer-whale / pod identity from the first frame into high-frequency operation surfaces.</li>
+<li>Keep the change bounded to input, command picker, option picker, shared picker frame, focused tests, and active docs.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>Made <code>PickerFrame.tsx</code> theme-aware.</li>
+<li>Reframed <code>CommandPicker.tsx</code> as <code>POD COMMANDS</code> with <code>echo filter</code> and no-match feedback.</li>
+<li>Updated <code>OptionPicker.tsx</code> to use Armature semantic tokens for selection, labels, descriptions, and scroll affordances.</li>
+<li>Retuned <code>InputArea.tsx</code> placeholder and multiline hint to pod briefing language.</li>
+<li>Updated focused Ink UI tests.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li><code>npm test -- tests/ink-ui.test.tsx</code> -&gt; <code>78</code> tests passed.</li>
+<li><code>npm run lint</code> -&gt; pass.</li>
+<li><code>npm run build</code> -&gt; pass.</li>
+<li><code>npm test -- tests/release-evidence.test.ts</code> -&gt; <code>3</code> tests passed.</li>
+<li><code>npm test</code> -&gt; <code>88</code> files / <code>1626</code> tests passed.</li>
+<li><code>ARMATURE_THEME=armature node dist/bin/armature.js --version</code> -&gt; <code>0.8.16</code>.</li>
+<li><code>git diff --check -- &lt;changed tranche files&gt;</code> -&gt; pass.</li>
+<li>Full <code>git diff --check</code> remains blocked by pre-existing trailing whitespace in root <code>AGENTS.md</code>, outside this tranche.</li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated PRD, architecture, UX map, optimization plan, task plan, visual plan, notes, deliverable, and rolling ledger.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-05-01 - Cute Armature Mascot UI/UX PDCA</h2>
+<p>Superseded on 2026-05-02 for startup Banner art: the separate mascot/icon block is deleted. <code>POD BRIEF</code> HomePanel language remains active.</p>
+<ul>
+<li>Plan:<ul>
+<li>Learn Hermes&#39;s logo implementation structure: wordmark + status panel.</li>
+<li>Keep Armature original without copying Hermes caduceus and without rendering a separate startup mascot/icon.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>The former <code>ARMATURE_MASCOT_LINES</code> path was later removed from the startup Banner.</li>
+<li>Updated HomePanel primary entry from <code>MISSION</code> to <code>POD BRIEF</code>.</li>
+<li>Updated focused Ink UI tests for clean startup deck and first-screen copy.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li><code>npm test -- tests/ink-ui.test.tsx</code> -&gt; <code>77</code> tests passed.</li>
+<li><code>npm run lint</code> -&gt; pass.</li>
+<li><code>npm run build</code> -&gt; pass.</li>
+<li><code>npm test -- tests/release-evidence.test.ts</code> -&gt; <code>3</code> tests passed.</li>
+<li><code>npm test</code> -&gt; <code>88</code> files / <code>1625</code> tests passed.</li>
+<li><code>ARMATURE_THEME=armature node dist/bin/armature.js --version</code> -&gt; <code>0.8.16</code>.</li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated PRD, architecture, UX map, optimization plan, task plan, notes, deliverable, and rolling ledger.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-05-01 - Killer-Whale / Ocean Joint Motif Correction</h2>
+<ul>
+<li>Plan:<ul>
+<li>Clarify the brand hierarchy: killer whale is the primary motif, ocean is the field motif, and pod intelligence is the product metaphor.</li>
+<li>Prevent future wording from drifting back into generic ocean / deep-sea branding.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>Updated <code>ARMATURE_VISUAL_SYSTEM_PLAN.md</code> and <code>.html</code> with the explicit hierarchy.</li>
+<li>Kept the shipped UI naming aligned to <code>Blackfin Signal</code>, <code>Blackfin Pod Deck</code>, <code>POD SIGNAL</code>, and <code>ARMATURE POD</code>.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li><code>rg</code> drift scan found only historical correction notes for <code>Abyssal -&gt; Blackfin</code>, not active source naming.</li>
+<li><code>npm run lint</code> -&gt; pass.</li>
+<li><code>npm run build</code> -&gt; pass.</li>
+<li><code>npm test</code> -&gt; <code>88</code> files / <code>1625</code> tests passed.</li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated notes and deliverable with full verification evidence.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-04-30 - Visual System PDCA Execution</h2>
+<ul>
+<li>Design source: <code>ARMATURE_VISUAL_SYSTEM_PLAN.md</code></li>
+<li>Human companion: <code>ARMATURE_VISUAL_SYSTEM_PLAN.html</code></li>
+<li>Plan source: <code>task_plan.md</code> ORCA-VIS queue</li>
+<li>Plan:<ul>
+<li>Adopt <code>Blackfin Signal</code> as Armature&#39;s terminal identity.</li>
+<li>Learn Hermes&#39;s high-recognition mechanics without copying its caduceus or exact gold-only palette.</li>
+<li>Anchor Armature&#39;s identity in the killer whale idea: blackfin, pod, dorsal-fin silhouette, and echolocation.</li>
+<li>Keep implementation in the existing Ink UI system and avoid new dependencies.</li>
+</ul>
+</li>
+<li>Do:<ul>
+<li>Added semantic <code>Blackfin Signal</code> theme tokens and made them the default dark theme.</li>
+<li>Updated startup Banner, HomePanel, ThemePicker, and StatusBar copy / hierarchy.</li>
+<li>Preserved existing alternate themes and narrow-terminal fallback behavior.</li>
+</ul>
+</li>
+<li>Check:<ul>
+<li><code>npm test -- tests/ink-ui.test.tsx</code> -&gt; <code>77</code> tests passed</li>
+<li><code>npm run lint</code> -&gt; pass</li>
+<li><code>npm run build</code> -&gt; pass</li>
+<li><code>ARMATURE_THEME=armature node dist/bin/armature.js --version</code> -&gt; <code>0.8.16</code></li>
+<li><code>npm test -- tests/release-evidence.test.ts</code> -&gt; <code>3</code> tests passed</li>
+<li><code>npm test</code> -&gt; <code>88</code> files / <code>1625</code> tests passed</li>
+<li><code>ai check</code> attempted but hung without output; interrupted child processes from <code>runtime/control_plane/check_cli.py</code> / <code>tests/test_all.py</code></li>
+</ul>
+</li>
+<li>Act:<ul>
+<li>Updated PRD, architecture, UX map, optimization plan, checklist, notes, deliverable, and rolling ledger.</li>
+<li>No new skill or root agent-rule update was promoted because this is project-specific visual system work.</li>
+</ul>
+</li>
+</ul>
+<h2>2026-04-29 - Queue and Swarm PDCA Execution</h2>
+<ul>
+<li>Audit source: <code>SOTA_GAP_SWARM_AUDIT.md</code></li>
+<li>Plan source: <code>task_plan.md</code></li>
+<li>Done tranche:<ul>
+<li>explicit project hook trust</li>
+<li>hook env allowlist</li>
+<li><code>fetch_url</code> / <code>web_search</code> approval gating</li>
+<li>private/loopback <code>fetch_url</code> guard</li>
+<li><code>armature queue list/show/follow/takeover/evidence</code></li>
+<li><code>serve /chat</code> canonical <code>WorkSession</code> / <code>TaskRun</code> records</li>
+<li>shared slash-command registry for REPL completion, Ink picker, and <code>/help</code>, with HomePanel hint metadata prepared for a later UI-baseline split</li>
+<li>release evidence snapshot guard for README and active PDCA docs</li>
+<li>CI gate integrity job for matrix sync, static, security, performance, and fast agent-eval gates</li>
+<li><code>armature run</code> default / goal-loop / mission / plan WorkSession and TaskRun records</li>
+<li>clean-index command baseline for workflow presets, <code>permissions</code>, <code>evolve</code>, and git-root helper support</li>
+<li>chat operator control plane for sessions, permissions, model picking, command output, and Ink home/detail panels</li>
+<li>chat REPL turn lifecycle now writes canonical WorkSession / TaskRun records with per-turn status and usage</li>
+<li><code>/evidence &lt;task-run-id&gt;</code> opens the shared TaskRun evidence drawer inside the Ink <code>DetailPanel</code></li>
+<li>submitted Ink prompts render as highlighted transcript blocks and assistant markdown renders in structured response panels</li>
+<li>review-before-apply approvals append to <code>TaskRun.approvals</code> and render in the shared CLI / Ink evidence drawer</li>
+<li><code>armature queue resume</code> claims a resume lease and prints a concrete <code>armature chat --continue &lt;saved-session-id&gt;</code> command for resumable chat TaskRuns</li>
+<li><code>armature queue schedule</code> claims the next unleased resumable or monitorable TaskRun and prints the recovery action</li>
+</ul>
+</li>
+<li>Check evidence:<ul>
+<li><code>npm run lint</code></li>
+<li><code>npm run build</code></li>
+<li><code>npm test</code> -&gt; <code>88</code> files / <code>1623</code> tests</li>
+<li><code>npm test -- tests/work-session-store.test.ts tests/queue-command.test.ts</code> -&gt; <code>17</code> tests</li>
+<li><code>npm test -- tests/work-session-store.test.ts tests/queue-command.test.ts tests/chat-proxy-tool-call.test.ts</code> -&gt; <code>40</code> tests</li>
+<li><code>npm test -- tests/ink-ui.test.tsx tests/chat-session-emitter.test.ts</code> -&gt; <code>84</code> tests</li>
+<li><code>npm test -- tests/queue-command.test.ts tests/chat-slash-readonly.test.ts tests/slash-commands.test.ts tests/ink-ui.test.tsx</code> -&gt; <code>108</code> tests</li>
+<li><code>npm test -- tests/chat-repl-turn.test.ts tests/work-session-store.test.ts</code> -&gt; <code>19</code> tests</li>
+<li><code>npm test -- tests/queue-command.test.ts tests/work-session-store.test.ts</code> -&gt; <code>11</code> tests</li>
+<li><code>npm test -- tests/slash-commands.test.ts tests/chat-slash-readonly.test.ts tests/ink-ui.test.tsx</code> -&gt; <code>98</code> tests</li>
+<li><code>npm test -- tests/release-evidence.test.ts</code> -&gt; <code>3</code> tests</li>
+<li><code>npm test -- tests/run-work-session.test.ts tests/work-session-store.test.ts tests/queue-command.test.ts</code> -&gt; <code>14</code> tests</li>
+<li>clean staged-index <code>npm run build</code></li>
+<li>clean staged-index chat/operator-control regression pack -&gt; <code>248</code> tests</li>
+<li><code>npm run test:matrix:sync</code></li>
+<li><code>npm run test:static</code></li>
+<li><code>npm run test:security</code></li>
+<li><code>npm run test:performance</code></li>
+<li><code>npm run test:ai-eval-fast</code></li>
+<li>gate evidence: <code>outputs/test-matrix/run-20260429-060205</code>, <code>run-20260429-060222</code>, <code>run-20260429-060232</code>, <code>run-20260429-060243</code></li>
+</ul>
+</li>
+<li>Act queue:<ul>
+<li>attach richer structured evidence bundles to serve/background TaskRuns</li>
+</ul>
+</li>
+</ul>
+<h2>Plan</h2>
+<ul>
+<li>Use the initiative docs as the single project-level planning surface.</li>
+<li>Ground architecture and UX descriptions in actual source files.</li>
+<li>Lock the real current baseline (<code>1280/1280</code> in the latest full run) before proposing any new test-growth target.</li>
+<li>Define separate breadth lanes, depth lanes, and fast / nightly / release gates so the large-scale quality program stays auditable.</li>
+<li>Use <code>SOTA_EXPERIENCE_GAP_REPORT.md</code> as the canonical competitive-gap source before choosing the next Armature UX tranche.</li>
+<li>Use <code>SOTA_GAP_SWARM_AUDIT.md</code> to tighten the benchmark into concrete continuity / queue / evidence / trust work items.</li>
+<li>Prioritize operator-surface deltas over isolated command additions:<ol>
+<li>session lifecycle productization</li>
+<li>approval / trust UX</li>
+<li>inspect-and-act detail panels</li>
+<li>remote / IDE / web continuity</li>
+</ol>
+</li>
+</ul>
+<h2>Do</h2>
+<ul>
+<li>Implement changes in <code>src/</code> or tests as required by the active task.</li>
+<li>Update project docs in the same task when system boundaries or user flows change.</li>
+<li>Fill <code>AGENT_EVAL_PLAN.md</code> with Armature-specific task / grader / evidence requirements.</li>
+<li>Scaffold <code>agent-eval/</code> and add new deterministic suites by matrix lane rather than through ad hoc file growth.</li>
+<li>Execute the SOTA experience program in waves:<ul>
+<li>Wave 0: unified picker + searchable picker + shared picker shell</li>
+<li>Wave 1: fork/share/export/import/handoff + inspect detail panels</li>
+<li>Wave 2: explicit approval / sandbox policy surface</li>
+<li>Wave 3: workflow presets (<code>review</code>, <code>debug</code>, <code>ship</code>, <code>research</code>, <code>quick assist</code>)</li>
+<li>Wave 4: remote / web / IDE continuity</li>
+<li>Wave 5: visible performance instrumentation</li>
+</ul>
+</li>
+</ul>
+<h2>Check</h2>
+<ul>
+<li>Default: <code>npm run lint</code> and <code>npm test</code></li>
+<li>Add <code>npm run build</code> when command assembly or packaging changes</li>
+<li>Add <code>npm run bench</code> when benchmark- or capability-facing behavior changes</li>
+<li>Fast gate: <code>550-650</code> selected deterministic cases + <code>12</code> task-eval scenarios</li>
+<li>Nightly gate: <code>~1700</code> deterministic cases + <code>36</code> task-eval scenarios</li>
+<li>Release gate: <code>~2210</code> deterministic cases + <code>72</code> task-eval scenarios + packaging/bin smokes + manual CLI journey review</li>
+<li>Current 2026-04-21 swarm-audit evidence refresh:<ul>
+<li><code>agent-eval/runs/20260421-074245-714923/</code></li>
+<li><code>agent-eval/runs/20260421-074333-249714/</code></li>
+<li><code>outputs/manual-cli-smoke/run-20260421-154536/</code></li>
+</ul>
+</li>
+</ul>
+<h2>Act</h2>
+<ul>
+<li>Record evidence and residual gaps in <code>deliverable.md</code></li>
+<li>Roll forward requirements and anti-regression notes in <code>ROLLING_REQUIREMENTS_AND_PROMPTS.md</code></li>
+<li>Update <code>AGENT_EVAL_PLAN.md</code> whenever task families, grader rules, or gate thresholds change</li>
+<li>Re-rank SOTA gaps after every completed wave so the next tranche is selected from fresh evidence, not stale assumptions</li>
+<li>Treat trust hardening as part of Wave 4 delivery, not as a postscript after continuity work lands.</li>
+</ul>
+</article></main></body></html>

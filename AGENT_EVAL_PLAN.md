@@ -1,12 +1,12 @@
 # Agent Evaluation Plan
 
-> Orca CLI 大规模测试扩容的统一评估计划：先锁定真实基线，再用 task / grader / run 资产补齐 Vitest 之外的端到端质量信号。
+> Armature CLI 大规模测试扩容的统一评估计划：先锁定真实基线，再用 task / grader / run 资产补齐 Vitest 之外的端到端质量信号。
 
 ## Meta
 
 - Owner: Maurice
 - LastUpdated: 2026-04-22 (continuity slice)
-- Product: Orca CLI (`orca-cli`)
+- Product: Armature CLI (`armature-cli`)
 - Version: `0.8.0`
 - GitBaseline: `4e642c1`
 - DeterministicBaseline: `npm test` => `1558/1558`
@@ -15,7 +15,7 @@
 
 ## Evaluation Target
 
-- Agent / Tool: Orca CLI terminal agent runtime (`src/bin/orca.ts`, `src/program.ts`)
+- Agent / Tool: Armature CLI terminal agent runtime (`src/bin/armature.ts`, `src/program.ts`)
 - Primary Surface: command-first CLI (`chat`, `run`, `council`, `race`, `pipeline`, `doctor`, `providers`, `stats`, `session`, `pr`, `serve`, `init`)
 - Target Environment:
   - macOS / Darwin developer host
@@ -48,7 +48,7 @@
 - `serve`: `/health`, `/doctor`, and `/providers` metadata smoke now exist, and `/chat` missing-prompt / malformed-body error paths now have both deterministic and black-box coverage, but deeper streaming contract coverage is still missing
 - `run`: top-level help coverage now exists, but task-execution path coverage is still thinner than subsystem coverage
 - `providers test`: explicit reachable-endpoint smoke now exists, and transport failure now has local black-box smoke, but timeout depth remains thin
-- root entry / `orca` / `--continue` / `--safe` / `--effort`: help-level black-box coverage exists and root `--continue` now has a local resume smoke, but resume execution depth remains thin
+- root entry / `armature` / `--continue` / `--safe` / `--effort`: help-level black-box coverage exists and root `--continue` now has a local resume smoke, but resume execution depth remains thin
 - packaging / install / bin entrypoint flows: deterministic packaging smoke exists, and install-from-tarball now has a release smoke, but broader user-path flows remain thin
 
 ### Depth gaps
@@ -139,7 +139,7 @@
 
 ## Test Architecture Guardrails
 
-1. Reduce global env mutation so growing suites do not amplify flake risk around `HOME`, `ORCA_HOME`, console mocks, or `process.exit`.
+1. Reduce global env mutation so growing suites do not amplify flake risk around `HOME`, `ARMATURE_HOME`, console mocks, or `process.exit`.
 2. Avoid megafile sprawl by splitting new suites through command-surface and lane ownership, not by extending already-large files forever.
 3. Keep public CLI contracts visible so internal harness growth does not create false confidence.
 4. Centralize fixture factories and temporary repo helpers to avoid setup duplication.

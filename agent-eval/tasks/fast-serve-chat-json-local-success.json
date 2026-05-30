@@ -1,11 +1,11 @@
 {
   "id": "fast-serve-chat-json-local-success",
   "title": "Serve `/chat` returns a successful non-stream JSON response via a local provider stub",
-  "description": "Black-box smoke for the non-stream success branch of `orca serve` using a localhost OpenAI-compatible provider stub.",
-  "input": "Start a local provider stub and `orca serve`, POST a prompt to `/chat` with `stream:false`, and verify the JSON response contains text/model/token fields without an error payload.",
+  "description": "Black-box smoke for the non-stream success branch of `armature serve` using a localhost OpenAI-compatible provider stub.",
+  "input": "Start a local provider stub and `armature serve`, POST a prompt to `/chat` with `stream:false`, and verify the JSON response contains text/model/token fields without an error payload.",
   "command": "bash agent-eval/scripts/run-serve-chat-json-local-success.sh",
   "artifacts": [
-    "${ORCA_EVAL_RUN_DIR}/artifacts/fast-serve-chat-json-request.json"
+    "${ARMATURE_EVAL_RUN_DIR}/artifacts/fast-serve-chat-json-request.json"
   ],
   "graders": [
     "exit_code_ok",

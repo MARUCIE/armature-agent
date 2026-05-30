@@ -5,24 +5,24 @@ import { tmpdir } from 'node:os'
 
 describe('evolution store', () => {
   const previousHome = process.env.HOME
-  const previousOrcaHome = process.env.ORCA_HOME
+  const previousArmatureHome = process.env.ARMATURE_HOME
   let homeDir: string
   let projectDir: string
 
   beforeEach(() => {
-    homeDir = join(tmpdir(), `orca-evolution-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    projectDir = join(tmpdir(), `orca-evolution-project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    homeDir = join(tmpdir(), `armature-evolution-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    projectDir = join(tmpdir(), `armature-evolution-project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
     mkdirSync(homeDir, { recursive: true })
     mkdirSync(projectDir, { recursive: true })
     process.env.HOME = homeDir
-    process.env.ORCA_HOME = join(homeDir, '.orca')
+    process.env.ARMATURE_HOME = join(homeDir, '.armature')
   })
 
   afterEach(() => {
     if (previousHome === undefined) delete process.env.HOME
     else process.env.HOME = previousHome
-    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = previousOrcaHome
+    if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = previousArmatureHome
     try { rmSync(homeDir, { recursive: true, force: true }) } catch { /* ignore */ }
     try { rmSync(projectDir, { recursive: true, force: true }) } catch { /* ignore */ }
   })

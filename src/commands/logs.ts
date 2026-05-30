@@ -1,9 +1,9 @@
 /**
- * `orca logs` — View local Orca runtime logs.
+ * `armature logs` — View local Armature runtime logs.
  *
  * Usage:
- *   orca logs             Show agent.log tail
- *   orca logs errors      Show errors.log tail
+ *   armature logs             Show agent.log tail
+ *   armature logs errors      Show errors.log tail
  */
 
 import { Command } from 'commander'
@@ -11,7 +11,7 @@ import { getLogPath, readLogTail } from '../logger.js'
 
 export function createLogsCommand(): Command {
   const cmd = new Command('logs')
-    .description('Show local Orca runtime logs')
+    .description('Show local Armature runtime logs')
     .option('-n, --lines <n>', 'Number of lines to show', '50')
     .argument('[kind]', 'Log kind: agent (default) or errors')
     .action((kindArg?: string, opts?: { lines?: string }) => {
@@ -21,7 +21,7 @@ export function createLogsCommand(): Command {
       const entries = readLogTail(kind, lines)
 
       console.log()
-      console.log(`  \x1b[1mOrca Logs: ${kind}\x1b[0m`)
+      console.log(`  \x1b[1mArmature Logs: ${kind}\x1b[0m`)
       console.log(`  \x1b[90m${getLogPath(kind)}\x1b[0m`)
       console.log()
 

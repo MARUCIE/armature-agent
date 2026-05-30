@@ -68,7 +68,7 @@ export function executeSeatbelted(
     allowWrite: [...policy.allowWrite, cwd],
   })
 
-  const profilePath = join(tmpdir(), `orca-sandbox-${Date.now()}.sb`)
+  const profilePath = join(tmpdir(), `armature-sandbox-${Date.now()}.sb`)
   try {
     writeFileSync(profilePath, profile, 'utf-8')
     const output = execSync(

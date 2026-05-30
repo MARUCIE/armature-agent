@@ -1,11 +1,11 @@
 {
   "id": "fast-serve-chat-stream-local-success",
   "title": "Serve `/chat` streams a successful SSE response via a local provider stub",
-  "description": "Black-box smoke for the happy-path SSE contract of `orca serve` using a localhost OpenAI-compatible streaming stub.",
-  "input": "Start a local streaming provider stub and `orca serve`, POST a prompt to `/chat`, and verify the SSE stream contains text, usage, done, and `[DONE]` without any error event.",
+  "description": "Black-box smoke for the happy-path SSE contract of `armature serve` using a localhost OpenAI-compatible streaming stub.",
+  "input": "Start a local streaming provider stub and `armature serve`, POST a prompt to `/chat`, and verify the SSE stream contains text, usage, done, and `[DONE]` without any error event.",
   "command": "bash agent-eval/scripts/run-serve-chat-stream-local-success.sh",
   "artifacts": [
-    "${ORCA_EVAL_RUN_DIR}/artifacts/fast-serve-chat-stream-request.json"
+    "${ARMATURE_EVAL_RUN_DIR}/artifacts/fast-serve-chat-stream-request.json"
   ],
   "graders": [
     "exit_code_ok",

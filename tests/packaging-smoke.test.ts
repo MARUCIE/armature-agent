@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 
 const projectDir = fileURLToPath(new URL('..', import.meta.url))
-const distBinPath = join(projectDir, 'dist', 'bin', 'orca.js')
+const distBinPath = join(projectDir, 'dist', 'bin', 'armature.js')
 const distIndexPath = join(projectDir, 'dist', 'index.js')
 let runtimeHome = ''
 
@@ -16,7 +16,7 @@ beforeAll(() => {
     encoding: 'utf-8',
     stdio: ['pipe', 'pipe', 'pipe'],
   })
-  runtimeHome = mkdtempSync(join(tmpdir(), 'orca-package-smoke-'))
+  runtimeHome = mkdtempSync(join(tmpdir(), 'armature-package-smoke-'))
 }, 30_000)
 
 afterAll(() => {
@@ -26,7 +26,7 @@ afterAll(() => {
 describe('packaging and bin entry smokes', () => {
   it('build emits the packaged dist artifacts referenced by package.json', () => {
     const pkg = JSON.parse(readFileSync(join(projectDir, 'package.json'), 'utf-8'))
-    expect(pkg.bin.orca).toBe('./dist/bin/orca.js')
+    expect(pkg.bin.armature).toBe('./dist/bin/armature.js')
     expect(existsSync(distBinPath)).toBe(true)
     expect(existsSync(distIndexPath)).toBe(true)
     expect(readFileSync(distBinPath, 'utf-8')).toContain('#!/usr/bin/env node')
@@ -41,7 +41,7 @@ describe('packaging and bin entry smokes', () => {
     const manifest = JSON.parse(packOutput) as Array<{ files: Array<{ path: string }> }>
     const files = manifest[0]?.files.map((file) => file.path) || []
 
-    expect(files).toContain('dist/bin/orca.js')
+    expect(files).toContain('dist/bin/armature.js')
     expect(files).toContain('dist/index.js')
     expect(files).toContain('README.md')
   })
@@ -66,17 +66,17 @@ describe('packaging and bin entry smokes', () => {
       env: {
         ...process.env,
         HOME: runtimeHome,
-        ORCA_HOME: join(runtimeHome, '.orca'),
-        ORCA_PROVIDER: 'openai',
+        ARMATURE_HOME: join(runtimeHome, '.armature'),
+        ARMATURE_PROVIDER: 'openai',
         OPENAI_API_KEY: 'test-openai-key',
       },
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
     })) as Record<string, any>
 
-    expect(report.project.name).toBe('orca-cli')
+    expect(report.project.name).toBe('armature-cli')
     expect(report.provider.activeProvider).toBe('openai')
     expect(report.git).toBeDefined()
-    expect(report.configPaths.global).toContain('.orca')
+    expect(report.configPaths.global).toContain('.armature')
   })
 })

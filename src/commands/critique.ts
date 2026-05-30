@@ -100,7 +100,7 @@ async function runCritique(goalParts: string[], opts: CritiqueCommandOptions, cw
     apiKey: resolved.apiKey,
     baseURL: resolved.baseURL,
     model: endpoint ? endpoint.model : resolved.model,
-    systemPrompt: 'You are Orca Critique: a read-only, evidence-first reviewer. Return JSON only.',
+    systemPrompt: 'You are Armature Critique: a read-only, evidence-first reviewer. Return JSON only.',
     maxTokens: 4000,
     headers: resolved.headers,
     reasoningEffort: resolved.reasoningEffort,
@@ -159,7 +159,7 @@ function emitDryRun(payload: CritiqueDryRun, json: boolean): void {
   }
 
   console.log()
-  console.log('  orca critique dry run')
+  console.log('  armature critique dry run')
   console.log(`  checkpoint: ${payload.checkpoint}`)
   console.log(`  reviewer: ${payload.reviewerModel}`)
   console.log(`  risk: ${payload.riskScore} (${payload.reason})`)

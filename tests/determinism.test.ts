@@ -16,14 +16,14 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execSync } from 'node:child_process'
 
-const testDir = join(tmpdir(), `orca-determ-${Date.now()}`)
+const testDir = join(tmpdir(), `armature-determ-${Date.now()}`)
 
 beforeAll(() => {
   mkdirSync(join(testDir, 'src'), { recursive: true })
   writeFileSync(join(testDir, 'src', 'app.ts'), 'export const version = "1.0.0"\n')
   writeFileSync(join(testDir, 'target.txt'), 'line1\nline2\nline3\n')
   try {
-    execSync('git init && git config user.email "orca-test@example.com" && git config user.name "Orca Test" && git add -A && git commit -m "init"', {
+    execSync('git init && git config user.email "armature-test@example.com" && git config user.name "Armature Test" && git add -A && git commit -m "init"', {
       cwd: testDir, encoding: 'utf-8', stdio: 'pipe',
     })
   } catch { /* ignore */ }

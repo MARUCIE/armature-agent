@@ -4,7 +4,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const projectDir = fileURLToPath(new URL('..', import.meta.url))
-const initiativeDir = join(projectDir, 'doc', '00_project', 'initiative_orca')
+const initiativeDir = join(projectDir, 'doc', '00_project', 'initiative_armature')
 
 interface VerificationSnapshot {
   packageVersion: string
@@ -30,7 +30,7 @@ function countTestFiles(): number {
 }
 
 function loadSnapshot(): VerificationSnapshot {
-  return loadJson<VerificationSnapshot>('doc/00_project/initiative_orca/verification_snapshot.json')
+  return loadJson<VerificationSnapshot>('doc/00_project/initiative_armature/verification_snapshot.json')
 }
 
 describe('release evidence snapshot', () => {
@@ -52,7 +52,7 @@ describe('release evidence snapshot', () => {
     const readme = readText('README.md')
 
     expect(readme).toContain(`tests-${snapshot.tests}%20passing`)
-    expect(readme).toContain(`Orca CLI  v${snapshot.packageVersion}`)
+    expect(readme).toContain(`Armature CLI  v${snapshot.packageVersion}`)
     expect(readme).toContain(`${snapshot.tests} automated tests`)
     expect(readme).toContain(`${snapshot.tests} tests`)
   })
@@ -70,8 +70,8 @@ describe('release evidence snapshot', () => {
     expect(pdcaPlan).toContain(`\`npm test\` -> ${markdownEvidenceText}`)
     expect(pdcaChecklist).toContain(`\`npm test\` -> ${markdownEvidenceText}`)
     expect(audit).toContain(`Final verification after PDCA tranche: \`npm run lint\`, \`npm run build\`, \`npm test\` (${markdownEvidenceText})`)
-    expect(audit).toContain('| ORCA-SWARM-011 | P2 | Align README/doc test counts to current suite evidence | docs | done |')
+    expect(audit).toContain('| ARMATURE-SWARM-011 | P2 | Align README/doc test counts to current suite evidence | docs | done |')
     expect(auditHtml).toContain(`${snapshot.testFiles}</code> files / <code>${snapshot.tests}</code> tests`)
-    expect(auditHtml).toContain('<tr><td>ORCA-SWARM-011</td><td>P2</td><td>README/doc 测试计数漂移清理</td><td>Done</td></tr>')
+    expect(auditHtml).toContain('<tr><td>ARMATURE-SWARM-011</td><td>P2</td><td>README/doc 测试计数漂移清理</td><td>Done</td></tr>')
   })
 })

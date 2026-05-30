@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
  * Real end-to-end closure proof: drives actual sub-agents against the configured
  * provider, crossing the process boundary (`spawnSubAgent` forks a worker).
  *
- * Skipped unless ORCA_E2E_REAL=1, because it makes live LLM calls (slow, costs
+ * Skipped unless ARMATURE_E2E_REAL=1, because it makes live LLM calls (slow, costs
  * tokens, non-deterministic). Requires a fresh build first — it imports from
  * `dist/`, NOT `src/`, on purpose: `spawnSubAgent` resolves its worker via
  * `import.meta.url` + 'sub-agent-worker.js', and that compiled worker only exists
@@ -12,9 +12,9 @@ import { describe, expect, it } from 'vitest'
  * TS source (vitest's default `../src/...` resolution) would fork a non-existent
  * `src/agent/sub-agent-worker.js` and every sub-agent would fail to start.
  *
- *   npm run build && ORCA_E2E_REAL=1 npx vitest run tests/workflow-e2e-real.test.ts
+ *   npm run build && ARMATURE_E2E_REAL=1 npx vitest run tests/workflow-e2e-real.test.ts
  */
-const REAL = process.env.ORCA_E2E_REAL === '1'
+const REAL = process.env.ARMATURE_E2E_REAL === '1'
 
 describe.skipIf(!REAL)('runWorkflow — real provider closure', () => {
   it(
@@ -24,11 +24,11 @@ describe.skipIf(!REAL)('runWorkflow — real provider closure', () => {
       // touches the build and the worker path resolves under dist/.
       const { resolveConfig, resolveProvider } = await import('../dist/config.js')
       const { runWorkflow } = await import('../dist/workflow/runtime.js')
-      const { OrcaWorkflowAgentRunner } = await import('../dist/workflow/runner.js')
+      const { ArmatureWorkflowAgentRunner } = await import('../dist/workflow/runner.js')
 
       const config = resolveConfig({ cwd: process.cwd() })
       const provider = resolveProvider(config)
-      const runner = new OrcaWorkflowAgentRunner({
+      const runner = new ArmatureWorkflowAgentRunner({
         cwd: process.cwd(),
         parent: { model: provider.model, apiKey: provider.apiKey, baseURL: provider.baseURL },
         timeoutMs: 120_000,

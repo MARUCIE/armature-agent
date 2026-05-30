@@ -119,7 +119,7 @@ def run_layer(run_dir: Path, layer: dict[str, Any]) -> dict[str, object]:
 def write_matrix(run_dir: Path, rows: list[dict[str, object]], gaps: list[str]) -> Path:
     matrix_path = run_dir / "matrix.md"
     lines = [
-        "# Orca CLI Layered Test Matrix",
+        "# Armature CLI Layered Test Matrix",
         "",
         f"Run id: `{run_dir.name}`",
         "",
@@ -138,7 +138,7 @@ def write_matrix(run_dir: Path, rows: list[dict[str, object]], gaps: list[str]) 
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run Orca's layered test matrix and persist evidence.")
+    parser = argparse.ArgumentParser(description="Run Armature's layered test matrix and persist evidence.")
     parser.add_argument("--run-id", default=now_run_id())
     parser.add_argument("--layers", help="Comma-separated layer ids to run (default: all layers)")
     parser.add_argument("--manifest", default=str(DEFAULT_MANIFEST), help="Path to the test-matrix manifest")

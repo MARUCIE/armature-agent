@@ -2,7 +2,7 @@
  * OpenAI-compatible provider for proxy services (Poe, OpenRouter, etc.)
  *
  * Uses the OpenAI SDK to talk to any OpenAI-compatible endpoint.
- * This is used when the orca CLI targets a proxy provider that speaks
+ * This is used when the armature CLI targets a proxy provider that speaks
  * OpenAI protocol but serves multiple model families (Claude, GPT, Gemini).
  */
 

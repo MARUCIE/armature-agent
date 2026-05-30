@@ -1,5 +1,5 @@
 /**
- * Orca CLI Hook System — Claude Code compatible.
+ * Armature CLI Hook System — Claude Code compatible.
  *
  * Hooks are shell commands that run at specific lifecycle events.
  * They receive JSON on stdin and return JSON on stdout.
@@ -19,17 +19,17 @@
  *  11. MultiModelStart  — before council/race/pipeline (built-in: force file preprocessing)
  *
  * Loads startup-safe global hooks by default:
- *   1. ~/.orca/hooks.json (global native format)
+ *   1. ~/.armature/hooks.json (global native format)
  *   2. ~/.claude/settings.json → hooks key (Claude Code format, auto-converted)
  *   3. ~/.codex/hooks.json (Codex format)
  *
- * Repo-local hooks from .orca / .claude files execute only when project hook trust
- * is explicit via HookManager({ trustProjectHooks: true }) or ORCA_TRUST_PROJECT_HOOKS=1.
+ * Repo-local hooks from .armature / .claude files execute only when project hook trust
+ * is explicit via HookManager({ trustProjectHooks: true }) or ARMATURE_TRUST_PROJECT_HOOKS=1.
  *
  * Claude Code format auto-detection:
  *   { matcher, hooks: [{ type, command, timeout }] } → flattened
  *   Timeout: ms → s conversion
- *   Env vars: CLAUDE_* passed alongside ORCA_* for compatibility
+ *   Env vars: CLAUDE_* passed alongside ARMATURE_* for compatibility
  */
 
 import { execSync, spawn as spawnChild } from 'node:child_process'
@@ -102,10 +102,10 @@ export interface HookManagerOptions {
   trustProjectHooks?: boolean
 }
 
-// ── Tool Name Mapping (Claude Code ↔ Orca) ─────────────────────
+// ── Tool Name Mapping (Claude Code ↔ Armature) ─────────────────────
 
-/** Map Claude Code tool names to Orca tool names for matcher compatibility */
-const CLAUDE_TO_ORCA_TOOL: Record<string, string> = {
+/** Map Claude Code tool names to Armature tool names for matcher compatibility */
+const CLAUDE_TO_ARMATURE_TOOL: Record<string, string> = {
   Bash: 'run_command',
   Read: 'read_file',
   Write: 'write_file',
@@ -117,14 +117,14 @@ const CLAUDE_TO_ORCA_TOOL: Record<string, string> = {
   Skill: 'skill',
 }
 
-const ORCA_TO_CLAUDE_TOOL: Record<string, string> = {}
-for (const [cc, orca] of Object.entries(CLAUDE_TO_ORCA_TOOL)) {
-  ORCA_TO_CLAUDE_TOOL[orca] = cc
+const ARMATURE_TO_CLAUDE_TOOL: Record<string, string> = {}
+for (const [cc, armature] of Object.entries(CLAUDE_TO_ARMATURE_TOOL)) {
+  ARMATURE_TO_CLAUDE_TOOL[armature] = cc
 }
 
-/** Get the Claude Code display name for an orca tool */
-function claudeToolName(orcaName: string): string {
-  return ORCA_TO_CLAUDE_TOOL[orcaName] || orcaName
+/** Get the Claude Code display name for an armature tool */
+function claudeToolName(armatureName: string): string {
+  return ARMATURE_TO_CLAUDE_TOOL[armatureName] || armatureName
 }
 
 // ── Hook Manager ─────────────────────────────────────────────────
@@ -136,7 +136,7 @@ export class HookManager {
   private readonly trustProjectHooks: boolean
 
   constructor(options: HookManagerOptions = {}) {
-    this.trustProjectHooks = options.trustProjectHooks === true || process.env.ORCA_TRUST_PROJECT_HOOKS === '1'
+    this.trustProjectHooks = options.trustProjectHooks === true || process.env.ARMATURE_TRUST_PROJECT_HOOKS === '1'
   }
 
   /**
@@ -149,11 +149,11 @@ export class HookManager {
     // Relative hook commands resolve from the directory that defines them.
     // That keeps project/global hooks isolated and makes file-location semantics explicit.
 
-    const trustProjectHooks = this.trustProjectHooks || process.env.ORCA_TRUST_PROJECT_HOOKS === '1'
+    const trustProjectHooks = this.trustProjectHooks || process.env.ARMATURE_TRUST_PROJECT_HOOKS === '1'
     if (trustProjectHooks && !this.loadedProjectDirs.has(cwd)) {
       this.loadNativeHooks([
-        join(cwd, '.orca', 'hooks.json'),
-        join(cwd, '.orca.json'),
+        join(cwd, '.armature', 'hooks.json'),
+        join(cwd, '.armature.json'),
         join(cwd, '.claude', 'hooks.json'),
       ], cwd)
       this.loadClaudeCodeHooks([
@@ -165,7 +165,7 @@ export class HookManager {
     if (!this.loadedGlobal) {
       this.loadedGlobal = true
       this.loadNativeHooks([
-        join(home, '.orca', 'hooks.json'),
+        join(home, '.armature', 'hooks.json'),
         join(home, '.codex', 'hooks.json'),
       ])
 
@@ -175,7 +175,7 @@ export class HookManager {
     }
   }
 
-  /** Load native Orca/Codex format: { hooks: { Event: [{ command, matcher, timeout }] } } */
+  /** Load native Armature/Codex format: { hooks: { Event: [{ command, matcher, timeout }] } } */
   private loadNativeHooks(paths: string[], scopeCwd?: string): void {
     for (const configPath of paths) {
       if (!existsSync(configPath)) continue
@@ -200,7 +200,7 @@ export class HookManager {
    * Claude Code uses nested structure:
    *   { matcher: "Bash", hooks: [{ type: "command", command: "...", timeout: 5000 }] }
    *
-   * Orca flattens to:
+   * Armature flattens to:
    *   { matcher: "run_command", command: "...", timeout: 5 }
    */
   private loadClaudeCodeHooks(paths: string[], scopeCwd?: string): void {
@@ -227,7 +227,7 @@ export class HookManager {
             for (const ih of innerHooks) {
               if (ih.type !== 'command' || !ih.command) continue
 
-              // Convert matcher: Claude tool names → Orca tool names
+              // Convert matcher: Claude tool names → Armature tool names
               // Keep original matcher for regex patterns that span both
               const forgeMatcher = convertMatcher(ccMatcher)
 
@@ -280,15 +280,15 @@ export class HookManager {
       if (def.scopeCwd && input.cwd !== def.scopeCwd) continue
       // Check matcher for tool-specific hooks
       if (def.matcher && input.toolName) {
-        const orcaName = input.toolName
-        const claudeName = claudeToolName(orcaName)
-        // Match against both orca name and Claude name
+        const armatureName = input.toolName
+        const claudeName = claudeToolName(armatureName)
+        // Match against both armature name and Claude name
         try {
           const regex = new RegExp(def.matcher)
-          if (!regex.test(orcaName) && !regex.test(claudeName)) continue
+          if (!regex.test(armatureName) && !regex.test(claudeName)) continue
         } catch {
           // Plain string match fallback
-          if (def.matcher !== orcaName && def.matcher !== claudeName) continue
+          if (def.matcher !== armatureName && def.matcher !== claudeName) continue
         }
       }
 
@@ -354,7 +354,7 @@ function isHookEvent(s: string): s is HookEvent {
   return HOOK_EVENTS.includes(s)
 }
 
-/** Map Claude Code event names to Orca event names */
+/** Map Claude Code event names to Armature event names */
 function mapClaudeEvent(event: string): HookEvent | null {
   if (isHookEvent(event)) return event
   // Claude Code aliases
@@ -362,7 +362,7 @@ function mapClaudeEvent(event: string): HookEvent | null {
   return null
 }
 
-/** Convert Claude Code matcher patterns to work with Orca tool names.
+/** Convert Claude Code matcher patterns to work with Armature tool names.
  *  "Bash" → "run_command|Bash"  (match both)
  *  "Edit|Write" → "edit_file|write_file|Edit|Write"
  *  "*" or "" → undefined (match all)
@@ -375,13 +375,13 @@ function convertMatcher(ccMatcher: string): string {
   for (const part of parts) {
     const trimmed = part.trim()
     expanded.push(trimmed)
-    const orcaEquiv = CLAUDE_TO_ORCA_TOOL[trimmed]
-    if (orcaEquiv) expanded.push(orcaEquiv)
+    const armatureEquiv = CLAUDE_TO_ARMATURE_TOOL[trimmed]
+    if (armatureEquiv) expanded.push(armatureEquiv)
   }
   return expanded.join('|')
 }
 
-/** Build environment variables compatible with both Claude Code and Orca */
+/** Build environment variables compatible with both Claude Code and Armature */
 function buildHookEnv(input: HookInput): Record<string, string> {
   const env: Record<string, string> = {}
   for (const key of ['PATH', 'HOME', 'SHELL', 'LANG', 'LC_ALL', 'TMPDIR']) {
@@ -389,10 +389,10 @@ function buildHookEnv(input: HookInput): Record<string, string> {
     if (value) env[key] = value
   }
 
-  // Orca native env vars
-  env.ORCA_HOOK_EVENT = input.event
-  env.ORCA_HOOK_TOOL = input.toolName || ''
-  env.ORCA_CWD = input.cwd || process.cwd()
+  // Armature native env vars
+  env.ARMATURE_HOOK_EVENT = input.event
+  env.ARMATURE_HOOK_TOOL = input.toolName || ''
+  env.ARMATURE_CWD = input.cwd || process.cwd()
 
   // Claude Code compatible env vars
   env.CLAUDE_HOOK_EVENT = input.event
@@ -417,7 +417,7 @@ function buildHookEnv(input: HookInput): Record<string, string> {
   }
   if (input.response) {
     const response = input.response.slice(0, 10000)
-    env.ORCA_RESPONSE = response
+    env.ARMATURE_RESPONSE = response
     env.CLAUDE_RESPONSE = response
   }
   if (input.model) {

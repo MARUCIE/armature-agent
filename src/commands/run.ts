@@ -1,5 +1,5 @@
 /**
- * `orca run` — Execute an agent task in the current directory.
+ * `armature run` — Execute an agent task in the current directory.
  *
  * Unlike `chat`, `run` is designed for task execution:
  *   - Defaults to acceptEdits permission mode
@@ -7,14 +7,14 @@
  *   - Outputs structured result summary
  *
  * Usage:
- *   orca run "fix the failing tests"
- *   orca run "add error handling to api.ts" --model claude-opus-4-20250514
- *   orca run "refactor to TypeScript" --max-turns 50
+ *   armature run "fix the failing tests"
+ *   armature run "add error handling to api.ts" --model claude-opus-4-20250514
+ *   armature run "refactor to TypeScript" --max-turns 50
  */
 
 import { Command } from 'commander'
 import { getPricingForModel } from '../model-catalog.js'
-import type { OrcaConfig } from '../config.js'
+import type { ArmatureConfig } from '../config.js'
 import { resolveConfig, resolveProvider } from '../config.js'
 import { parseDoneCriteria, runGoalLoop } from '../harness/goal-loop.js'
 import { chatOnce } from '../providers/openai-compat.js'
@@ -269,7 +269,7 @@ export function createRunCommand(): Command {
             },
             evidence: [{
               label: 'mission-state',
-              path: `${runCwd}/.orca/missions/${controller.getState().id}/state.json`,
+              path: `${runCwd}/.armature/missions/${controller.getState().id}/state.json`,
               }],
           })
           emitRunObservation(
@@ -396,7 +396,7 @@ interface ExecuteTaskOptions {
   apiKey: string
   model: string
   baseURL?: string
-  config: OrcaConfig
+  config: ArmatureConfig
   outputMode: OutputMode
   cwd: string
   dangerously: boolean
@@ -413,10 +413,10 @@ async function executeTask(options: ExecuteTaskOptions): Promise<ExecuteTaskResu
 
   let sdk: { createAgent: (opts: Record<string, unknown>) => { query: (p: string) => AsyncIterable<unknown> } }
   try {
-    // @ts-ignore — @orca/sdk is an optional dependency for native provider path
-    sdk = await import('@orca/sdk')
+    // @ts-ignore — @armature/sdk is an optional dependency for native provider path
+    sdk = await import('@armature/sdk')
   } catch {
-    throw new Error('@orca/sdk not installed. Use --provider poe for proxy mode, or npm install @orca/sdk for native mode.')
+    throw new Error('@armature/sdk not installed. Use --provider poe for proxy mode, or npm install @armature/sdk for native mode.')
   }
 
   if (dangerously) {
@@ -519,10 +519,10 @@ async function executeTask(options: ExecuteTaskOptions): Promise<ExecuteTaskResu
   }
 }
 
-function buildFlags(opts: RunOptions): Partial<OrcaConfig> {
-  const flags: Partial<OrcaConfig> = {}
+function buildFlags(opts: RunOptions): Partial<ArmatureConfig> {
+  const flags: Partial<ArmatureConfig> = {}
   if (opts.model) flags.model = opts.model
-  if (opts.provider) flags.provider = opts.provider as OrcaConfig['provider']
+  if (opts.provider) flags.provider = opts.provider as ArmatureConfig['provider']
   if (opts.apiKey) flags.apiKey = opts.apiKey
   if (opts.maxTurns) flags.maxTurns = parseInt(opts.maxTurns, 10)
   if (opts.systemPrompt) flags.systemPrompt = opts.systemPrompt

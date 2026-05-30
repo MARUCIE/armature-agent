@@ -197,7 +197,7 @@ function runVideoConvert(filePath: string): string {
 
   // Extract audio → markitdown for transcript
   if (hasFfmpeg() && hasMarkitdown()) {
-    const tmpAudio = join(tmpdir(), `orca-audio-${Date.now()}.wav`)
+    const tmpAudio = join(tmpdir(), `armature-audio-${Date.now()}.wav`)
     try {
       execFileSync('ffmpeg', ['-i', filePath, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', '-t', '300', tmpAudio, '-y'], {
         stdio: 'pipe', timeout: 120_000,
@@ -216,7 +216,7 @@ function runVideoConvert(filePath: string): string {
 
   // Extract keyframes as descriptions (if markitdown supports images)
   if (hasFfmpeg()) {
-    const tmpDir = join(tmpdir(), `orca-frames-${Date.now()}`)
+    const tmpDir = join(tmpdir(), `armature-frames-${Date.now()}`)
     try {
       mkdirSync(tmpDir, { recursive: true })
       // Extract 1 frame per 30 seconds, max 10 frames

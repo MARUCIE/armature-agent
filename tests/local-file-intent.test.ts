@@ -12,7 +12,7 @@ import {
 import type { ChatMessage } from '../src/providers/openai-compat.js'
 
 function tempPath(name: string): string {
-  return join(tmpdir(), `orca-local-file-intent-${process.pid}-${Date.now()}-${name}`)
+  return join(tmpdir(), `armature-local-file-intent-${process.pid}-${Date.now()}-${name}`)
 }
 
 describe('local file intent guard', () => {

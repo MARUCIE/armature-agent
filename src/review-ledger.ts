@@ -50,7 +50,7 @@ export interface ReviewLedgerRunOptions {
 const DEFAULT_MAX_DIFF_CHARS = 120_000
 
 export const REVIEW_LEDGER_SYSTEM_PROMPT = [
-  'You are an independent senior code reviewer inside Orca CLI.',
+  'You are an independent senior code reviewer inside Armature CLI.',
   'Prioritize real bugs, security issues, money/data correctness, concurrency, idempotency, and missing tests.',
   'Do not auto-fix anything. Produce concise, evidence-backed Markdown.',
 ].join(' ')

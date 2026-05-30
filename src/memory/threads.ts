@@ -1,7 +1,7 @@
 /**
  * Thread-based conversation persistence (Amp-style).
  *
- * Each thread is a standalone JSON file under ~/.orca/threads/.
+ * Each thread is a standalone JSON file under ~/.armature/threads/.
  * Threads support create / list / load / append / search / delete.
  */
 
@@ -32,7 +32,7 @@ export class ThreadManager {
   private threadsDir: string
 
   constructor() {
-    this.threadsDir = join(homedir(), '.orca', 'threads')
+    this.threadsDir = join(homedir(), '.armature', 'threads')
     if (!existsSync(this.threadsDir)) {
       mkdirSync(this.threadsDir, { recursive: true })
     }

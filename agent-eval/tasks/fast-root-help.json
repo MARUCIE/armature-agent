@@ -1,9 +1,9 @@
 {
   "id": "fast-root-help",
   "title": "Root help exposes core commands and root flags",
-  "description": "Black-box smoke for the root Orca CLI help surface.",
-  "input": "Run `orca --help` and verify the shipped command list plus the root resume/safety flags remain visible.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; node dist/bin/orca.js --help'",
+  "description": "Black-box smoke for the root Armature CLI help surface.",
+  "input": "Run `armature --help` and verify the shipped command list plus the root resume/safety flags remain visible.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; node dist/bin/armature.js --help'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

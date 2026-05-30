@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { rmSync } from 'node:fs'
-import type { OrcaConfig } from '../src/config.js'
+import type { ArmatureConfig } from '../src/config.js'
 import { executeReplTurn } from '../src/commands/chat-repl-turn.js'
 import { ResetSensitiveWaitCanceledError } from '../src/commands/chat-proxy-tool-call.js'
 import { ContextMonitor, LoopDetector } from '../src/harness/index.js'
@@ -149,7 +149,7 @@ vi.mock('../src/output.js', async (importOriginal) => {
 })
 
 describe('executeReplTurn', () => {
-  const config = { providers: {}, defaultProvider: 'openai', defaultModel: 'gpt-5.4' } as unknown as OrcaConfig
+  const config = { providers: {}, defaultProvider: 'openai', defaultModel: 'gpt-5.4' } as unknown as ArmatureConfig
   const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
   const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
   const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
@@ -421,7 +421,7 @@ describe('executeReplTurn', () => {
   })
 
   it('repairs and opens a missing claimed local file before calling the provider', async () => {
-    const path = join(tmpdir(), `orca-repl-missing-claim-${process.pid}-${Date.now()}.md`)
+    const path = join(tmpdir(), `armature-repl-missing-claim-${process.pid}-${Date.now()}.md`)
     rmSync(path, { force: true })
     const history = [
       { role: 'system' as const, content: 'system prompt' },

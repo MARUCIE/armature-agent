@@ -1,9 +1,9 @@
 {
   "id": "fast-stats-daily-empty",
   "title": "Stats daily shows a clear empty state",
-  "description": "Black-box smoke for `orca stats daily` when no usage data exists yet.",
-  "input": "Run `orca stats daily` in an isolated empty ORCA_HOME and verify the command prints the empty-state message instead of crashing.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); trap \"rm -rf $TMP_HOME\" EXIT; mkdir -p \"$TMP_HOME/.orca\"; env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ORCA_HOME=\"$TMP_HOME/.orca\" node dist/bin/orca.js stats daily'",
+  "description": "Black-box smoke for `armature stats daily` when no usage data exists yet.",
+  "input": "Run `armature stats daily` in an isolated empty ARMATURE_HOME and verify the command prints the empty-state message instead of crashing.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); trap \"rm -rf $TMP_HOME\" EXIT; mkdir -p \"$TMP_HOME/.armature\"; env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ARMATURE_HOME=\"$TMP_HOME/.armature\" node dist/bin/armature.js stats daily'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

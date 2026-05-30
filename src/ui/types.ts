@@ -1,5 +1,5 @@
 /**
- * Typed UI event system for Orca CLI.
+ * Typed UI event system for Armature CLI.
  *
  * Business logic emits UIEvents → the UI layer (ink or legacy) consumes them.
  * This decouples rendering from agent logic, enabling ink migration without

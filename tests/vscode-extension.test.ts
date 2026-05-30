@@ -4,13 +4,13 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const require = createRequire(import.meta.url)
-const extRoot = join(process.cwd(), 'integrations', 'vscode-orca')
-const helpers = require('../integrations/vscode-orca/terminal-options.cjs')
+const extRoot = join(process.cwd(), 'integrations', 'vscode-armature')
+const helpers = require('../integrations/vscode-armature/terminal-options.cjs')
 
 describe('VS Code extension skeleton', () => {
-  it('builds terminal options for orca commands', () => {
-    const options = helpers.buildOrcaTerminalOptions('Orca Chat', ['chat'], '/tmp/project')
-    expect(options.name).toBe('Orca Chat')
+  it('builds terminal options for armature commands', () => {
+    const options = helpers.buildArmatureTerminalOptions('Armature Chat', ['chat'], '/tmp/project')
+    expect(options.name).toBe('Armature Chat')
     expect(options.shellArgs).toEqual(['chat'])
     expect(options.cwd).toBe('/tmp/project')
     expect(typeof options.shellPath).toBe('string')
@@ -26,10 +26,10 @@ describe('VS Code extension skeleton', () => {
   it('declares expected command contributions', () => {
     const manifest = JSON.parse(readFileSync(join(extRoot, 'package.json'), 'utf-8'))
     const commandIds = manifest.contributes.commands.map((cmd) => cmd.command)
-    expect(commandIds).toContain('orca.chat')
-    expect(commandIds).toContain('orca.chatCurrentFile')
-    expect(commandIds).toContain('orca.chatSelection')
-    expect(commandIds).toContain('orca.startMcpServer')
-    expect(commandIds).toContain('orca.doctor')
+    expect(commandIds).toContain('armature.chat')
+    expect(commandIds).toContain('armature.chatCurrentFile')
+    expect(commandIds).toContain('armature.chatSelection')
+    expect(commandIds).toContain('armature.startMcpServer')
+    expect(commandIds).toContain('armature.doctor')
   })
 })

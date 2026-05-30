@@ -1,9 +1,9 @@
 {
   "id": "fast-bench-json-quick",
   "title": "Bench quick JSON emits a passing summary",
-  "description": "Black-box smoke for `orca bench --quick --json`.",
-  "input": "Run `orca bench --quick --json` and verify the JSON output reports three quick scenarios and a perfect score.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; node dist/bin/orca.js bench --quick --json'",
+  "description": "Black-box smoke for `armature bench --quick --json`.",
+  "input": "Run `armature bench --quick --json` and verify the JSON output reports three quick scenarios and a perfect score.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; node dist/bin/armature.js bench --quick --json'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

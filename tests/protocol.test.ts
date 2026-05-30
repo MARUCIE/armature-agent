@@ -198,7 +198,7 @@ describe('Protocol: Malformed tool responses', () => {
 
 // ── Untested Tool Paths ─────────────────────────────────────────
 
-const toolDir = join(tmpdir(), `orca-protocol-tools-${Date.now()}`)
+const toolDir = join(tmpdir(), `armature-protocol-tools-${Date.now()}`)
 
 beforeAll(() => {
   mkdirSync(join(toolDir, 'src'), { recursive: true })
@@ -267,7 +267,7 @@ describe('Untested tools: notebook_edit edge cases', () => {
 
 describe('Untested tools: git in non-repo directory', () => {
   it('12.11 git_status in non-repo directory fails gracefully', () => {
-    const nonRepo = join(tmpdir(), `orca-nonrepo-${Date.now()}`)
+    const nonRepo = join(tmpdir(), `armature-nonrepo-${Date.now()}`)
     mkdirSync(nonRepo, { recursive: true })
     try {
       const r = executeTool('git_status', {}, nonRepo)
@@ -278,7 +278,7 @@ describe('Untested tools: git in non-repo directory', () => {
   })
 
   it('12.12 git_log in non-repo directory fails gracefully', () => {
-    const nonRepo = join(tmpdir(), `orca-nonrepo2-${Date.now()}`)
+    const nonRepo = join(tmpdir(), `armature-nonrepo2-${Date.now()}`)
     mkdirSync(nonRepo, { recursive: true })
     try {
       const r = executeTool('git_log', { count: 5 }, nonRepo)
@@ -289,7 +289,7 @@ describe('Untested tools: git in non-repo directory', () => {
   })
 
   it('12.13 git_diff in non-repo directory fails gracefully', () => {
-    const nonRepo = join(tmpdir(), `orca-nonrepo3-${Date.now()}`)
+    const nonRepo = join(tmpdir(), `armature-nonrepo3-${Date.now()}`)
     mkdirSync(nonRepo, { recursive: true })
     try {
       const r = executeTool('git_diff', {}, nonRepo)
@@ -300,7 +300,7 @@ describe('Untested tools: git in non-repo directory', () => {
   })
 
   it('12.13b git_commit in non-repo directory fails gracefully', () => {
-    const nonRepo = join(tmpdir(), `orca-nonrepo4-${Date.now()}`)
+    const nonRepo = join(tmpdir(), `armature-nonrepo4-${Date.now()}`)
     mkdirSync(nonRepo, { recursive: true })
     try {
       const r = executeTool('git_commit', { message: 'test: commit outside repo' }, nonRepo)

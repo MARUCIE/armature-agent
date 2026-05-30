@@ -124,8 +124,8 @@ describe('WorktreeAgent: interface contract', () => {
   it('A.13 WorktreeAgent interface has required fields', () => {
     const agent: WorktreeAgent = {
       id: 'test-001',
-      branch: 'orca-agent-test-001',
-      worktreePath: '/tmp/.orca-worktrees/test-001',
+      branch: 'armature-agent-test-001',
+      worktreePath: '/tmp/.armature-worktrees/test-001',
       task: 'implement feature X',
       status: 'working',
       createdAt: Date.now(),

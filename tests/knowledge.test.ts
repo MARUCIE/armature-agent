@@ -21,7 +21,7 @@ import { LearningJournal } from '../src/knowledge/learning.js'
 const origHome = process.env.HOME
 
 beforeAll(() => {
-  const tmpHome = join(tmpdir(), `orca-knowledge-test-${Date.now()}`)
+  const tmpHome = join(tmpdir(), `armature-knowledge-test-${Date.now()}`)
   mkdirSync(tmpHome, { recursive: true })
   process.env.HOME = tmpHome
 })

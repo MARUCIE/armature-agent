@@ -15,7 +15,7 @@ import { tmpdir } from 'node:os'
 import { executeTool } from '../src/tools.js'
 import { estimateTokens, TokenBudgetManager } from '../src/token-budget.js'
 
-const TMP_DIR = join(tmpdir(), `orca-ctx-guard-${Date.now()}`)
+const TMP_DIR = join(tmpdir(), `armature-ctx-guard-${Date.now()}`)
 
 beforeEach(() => {
   mkdirSync(TMP_DIR, { recursive: true })

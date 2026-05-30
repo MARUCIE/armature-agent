@@ -181,7 +181,7 @@ export function buildCritiquePrompt(context: CritiqueContext): string {
     ? context.changedFiles.map((file) => `- ${file}`).join('\n')
     : '(none detected)'
 
-  return `You are Orca's Rubber Duck Critique reviewer.
+  return `You are Armature's Rubber Duck Critique reviewer.
 
 You are read-only. Do not propose shell commands that mutate the workspace unless they are framed as a recommendation for the main agent to validate. Your job is to challenge the main agent's plan, implementation, tests, and risk assumptions before execution continues.
 

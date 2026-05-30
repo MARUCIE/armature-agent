@@ -66,11 +66,11 @@ export function isAuthorizedRequest(req: IncomingMessage, authToken: string | un
 export function resolveServeAuthToken(
   isLoopbackHost: (host: string) => boolean,
   host: string,
-  envToken = process.env.ORCA_SERVE_TOKEN,
+  envToken = process.env.ARMATURE_SERVE_TOKEN,
 ): string | undefined {
   if (isLoopbackHost(host)) return undefined
   if (envToken && envToken.trim()) return envToken.trim()
-  throw new Error('Remote serve requires ORCA_SERVE_TOKEN')
+  throw new Error('Remote serve requires ARMATURE_SERVE_TOKEN')
 }
 
 export function buildPermissionPreview(name: string, args: ToolArgs): string {

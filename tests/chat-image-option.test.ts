@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { buildImagePromptContent, extractImagePromptInput, splitImageArgsAndPrompt } from '../src/commands/chat-input.js'
 
-const TMP_DIR = join(tmpdir(), `orca-chat-image-${Date.now()}`)
+const TMP_DIR = join(tmpdir(), `armature-chat-image-${Date.now()}`)
 
 beforeEach(() => {
   mkdirSync(TMP_DIR, { recursive: true })

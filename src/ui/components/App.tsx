@@ -1,5 +1,5 @@
 /**
- * InkApp — root component for Orca CLI's terminal UI.
+ * InkApp — root component for Armature CLI's terminal UI.
  *
  * Layout (flexbox column, full terminal height):
  *   ┌─────────────────────────────────┐
@@ -222,7 +222,7 @@ function summarizeToolArgs(args: Record<string, unknown>): string {
 function openExternalEditor(initialText: string): string | null {
   const editor = process.env.VISUAL || process.env.EDITOR
   if (!editor) return null
-  const dir = mkdtempSync(join(tmpdir(), 'orca-prompt-'))
+  const dir = mkdtempSync(join(tmpdir(), 'armature-prompt-'))
   const filePath = join(dir, 'prompt.md')
   try {
     writeFileSync(filePath, initialText, 'utf-8')
@@ -243,7 +243,7 @@ function shellQuote(value: string): string {
 }
 
 function pasteClipboardImage(currentText: string): string | null {
-  const dir = mkdtempSync(join(tmpdir(), 'orca-clipboard-image-'))
+  const dir = mkdtempSync(join(tmpdir(), 'armature-clipboard-image-'))
   const filePath = join(dir, 'clipboard.png')
 
   const pngpaste = spawnSync('pngpaste', [filePath], { encoding: 'utf-8' })
@@ -304,7 +304,7 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
   const [activeTool, setActiveTool] = useState<{ id: string; start: ToolStartInfo; startTime: number } | null>(null)
   const [inputValue, setInputValue] = useState('')
   const [inputDraft, setInputDraft] = useState<{ id: number; text: string } | null>(null)
-  // Theme picker: show on first launch if ORCA_THEME not set
+  // Theme picker: show on first launch if ARMATURE_THEME not set
   const [showThemePicker, setShowThemePicker] = useState(() => !hasConfiguredThemePreference())
 
   // Command picker state
@@ -326,7 +326,7 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
   // Mouse tracking prevents normal terminal text selection in many terminals.
   // Keep it opt-in so the default Ink UI behaves like Claude Code's copyable scrollback.
   useMouseWheel({
-    isActive: process.env.ORCA_MOUSE === '1',
+    isActive: process.env.ARMATURE_MOUSE === '1',
     onWheel: useCallback((delta: number) => {
       scrollRef.current?.scrollBy(delta)
     }, []),
@@ -668,7 +668,7 @@ export function App({ session, initialStatus, banner, noFlicker = false }: Props
     setShowThemePicker(false)
     const home = process.env.HOME || process.env.USERPROFILE || ''
     if (!home) return
-    const dir = `${home}/.orca`
+    const dir = `${home}/.armature`
     try {
       mkdirSync(dir, { recursive: true })
       writeFileSync(`${dir}/theme`, themeId, 'utf-8')

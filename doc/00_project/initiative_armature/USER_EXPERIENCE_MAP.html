@@ -1,0 +1,1487 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Armature CLI User Experience Map</title><style>:root { --primary:#003a70; --accent:#0077c8; --gold:#c4a35a; --bg:#f4f6f9; --card:#ffffff; --text:#172033; --muted:#4b5b73; --border:#d8e1eb; --code-bg:#0f1c2e; --code-text:#e8eef8; --shadow:0 10px 30px rgba(0,58,112,0.08); } * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.7; } header { background:linear-gradient(135deg,#003a70,#001f3f); color:#fff; padding:56px 24px 40px; } header h1 { margin:0 0 10px; font-size:clamp(28px,5vw,44px); } header p { margin:0; color:rgba(255,255,255,0.78); } .shell { max-width:1280px; margin:-24px auto 48px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); gap:20px; } .toc { background:rgba(255,255,255,0.9); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; position:sticky; top:16px; height:fit-content; max-height:calc(100vh - 32px); overflow:auto; } .toc-title { font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:12px; font-weight:700; } .toc a { display:block; color:var(--primary); text-decoration:none; padding:6px 0; font-size:14px; } .content { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow); padding:32px; min-width:0; } .content h1:first-child { display:none; } .content h2 { color:var(--primary); margin-top:36px; scroll-margin-top:24px; } .content h3 { color:var(--accent); margin-top:28px; scroll-margin-top:24px; } .content p, .content li { color:var(--text); } .content code { background:rgba(15,28,46,0.08); padding:0.1em 0.35em; border-radius:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:0.92em; } .content pre { background:var(--code-bg); color:var(--code-text); padding:18px; border-radius:14px; overflow:auto; } .content pre code { background:transparent; color:inherit; padding:0; } .content table { width:100%; border-collapse:collapse; margin:16px 0 24px; display:block; overflow-x:auto; } .content th, .content td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; min-width:120px; } .content th { background:#eef5fb; color:var(--primary); } .content blockquote { margin:16px 0; padding:12px 16px; border-left:4px solid var(--gold); background:#f8fbfe; color:var(--muted); } @media (min-width:1080px) { .shell { grid-template-columns:260px minmax(0,1fr); } } @media (max-width:1079px) { .toc { position:static; } .content { padding:22px; } }</style></head><body><header><h1>Armature CLI User Experience Map</h1><p>Canonical Markdown source rendered as a single-file offline HTML companion.</p></header><main class="shell"><aside class="toc"><div class="toc-title">Sections</div><a href="#2026-05-03-ux-delta-markdown-artifact-write-integrity">2026-05-03 UX Delta - Markdown Artifact Write Integrity</a><a href="#2026-05-02-ux-delta-local-file-tool-continuity-and-armature-mark">2026-05-02 UX Delta - Local File Tool Continuity and Armature Mark</a><a href="#2026-05-02-ux-delta-model-metadata-consistency">2026-05-02 UX Delta - Model Metadata Consistency</a><a href="#2026-05-02-ux-delta-copyable-terminal-and-stable-tool-workspace">2026-05-02 UX Delta - Copyable Terminal and Stable Tool Workspace</a><a href="#2026-05-02-ux-delta-critique-quality-gate">2026-05-02 UX Delta - Critique Quality Gate</a><a href="#2026-05-01-ux-delta-pod-helm-footer">2026-05-01 UX Delta - Pod Helm Footer</a><a href="#2026-05-01-ux-delta-pod-council-runway">2026-05-01 UX Delta - Pod Council Runway</a><a href="#2026-05-01-ux-delta-pod-evidence-drawer">2026-05-01 UX Delta - Pod Evidence Drawer</a><a href="#2026-05-01-ux-delta-pod-trust-gate">2026-05-01 UX Delta - Pod Trust Gate</a><a href="#2026-05-01-ux-delta-pod-proof-wake">2026-05-01 UX Delta - Pod Proof Wake</a><a href="#2026-05-01-ux-delta-pod-status-rail">2026-05-01 UX Delta - Pod Status Rail</a><a href="#2026-05-01-ux-delta-pod-transcript-flow">2026-05-01 UX Delta - Pod Transcript Flow</a><a href="#2026-05-01-ux-delta-pod-command-surface">2026-05-01 UX Delta - Pod Command Surface</a><a href="#2026-05-01-ux-delta-cute-armature-mascot-entry">2026-05-01 UX Delta - Cute Armature Mascot Entry</a><a href="#2026-04-30-ux-delta-blackfin-signal-entry-deck">2026-04-30 UX Delta - Blackfin Signal Entry Deck</a><a href="#2026-04-29-ux-delta-queue-and-trust">2026-04-29 UX Delta - Queue and Trust</a><a href="#experience-model">Experience Model</a><a href="#journey-map">Journey Map</a><a href="#command-flow-details">Command Flow Details</a><a href="#benchmark-derived-target-journeys-2026-04-21">Benchmark-Derived Target Journeys (2026-04-21)</a><a href="#ux-constraints">UX Constraints</a><a href="#page-route-equivalents">Page / Route Equivalents</a><a href="#repl-screenshot-journey-2026-04-20">REPL Screenshot Journey (2026-04-20)</a><a href="#chat-taskrun-journey-2026-04-29">Chat TaskRun Journey (2026-04-29)</a></aside><article class="content markdown-body"><h1>Armature CLI User Experience Map</h1>
+<h2>2026-05-03 UX Delta - Markdown Artifact Write Integrity</h2>
+<p>New operator journeys from the Markdown artifact write regression:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Generate a clean Markdown file</td>
+<td>Ask Armature to generate a <code>.md</code> document and get only the requested article/document body in the file</td>
+<td><code>armature chat</code> / provider proxy save request</td>
+<td><code>src/commands/local-file-intent.ts</code>, <code>tests/local-file-intent.test.ts</code></td>
+</tr>
+<tr>
+<td>Avoid chat transcript pollution</td>
+<td>Prevent save confirmations, explanations, or prior chat text from being written into the target <code>.md</code> file</td>
+<td>false-save repair path</td>
+<td><code>tests/chat-internals.test.ts</code></td>
+</tr>
+<tr>
+<td>Avoid unsafe repair when no artifact exists</td>
+<td>If a model only says it saved a file but provides no generated body, Armature does not fabricate a polluted file</td>
+<td>post-model repair guard</td>
+<td><code>tests/local-file-intent.test.ts</code></td>
+</tr>
+</tbody></table>
+<h2>2026-05-02 UX Delta - Local File Tool Continuity and Armature Mark</h2>
+<p>New operator journeys from the long-session tool-call fix, test matrix closure, and startup mark refresh:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Create and open a local Markdown file in a long chat</td>
+<td>Ask Armature to write and visually open a <code>.md</code> file without the model claiming it has no local access after earlier turns</td>
+<td><code>armature chat</code> REPL with history</td>
+<td><code>src/providers/openai-compat.ts</code>, <code>src/system-prompt.ts</code>, <code>tests/openai-compat-multimodal.test.ts</code>, <code>tests/e2e-workflow.test.ts</code></td>
+</tr>
+<tr>
+<td>Recover a falsely claimed saved file</td>
+<td>Say the file is missing and ask Armature to open it; Armature reconstructs the claimed file from chat history, writes it, then opens it</td>
+<td><code>armature chat</code> follow-up prompt such as <code>本地没有这个文件，给我打开</code></td>
+<td><code>src/commands/local-file-intent.ts</code>, <code>src/commands/chat-repl-turn.ts</code>, <code>tests/local-file-intent.test.ts</code>, <code>tests/chat-repl-turn.test.ts</code></td>
+</tr>
+<tr>
+<td>Stop false save claims from becoming silent failures</td>
+<td>When a model says <code>saved to &lt;path&gt;</code> but did not call a file tool, the proxy runtime writes the file and records the guard result</td>
+<td>streamed proxy turn</td>
+<td><code>src/commands/chat.ts</code>, <code>tests/chat-internals.test.ts</code></td>
+</tr>
+<tr>
+<td>Verify all tool-call paths together</td>
+<td>Run one canonical matrix lane instead of remembering scattered tool tests</td>
+<td><code>npm run test:tool-calls</code></td>
+<td><code>agent-eval/manifests/test-matrix.json</code>, <code>agent-eval/generated/test-matrix-entrypoints.md</code></td>
+</tr>
+<tr>
+<td>Recognize Armature immediately on startup</td>
+<td>See a dominant <code>ARMATURE-AGENT</code> wordmark and clean session deck without separate mascot/icon art</td>
+<td>default Ink startup banner</td>
+<td><code>src/ui/components/Banner.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Keep Hermes-style branding mechanics without copying Hermes</td>
+<td>Benefit from large wordmark hierarchy, theme-aware deck, and operational status while preserving Armature identity</td>
+<td>Banner / HomePanel first frame</td>
+<td><code>src/ui/components/Banner.tsx</code>, <code>src/ui/theme.tsx</code></td>
+</tr>
+</tbody></table>
+<h2>2026-05-02 UX Delta - Model Metadata Consistency</h2>
+<p>New operator journeys from the model-catalog SSoT tranche:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Trust model capacity labels</td>
+<td>See the same context/max-output metadata in startup info, model picker, provider inspection, and runtime budget behavior</td>
+<td><code>armature chat</code>, <code>/model</code>, <code>/models</code>, <code>armature providers</code></td>
+<td><code>src/model-metadata.ts</code>, <code>src/model-catalog.ts</code>, <code>src/output.ts</code>, <code>tests/model-catalog.test.ts</code></td>
+</tr>
+<tr>
+<td>Trust cost summaries</td>
+<td>Avoid pricing drift between model-picker metadata and usage/session cost estimates</td>
+<td>turn summary and session summary</td>
+<td><code>src/model-metadata.ts</code>, <code>src/output.ts</code></td>
+</tr>
+<tr>
+<td>Avoid runtime metadata drift</td>
+<td>Know token budget guards and OpenAI-compatible request defaults use the same metadata as operator-facing model selection</td>
+<td>normal provider calls and context guard behavior</td>
+<td><code>src/token-budget.ts</code>, <code>src/providers/openai-compat.ts</code>, <code>tests/model-catalog.test.ts</code></td>
+</tr>
+</tbody></table>
+<h2>2026-05-02 UX Delta - Copyable Terminal and Stable Tool Workspace</h2>
+<p>New operator journeys from the terminal-operability hardening tranche:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Copy Armature output normally</td>
+<td>Select and copy visible transcript text from the terminal without fighting alternate screen or mouse capture</td>
+<td>default <code>armature chat</code> Ink UI</td>
+<td><code>src/ui/render.tsx</code>, <code>src/ui/components/App.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Opt into fullscreen behavior</td>
+<td>Restore old alternate-screen behavior only when explicitly desired</td>
+<td><code>ARMATURE_ALT_SCREEN=1 armature chat</code></td>
+<td><code>src/ui/render.tsx</code></td>
+</tr>
+<tr>
+<td>Opt into mouse wheel capture</td>
+<td>Restore app-level mouse wheel handling only when explicitly desired</td>
+<td><code>ARMATURE_MOUSE=1 armature chat</code></td>
+<td><code>src/ui/components/App.tsx</code></td>
+</tr>
+<tr>
+<td>Launch from a menu or home directory</td>
+<td>Keep tools pointed at the last real project workspace instead of accidental <code>~</code> cwd</td>
+<td><code>armature</code>, <code>ai 7</code>, launcher wrappers</td>
+<td><code>src/commands/chat-support.ts</code>, <code>tests/chat-support.test.ts</code></td>
+</tr>
+<tr>
+<td>Force a project from any launcher</td>
+<td>Pass a specific project directory without changing shell cwd</td>
+<td><code>armature --cwd &lt;project&gt;</code>, <code>armature chat --cwd &lt;project&gt;</code></td>
+<td><code>src/program.ts</code>, <code>src/commands/chat.ts</code>, <code>tests/program.test.ts</code></td>
+</tr>
+<tr>
+<td>Open a Markdown file visually</td>
+<td>Ask the agent to open a local <code>.md</code> or other document in the OS default app</td>
+<td><code>open_file</code> tool</td>
+<td><code>src/tools.ts</code>, <code>tests/tools.test.ts</code></td>
+</tr>
+<tr>
+<td>Use Codex/OMX MCP tools</td>
+<td>Route MCP tool calls for server names that contain <code>_</code> or <code>-</code></td>
+<td><code>mcp__omx_code_intel__...</code></td>
+<td><code>src/mcp-client.ts</code>, <code>tests/mcp-client.test.ts</code></td>
+</tr>
+</tbody></table>
+<h2>2026-05-02 UX Delta - Critique Quality Gate</h2>
+<p>New operator journeys from the Rubber Duck Critique tranche:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Challenge a plan before implementation</td>
+<td>Ask a separate reviewer to find plan gaps before execution starts</td>
+<td><code>armature critique --checkpoint after_plan --plan-file &lt;file&gt;</code></td>
+<td><code>src/commands/critique.ts</code>, <code>tests/critique.test.ts</code></td>
+</tr>
+<tr>
+<td>Review a complex working-tree diff</td>
+<td>Gate a multi-file or sensitive implementation before tests or final review</td>
+<td><code>armature critique --checkpoint after_complex_implementation</code></td>
+<td><code>src/critique.ts</code>, <code>src/commands/critique.ts</code></td>
+</tr>
+<tr>
+<td>Inspect risk without spending tokens</td>
+<td>See whether a checkpoint would run and why without live model credentials</td>
+<td><code>armature critique --dry-run --json</code></td>
+<td><code>tests/critique.test.ts</code></td>
+</tr>
+<tr>
+<td>Inspect critique risk mid-chat</td>
+<td>Check risk and reviewer choice from the active REPL without leaving the session</td>
+<td><code>/critique --checkpoint after_plan</code></td>
+<td><code>src/commands/chat-slash-readonly.ts</code>, <code>tests/chat-slash-readonly.test.ts</code></td>
+</tr>
+<tr>
+<td>Notice risky dirty diffs before sending</td>
+<td>Get a local reminder to challenge a large working-tree diff before the next provider call</td>
+<td>automatic chat pre-send notice</td>
+<td><code>src/critique-auto.ts</code>, <code>src/commands/chat-repl-turn.ts</code>, <code>tests/chat-repl-turn.test.ts</code></td>
+</tr>
+<tr>
+<td>Notice risky dirty diffs in one-shot chat</td>
+<td>Get the same local reminder before <code>armature chat &quot;prompt&quot;</code> starts a one-shot provider run</td>
+<td>one-shot chat pre-send notice</td>
+<td><code>src/commands/chat.ts</code>, <code>tests/chat-one-shot-mcp-cleanup.test.ts</code></td>
+</tr>
+<tr>
+<td>Avoid repeated critique noise</td>
+<td>See the automatic reminder once per dirty diff signature instead of every turn</td>
+<td>repeat suppression in the chat session</td>
+<td><code>src/critique-auto.ts</code>, <code>tests/critique.test.ts</code></td>
+</tr>
+<tr>
+<td>Tune automatic critique hints per session</td>
+<td>Disable or retune local pre-send hints for the current REPL without changing env vars</td>
+<td><code>armature chat --no-auto-critique</code>, <code>armature chat --auto-critique-threshold 0.4</code></td>
+<td><code>src/commands/chat.ts</code>, <code>tests/command-contracts.test.ts</code></td>
+</tr>
+<tr>
+<td>Review critique output in Ink</td>
+<td>Open checkpoint, risk, files, and diff-line evidence as an in-app detail panel</td>
+<td><code>/critique</code> in Ink chat</td>
+<td><code>src/commands/chat-slash-readonly.ts</code></td>
+</tr>
+<tr>
+<td>Recover from repeated failures</td>
+<td>Trigger a critique when the main loop keeps making similar fixes</td>
+<td><code>armature critique --checkpoint stuck_loop --repeated-failure</code></td>
+<td><code>src/critique.ts</code></td>
+</tr>
+<tr>
+<td>Keep reflection and critique distinct</td>
+<td>Use <code>reflect</code> for Socratic diagnosis and <code>critique</code> for read-only reviewer challenge</td>
+<td><code>armature reflect</code>, <code>armature critique</code></td>
+<td><code>README.md</code>, <code>src/commands/reflect-mode.ts</code>, <code>src/commands/critique.ts</code></td>
+</tr>
+</tbody></table>
+<h2>2026-05-01 UX Delta - Pod Helm Footer</h2>
+<p>New operator journeys from the helm-footer UI/UX tranche:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Read persistent helm guidance</td>
+<td>Keep Armature identity visible in the bottom shortcut rail after the banner scrolls away</td>
+<td>Footer</td>
+<td><code>src/ui/components/Footer.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Interrupt active output clearly</td>
+<td>Know that <code>esc</code> interrupts the current echo without losing the generating-state hint</td>
+<td>Generating Footer</td>
+<td><code>src/ui/components/Footer.tsx</code></td>
+</tr>
+<tr>
+<td>Send a pod brief</td>
+<td>Understand <code>enter</code> as submitting a brief to the pod rather than a generic send action</td>
+<td>Active input Footer</td>
+<td><code>src/ui/components/Footer.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Open pod commands</td>
+<td>Read <code>/help</code> as the command surface for the pod</td>
+<td>Active / idle Footer</td>
+<td><code>src/ui/components/Footer.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Preserve trust-mode awareness</td>
+<td>Keep <code>shift+tab</code> and the active permission mode/source visible while the footer gains Armature language</td>
+<td>Active / idle Footer</td>
+<td><code>src/ui/components/Footer.tsx</code></td>
+</tr>
+<tr>
+<td>Avoid broken shortcut wraps</td>
+<td>Keep ordinary-width terminals from splitting <code>POD HELM</code> and key labels into incoherent columns</td>
+<td>Footer responsive rendering</td>
+<td><code>src/ui/components/Footer.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+</tbody></table>
+<h2>2026-05-01 UX Delta - Pod Council Runway</h2>
+<p>New operator journeys from the council-runway UI/UX tranche:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Track a multi-model pod run</td>
+<td>See council, race, or pipeline progress as coordinated Armature pod work</td>
+<td>MultiModelProgress</td>
+<td><code>src/ui/components/MultiModelProgress.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Read active command and voice count</td>
+<td>Know which multi-model command is running and how many model voices are involved</td>
+<td>MultiModelProgress header</td>
+<td><code>src/ui/components/MultiModelProgress.tsx</code></td>
+</tr>
+<tr>
+<td>Distinguish surfaced voices</td>
+<td>Identify completed model outputs without losing model name or elapsed time</td>
+<td>Completed model row</td>
+<td><code>src/ui/components/MultiModelProgress.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Distinguish active sonar scans</td>
+<td>Identify in-progress model work as sonar scanning while preserving spinner feedback</td>
+<td>Active model row</td>
+<td><code>src/ui/components/MultiModelProgress.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+</tbody></table>
+<h2>2026-05-01 UX Delta - Pod Evidence Drawer</h2>
+<p>New operator journeys from the evidence-drawer UI/UX tranche:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Read detail panels as surfaced evidence</td>
+<td>Recognize status, permission, notes, thread, and TaskRun detail panels as one Armature evidence family</td>
+<td>DetailPanel</td>
+<td><code>src/ui/components/DetailPanel.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Keep source context visible</td>
+<td>See the original detail title and subtitle after the Armature frame label is added</td>
+<td>DetailPanel title/subtitle</td>
+<td><code>src/ui/components/DetailPanel.tsx</code></td>
+</tr>
+<tr>
+<td>Understand detail context as a pod scan</td>
+<td>Read <code>pod scan</code> before the original subtitle without losing the source metadata</td>
+<td>DetailPanel subtitle</td>
+<td><code>src/ui/components/DetailPanel.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Preserve markdown evidence readability</td>
+<td>Keep body markdown rendering identical while the frame becomes Armature-branded</td>
+<td>MarkdownText in DetailPanel</td>
+<td><code>src/ui/components/DetailPanel.tsx</code>, <code>src/ui/components/MarkdownText.tsx</code></td>
+</tr>
+</tbody></table>
+<h2>2026-05-01 UX Delta - Pod Trust Gate</h2>
+<p>New operator journeys from the trust-gate UI/UX tranche:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Read approval as a trust boundary</td>
+<td>Understand that a tool is crossing a permission boundary before allowing it</td>
+<td>PermissionPrompt</td>
+<td><code>src/ui/components/PermissionPrompt.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Scan tool impact before deciding</td>
+<td>See the tool preview under <code>SCAN</code> before selecting allow or deny</td>
+<td>PermissionPrompt preview</td>
+<td><code>src/ui/components/PermissionPrompt.tsx</code></td>
+</tr>
+<tr>
+<td>Pick the correct trust scope</td>
+<td>Distinguish one-time approval from session trust and project policy persistence</td>
+<td>PermissionPrompt choices</td>
+<td><code>src/ui/components/PermissionPrompt.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Deny quickly without ambiguity</td>
+<td>Hold the boundary through <code>Deny</code>, <code>n</code>, or Esc without changing existing semantics</td>
+<td>PermissionPrompt footer / keybindings</td>
+<td><code>src/ui/components/PermissionPrompt.tsx</code></td>
+</tr>
+<tr>
+<td>Review writes as an echo diff</td>
+<td>Read write previews as <code>ECHO DIFF</code> while retaining file path, counts, line numbers, and truncation</td>
+<td>DiffPreview</td>
+<td><code>src/ui/components/DiffPreview.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+</tbody></table>
+<h2>2026-05-01 UX Delta - Pod Proof Wake</h2>
+<p>New operator journeys from the proof-wake UI/UX tranche:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Read a completed turn&#39;s proof wake</td>
+<td>See a compact completion receipt after the assistant response finishes</td>
+<td>TurnSummary after <code>turn_summary</code> event</td>
+<td><code>src/ui/components/TurnSummary.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Interpret token flow without internal shorthand</td>
+<td>Read <code>time</code>, <code>in</code>, <code>out</code>, <code>tools</code>, cost, and throughput instead of <code>r</code>, <code>d</code>, and <code>u</code></td>
+<td>Post-turn summary</td>
+<td><code>src/ui/components/TurnSummary.tsx</code></td>
+</tr>
+<tr>
+<td>Preserve accounting trust</td>
+<td>Confirm UI wording changed without altering usage payloads or provider behavior</td>
+<td><code>TurnSummaryInfo</code> unchanged</td>
+<td><code>src/ui/types.ts</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+</tbody></table>
+<h2>2026-05-01 UX Delta - Pod Status Rail</h2>
+<p>New operator journeys from the status-rail UI/UX tranche:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Read persistent pod identity</td>
+<td>Keep Armature identity visible after the startup banner scrolls away</td>
+<td>Fixed StatusBar line 1</td>
+<td><code>src/ui/components/StatusBar.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Interpret context as sonar load</td>
+<td>Understand context pressure as an operational signal instead of an unlabeled meter</td>
+<td>StatusBar context segment</td>
+<td><code>src/ui/components/StatusBar.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Scan live session metrics</td>
+<td>Read cost, throughput, turns, session id, policy summaries, output style, and sparkline as one signal rail</td>
+<td>StatusBar line 2</td>
+<td><code>src/ui/components/StatusBar.tsx</code></td>
+</tr>
+<tr>
+<td>Check trust posture quickly</td>
+<td>See permission mode, source, behavior mode, effort, and shift-tab cycling guidance in one trust rail</td>
+<td>StatusBar line 3</td>
+<td><code>src/ui/components/StatusBar.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+</tbody></table>
+<h2>2026-05-01 UX Delta - Pod Transcript Flow</h2>
+<p>New operator journeys from the transcript-flow UI/UX tranche:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Read submitted prompts as operator briefs</td>
+<td>Keep the user&#39;s own prompt visible as an Armature-owned <code>POD BRIEF</code> block</td>
+<td>Press Enter in Ink chat</td>
+<td><code>src/ui/components/App.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Read assistant output as pod response</td>
+<td>See assistant markdown in an <code>ARMATURE POD</code> panel with headings and bullets rendered structurally</td>
+<td>Assistant response / turn summary</td>
+<td><code>src/ui/components/App.tsx</code>, <code>src/ui/components/MarkdownText.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Understand streaming as live echolocation</td>
+<td>Read in-progress assistant output as <code>ARMATURE POD echoing</code> rather than a generic stream</td>
+<td>Assistant streaming</td>
+<td><code>src/ui/components/App.tsx</code></td>
+</tr>
+<tr>
+<td>Track tools as evidence scans</td>
+<td>Recognize active and completed tool calls as <code>ECHO TOOL</code> rails while keeping tool name, path, result, and duration visible</td>
+<td>Tool start/end events</td>
+<td><code>src/ui/components/App.tsx</code>, <code>src/ui/components/ToolCallBlock.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Interpret waiting state as pod work</td>
+<td>See compact <code>POD &lt;verb&gt;...</code> feedback tied to listening, routing, verifying, and evidence surfacing</td>
+<td>ThinkingSpinner</td>
+<td><code>src/ui/components/ThinkingSpinner.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+</tbody></table>
+<h2>2026-05-01 UX Delta - Pod Command Surface</h2>
+<p>New operator journeys from the command-surface UI/UX tranche:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Brief the pod from the prompt</td>
+<td>Start typing from an Armature-owned input surface instead of a generic message box</td>
+<td>InputArea empty state</td>
+<td><code>src/ui/components/InputArea.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Discover commands without losing brand context</td>
+<td>Browse slash commands inside a <code>POD COMMANDS</code> picker with filter feedback</td>
+<td>Type <code>/</code> or use command picker</td>
+<td><code>src/ui/components/CommandPicker.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Recover from an over-specific command filter</td>
+<td>See <code>no matching command</code> instead of a disappearing picker</td>
+<td>CommandPicker filtered no-match state</td>
+<td><code>src/ui/components/CommandPicker.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Select finite options with Armature hierarchy</td>
+<td>Pick modes, models, themes, or actions with the same Armature semantic color language</td>
+<td>OptionPicker surfaces</td>
+<td><code>src/ui/components/OptionPicker.tsx</code></td>
+</tr>
+<tr>
+<td>Read shared picker framing consistently</td>
+<td>Recognize all picker panels as the same terminal control family</td>
+<td>PickerFrame</td>
+<td><code>src/ui/components/PickerFrame.tsx</code></td>
+</tr>
+</tbody></table>
+<h2>2026-05-01 UX Delta - Cute Armature Mascot Entry</h2>
+<p>Superseded on 2026-05-02 for the startup Banner: the independent mascot/icon block is removed. The HomePanel pod-brief journey remains active.</p>
+<p>New operator journeys from the mascot UI/UX tranche:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Recognize Armature startup identity</td>
+<td>See a dominant <code>ARMATURE-AGENT</code> wordmark and clean live state deck, not a mascot/icon block</td>
+<td><code>armature</code>, <code>armature chat</code> startup</td>
+<td><code>src/ui/components/Banner.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Understand the logo system</td>
+<td>Read the Hermes-inspired structure as wordmark + live state, without copying Hermes&#39;s caduceus or adding a mascot</td>
+<td>Banner</td>
+<td><code>src/ui/components/Banner.tsx</code></td>
+</tr>
+<tr>
+<td>Brief the pod</td>
+<td>Give Armature one outcome in a friendly first panel rather than a generic mission-control prompt</td>
+<td>HomePanel <code>POD BRIEF</code></td>
+<td><code>src/ui/components/HomePanel.tsx</code></td>
+</tr>
+<tr>
+<td>Keep operational context visible</td>
+<td>Preserve trust, model, session, tools, recovery, and guardrails after the startup cleanup</td>
+<td>HomePanel / StatusBar</td>
+<td><code>src/ui/components/HomePanel.tsx</code>, <code>src/ui/components/StatusBar.tsx</code></td>
+</tr>
+</tbody></table>
+<h2>2026-04-30 UX Delta - Blackfin Signal Entry Deck</h2>
+<p>New operator journeys from the visual system tranche:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Recognize Armature immediately</td>
+<td>See a distinctive <code>ORCA</code> wordmark and killer-whale pod signal motif before reading details</td>
+<td><code>armature</code>, <code>armature chat</code> startup</td>
+<td><code>src/ui/components/Banner.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Read operational startup state</td>
+<td>Confirm model, cwd, trust, config, session, and fleet state without scanning raw logs</td>
+<td>Banner info deck</td>
+<td><code>src/ui/components/Banner.tsx</code></td>
+</tr>
+<tr>
+<td>Start from pod brief intent</td>
+<td>Focus the first screen on the next objective rather than decorative onboarding copy</td>
+<td>HomePanel <code>POD BRIEF</code></td>
+<td><code>src/ui/components/HomePanel.tsx</code></td>
+</tr>
+<tr>
+<td>Check live pod state</td>
+<td>See trust mode, workflow mode, model, session id, and tool count as a compact operator panel</td>
+<td>HomePanel <code>POD SIGNAL</code></td>
+<td><code>src/ui/components/HomePanel.tsx</code></td>
+</tr>
+<tr>
+<td>Recover without remembering commands</td>
+<td>Continue sessions, inspect permissions, run doctor, switch models, or open evidence from the first screen</td>
+<td>HomePanel <code>RECOVER</code></td>
+<td><code>src/ui/components/HomePanel.tsx</code></td>
+</tr>
+<tr>
+<td>Pick identity deliberately</td>
+<td>See <code>Blackfin Signal</code> as the default while preserving existing theme choices</td>
+<td>ThemePicker</td>
+<td><code>src/ui/components/ThemePicker.tsx</code></td>
+</tr>
+<tr>
+<td>Track status consistently</td>
+<td>Read the status bar as an Armature pod surface rather than a generic status strip</td>
+<td>StatusBar</td>
+<td><code>src/ui/components/StatusBar.tsx</code></td>
+</tr>
+</tbody></table>
+<h2>2026-04-29 UX Delta - Queue and Trust</h2>
+<p>New operator journeys:</p>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Need</th>
+<th>Entry</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Inspect running/completed agent work</td>
+<td>See current TaskRun queue without opening raw files</td>
+<td><code>armature queue list</code>, <code>armature queue show &lt;id&gt;</code></td>
+<td><code>src/commands/queue.ts</code>, <code>tests/queue-command.test.ts</code></td>
+</tr>
+<tr>
+<td>Follow live TaskRun evidence</td>
+<td>Stream appended evidence logs until a TaskRun reaches a terminal state</td>
+<td><code>armature queue follow &lt;id&gt;</code></td>
+<td><code>src/commands/queue.ts</code>, <code>tests/queue-command.test.ts</code></td>
+</tr>
+<tr>
+<td>Open a TaskRun evidence drawer</td>
+<td>Inspect logs, diffs, data, reports, missing artifacts, and capped previews by TaskRun</td>
+<td><code>armature queue evidence &lt;id&gt;</code></td>
+<td><code>src/commands/queue.ts</code>, <code>tests/queue-command.test.ts</code></td>
+</tr>
+<tr>
+<td>Open TaskRun evidence in chat</td>
+<td>Inspect the same TaskRun evidence drawer without leaving the Ink REPL</td>
+<td><code>/evidence &lt;id&gt;</code></td>
+<td><code>src/commands/chat-slash-readonly.ts</code>, <code>src/commands/queue.ts</code>, <code>tests/chat-slash-readonly.test.ts</code></td>
+</tr>
+<tr>
+<td>Review approval history</td>
+<td>See prompted, preapproved, policy-blocked, and hook-blocked tool decisions before file evidence</td>
+<td><code>armature queue evidence &lt;id&gt;</code>, <code>/evidence &lt;id&gt;</code></td>
+<td><code>src/policy-executor.ts</code>, <code>src/work-session-store.ts</code>, <code>tests/chat-proxy-tool-call.test.ts</code></td>
+</tr>
+<tr>
+<td>Read submitted prompts after sending</td>
+<td>Keep the operator&#39;s own prompt visible as a distinct highlighted transcript block</td>
+<td>Press Enter in Ink chat</td>
+<td><code>src/ui/components/App.tsx</code>, <code>src/ui/session.ts</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Read structured assistant output</td>
+<td>See headings, bullets, inline emphasis, and code blocks in a framed assistant response panel</td>
+<td>Assistant streaming / turn completion</td>
+<td><code>src/ui/components/App.tsx</code>, <code>src/ui/components/MarkdownText.tsx</code>, <code>tests/ink-ui.test.tsx</code></td>
+</tr>
+<tr>
+<td>Claim operator control of a TaskRun</td>
+<td>Mark a non-terminal TaskRun as owned by an operator for a bounded TTL</td>
+<td><code>armature queue takeover &lt;id&gt; --holder &lt;name&gt; --ttl &lt;duration&gt;</code></td>
+<td><code>src/commands/queue.ts</code>, <code>src/work-session-store.ts</code>, <code>tests/queue-command.test.ts</code>, <code>tests/work-session-store.test.ts</code></td>
+</tr>
+<tr>
+<td>Resume a chat TaskRun</td>
+<td>Claim a bounded resume lease and receive the exact saved-session continue command</td>
+<td><code>armature queue resume &lt;id&gt; --holder &lt;name&gt;</code></td>
+<td><code>src/commands/queue.ts</code>, <code>src/work-session-store.ts</code>, <code>tests/queue-command.test.ts</code></td>
+</tr>
+<tr>
+<td>Schedule the next recoverable TaskRun</td>
+<td>Skip active leases and unsupported replay records, then claim the next resumable or monitorable item</td>
+<td><code>armature queue schedule --holder &lt;name&gt;</code></td>
+<td><code>src/commands/queue.ts</code>, <code>tests/queue-command.test.ts</code></td>
+</tr>
+<tr>
+<td>Discover slash commands consistently</td>
+<td>See the same command surface in completion, picker, and help, with HomePanel metadata prepared for the pending UI-baseline split</td>
+<td><code>/</code>, <code>Tab</code>, <code>/help</code></td>
+<td><code>src/slash-commands.ts</code>, <code>tests/slash-commands.test.ts</code></td>
+</tr>
+<tr>
+<td>Trust release evidence in docs</td>
+<td>See README and active PDCA counts aligned with the package version and current full-suite snapshot</td>
+<td>README, PDCA docs, <code>verification_snapshot.json</code></td>
+<td><code>tests/release-evidence.test.ts</code></td>
+</tr>
+<tr>
+<td>Trust CI gate integrity</td>
+<td>See documented matrix/security/performance/eval gates enforced by CI instead of a narrower build/test-only workflow</td>
+<td>GitHub Actions, <code>npm run test:*</code></td>
+<td><code>.github/workflows/ci.yml</code>, <code>agent-eval/manifests/test-matrix.json</code></td>
+</tr>
+<tr>
+<td>Trust project hooks explicitly</td>
+<td>Prevent arbitrary checked-out repos from running startup hook shell commands</td>
+<td><code>ARMATURE_TRUST_PROJECT_HOOKS=1</code> or trusted <code>HookManager</code></td>
+<td><code>src/hooks.ts</code>, <code>tests/hooks.test.ts</code></td>
+</tr>
+<tr>
+<td>Approve network-capable tools</td>
+<td>Treat outbound fetch/search as a trust boundary</td>
+<td>permission prompt for <code>fetch_url</code> / <code>web_search</code></td>
+<td><code>src/tools.ts</code>, <code>tests/chat-proxy-tool-call.test.ts</code></td>
+</tr>
+</tbody></table>
+<p>Open UX work:</p>
+<ul>
+<li>Extend resume support beyond chat saved sessions only after non-chat TaskRuns persist replay-safe argv/prompt metadata.</li>
+<li>Move command handlers behind registry metadata only after the command execution contract is stable.</li>
+<li>Split the existing HomePanel UI baseline before wiring quick-path command hints to the registry.</li>
+<li>Keep CI gate labels aligned with <code>agent-eval/manifests/test-matrix.json</code> and the generated entrypoint snippet.</li>
+</ul>
+<!-- AI-FLEET:PROJECT_DIR:START -->
+<ul>
+<li><code>PROJECT_DIR</code>: <code>/Users/mauricewen/Projects/armature-cli</code></li>
+</ul>
+<!-- AI-FLEET:PROJECT_DIR:END -->
+
+<h2>Experience Model</h2>
+<p>Armature CLI is a command-first product. User journeys are structured around terminal entry points, not URLs.</p>
+<h2>Journey Map</h2>
+<table>
+<thead>
+<tr>
+<th>Journey</th>
+<th>User Intent</th>
+<th>Command / Entry</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Onboard</td>
+<td>Configure a provider and initialize usage</td>
+<td><code>armature init</code>, env vars, config files</td>
+<td><code>src/commands/init.ts</code>, <code>src/config.ts</code></td>
+</tr>
+<tr>
+<td>Explore interactively</td>
+<td>Ask questions or operate in a REPL</td>
+<td><code>armature</code>, <code>armature chat</code>, <code>armature -c [id]</code></td>
+<td><code>src/bin/armature.ts</code>, <code>src/commands/chat.ts</code>, <code>src/commands/session.ts</code></td>
+</tr>
+<tr>
+<td>Run operator-wide session automation</td>
+<td>Apply personal runtime hooks such as terminal-title sync across all projects</td>
+<td><code>~/.armature/hooks.json</code> + <code>armature</code></td>
+<td><code>src/hooks.ts</code></td>
+</tr>
+<tr>
+<td>Reflect on a bug or confusing code path</td>
+<td>Run a focused rubber-duck-style diagnosis pass with explicit and persistent entrypoints</td>
+<td><code>armature reflect</code>, <code>/reflect</code>, <code>/mode reflect</code></td>
+<td><code>src/commands/chat.ts</code>, <code>src/commands/reflect-mode.ts</code>, <code>src/modes/registry.ts</code></td>
+</tr>
+<tr>
+<td>Enter a workflow preset explicitly</td>
+<td>Jump straight into code review, debugging, or architecture/planning without first switching <code>/mode</code> manually</td>
+<td><code>armature review</code>, <code>armature debug</code>, <code>armature architect</code></td>
+<td><code>src/commands/chat.ts</code>, <code>src/program.ts</code>, <code>src/modes/registry.ts</code></td>
+</tr>
+<tr>
+<td>Analyze local images</td>
+<td>Send one or more local screenshots/images with a text instruction through the proxy path</td>
+<td><code>armature chat --image &lt;path...&gt; &quot;prompt&quot;</code></td>
+<td><code>src/commands/chat.ts</code>, <code>src/providers/openai-compat.ts</code></td>
+</tr>
+<tr>
+<td>Diagnose the runtime</td>
+<td>Check config/provider/hook/MCP/session/log state before debugging by hand</td>
+<td><code>armature doctor</code></td>
+<td><code>src/commands/doctor.ts</code>, <code>src/doctor.ts</code></td>
+</tr>
+<tr>
+<td>Connect repo-scoped MCP deliberately</td>
+<td>Review discovered MCP servers, then opt into a project-scoped server instead of auto-spawning it on startup</td>
+<td><code>/mcp connect &lt;name&gt;</code></td>
+<td><code>src/commands/chat.ts</code>, <code>src/mcp-client.ts</code></td>
+</tr>
+<tr>
+<td>Pick a model safely</td>
+<td>Inspect provider, context window, approximate pricing, and caution notes before switching; <code>/model</code> opens the picker and <code>/model &lt;name&gt;</code> switches directly</td>
+<td><code>/model</code>, <code>/models</code></td>
+<td><code>src/commands/chat.ts</code>, <code>src/model-catalog.ts</code></td>
+</tr>
+<tr>
+<td>Switch behavior profile</td>
+<td>Use a picker for finite built-in/custom modes instead of memorizing mode ids, with a visible summary of what each workflow profile changes</td>
+<td><code>/mode</code>, <code>/mode &lt;id&gt;</code></td>
+<td><code>src/commands/chat.ts</code>, <code>src/modes/registry.ts</code></td>
+</tr>
+<tr>
+<td>Tune reasoning depth</td>
+<td>Use a picker for low/medium/high/max effort levels or switch directly by name</td>
+<td><code>/effort</code>, <code>/effort &lt;level&gt;</code></td>
+<td><code>src/commands/chat.ts</code></td>
+</tr>
+<tr>
+<td>Inspect and persist approval mode</td>
+<td>Make trust/approval policy explicit instead of relying on hidden defaults or hotkeys; expose live mode, policy source, stored allowlist counts, and legacy-rule maintenance in one operator surface</td>
+<td><code>armature permissions</code>, <code>armature permissions rules</code>, <code>armature permissions revoke</code>, <code>armature permissions clear</code>, <code>armature permissions normalize</code>, <code>/permissions</code>, <code>/permissions rules</code>, <code>/permissions revoke</code>, <code>/permissions clear</code>, <code>/permissions normalize</code></td>
+<td><code>src/commands/permissions.ts</code>, <code>src/commands/chat-slash-mutations.ts</code>, <code>src/config.ts</code></td>
+</tr>
+<tr>
+<td>Check providers before starting</td>
+<td>Inspect provider readiness and default-model metadata before entering a session</td>
+<td><code>armature providers</code>, <code>armature providers test</code></td>
+<td><code>src/commands/providers.ts</code>, <code>src/model-catalog.ts</code></td>
+</tr>
+<tr>
+<td>Inspect runtime logs</td>
+<td>Read recent info/warn/error entries without opening files manually</td>
+<td><code>armature logs</code>, <code>armature logs errors</code></td>
+<td><code>src/commands/logs.ts</code>, <code>src/logger.ts</code></td>
+</tr>
+<tr>
+<td>Review runtime dashboard</td>
+<td>See usage, runtime health, and recent error signals in one place</td>
+<td><code>armature stats</code></td>
+<td><code>src/commands/stats.ts</code>, <code>src/doctor.ts</code>, <code>src/logger.ts</code></td>
+</tr>
+<tr>
+<td>Inspect continuity state headlessly</td>
+<td>Query the saved-session object set before attaching a richer client</td>
+<td><code>armature serve</code> + `GET /sessions</td>
+<td>/sessions/latest`</td>
+</tr>
+<tr>
+<td>Inspect run continuity state headlessly</td>
+<td>Query durable run objects created by <code>armature run</code> default, goal-loop, mission, and plan paths</td>
+<td><code>armature serve</code> + <code>GET /work-sessions*</code>, <code>GET /task-runs*</code></td>
+<td><code>src/commands/run.ts</code>, <code>src/commands/serve.ts</code>, <code>src/work-session-store.ts</code>, <code>tests/run-work-session.test.ts</code></td>
+</tr>
+<tr>
+<td>Execute headless chat as a tracked run</td>
+<td>Send a prompt over HTTP and receive durable run ids for later queue inspection</td>
+<td><code>POST /chat</code> with JSON or SSE response</td>
+<td><code>src/commands/serve.ts</code>, <code>tests/serve-command.test.ts</code></td>
+</tr>
+<tr>
+<td>Resume a specific saved session</td>
+<td>Continue an exact durable session object instead of only “latest”</td>
+<td><code>armature -c &lt;id&gt;</code></td>
+<td><code>src/commands/chat.ts</code>, <code>src/commands/session.ts</code></td>
+</tr>
+<tr>
+<td>Inspect one saved session headlessly</td>
+<td>Read a single durable session object before designing take-over/resume</td>
+<td><code>armature serve</code> + <code>GET /sessions/:id</code></td>
+<td><code>src/commands/serve.ts</code>, <code>src/session-store.ts</code></td>
+</tr>
+<tr>
+<td>Plan quality expansion</td>
+<td>Turn the current automated baseline into a larger SOTA test program with explicit task / grader ownership</td>
+<td><code>AGENT_EVAL_PLAN.md</code>, <code>agent-eval/manifests/*.json</code></td>
+<td>repo root plan + manifest-based gate workflow</td>
+</tr>
+<tr>
+<td>Run fast / nightly / release gates</td>
+<td>Execute reproducible SOTA bundles and collect auditable artifacts under one runner</td>
+<td><code>npm run eval:fast</code>, <code>npm run eval:nightly</code>, <code>npm run eval:release</code></td>
+<td><code>package.json</code>, <code>agent-eval/scripts/run-gate.py</code>, <code>agent-eval/manifests/*.json</code></td>
+</tr>
+<tr>
+<td>Inspect headless runtime state</td>
+<td>Query health/provider/doctor metadata over HTTP before attaching a client</td>
+<td><code>armature serve</code> + `GET /health</td>
+<td>/providers</td>
+</tr>
+<tr>
+<td>Launch from IDE</td>
+<td>Start Armature chat/doctor/MCP from VS Code without hand-writing terminal commands</td>
+<td>VS Code commands from <code>integrations/vscode-armature/</code></td>
+<td><code>integrations/vscode-armature/package.json</code>, <code>integrations/vscode-armature/extension.js</code></td>
+</tr>
+<tr>
+<td>Execute work</td>
+<td>Run a coding or analysis task</td>
+<td><code>armature run</code></td>
+<td><code>src/commands/run.ts</code></td>
+</tr>
+<tr>
+<td>Compare models</td>
+<td>Get multiple opinions or race for speed</td>
+<td><code>armature council</code>, <code>armature race</code>, <code>armature pipeline</code></td>
+<td><code>src/commands/multi.ts</code>, <code>src/multi-model.ts</code></td>
+</tr>
+<tr>
+<td>Inspect routing</td>
+<td>Check configured providers</td>
+<td><code>armature providers</code></td>
+<td><code>src/commands/providers.ts</code></td>
+</tr>
+<tr>
+<td>Review cost and sessions</td>
+<td>Inspect usage history and saved sessions</td>
+<td><code>armature stats</code>, <code>armature session</code></td>
+<td><code>src/commands/stats.ts</code>, <code>src/commands/session.ts</code></td>
+</tr>
+<tr>
+<td>Move session artifacts across contexts</td>
+<td>fork / export / import / markdown-share / handoff saved sessions for branching and portability, with metadata sidecars for collaboration artifacts</td>
+<td>`armature session fork</td>
+<td>export</td>
+</tr>
+<tr>
+<td>Move thread artifacts across contexts</td>
+<td>export / markdown / share / import / handoff collaborative thread records, with metadata sidecars and handoff bundles</td>
+<td>`/thread export</td>
+<td>markdown</td>
+</tr>
+<tr>
+<td>Track background work</td>
+<td>Start detached work and get notified when it finishes</td>
+<td><code>run_background</code>, <code>/jobs</code></td>
+<td><code>src/tools.ts</code>, <code>src/background-jobs.ts</code>, <code>src/commands/chat.ts</code></td>
+</tr>
+<tr>
+<td>Review a PR</td>
+<td>Pull and review GitHub PRs</td>
+<td><code>armature pr</code></td>
+<td><code>src/commands/pr.ts</code></td>
+</tr>
+<tr>
+<td>Run headless</td>
+<td>Expose the runtime over HTTP/SSE</td>
+<td><code>armature serve</code></td>
+<td><code>src/commands/serve.ts</code></td>
+</tr>
+<tr>
+<td>Benchmark quality</td>
+<td>Measure runtime quality and capability</td>
+<td><code>armature bench</code></td>
+<td><code>src/commands/bench.ts</code></td>
+</tr>
+<tr>
+<td>Run release-quality evaluation</td>
+<td>Validate deterministic suites, performance, and scenario-based agent delivery before shipping</td>
+<td><code>npm test</code>, <code>npm run build</code>, <code>npm run bench</code>, future <code>ai agent-eval ... run</code></td>
+<td><code>package.json</code>, <code>AGENT_EVAL_PLAN.md</code></td>
+</tr>
+</tbody></table>
+<h2>Command Flow Details</h2>
+<h3>1. REPL / One-Shot Flow</h3>
+<ol>
+<li>User invokes <code>armature</code> or <code>armature chat</code>.</li>
+<li><code>src/bin/armature.ts</code> hands off to <code>src/program.ts</code>.</li>
+<li><code>src/commands/chat.ts</code> resolves config, model, prompt, tool loop, and streaming output.</li>
+<li>User receives formatted markdown and tool events in terminal.</li>
+</ol>
+<h3>1a. Entry / Home Panel Flow</h3>
+<ol>
+<li>User opens the REPL with no prior output on screen.</li>
+<li>Armature shows the banner plus a dedicated home panel instead of a long flat command list.</li>
+<li>The home panel emphasizes one primary action: type a concrete task and press Enter.</li>
+<li>Secondary panels expose:<ul>
+<li>trust/state</li>
+<li>quick recovery paths</li>
+<li>failure help</li>
+</ul>
+</li>
+<li><code>Tab</code> opens a quick-action picker for high-frequency prompts and diagnostics.</li>
+<li>The goal is to make the entry screen usable without memorizing slash commands while keeping the prompt bar as the single primary action.</li>
+</ol>
+<h3>1a. Reflect Flow</h3>
+<ol>
+<li>User invokes <code>armature reflect</code>, <code>/reflect ...</code>, or switches the session with <code>/mode reflect</code>.</li>
+<li><code>src/commands/reflect-mode.ts</code> rewrites the prompt into a structured reflection contract: symptom, hypotheses, evidence, root cause, next step.</li>
+<li><code>src/commands/chat.ts</code> reuses the normal agent/tool loop, but with reflect-specific prompt shaping and mode guidance.</li>
+<li>For clear debugging or explanation prompts in standard <code>armature chat</code>, Armature can conservatively auto-trigger reflect and shows an inline notice when it does.</li>
+</ol>
+<h3>1aa. Workflow Preset Flow</h3>
+<ol>
+<li>User invokes <code>armature review</code>, <code>armature debug</code>, or <code>armature architect</code>.</li>
+<li><code>src/program.ts</code> registers each preset as a top-level command backed by <code>createChatCommand(...)</code>.</li>
+<li>The command enters <code>chat</code> with an <code>initialModeId</code>, so the session starts directly inside the matching built-in mode.</li>
+<li>The operator can still switch modes later with <code>/mode</code>, but the initial entry cost is reduced for high-frequency workflows.</li>
+</ol>
+<h3>1b. Model Selection Flow</h3>
+<ol>
+<li>User invokes <code>/model</code> or <code>/models</code>.</li>
+<li><code>src/model-catalog.ts</code> derives model metadata from config + known model hints.</li>
+<li>Ink REPL opens a provider-first picker, then a model picker scoped to that provider; duplicate model names are carried as provider+model keys so Poe/Copilot/OpenAI variants do not resolve to the wrong backend.</li>
+<li>Long picker lists are windowed instead of rendered as one dense wall; legacy mode still renders a numbered fallback list grouped by provider.</li>
+<li>If a cautionary model is selected, the REPL warns immediately instead of failing later through degraded tool use.</li>
+</ol>
+<h3>1c. Mode And Effort Picker Flow</h3>
+<ol>
+<li>User invokes <code>/mode</code> or <code>/effort</code> without arguments.</li>
+<li><code>src/commands/chat.ts</code> opens a shared option picker in ink mode rather than printing static text instructions.</li>
+<li><code>/mode</code> descriptions now summarize the workflow delta for each profile, not just the mode name.</li>
+<li>The summary text now comes from the same registry that defines top-level workflow presets, reducing description drift.</li>
+<li>Workflow presets now also define structured default policy fields such as <code>effort</code> and <code>permission mode</code>, rather than relying only on free-text descriptions.</li>
+<li><code>/mode</code> picker descriptions now surface those preset defaults directly, instead of hiding them behind command docs.</li>
+<li>When a selected mode is backed by a workflow preset, Armature also applies the preset&#39;s default <code>effort</code> / <code>permission mode</code> values.</li>
+<li>Startup and <code>/mode</code> switching now use one shared preset-policy application path, and the startup path composes the initial system prompt from mode + preset + effort.</li>
+<li>Workflow presets now also carry <code>tool policy</code> and <code>output style</code>, and <code>/mode</code> descriptions surface them directly.</li>
+<li>Active mode tool restrictions are now enforced in the proxy tool runtime instead of depending only on prompt obedience.</li>
+<li><code>/effort</code> and preset default effort now also flow into proxy <code>reasoning_effort</code>, instead of remaining UI-only state.</li>
+<li><code>/status</code> and the live status bar now surface the current <code>mode + effort + permissions</code> combination instead of only the mode label, while <code>/status</code> additionally exposes <code>tool policy</code> and <code>output style</code>.</li>
+<li><code>model policy</code> is now also exposed in <code>/status</code>, and the live <code>StatusBar</code> shows a compact <code>model:</code> summary when a preset provides it.</li>
+<li>The live <code>StatusBar</code> now shows compact <code>tools:</code> / <code>out:</code> summaries when a preset provides them.</li>
+<li>The picker returns the selected mode id or effort level immediately, and the status bar updates in place.</li>
+</ol>
+<h3>1d. Permission / Trust Flow</h3>
+<ol>
+<li>User invokes <code>armature permissions</code> or <code>/permissions</code>.</li>
+<li><code>armature permissions</code> shows the current effective approval mode, persisted project/global config values, rule counts, and the user-facing meaning of each mode.</li>
+<li>Ink <code>/permissions</code> opens a detail panel plus a live picker for <code>yolo</code> / <code>auto</code> / <code>plan</code> and save-to-project/global actions.</li>
+<li><code>/permissions set</code> updates the live REPL policy immediately; <code>/permissions save</code> or <code>armature permissions set --scope ...</code> persists it to config.</li>
+<li><code>plan</code> mode now requests approval for every tool; <code>auto</code> requests approval only for dangerous tools; <code>yolo</code> bypasses prompts.</li>
+<li>The legacy persisted config value <code>default</code> now resolves to <code>auto</code>, so a fresh session no longer starts in fail-open <code>yolo</code>.</li>
+<li>MCP tool execution now goes through the same shared policy executor for hooks, tool filtering, approval checks, and sandbox posture; dangerous tools fail closed when no grant exists.</li>
+<li>Repo-local MCP is no longer auto-connected on startup; only home/global-scoped MCP is startup-safe, and project-scoped MCP requires explicit operator connect.</li>
+<li>Permission prompts now support <code>allow once</code>, <code>allow session</code>, <code>allow project</code>, and <code>deny</code>, so approvals can be promoted into session/project policy inline.</li>
+<li><code>armature permissions rules</code> and <code>/permissions rules</code> expose stored session/project/global rule entries rather than only a count.</li>
+<li><code>armature permissions revoke|clear</code> and <code>/permissions revoke|clear</code> let the operator remove one rule or clear a scope instead of editing config files manually; revoke now supports filter-and-pick selection when the exact rule key is not supplied.</li>
+<li>Stored permission rules now use stable canonical descriptors such as <code>write_file|path=...</code> and <code>run_command|command=...</code>, which makes persistence less sensitive to preview formatting changes.</li>
+<li><code>armature permissions normalize</code> and <code>/permissions normalize</code> rewrite legacy preview-style rules into canonical descriptors instead of leaving them mixed forever.</li>
+<li><code>permissions rules</code> now annotates rule state (<code>canonical</code>, <code>legacy</code>, <code>unrecognized</code>) and shows the normalized target for legacy entries.</li>
+<li>Legacy <code>::</code> rules are explicitly supported by the normalize flow instead of being stranded forever as opaque leftovers.</li>
+<li><code>permissions rules</code> now supports filtering by state (<code>all</code>, <code>canonical</code>, <code>legacy</code>, <code>unrecognized</code>) for faster audits.</li>
+<li>Effective runtime permission checks now merge <code>project</code> and <code>global</code> stored rules instead of only consuming project rules.</li>
+<li>Status/footer hints expose the current permission source (<code>session</code>, <code>project</code>, <code>global</code>, <code>env</code>, <code>flag</code>, <code>default</code>) so the active policy is auditable in-session.</li>
+</ol>
+<h3>1e. Provider Inspection Flow</h3>
+<ol>
+<li>User invokes <code>armature providers</code> or <code>armature providers test</code>.</li>
+<li><code>src/commands/providers.ts</code> resolves configured providers and decorates them with model-catalog metadata.</li>
+<li>The CLI shows readiness plus context/pricing/caution data before the user commits to a session or connectivity test.</li>
+</ol>
+<h3>1f. Doctor Flow</h3>
+<ol>
+<li>User invokes <code>armature doctor</code>.</li>
+<li><code>src/doctor.ts</code> gathers provider, project, hook, MCP, session, background-job, and log diagnostics.</li>
+<li>The command emits either a human-readable health summary or JSON for automation.</li>
+</ol>
+<h2>Benchmark-Derived Target Journeys (2026-04-21)</h2>
+<p>These are not fully shipped yet; they are the next continuity targets derived from the SOTA benchmark set.</p>
+<table>
+<thead>
+<tr>
+<th>Target Journey</th>
+<th>User Intent</th>
+<th>Expected Future Surface</th>
+<th>Strongest Benchmark References</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Resume work across terminal / web / IDE</td>
+<td>Start in one surface, continue in another without rebuilding context</td>
+<td>durable session object + shared session id + resumable web/IDE handoff</td>
+<td>Codex, Cursor, OpenCode, GitHub Copilot</td>
+</tr>
+<tr>
+<td>Inspect async execution before taking over</td>
+<td>Review what a detached agent already did before resuming locally</td>
+<td>queue / agent list + status + timeline + take-over action</td>
+<td>Cursor background agents, GitHub Copilot cloud agent, OpenCode web</td>
+</tr>
+<tr>
+<td>Review agent output through evidence rather than trust</td>
+<td>Read logs, session history, and change evidence before merge/apply</td>
+<td>evidence console with logs, timeline, artifacts, and diff links</td>
+<td>GitHub Copilot, Claude Code, Cursor Bugbot</td>
+</tr>
+<tr>
+<td>Share a durable investigation / implementation thread</td>
+<td>Hand off work with state, not just prose summary</td>
+<td>shareable session/thread artifact with optional hosted continuation</td>
+<td>Amp, OpenCode, Codex</td>
+</tr>
+</tbody></table>
+<p>The first shipped foothold for these journeys is now a stable REPL <code>sessionId</code> plus headless session-discovery endpoints.
+The 2026-04-21 swarm audit adds one sharper constraint to these journeys: they do not close until Armature exposes leaseable session/task objects, queue inspection/take-over, review-grade evidence bundles, and a trust model shared across REPL / MCP / serve.
+4. Malformed local JSON config files are called out explicitly instead of being hidden in generic stderr noise.</p>
+<h3>1g. Serve Metadata Flow</h3>
+<ol>
+<li>User starts <code>armature serve</code>.</li>
+<li>HTTP clients can call <code>/health</code>, <code>/providers</code>, and <code>/doctor</code>.</li>
+<li>The headless server returns the same provider/runtime metadata already exposed in the CLI surfaces.</li>
+</ol>
+<h3>1h. Session Continuity Discovery Flow</h3>
+<ol>
+<li>The REPL now assigns a stable <code>sessionId</code> to the current conversation and reuses the restored id on <code>--continue</code>.</li>
+<li><code>armature -c</code> resumes the latest session, and <code>armature -c &lt;id&gt;</code> resumes a specific saved session object by id.</li>
+<li><code>/status</code> and the live status bar expose that id so the operator can anchor follow-up actions to the same object.</li>
+<li><code>armature serve</code> exposes <code>GET /sessions</code>, <code>GET /sessions/latest</code>, and <code>GET /sessions/:id</code> so a future web/IDE client can discover and inspect the durable session object set.</li>
+<li>This is the first continuity surface, not the final hosted continuity workflow.</li>
+<li>The next continuity step is not another metadata endpoint; it is richer replay metadata for non-chat TaskRuns.</li>
+<li>The shipped <code>WorkSession</code> / <code>TaskRun</code> slice now covers the default <code>armature run</code>, goal-loop, mission, plan, <code>armature chat</code>, and <code>serve /chat</code> paths and is inspectable through queue and serve surfaces.</li>
+<li><code>armature queue resume</code> and <code>armature queue schedule</code> turn saved chat session metadata into concrete continuation commands, while unsupported non-chat replay stays explicit instead of pretending to resume arbitrary runs.</li>
+<li>If <code>serve</code> binds to a non-loopback host, <code>ARMATURE_SERVE_TOKEN</code> is now required and HTTP requests must present a bearer token.</li>
+</ol>
+<h3>1i. Stats Dashboard Flow</h3>
+<ol>
+<li>User invokes <code>armature stats</code>.</li>
+<li><code>src/commands/stats.ts</code> reads usage history from SQLite.</li>
+<li>The command merges in runtime health from <code>doctor</code> and recent errors from the local logger.</li>
+<li>The user sees both cost metrics and operational state in a single output.</li>
+</ol>
+<h3>1j. Runtime Log Flow</h3>
+<ol>
+<li>Runtime warnings/errors and selected info events are persisted via <code>src/logger.ts</code>.</li>
+<li>Files are written to <code>~/.armature/logs/</code> (or <code>$ARMATURE_HOME/logs/</code>).</li>
+<li><code>armature logs</code> and <code>armature logs errors</code> surface recent entries without requiring direct file inspection.</li>
+</ol>
+<h3>2. Task Execution Flow</h3>
+<ol>
+<li>User invokes <code>armature run &quot;task&quot;</code>.</li>
+<li><code>src/commands/run.ts</code> creates a WorkSession plus TaskRun before choosing the default, goal-loop, mission, or plan branch.</li>
+<li>Runtime resolves provider/model config and tool permissions.</li>
+<li>Completion writes TaskRun status, summary, usage, and mission-state evidence when applicable.</li>
+<li>Output streams back through <code>src/output.ts</code> and <code>src/markdown.ts</code>.</li>
+</ol>
+<h3>3. Multi-Model Collaboration Flow</h3>
+<ol>
+<li>User chooses <code>council</code>, <code>race</code>, or <code>pipeline</code>.</li>
+<li><code>src/commands/multi.ts</code> resolves provider strategy.</li>
+<li><code>src/multi-model.ts</code> coordinates parallel or staged calls.</li>
+<li>Result is rendered with verdict, winner, or stage-by-stage output.</li>
+</ol>
+<h3>4. Background Job Flow</h3>
+<ol>
+<li>The agent invokes <code>run_background</code>.</li>
+<li><code>src/background-jobs.ts</code> creates a tracked detached job and log artifact.</li>
+<li>The REPL surfaces completion notifications before the next prompt.</li>
+<li><code>/jobs</code> provides a quick state view without falling back to raw PID inspection.</li>
+</ol>
+<h3>4a. Session Portability Flow</h3>
+<ol>
+<li>User invokes <code>armature session fork</code>, <code>armature session export</code>, <code>armature session import</code>, <code>armature session markdown</code>, <code>armature session share</code>, or <code>armature session handoff</code>.</li>
+<li><code>src/commands/session.ts</code> delegates to <code>src/session-store.ts</code>.</li>
+<li>The runtime clones, serializes, or imports a saved session record without mutating the source record in place.</li>
+<li>Shared and handoff session artifacts emit both human-readable Markdown and a metadata sidecar for downstream reuse.</li>
+</ol>
+<h3>4b. Thread Portability Flow</h3>
+<ol>
+<li>User invokes <code>/thread export</code>, <code>/thread markdown</code>, <code>/thread share</code>, <code>/thread import</code>, or <code>/thread handoff</code>.</li>
+<li><code>src/commands/chat-slash-mutations.ts</code> delegates to <code>ThreadManager</code>.</li>
+<li>Armature writes/loads JSON thread artifacts and can create a handoff clone with source metadata.</li>
+<li>Share/handoff flows emit Markdown plus metadata sidecars so artifacts stay portable and auditable.</li>
+</ol>
+<h3>4b. Quality Expansion Flow</h3>
+<ol>
+<li>Maintainer measures the current suite baseline from the real repo state.</li>
+<li><code>AGENT_EVAL_PLAN.md</code> defines breadth lanes, depth lanes, gate tiers, and task / grader expectations.</li>
+<li><code>agent-eval/manifests/{fast,nightly,release}.json</code> codify the current gate bundles.</li>
+<li><code>agent-eval/scripts/run-gate.py</code> executes the selected manifest and writes transcripts, outcomes, grades, summary JSON, and summary Markdown.</li>
+<li>Fast gate protects critical-path operator surfaces with the local black-box smoke pack.</li>
+<li>Nightly gate adds deterministic repo verification (<code>lint</code>, <code>test</code>, <code>build</code>) ahead of the same black-box bundle.</li>
+<li>Release gate adds <code>bench</code> plus a recorded CLI journey artifact before a ship decision.</li>
+</ol>
+<h3>5. ink Terminal UI Interaction Model</h3>
+<p>The REPL now uses ink (React for terminals) as the rendering engine. The UI is a fullscreen alternate-screen layout:</p>
+<pre><code>┌─────────────────────────────────┐
+│  ScrollBox (content area)       │  ← scrollable: PageUp/Down, g/G, mouse wheel
+│  banner, markdown, tool calls   │  ← stickyScroll: auto-follows bottom
+│  thinking spinner, diff preview │
+├─────────────────────────────────┤
+│  CommandPicker (when / typed)   │  ← slash command autocomplete
+├─────────────────────────────────┤
+│  &gt; InputArea                    │  ← multi-line: Ctrl+J/Meta+Enter/Shift+Enter
+│    cursor, kill/yank, paste     │  ← word nav: Option+Arrow, Ctrl+W, Ctrl+K/Y
+├─────────────────────────────────┤
+│  model · mode · branch · cost   │  ← StatusBar line 1 (inverse video)
+│  ████░░░░ 12% · 3 turns · ▃▅█  │  ← StatusBar line 2 (context bar + sparkline)
+├─────────────────────────────────┤
+│  enter send · ctrl+j newline    │  ← Footer (context-aware keyboard hints)
+└─────────────────────────────────┘
+</code></pre>
+<p>The picker is a token-scoped helper, not a submit interceptor: it should appear only while the user is still typing the slash command token itself. Once the input moves into whitespace-delimited arguments, Enter must submit the full command text unchanged. Theme onboarding is also a first-launch-only flow and should be skipped whenever <code>ARMATURE_THEME</code> or <code>~/.armature/theme</code> already defines a valid preference.</p>
+<p>Key ink UI components (18 files in <code>src/ui/</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AlternateScreen</td>
+<td>Terminal alternate buffer + SIGCONT resume</td>
+</tr>
+<tr>
+<td>ScrollBox</td>
+<td>Viewport scroll with stickyScroll + PageUp/Down + g/G + mouse wheel</td>
+</tr>
+<tr>
+<td>InputArea</td>
+<td>Multi-line input with Cursor model, kill/yank, paste, history</td>
+</tr>
+<tr>
+<td>StatusBar</td>
+<td>2-line inverse status: model/cost/branch + context bar/sparkline</td>
+</tr>
+<tr>
+<td>Banner</td>
+<td>Animated armature swimming art + version info</td>
+</tr>
+<tr>
+<td>HomePanel</td>
+<td>Entry-state onboarding shell with one primary action, trust/state summary, quick paths, and failure help</td>
+</tr>
+<tr>
+<td>ThemePicker</td>
+<td>First-launch theme selection that respects persisted preference in <code>ARMATURE_THEME</code> or <code>~/.armature/theme</code></td>
+</tr>
+<tr>
+<td>OptionPicker</td>
+<td>Shared finite-choice picker for model/mode/effort and tool-side multiple-choice prompts</td>
+</tr>
+<tr>
+<td>Footer</td>
+<td>Context-aware keyboard shortcut hints</td>
+</tr>
+<tr>
+<td>ThinkingSpinner</td>
+<td>204 verbs + stalledIntensity color shift + reduced-motion</td>
+</tr>
+<tr>
+<td>ToolCallBlock</td>
+<td>Graduated error rendering (6 error types)</td>
+</tr>
+<tr>
+<td>DiffPreview</td>
+<td>Inline colored diff for file modifications</td>
+</tr>
+<tr>
+<td>MarkdownText</td>
+<td>highlight.js ANSI syntax highlighting</td>
+</tr>
+<tr>
+<td>FileLink</td>
+<td>OSC 8 clickable file paths</td>
+</tr>
+<tr>
+<td>PermissionPrompt</td>
+<td>Tool permission allow/deny dialog</td>
+</tr>
+<tr>
+<td>CommandPicker</td>
+<td>Slash command autocomplete overlay that only owns the command token, never argument-entry submission, now including <code>/reflect</code></td>
+</tr>
+<tr>
+<td>MultiModelProgress</td>
+<td>Council/race/pipeline progress display</td>
+</tr>
+</tbody></table>
+<p>Hooks and modules:</p>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>useTerminalSize</td>
+<td>Reactive terminal dimensions via SIGWINCH</td>
+</tr>
+<tr>
+<td>useMouseWheel</td>
+<td>SGR mouse protocol for wheel scrolling</td>
+</tr>
+<tr>
+<td>usePasteHandler</td>
+<td>Bracketed paste mode detection</td>
+</tr>
+<tr>
+<td>cursor.ts</td>
+<td>Pure-function text editing model (word boundary, kill/yank)</td>
+</tr>
+<tr>
+<td>theme.tsx</td>
+<td>25 semantic color tokens + dark/light auto-detection</td>
+</tr>
+<tr>
+<td>session.ts</td>
+<td>ChatSessionEmitter: typed event bridge between business logic and UI</td>
+</tr>
+</tbody></table>
+<h2>UX Constraints</h2>
+<ul>
+<li>No browser dependency for core workflows</li>
+<li>Provider configuration must stay legible from CLI affordances</li>
+<li>Multi-model output must remain understandable in a terminal session</li>
+<li>Safe mode vs YOLO mode must remain obvious when dangerous actions exist</li>
+<li>Reflect mode must stay explicit and visible when it is force-enabled, and noticeable when auto-triggered</li>
+<li>Detached work must stay observable without forcing manual shell polling</li>
+<li>Model switching should expose enough metadata to prevent obviously bad runtime choices</li>
+<li>Runtime diagnostics should stay available even after the terminal session ends</li>
+<li>The runtime should provide one explicit health-check surface before users fall back to manual file inspection</li>
+</ul>
+<h2>Page / Route Equivalents</h2>
+<table>
+<thead>
+<tr>
+<th>Equivalent Surface</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Web pages</td>
+<td><code>N/A</code></td>
+</tr>
+<tr>
+<td>Primary navigation</td>
+<td>top-level commands in <code>src/program.ts</code></td>
+</tr>
+<tr>
+<td>Secondary navigation</td>
+<td>slash commands and options inside REPL / command modules, including <code>/jobs</code> for detached work</td>
+</tr>
+<tr>
+<td>API surface</td>
+<td>headless serve mode from <code>src/commands/serve.ts</code></td>
+</tr>
+<tr>
+<td>Maintainer quality gates</td>
+<td><code>npm run eval:fast</code>, <code>npm run eval:nightly</code>, <code>npm run eval:release</code></td>
+</tr>
+</tbody></table>
+<h2>REPL Screenshot Journey (2026-04-20)</h2>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>User Action</th>
+<th>System Response</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SS-1</td>
+<td>User starts <code>armature chat</code> in REPL mode</td>
+<td>Armature opens the normal interactive session</td>
+<td>CLI REPL</td>
+</tr>
+<tr>
+<td>SS-2</td>
+<td>User enters one or more local image paths in the prompt text</td>
+<td>Armature detects the image files, including quoted paths and shell-escaped spaces</td>
+<td>prompt assembly in <code>chat-input.ts</code></td>
+</tr>
+<tr>
+<td>SS-3</td>
+<td>User includes text plus two or more screenshots</td>
+<td>Armature sends a single multimodal turn with all images attached</td>
+<td>proxy-path multimodal request</td>
+</tr>
+<tr>
+<td>SS-4</td>
+<td>User asks a follow-up question about the same screenshots</td>
+<td>Armature retains the multimodal user turn in history on the proxy path</td>
+<td>preserved proxy history</td>
+</tr>
+<tr>
+<td>SS-5</td>
+<td>User tries direct clipboard bitmap paste</td>
+<td>Not supported yet; user must reference local image files</td>
+<td>documented limitation</td>
+</tr>
+</tbody></table>
+<h2>Chat TaskRun Journey (2026-04-29)</h2>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>User Action</th>
+<th>System Response</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CT-1</td>
+<td>User starts <code>armature chat</code> in REPL mode</td>
+<td>Armature creates a durable chat <code>WorkSession</code> with current provider/model/mode metadata</td>
+<td><code>src/commands/chat.ts</code></td>
+</tr>
+<tr>
+<td>CT-2</td>
+<td>User submits a normal prompt</td>
+<td>Armature creates a <code>kind: &quot;chat&quot;</code> <code>TaskRun</code> titled from the prompt</td>
+<td><code>src/work-session-store.ts</code></td>
+</tr>
+<tr>
+<td>CT-3</td>
+<td>Provider turn completes, fails, or aborts</td>
+<td>Armature finishes the <code>TaskRun</code> with status, token usage, cost, duration, and runtime observation evidence</td>
+<td><code>src/commands/chat-repl-turn.ts</code></td>
+</tr>
+<tr>
+<td>CT-4</td>
+<td>Operator inspects queue state later</td>
+<td>The chat turn is visible through the same queue/work-session store used by <code>run</code> and <code>serve /chat</code></td>
+<td><code>tests/work-session-store.test.ts</code></td>
+</tr>
+</tbody></table>
+<h2>REPL History And Local Document Journey (2026-05-03)</h2>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>User Action</th>
+<th>System Response</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>HD-1</td>
+<td>User reads a long Armature response while the prompt input is focused</td>
+<td>PageUp/PageDown and shifted arrow history scrolling remain available</td>
+<td><code>getHistoryScrollActivationState()</code> in <code>src/ui/components/App.tsx</code></td>
+</tr>
+<tr>
+<td>HD-2</td>
+<td>User types ordinary text such as <code>g</code> or <code>G</code> into the prompt</td>
+<td>Text-key scroll shortcuts remain disabled while input is focused</td>
+<td><code>ScrollBox.vimKeysActive</code></td>
+</tr>
+<tr>
+<td>HD-3</td>
+<td>User asks Armature to generate/save a Markdown file at a local path</td>
+<td>If the model returns generated Markdown body content, runtime writes it with <code>write_file</code></td>
+<td><code>buildPostModelRequiredFileWritePlan()</code></td>
+</tr>
+<tr>
+<td>HD-4</td>
+<td>Model refuses or omits required file-tool evidence</td>
+<td>Armature emits a local-file enforcement notice and does not treat the request as completed</td>
+<td><code>buildLocalFileEnforcementNotice()</code></td>
+</tr>
+</tbody></table>
+<!-- generated-by: html-style-router; route=html-document-style; update=2026-05-29 review-ledger -->
+<h2>2026-05-29 体验增量 - 多模型 Review Ledger</h2>
+<table>
+<thead><tr><th>步骤</th><th>用户动作</th><th>系统响应</th><th>证据</th></tr></thead>
+<tbody>
+<tr><td>RL-1</td><td>用户运行 <code>armature review-ledger --pr &lt;number&gt; --models &lt;csv&gt;</code></td><td>Armature 读取 PR 元数据和 diff，生成统一 review packet</td><td><code>src/commands/review-ledger.ts</code></td></tr>
+<tr><td>RL-2</td><td>用户选择多个模型参与审查</td><td>Armature 对每个模型发起独立 first-pass review，避免互相污染</td><td><code>buildIndependentReviewPrompt()</code></td></tr>
+<tr><td>RL-3</td><td>用户查看 synthesis ledger</td><td>Armature 按 Critical / High / Medium 汇总共性问题，并显示 agreement count</td><td><code>buildSynthesisPrompt()</code></td></tr>
+<tr><td>RL-4</td><td>用户勾选 accepted / rejected / deferred</td><td>Fix agent 只能处理 accepted 项，所有决策留在 <code>05_human_decisions.md</code></td><td>ledger artifact contract</td></tr>
+<tr><td>RL-5</td><td>修复后进入复审和回归</td><td>Armature 账本保留 fix log、review verdict、E2E evidence 三段证据</td><td><code>06_fix_log.md</code> 到 <code>08_e2e_evidence.md</code></td></tr>
+</tbody>
+</table>
+</article></main></body></html>

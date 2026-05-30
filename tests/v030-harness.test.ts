@@ -33,22 +33,22 @@ describe('version consistency', () => {
     expect(program.version()).toBe(pkg.version)
   })
 
-  it('16.3 package name is orca-cli', () => {
+  it('16.3 package name is armature-cli', () => {
     const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'))
-    expect(pkg.name).toBe('orca-cli')
+    expect(pkg.name).toBe('armature-cli')
   })
 
-  it('16.4 binary entry point is orca', () => {
+  it('16.4 binary entry point is armature', () => {
     const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'))
-    expect(pkg.bin).toHaveProperty('orca')
-    expect(pkg.bin.orca).toContain('orca.js')
+    expect(pkg.bin).toHaveProperty('armature')
+    expect(pkg.bin.armature).toContain('armature.js')
   })
 })
 
 // ── 2. Shell Injection Protection ───────────────────────────────
 
 describe('shell injection protection via tool execution', () => {
-  const shellDir = join(tmpdir(), `orca-shell-${Date.now()}`)
+  const shellDir = join(tmpdir(), `armature-shell-${Date.now()}`)
 
   beforeAll(() => {
     mkdirSync(join(shellDir, 'src'), { recursive: true })
@@ -99,19 +99,19 @@ describe('shell injection protection via tool execution', () => {
 // ── 3. Tool Argument Coercion (Extended) ────────────────────────
 
 describe('tool argument coercion extended', () => {
-  const coerceDir = join(tmpdir(), `orca-coerce-${Date.now()}`)
-  const origOrcaHome = process.env.ORCA_HOME
+  const coerceDir = join(tmpdir(), `armature-coerce-${Date.now()}`)
+  const origArmatureHome = process.env.ARMATURE_HOME
 
   beforeAll(() => {
     mkdirSync(join(coerceDir, 'src'), { recursive: true })
     writeFileSync(join(coerceDir, 'src', 'example.ts'), 'line1\nline2\nline3\nline4\nline5\n')
-    // Isolate background jobs to temp dir so tests don't pollute ~/.orca/
-    process.env.ORCA_HOME = join(coerceDir, '.orca-test')
+    // Isolate background jobs to temp dir so tests don't pollute ~/.armature/
+    process.env.ARMATURE_HOME = join(coerceDir, '.armature-test')
   })
 
   afterAll(() => {
-    process.env.ORCA_HOME = origOrcaHome || ''
-    if (!origOrcaHome) delete process.env.ORCA_HOME
+    process.env.ARMATURE_HOME = origArmatureHome || ''
+    if (!origArmatureHome) delete process.env.ARMATURE_HOME
     try { rmSync(coerceDir, { recursive: true, force: true }) } catch { /* */ }
   })
 
@@ -171,13 +171,13 @@ describe('hook banner consistency', () => {
 
   it('16.13 HookManager.totalHooks counts actual handlers, not event types', () => {
     const manager = new HookManager({ trustProjectHooks: true })
-    const hookDir = join(tmpdir(), `orca-hookcount-${Date.now()}`)
-    const fakeHome = join(tmpdir(), `orca-hookcount-home-${Date.now()}`)
-    mkdirSync(join(hookDir, '.orca'), { recursive: true })
+    const hookDir = join(tmpdir(), `armature-hookcount-${Date.now()}`)
+    const fakeHome = join(tmpdir(), `armature-hookcount-home-${Date.now()}`)
+    mkdirSync(join(hookDir, '.armature'), { recursive: true })
     mkdirSync(fakeHome, { recursive: true })
     process.env.HOME = fakeHome
 
-    writeFileSync(join(hookDir, '.orca', 'hooks.json'), JSON.stringify({
+    writeFileSync(join(hookDir, '.armature', 'hooks.json'), JSON.stringify({
       PreToolUse: [
         { command: 'echo pre1' },
         { command: 'echo pre2' },
@@ -201,13 +201,13 @@ describe('hook banner consistency', () => {
 
   it('16.14 printStatus does not output total when called', () => {
     const manager = new HookManager({ trustProjectHooks: true })
-    const hookDir = join(tmpdir(), `orca-hookstatus-${Date.now()}`)
-    const fakeHome = join(tmpdir(), `orca-hookstatus-home-${Date.now()}`)
-    mkdirSync(join(hookDir, '.orca'), { recursive: true })
+    const hookDir = join(tmpdir(), `armature-hookstatus-${Date.now()}`)
+    const fakeHome = join(tmpdir(), `armature-hookstatus-home-${Date.now()}`)
+    mkdirSync(join(hookDir, '.armature'), { recursive: true })
     mkdirSync(fakeHome, { recursive: true })
     process.env.HOME = fakeHome
 
-    writeFileSync(join(hookDir, '.orca', 'hooks.json'), JSON.stringify({
+    writeFileSync(join(hookDir, '.armature', 'hooks.json'), JSON.stringify({
       PreToolUse: [{ command: 'echo pre' }],
       PostToolUse: [{ command: 'echo post' }],
     }))
@@ -231,8 +231,8 @@ describe('hook banner consistency', () => {
 
   it('16.15 printStatus outputs nothing when no hooks are configured', () => {
     const manager = new HookManager()
-    const hookDir = join(tmpdir(), `orca-nohook-${Date.now()}`)
-    const fakeHome = join(tmpdir(), `orca-nohook-home-${Date.now()}`)
+    const hookDir = join(tmpdir(), `armature-nohook-${Date.now()}`)
+    const fakeHome = join(tmpdir(), `armature-nohook-home-${Date.now()}`)
     mkdirSync(hookDir, { recursive: true })
     mkdirSync(fakeHome, { recursive: true })
     process.env.HOME = fakeHome
@@ -258,27 +258,27 @@ describe('doctor extended diagnostics', () => {
   let homeDir: string
   let projectDir: string
   const previousHome = process.env.HOME
-  const previousOrcaHome = process.env.ORCA_HOME
+  const previousArmatureHome = process.env.ARMATURE_HOME
 
   beforeEach(() => {
-    homeDir = join(tmpdir(), `orca-doc-ext-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    projectDir = join(tmpdir(), `orca-doc-ext-proj-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    mkdirSync(join(homeDir, '.orca', 'sessions'), { recursive: true })
-    mkdirSync(join(homeDir, '.orca', 'background-jobs'), { recursive: true })
+    homeDir = join(tmpdir(), `armature-doc-ext-home-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    projectDir = join(tmpdir(), `armature-doc-ext-proj-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    mkdirSync(join(homeDir, '.armature', 'sessions'), { recursive: true })
+    mkdirSync(join(homeDir, '.armature', 'background-jobs'), { recursive: true })
     mkdirSync(projectDir, { recursive: true })
     process.env.HOME = homeDir
-    process.env.ORCA_HOME = join(homeDir, '.orca')
+    process.env.ARMATURE_HOME = join(homeDir, '.armature')
     process.env.OPENAI_API_KEY = 'test-key'
-    process.env.ORCA_PROVIDER = 'openai'
+    process.env.ARMATURE_PROVIDER = 'openai'
   })
 
   afterEach(() => {
     if (previousHome === undefined) delete process.env.HOME
     else process.env.HOME = previousHome
-    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = previousOrcaHome
+    if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = previousArmatureHome
     delete process.env.OPENAI_API_KEY
-    delete process.env.ORCA_PROVIDER
+    delete process.env.ARMATURE_PROVIDER
     try { rmSync(homeDir, { recursive: true, force: true }) } catch { /* */ }
     try { rmSync(projectDir, { recursive: true, force: true }) } catch { /* */ }
   })
@@ -307,9 +307,9 @@ describe('doctor extended diagnostics', () => {
 // ── 6. Brand Identity ───────────────────────────────────────────
 
 describe('brand identity assertions', () => {
-  it('16.19 program name is orca', () => {
+  it('16.19 program name is armature', () => {
     const program = createProgram()
-    expect(program.name()).toBe('orca')
+    expect(program.name()).toBe('armature')
   })
 
   it('16.20 program description contains provider-neutral', () => {

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Project test bridge for AI-Fleet `ai check`.
 
-`ai check` invokes `tests/test_all.py` for project-mode repositories. Orca is a
+`ai check` invokes `tests/test_all.py` for project-mode repositories. Armature is a
 Node/TypeScript project, so this wrapper maps that contract to the real npm
 verification commands instead of maintaining a parallel Python test suite.
 """
@@ -29,7 +29,7 @@ def main() -> int:
         ["npm", "test"],
     ]
 
-    override = os.environ.get("ORCA_AI_CHECK_TEST_COMMAND")
+    override = os.environ.get("ARMATURE_AI_CHECK_TEST_COMMAND")
     if override:
         commands = [["bash", "-lc", override]]
 

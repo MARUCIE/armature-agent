@@ -19,7 +19,7 @@ import { execSync } from 'node:child_process'
 // ── Project Context Loader ──────────────────────────────────────
 
 describe('Project context: Node/TypeScript detection', () => {
-  const projDir = join(tmpdir(), `orca-ctx-node-${Date.now()}`)
+  const projDir = join(tmpdir(), `armature-ctx-node-${Date.now()}`)
 
   beforeAll(() => {
     mkdirSync(join(projDir, 'src'), { recursive: true })
@@ -34,7 +34,7 @@ describe('Project context: Node/TypeScript detection', () => {
     writeFileSync(join(projDir, 'src', 'index.ts'), 'export const app = "hello"\n')
     writeFileSync(join(projDir, 'src', 'utils.py'), 'def helper(): pass\n')
     try {
-      execSync('git init && git config user.email "orca-test@example.com" && git config user.name "Orca Test" && git add -A && git commit -m "init"', {
+      execSync('git init && git config user.email "armature-test@example.com" && git config user.name "Armature Test" && git add -A && git commit -m "init"', {
         cwd: projDir, encoding: 'utf-8', stdio: 'pipe',
       })
     } catch { /* ignore */ }
@@ -111,7 +111,7 @@ describe('Project context: Node/TypeScript detection', () => {
 // ── Smart Output Truncation ─────────────────────────────────────
 
 describe('Smart output truncation', () => {
-  const truncDir = join(tmpdir(), `orca-trunc-${Date.now()}`)
+  const truncDir = join(tmpdir(), `armature-trunc-${Date.now()}`)
 
   beforeAll(() => {
     mkdirSync(join(truncDir, 'src'), { recursive: true })
@@ -153,7 +153,7 @@ describe('Smart output truncation', () => {
 // ── Error Self-Correction Hints ─────────────────────────────────
 
 describe('Error messages include recovery hints', () => {
-  const errDir = join(tmpdir(), `orca-errhint-${Date.now()}`)
+  const errDir = join(tmpdir(), `armature-errhint-${Date.now()}`)
 
   beforeAll(() => {
     mkdirSync(errDir, { recursive: true })

@@ -67,7 +67,7 @@ afterEach(() => {
   mcpState.connect.mockReset()
   mcpState.listServers.mockReset()
   mcpState.connectedCount = 0
-  delete process.env.ORCA_HOME
+  delete process.env.ARMATURE_HOME
 })
 
 function normalizeRenderedText(text: string): string {
@@ -102,7 +102,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'set model-b',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => currentModel,
         setModel: (target) => {
@@ -121,7 +121,7 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('exports the current transcript as a Markdown artifact', () => {
-    const outDir = mkdtempSync(join(tmpdir(), 'orca-current-export-'))
+    const outDir = mkdtempSync(join(tmpdir(), 'armature-current-export-'))
     const outFile = join(outDir, 'current-session.md')
     const logs: string[] = []
     vi.spyOn(console, 'log').mockImplementation((...args) => { logs.push(args.join(' ')) })
@@ -136,7 +136,7 @@ describe('chat mutating slash helpers', () => {
           { role: 'assistant', content: 'hi there' },
         ],
         stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 5 },
-        cwd: '/tmp/orca-cli',
+        cwd: '/tmp/armature-cli',
         mc: {
           getModel: () => 'model-a',
           setModel: () => true,
@@ -172,7 +172,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history,
       stats,
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -200,7 +200,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'connect demo',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -227,7 +227,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'connect demo',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -254,7 +254,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'enable demo',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -290,7 +290,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'docs',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -320,7 +320,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -348,7 +348,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -365,7 +365,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -389,7 +389,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'set model-b',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => currentModel,
         setModel: (target) => {
@@ -433,7 +433,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'set gpt-5.4',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'gpt-5.4',
         setModel: (target) => {
@@ -457,7 +457,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'model-b',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => currentModel,
         setModel: (target) => {
@@ -481,7 +481,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'set plan',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -497,14 +497,14 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('persists permission mode through /permissions save', () => {
-    const persistPermissionMode = vi.fn(() => '/tmp/.orca.json')
+    const persistPermissionMode = vi.fn(() => '/tmp/.armature.json')
 
     const result = handleMutatingSlashCommand({
       cmd: '/permissions',
       arg: 'save auto global',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -540,7 +540,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -563,7 +563,7 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('opens the Ink permissions picker and persists the current mode', async () => {
-    const persistPermissionMode = vi.fn(() => '/tmp/.orca.json')
+    const persistPermissionMode = vi.fn(() => '/tmp/.armature.json')
     const session = new ChatSessionEmitter()
     const messages: string[] = []
 
@@ -579,7 +579,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -596,7 +596,7 @@ describe('chat mutating slash helpers', () => {
     await Promise.resolve()
     expect(persistPermissionMode).toHaveBeenCalledWith('auto', 'project')
     expect(messages).toContain('saved permissions: auto (project)')
-    expect(messages).toContain('config: /tmp/.orca.json')
+    expect(messages).toContain('config: /tmp/.armature.json')
   })
 
   it('shows permission rules through /permissions rules in Ink mode', () => {
@@ -612,7 +612,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'rules session',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -650,7 +650,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -685,7 +685,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'rules project legacy',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -713,7 +713,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'revoke session run_command::run: echo hello',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -742,7 +742,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'revoke project',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -770,7 +770,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'clear project',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -801,7 +801,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -828,7 +828,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'normalize project',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -850,7 +850,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'normalize all',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -885,7 +885,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -924,7 +924,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -955,7 +955,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'set model-b',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => legacyModel,
         setModel: (target) => {
@@ -976,7 +976,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'set model-b',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => inkModel,
         setModel: (target) => {
@@ -1014,7 +1014,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history,
       stats,
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1052,7 +1052,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [{ role: 'system', content: 'System prompt' }],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0, startTime: 1, turnTokens: [] },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1083,7 +1083,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history,
       stats,
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1105,7 +1105,7 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('falls through on /commit when git has pending changes', () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-slash-commit-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-slash-commit-'))
     execSync('git init', { cwd, stdio: 'ignore' })
     writeFileSync(join(cwd, 'README.md'), '# dirty tree\n', 'utf-8')
 
@@ -1135,7 +1135,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1153,7 +1153,7 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('clears shared undo state after a successful undo', () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-slash-undo-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-slash-undo-'))
     const file = join(cwd, 'artifact.txt')
     writeFileSync(file, 'new content', 'utf-8')
     const undo = { lastWrite: { path: file, oldContent: 'old content' } }
@@ -1207,7 +1207,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'compare the options',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1225,7 +1225,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'why is the parser dropping the last line?',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1238,15 +1238,15 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('persists the active mode when saving a session', () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-save-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-save-'))
+    process.env.ARMATURE_HOME = armatureHome
 
     const result = handleMutatingSlashCommand({
       cmd: '/save',
       arg: 'reflect-session',
       history: [{ role: 'system', content: 'You are in reflect mode.\n\nBase prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1259,16 +1259,16 @@ describe('chat mutating slash helpers', () => {
       } as never,
     })
 
-    const saved = JSON.parse(readFileSync(join(orcaHome, 'sessions', 'reflect-session.json'), 'utf-8'))
-    rmSync(orcaHome, { recursive: true, force: true })
+    const saved = JSON.parse(readFileSync(join(armatureHome, 'sessions', 'reflect-session.json'), 'utf-8'))
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     expect(saved.modeId).toBe('reflect')
   })
 
   it('rejects unsafe session names on /save', () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-save-invalid-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-save-invalid-'))
+    process.env.ARMATURE_HOME = armatureHome
     const lines: string[] = []
     vi.spyOn(console, 'log').mockImplementation((...args) => { lines.push(args.join(' ')) })
 
@@ -1277,7 +1277,7 @@ describe('chat mutating slash helpers', () => {
       arg: '../escape',
       history: [{ role: 'system', content: 'System prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1290,15 +1290,15 @@ describe('chat mutating slash helpers', () => {
       } as never,
     })
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     expect(lines.join('\n')).toContain('save failed: invalid session name')
   })
 
   it('restores the saved mode on /continue', () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-continue-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-continue-'))
+    process.env.ARMATURE_HOME = armatureHome
     writeSavedSession('reflect-auto', {
       provider: 'openai',
       model: 'model-a',
@@ -1323,7 +1323,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history,
       stats,
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1338,7 +1338,7 @@ describe('chat mutating slash helpers', () => {
       session,
     })
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     expect(switchTo).toHaveBeenCalledWith('reflect')
@@ -1352,8 +1352,8 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('drops buffered input when restoring /continue', async () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-continue-buffer-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-continue-buffer-'))
+    process.env.ARMATURE_HOME = armatureHome
     writeSavedSession('reflect-buffered-continue', {
       provider: 'openai',
       model: 'model-a',
@@ -1371,7 +1371,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0, startTime: 1, turnTokens: [] },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1385,15 +1385,15 @@ describe('chat mutating slash helpers', () => {
       session,
     })
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     await expectBufferedInputDropped(session)
   })
 
   it('restores legacy /continue sessions into default mode', () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-continue-legacy-mode-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-continue-legacy-mode-'))
+    process.env.ARMATURE_HOME = armatureHome
     writeSavedSession('legacy-session', {
       provider: 'openai',
       model: 'model-a',
@@ -1408,7 +1408,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0, startTime: 1, turnTokens: [] },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1421,15 +1421,15 @@ describe('chat mutating slash helpers', () => {
       } as never,
     })
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     expect(switchTo).toHaveBeenCalledWith('default')
   })
 
   it('does not restore a session when the saved mode is unavailable', () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-continue-missing-mode-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-continue-missing-mode-'))
+    process.env.ARMATURE_HOME = armatureHome
     writeSavedSession('missing-mode', {
       provider: 'openai',
       model: 'model-a',
@@ -1448,7 +1448,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history,
       stats,
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: vi.fn(() => true),
@@ -1461,7 +1461,7 @@ describe('chat mutating slash helpers', () => {
       } as never,
     })
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     expect(history).toEqual([{ role: 'system', content: 'Current prompt' }])
@@ -1472,8 +1472,8 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('does not mutate the current session on /continue when saved history is malformed', () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-continue-invalid-history-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-continue-invalid-history-'))
+    process.env.ARMATURE_HOME = armatureHome
     writeSavedSession('broken-history', {
       provider: 'openai',
       model: 'model-a',
@@ -1493,7 +1493,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history,
       stats,
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel,
@@ -1506,7 +1506,7 @@ describe('chat mutating slash helpers', () => {
       } as never,
     })
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     expect(history).toEqual([{ role: 'system', content: 'Current prompt' }])
@@ -1518,8 +1518,8 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('does not mutate the current session on /continue when saved history is empty', () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-continue-empty-history-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-continue-empty-history-'))
+    process.env.ARMATURE_HOME = armatureHome
     writeSavedSession('empty-history', {
       provider: 'openai',
       model: 'model-a',
@@ -1539,7 +1539,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history,
       stats,
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel,
@@ -1552,7 +1552,7 @@ describe('chat mutating slash helpers', () => {
       } as never,
     })
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     expect(history).toEqual([{ role: 'system', content: 'Current prompt' }])
@@ -1571,7 +1571,7 @@ describe('chat mutating slash helpers', () => {
       arg: '../escape',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20, startTime: 123, turnTokens: [5] },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1585,8 +1585,8 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('does not change model on /load when the saved mode is unavailable', () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-load-missing-mode-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-load-missing-mode-'))
+    process.env.ARMATURE_HOME = armatureHome
     writeSavedSession('missing-load-mode', {
       provider: 'openai',
       model: 'model-b',
@@ -1604,7 +1604,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'missing-load-mode',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20, startTime: 123, turnTokens: [5] },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel,
@@ -1617,7 +1617,7 @@ describe('chat mutating slash helpers', () => {
       } as never,
     })
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     expect(setModel).not.toHaveBeenCalled()
@@ -1625,8 +1625,8 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('calls onSessionReset when loading a saved session', () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-load-ok-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-load-ok-'))
+    process.env.ARMATURE_HOME = armatureHome
     writeSavedSession('reflect-load', {
       provider: 'openai',
       model: 'model-a',
@@ -1650,7 +1650,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'reflect-load',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20, startTime: 1, turnTokens: [5] },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1669,7 +1669,7 @@ describe('chat mutating slash helpers', () => {
       session,
     })
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     expect(switchTo).toHaveBeenCalledWith('reflect')
@@ -1681,8 +1681,8 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('opens an option picker for /load in ink mode and loads the selected session', async () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-load-picker-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-load-picker-'))
+    process.env.ARMATURE_HOME = armatureHome
     writeSavedSession('reflect-picked', {
       provider: 'openai',
       model: 'model-a',
@@ -1710,7 +1710,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20, startTime: 1, turnTokens: [5] },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1733,7 +1733,7 @@ describe('chat mutating slash helpers', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(pickerTitles).toEqual(['Load session'])
     expect(switchTo).toHaveBeenCalledWith('reflect')
@@ -1762,7 +1762,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'search auth bug',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1787,9 +1787,9 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('opens a searchable picker for /prompts find in ink mode', async () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-prompts-find-picker-'))
-    process.env.ORCA_HOME = orcaHome
-    const promptsDir = join(orcaHome, 'knowledge', 'prompts')
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-prompts-find-picker-'))
+    process.env.ARMATURE_HOME = armatureHome
+    const promptsDir = join(armatureHome, 'knowledge', 'prompts')
     mkdirSync(promptsDir, { recursive: true })
     writeFileSync(join(promptsDir, 'prompt-test.json'), JSON.stringify({
       id: 'prompt-test',
@@ -1821,7 +1821,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'find review',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1835,7 +1835,7 @@ describe('chat mutating slash helpers', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(pickerPayloads).toEqual([{ title: 'Search prompts', initialQuery: 'review', filterable: true }])
     expect(detailPanels[0]?.title).toContain('Review prompt')
@@ -1843,14 +1843,14 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('exports a thread through /thread export', () => {
-    const outFile = join(tmpdir(), `orca-thread-export-${Date.now()}.json`)
+    const outFile = join(tmpdir(), `armature-thread-export-${Date.now()}.json`)
 
     const result = handleMutatingSlashCommand({
       cmd: '/thread',
       arg: `export thread-1 ${outFile}`,
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1869,7 +1869,7 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('exports a thread as markdown through /thread markdown', () => {
-    const outFile = join(tmpdir(), `orca-thread-markdown-${Date.now()}.md`)
+    const outFile = join(tmpdir(), `armature-thread-markdown-${Date.now()}.md`)
     const exportMarkdown = vi.fn(() => true)
 
     const result = handleMutatingSlashCommand({
@@ -1877,7 +1877,7 @@ describe('chat mutating slash helpers', () => {
       arg: `markdown thread-1 ${outFile}`,
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1904,7 +1904,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'share thread-1',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1921,7 +1921,7 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('imports a thread through /thread import', () => {
-    const inFile = join(tmpdir(), `orca-thread-import-${Date.now()}.json`)
+    const inFile = join(tmpdir(), `armature-thread-import-${Date.now()}.json`)
     writeFileSync(inFile, JSON.stringify({
       id: 'thread-import',
       title: 'Imported thread',
@@ -1937,7 +1937,7 @@ describe('chat mutating slash helpers', () => {
       arg: `import ${inFile}`,
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1966,7 +1966,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'handoff thread-1',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1985,8 +1985,8 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('drops buffered input when loading a saved session', async () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-load-buffer-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-load-buffer-'))
+    process.env.ARMATURE_HOME = armatureHome
     writeSavedSession('reflect-buffered-load', {
       provider: 'openai',
       model: 'model-a',
@@ -2004,7 +2004,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'reflect-buffered-load',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0, startTime: 1, turnTokens: [] },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -2018,15 +2018,15 @@ describe('chat mutating slash helpers', () => {
       session,
     })
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     await expectBufferedInputDropped(session)
   })
 
   it('restores legacy /load sessions into default mode', () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-load-legacy-mode-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-load-legacy-mode-'))
+    process.env.ARMATURE_HOME = armatureHome
     writeSavedSession('legacy-load', {
       provider: 'openai',
       model: 'model-a',
@@ -2041,7 +2041,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'legacy-load',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20, startTime: 1, turnTokens: [5] },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -2054,15 +2054,15 @@ describe('chat mutating slash helpers', () => {
       } as never,
     })
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     expect(switchTo).toHaveBeenCalledWith('default')
   })
 
   it('does not mutate the current session on /load when saved history is malformed', () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-load-invalid-history-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-load-invalid-history-'))
+    process.env.ARMATURE_HOME = armatureHome
     writeSavedSession('broken-load', {
       provider: 'openai',
       model: 'model-a',
@@ -2083,7 +2083,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'broken-load',
       history,
       stats,
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel,
@@ -2096,7 +2096,7 @@ describe('chat mutating slash helpers', () => {
       } as never,
     })
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     expect(history).toEqual([{ role: 'system', content: 'Current prompt' }])
@@ -2108,8 +2108,8 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('does not mutate the current session on /load when the saved history starts without a system prompt', () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-load-missing-system-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-load-missing-system-'))
+    process.env.ARMATURE_HOME = armatureHome
     writeSavedSession('missing-system', {
       provider: 'openai',
       model: 'model-a',
@@ -2130,7 +2130,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'missing-system',
       history,
       stats,
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel,
@@ -2143,7 +2143,7 @@ describe('chat mutating slash helpers', () => {
       } as never,
     })
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     expect(history).toEqual([{ role: 'system', content: 'Current prompt' }])
@@ -2188,7 +2188,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'load t-1',
       history,
       stats,
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -2224,8 +2224,8 @@ describe('chat mutating slash helpers', () => {
   })
 
   it('does not change model on /continue when the saved mode is unavailable', () => {
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-continue-missing-mode-no-model-'))
-    process.env.ORCA_HOME = orcaHome
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-continue-missing-mode-no-model-'))
+    process.env.ARMATURE_HOME = armatureHome
     writeSavedSession('missing-continue-mode', {
       provider: 'openai',
       model: 'model-b',
@@ -2243,7 +2243,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20, startTime: 123, turnTokens: [5] },
-      cwd: '/tmp/orca-cli',
+      cwd: '/tmp/armature-cli',
       mc: {
         getModel: () => 'model-a',
         setModel,
@@ -2256,7 +2256,7 @@ describe('chat mutating slash helpers', () => {
       } as never,
     })
 
-    rmSync(orcaHome, { recursive: true, force: true })
+    rmSync(armatureHome, { recursive: true, force: true })
 
     expect(result).toBe('handled')
     expect(setModel).not.toHaveBeenCalled()

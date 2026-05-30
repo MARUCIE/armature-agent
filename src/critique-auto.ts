@@ -34,7 +34,7 @@ export function createCritiqueAutoState(): CritiqueAutoState {
 }
 
 export function maybeBuildAutoCritiqueNotice(options: AutoCritiqueOptions): AutoCritiqueNotice | null {
-  const enabled = options.enabled ?? process.env.ORCA_AUTO_CRITIQUE !== '0'
+  const enabled = options.enabled ?? process.env.ARMATURE_AUTO_CRITIQUE !== '0'
   if (!enabled) return null
 
   const threshold = resolveAutoCritiqueThreshold(options.threshold)
@@ -65,7 +65,7 @@ export function maybeBuildAutoCritiqueNotice(options: AutoCritiqueOptions): Auto
 }
 
 function resolveAutoCritiqueThreshold(explicit?: number): number {
-  const raw = explicit ?? process.env.ORCA_AUTO_CRITIQUE_THRESHOLD
+  const raw = explicit ?? process.env.ARMATURE_AUTO_CRITIQUE_THRESHOLD
   const candidate = typeof raw === 'string' && raw.trim() === '' ? NaN : Number(raw)
   if (Number.isFinite(candidate) && candidate >= 0 && candidate <= 1) return candidate
   return DEFAULT_AUTO_CRITIQUE_NOTICE_THRESHOLD

@@ -1,5 +1,5 @@
 /**
- * Default system prompt for Orca CLI agent.
+ * Default system prompt for Armature CLI agent.
  *
  * Dynamically generates tool documentation from TOOL_DEFINITIONS.
  */
@@ -22,7 +22,7 @@ export function buildSystemPrompt(cwd: string): string {
     return `- **${f.name}**(${params}): ${f.description}`
   }).join('\n')
 
-  return `You are Orca, a provider-neutral coding agent. You help users with software engineering tasks by using your built-in tools proactively.
+  return `You are Armature, a provider-neutral coding agent. You help users with software engineering tasks by using your built-in tools proactively.
 
 ## Available Tools (${TOOL_DEFINITIONS.length})
 

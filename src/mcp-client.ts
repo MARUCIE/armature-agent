@@ -1,7 +1,7 @@
 /**
  * MCP (Model Context Protocol) stdio client.
  *
- * Spawns child processes for MCP servers defined in .mcp.json / .orca.json,
+ * Spawns child processes for MCP servers defined in .mcp.json / .armature.json,
  * communicates via JSON-RPC 2.0 over stdin/stdout.
  *
  * Capabilities:
@@ -103,12 +103,12 @@ function discoverLoadedMcpServerConfigs(cwd: string): Map<string, LoadedMCPServe
   const home = process.env.HOME || '/tmp'
   const configs = new Map<string, LoadedMCPServerConfig>()
 
-  // Native Orca configs
+  // Native Armature configs
   const jsonSources: Array<{ path: string; scope: MCPConfigScope }> = [
     { path: join(cwd, '.mcp.json'), scope: 'project' },
-    { path: join(cwd, '.orca.json'), scope: 'project' },
-    { path: join(cwd, '.orca', 'mcp.json'), scope: 'project' },
-    { path: join(home, '.orca', 'mcp.json'), scope: 'home' },
+    { path: join(cwd, '.armature.json'), scope: 'project' },
+    { path: join(cwd, '.armature', 'mcp.json'), scope: 'project' },
+    { path: join(home, '.armature', 'mcp.json'), scope: 'home' },
   ]
 
   for (const { path: configPath, scope } of jsonSources) {
@@ -216,7 +216,7 @@ export class MCPClient {
   private disabled = new Set<string>()
 
   /** Load server configs from project/global config files.
-   *  Supports native .orca, Claude Code (.claude/settings.json), and Codex (.codex/config.toml).
+   *  Supports native .armature, Claude Code (.claude/settings.json), and Codex (.codex/config.toml).
    */
   loadConfigs(cwd: string): void {
     for (const [name, loaded] of discoverLoadedMcpServerConfigs(cwd)) {
@@ -293,7 +293,7 @@ export class MCPClient {
       const initResult = await this.request(name, 'initialize', {
         protocolVersion: '2024-11-05',
         capabilities: {},
-        clientInfo: { name: 'orca-cli', version: '0.1.0' },
+        clientInfo: { name: 'armature-cli', version: '0.1.0' },
       })
 
       if (initResult) {

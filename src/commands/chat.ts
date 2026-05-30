@@ -1,16 +1,16 @@
 /**
- * `orca chat` — Interactive or one-shot agent conversation.
+ * `armature chat` — Interactive or one-shot agent conversation.
  *
  * Usage:
- *   orca chat "your prompt"       — one-shot query with streaming output
- *   orca chat                      — interactive REPL mode with multi-turn history
- *   orca chat --json "prompt"     — NDJSON output for CI/pipelines
+ *   armature chat "your prompt"       — one-shot query with streaming output
+ *   armature chat                      — interactive REPL mode with multi-turn history
+ *   armature chat --json "prompt"     — NDJSON output for CI/pipelines
  */
 
 import { Command } from 'commander'
 import { execSync } from 'node:child_process'
 import { basename } from 'node:path'
-import type { OrcaConfig } from '../config.js'
+import type { ArmatureConfig } from '../config.js'
 import {
   clearStoredPermissionRules,
   configPermissionModeFromRepl,
@@ -66,7 +66,7 @@ import {
   type ModelChoice,
 } from '../model-catalog.js'
 import { logInfo, logWarning } from '../logger.js'
-import { ORCA_VERSION } from '../version.js'
+import { ARMATURE_VERSION } from '../version.js'
 import { ContextMonitor, LoopDetector } from '../harness/index.js'
 import { ModeRegistry } from '../modes/index.js'
 import {
@@ -161,7 +161,7 @@ export interface ResolvedChatPresetRuntimeOptions {
   initialPermissionMode?: 'yolo' | 'auto' | 'plan'
 }
 
-const RUNTIME_IDENTITY_BLOCK_HEADING = '## Orca Runtime Identity'
+const RUNTIME_IDENTITY_BLOCK_HEADING = '## Armature Runtime Identity'
 
 export function upsertRuntimeIdentityPrompt(basePrompt: string, provider: string, model: string): string {
   const trimmedBase = basePrompt.trimEnd()
@@ -271,7 +271,7 @@ export function createChatCommand(preset: ChatCommandPreset = {}): Command {
       const outputMode: OutputMode = opts.json ? 'json' : 'streaming'
       const autoCritiqueThreshold = parseAutoCritiqueThresholdOption(opts.autoCritiqueThreshold)
 
-      // Stdin pipe support: cat file | orca chat "prompt"
+      // Stdin pipe support: cat file | armature chat "prompt"
       // If stdin is piped (not TTY), read it as context
       if (!process.stdin.isTTY && prompt) {
         try {
@@ -332,7 +332,7 @@ export function createChatCommand(preset: ChatCommandPreset = {}): Command {
             hooks.load(cwd)
 
             // In ink mode, banner is rendered by the ink App component — skip legacy ANSI banner
-            const willUseInk = process.stdout.isTTY && !opts.json && !process.env.ORCA_NO_INK
+            const willUseInk = process.stdout.isTTY && !opts.json && !process.env.ARMATURE_NO_INK
             if (!willUseInk) {
               const configFiles = detectConfigFiles(cwd)
 
@@ -523,7 +523,7 @@ export async function loadOneShotMcpTools(
 export async function executeOneShot(
   prompt: PromptContent,
   resolved: ResolvedProvider,
-  config: OrcaConfig,
+  config: ArmatureConfig,
   outputMode: OutputMode,
   cwd: string,
   toolDefs: Array<Record<string, unknown>> = [],
@@ -577,7 +577,7 @@ function summarizeChatTaskPrompt(prompt: string): string {
 
 async function runREPL(
   resolved: ResolvedProvider,
-  config: OrcaConfig,
+  config: ArmatureConfig,
   outputMode: OutputMode,
   cwd: string,
   opts: {
@@ -595,10 +595,10 @@ async function runREPL(
   const { homedir: getHomedir } = await import('node:os')
 
   // Decide UI mode early — ink for TTY, legacy for pipes/JSON/env override
-  const useInk = process.stdout.isTTY && outputMode !== 'json' && !process.env.ORCA_NO_INK
+  const useInk = process.stdout.isTTY && outputMode !== 'json' && !process.env.ARMATURE_NO_INK
 
   // Enable input history (up/down arrow) with persistent file
-  const historyFile = join(getHomedir(), '.orca', 'repl_history')
+  const historyFile = join(getHomedir(), '.armature', 'repl_history')
   let savedHistory: string[] = []
   try {
     const { readFileSync, existsSync } = await import('node:fs')
@@ -708,8 +708,8 @@ async function runREPL(
 
   const modeRegistry = new ModeRegistry()
 
-  // Load custom modes from .orca/modes.json if present
-  const customModesPath = join(cwd, '.orca', 'modes.json')
+  // Load custom modes from .armature/modes.json if present
+  const customModesPath = join(cwd, '.armature', 'modes.json')
   if (existsSync(customModesPath)) {
     try {
       modeRegistry.loadFromFile(customModesPath)
@@ -835,7 +835,7 @@ async function runREPL(
     try {
       const restoredResolved = resolveProvider({
         ...config,
-        ...(restoredSelection.provider ? { defaultProvider: restoredSelection.provider as OrcaConfig['provider'] } : {}),
+        ...(restoredSelection.provider ? { defaultProvider: restoredSelection.provider as ArmatureConfig['provider'] } : {}),
         defaultModel: restoredSelection.model,
       })
       resolved.provider = restoredResolved.provider
@@ -1052,7 +1052,7 @@ async function runREPL(
     const configFiles = detectConfigFiles(cwd)
     const bannerConfigFiles = detectConfigFiles(cwd)
     inkInstance = renderInkApp(session, getStatusInfo(), {
-      version: ORCA_VERSION,
+      version: ARMATURE_VERSION,
       cwd,
       configFiles: bannerConfigFiles.length > 0 ? bannerConfigFiles : undefined,
       toolCount: TOOL_DEFINITIONS.length,
@@ -2035,7 +2035,7 @@ function handleSlashCommand(
 interface ProxyTurnOptions {
   prompt: PromptContent
   resolved: ResolvedProvider
-  config: OrcaConfig
+  config: ArmatureConfig
   outputMode: OutputMode
   history: ChatMessage[]
   cwd: string
@@ -2409,7 +2409,7 @@ export async function runProxyTurn(options: ProxyTurnOptions): Promise<{ inputTo
 interface ProxyQueryOptions {
   prompt: PromptContent
   resolved: ResolvedProvider
-  config: OrcaConfig
+  config: ArmatureConfig
   outputMode: OutputMode
   toolDefs?: Array<Record<string, unknown>>
   extraToolDefs?: Array<Record<string, unknown>>
@@ -2441,7 +2441,7 @@ async function runProxyQuery(options: ProxyQueryOptions & { cwd?: string }): Pro
 interface SDKQueryOptions {
   prompt: PromptContent
   resolved: ResolvedProvider
-  config: OrcaConfig
+  config: ArmatureConfig
   outputMode: OutputMode
   cwd: string
   history?: ChatMessage[]
@@ -2456,10 +2456,10 @@ async function runSDKQuery(options: SDKQueryOptions): Promise<{ inputTokens: num
 
   let sdk: { createAgent: (opts: Record<string, unknown>) => { query: (p: string, opts?: { abortSignal?: AbortSignal }) => AsyncIterable<unknown> } }
   try {
-    // @ts-ignore — @orca/sdk is an optional dependency for native provider path
-    sdk = await import('@orca/sdk')
+    // @ts-ignore — @armature/sdk is an optional dependency for native provider path
+    sdk = await import('@armature/sdk')
   } catch {
-    throw new Error('@orca/sdk not installed. Use --provider poe for proxy mode, or npm install @orca/sdk for native mode.')
+    throw new Error('@armature/sdk not installed. Use --provider poe for proxy mode, or npm install @armature/sdk for native mode.')
   }
 
   // Map CLI provider to SDK provider option

@@ -1,9 +1,9 @@
 {
   "id": "fast-pr-invalid-number",
   "title": "PR command rejects non-numeric PR identifiers",
-  "description": "Black-box smoke for `orca pr <number>` when the provided PR token is not a valid integer.",
-  "input": "Run `orca pr abc` and verify the CLI reports the invalid PR number and exits with status 1 before touching GitHub CLI flows.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/bin\" \"$TMP_ROOT/home\"; ln -s \"$(command -v node)\" \"$TMP_ROOT/bin/node\"; OUTPUT=$(env -i PATH=\"$TMP_ROOT/bin\" HOME=\"$TMP_ROOT/home\" node dist/bin/orca.js pr abc 2>&1; STATUS=$?; printf \"status=%s\\n%s\\n\" \"$STATUS\" \"$OUTPUT\"); printf \"%s\\n\" \"$OUTPUT\"; printf \"%s\" \"$OUTPUT\" | grep -q \"status=1\"'",
+  "description": "Black-box smoke for `armature pr <number>` when the provided PR token is not a valid integer.",
+  "input": "Run `armature pr abc` and verify the CLI reports the invalid PR number and exits with status 1 before touching GitHub CLI flows.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/bin\" \"$TMP_ROOT/home\"; ln -s \"$(command -v node)\" \"$TMP_ROOT/bin/node\"; OUTPUT=$(env -i PATH=\"$TMP_ROOT/bin\" HOME=\"$TMP_ROOT/home\" node dist/bin/armature.js pr abc 2>&1; STATUS=$?; printf \"status=%s\\n%s\\n\" \"$STATUS\" \"$OUTPUT\"); printf \"%s\\n\" \"$OUTPUT\"; printf \"%s\" \"$OUTPUT\" | grep -q \"status=1\"'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

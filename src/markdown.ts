@@ -1,5 +1,5 @@
 /**
- * Markdown rendering for Orca CLI.
+ * Markdown rendering for Armature CLI.
  *
  * Two rendering paths:
  *   1. StreamMarkdown — line-buffered streaming renderer for real-time output.

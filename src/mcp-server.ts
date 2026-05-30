@@ -1,7 +1,7 @@
 /**
  * MCP (Model Context Protocol) server — stdio transport.
  *
- * Exposes Orca's built-in tools as a JSON-RPC 2.0 server.
+ * Exposes Armature's built-in tools as a JSON-RPC 2.0 server.
  * Each stdin line is one JSON-RPC request; each stdout line is one response.
  */
 
@@ -81,7 +81,7 @@ export class MCPServer {
           id: req.id,
           result: {
             capabilities: { tools: {} },
-            serverInfo: { name: 'orca-cli', version: '0.7.1' },
+            serverInfo: { name: 'armature-cli', version: '0.7.1' },
           },
         }
 

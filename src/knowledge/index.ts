@@ -7,7 +7,7 @@
  *   3. PromptRepository — versioned prompt templates with effectiveness tracking
  *   4. LearningJournal — auto-evolution: observations → hypotheses → promoted rules
  *
- * Storage: JSON files in ~/.orca/knowledge/
+ * Storage: JSON files in ~/.armature/knowledge/
  * Integration: PostToolUse hook (postmortem auto-match) + system prompt (promoted rules)
  */
 

@@ -1,5 +1,5 @@
 /**
- * `orca council` / `orca race` / `orca pipeline`
+ * `armature council` / `armature race` / `armature pipeline`
  *
  * Multi-model collaboration commands — the feature no single-vendor CLI can have.
  *
@@ -8,20 +8,20 @@
  *   - No aggregator: each model routes to its direct provider (Anthropic/OpenAI/Google)
  *
  * Usage:
- *   orca council "should we use SQL or NoSQL?"           # 3 models + judge
- *   orca race "write a CSV parser"                       # first model wins
- *   orca pipeline "build a REST API"                     # plan→code→review
+ *   armature council "should we use SQL or NoSQL?"           # 3 models + judge
+ *   armature race "write a CSV parser"                       # first model wins
+ *   armature pipeline "build a REST API"                     # plan→code→review
  */
 
 import { Command } from 'commander'
-import { resolveConfig, resolveModelEndpoint, findAggregator, type OrcaConfig } from '../config.js'
+import { resolveConfig, resolveModelEndpoint, findAggregator, type ArmatureConfig } from '../config.js'
 import { printError } from '../output.js'
 import { runCouncil, runRace, runPipeline, pickDiverseModels } from '../multi-model.js'
 import { StreamMarkdown } from '../markdown.js'
 import type { PipelineStage } from '../multi-model.js'
 
 function describeAggregatorRoute(
-  config: OrcaConfig,
+  config: ArmatureConfig,
   aggregatorId: string | undefined,
   explicitProvider?: string,
 ): string {
@@ -32,7 +32,7 @@ function describeAggregatorRoute(
     return `via ${aggregatorId} (forced override)`
   }
 
-  const fallbackConfig: OrcaConfig = {
+  const fallbackConfig: ArmatureConfig = {
     ...config,
     providers: {
       ...config.providers,
@@ -65,9 +65,9 @@ function describeBillingPath(aggregatorId: string | undefined): string {
   }
 }
 
-function describeFallbackBillingPath(config: OrcaConfig, aggregatorId: string | undefined): string | undefined {
+function describeFallbackBillingPath(config: ArmatureConfig, aggregatorId: string | undefined): string | undefined {
   if (!aggregatorId) return undefined
-  const fallbackConfig: OrcaConfig = {
+  const fallbackConfig: ArmatureConfig = {
     ...config,
     providers: {
       ...config.providers,
@@ -117,7 +117,7 @@ export function createCouncilCommand(): Command {
         if (!testEndpoint) {
           printError(
             `Cannot route model "${models[0]}". Configure an aggregator (Poe/OpenRouter) or direct provider API keys.\n` +
-            `  orca council -p poe "..."      (aggregator)\n` +
+            `  armature council -p poe "..."      (aggregator)\n` +
             `  Set ANTHROPIC_API_KEY + OPENAI_API_KEY for direct routing`
           )
           process.exit(1)
@@ -322,15 +322,15 @@ export function createPipelineCommand(): Command {
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function buildMultiFlags(opts: { provider?: string; apiKey?: string }): Partial<OrcaConfig> {
-  const flags: Partial<OrcaConfig> = {}
-  if (opts.provider) flags.provider = opts.provider as OrcaConfig['provider']
+function buildMultiFlags(opts: { provider?: string; apiKey?: string }): Partial<ArmatureConfig> {
+  const flags: Partial<ArmatureConfig> = {}
+  if (opts.provider) flags.provider = opts.provider as ArmatureConfig['provider']
   if (opts.apiKey) flags.apiKey = opts.apiKey
   return flags
 }
 
 /** Get model list from a specific or default provider (fallback when no aggregator) */
-function getSingleProviderModels(config: OrcaConfig, overrideProviderId?: string): string[] | undefined {
+function getSingleProviderModels(config: ArmatureConfig, overrideProviderId?: string): string[] | undefined {
   if (overrideProviderId) return config.providers[overrideProviderId]?.models
   const defaultId = config.defaultProvider === 'auto' ? undefined : config.defaultProvider
   if (defaultId) return config.providers[defaultId]?.models

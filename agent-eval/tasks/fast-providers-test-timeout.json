@@ -1,8 +1,8 @@
 {
   "id": "fast-providers-test-timeout",
   "title": "Providers test surfaces request timeouts clearly",
-  "description": "Black-box smoke for `orca providers test local` against a local endpoint that accepts the connection but never returns `/models`.",
-  "input": "Start a localhost endpoint that hangs on `/v1/models`, run `orca providers test local`, and verify the CLI reports a timeout failure instead of hanging or crashing.",
+  "description": "Black-box smoke for `armature providers test local` against a local endpoint that accepts the connection but never returns `/models`.",
+  "input": "Start a localhost endpoint that hangs on `/v1/models`, run `armature providers test local`, and verify the CLI reports a timeout failure instead of hanging or crashing.",
   "command": "bash agent-eval/scripts/run-providers-test-timeout.sh",
   "artifacts": [],
   "graders": [

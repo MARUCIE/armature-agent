@@ -12,7 +12,7 @@ const COMMANDS = [
 
 const ORIGINAL_HOME = process.env.HOME
 const ORIGINAL_USERPROFILE = process.env.USERPROFILE
-const ORIGINAL_ORCA_THEME = process.env.ORCA_THEME
+const ORIGINAL_ARMATURE_THEME = process.env.ARMATURE_THEME
 
 afterEach(() => {
   if (ORIGINAL_HOME === undefined) delete process.env.HOME
@@ -21,8 +21,8 @@ afterEach(() => {
   if (ORIGINAL_USERPROFILE === undefined) delete process.env.USERPROFILE
   else process.env.USERPROFILE = ORIGINAL_USERPROFILE
 
-  if (ORIGINAL_ORCA_THEME === undefined) delete process.env.ORCA_THEME
-  else process.env.ORCA_THEME = ORIGINAL_ORCA_THEME
+  if (ORIGINAL_ARMATURE_THEME === undefined) delete process.env.ARMATURE_THEME
+  else process.env.ARMATURE_THEME = ORIGINAL_ARMATURE_THEME
 
   vi.resetModules()
 })
@@ -56,13 +56,13 @@ describe('ui utils', () => {
     expect(getCommandPickerFilter('plain text')).toBe('')
   })
 
-  it('detects persisted theme preference from ~/.orca/theme', async () => {
-    delete process.env.ORCA_THEME
-    const home = mkdtempSync(join(tmpdir(), 'orca-theme-'))
+  it('detects persisted theme preference from ~/.armature/theme', async () => {
+    delete process.env.ARMATURE_THEME
+    const home = mkdtempSync(join(tmpdir(), 'armature-theme-'))
     process.env.HOME = home
     delete process.env.USERPROFILE
-    mkdirSync(join(home, '.orca'), { recursive: true })
-    writeFileSync(join(home, '.orca', 'theme'), 'default', 'utf-8')
+    mkdirSync(join(home, '.armature'), { recursive: true })
+    writeFileSync(join(home, '.armature', 'theme'), 'default', 'utf-8')
 
     vi.resetModules()
     const { hasConfiguredThemePreference } = await import('../src/ui/theme.js')

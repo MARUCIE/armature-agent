@@ -4,7 +4,7 @@ set -euo pipefail
 REPO_ROOT="${PROJECT_DIR:-$(pwd)}"
 cd "$REPO_ROOT"
 
-DIST_ENTRY="$REPO_ROOT/dist/bin/orca.js"
+DIST_ENTRY="$REPO_ROOT/dist/bin/armature.js"
 needs_build=0
 
 if [[ ! -f "$DIST_ENTRY" ]]; then

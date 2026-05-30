@@ -1,9 +1,9 @@
 {
   "id": "fast-run-plan-no-baseurl",
   "title": "Run plan mode reports missing baseURL clearly",
-  "description": "Black-box smoke for `orca run --plan` when the selected provider has no baseURL configured.",
-  "input": "Create a custom provider config without `baseURL`, run `orca run \"say hello\" --provider dummy --plan`, and verify the CLI reports the missing baseURL requirement.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home\"; cat > \"$TMP_ROOT/.orca.json\" <<EOF\n{\n  \"providers\": {\n    \"dummy\": {\n      \"apiKey\": \"test-dummy-key\",\n      \"defaultModel\": \"dummy-model\"\n    }\n  },\n  \"defaultProvider\": \"dummy\"\n}\nEOF\nOUTPUT=$(cd \"$TMP_ROOT\" && env -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ORCA_HOME=\"$TMP_ROOT/home/.orca\" node \"$REPO_ROOT/dist/bin/orca.js\" run \"say hello\" --provider dummy --plan 2>&1; STATUS=$?; printf \"status=%s\\n%s\\n\" \"$STATUS\" \"$OUTPUT\"); printf \"%s\\n\" \"$OUTPUT\"; printf \"%s\" \"$OUTPUT\" | grep -q \"status=1\"'",
+  "description": "Black-box smoke for `armature run --plan` when the selected provider has no baseURL configured.",
+  "input": "Create a custom provider config without `baseURL`, run `armature run \"say hello\" --provider dummy --plan`, and verify the CLI reports the missing baseURL requirement.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_ROOT=$(mktemp -d); trap \"rm -rf $TMP_ROOT\" EXIT; mkdir -p \"$TMP_ROOT/home\"; cat > \"$TMP_ROOT/.armature.json\" <<EOF\n{\n  \"providers\": {\n    \"dummy\": {\n      \"apiKey\": \"test-dummy-key\",\n      \"defaultModel\": \"dummy-model\"\n    }\n  },\n  \"defaultProvider\": \"dummy\"\n}\nEOF\nOUTPUT=$(cd \"$TMP_ROOT\" && env -i PATH=\"$PATH\" HOME=\"$TMP_ROOT/home\" ARMATURE_HOME=\"$TMP_ROOT/home/.armature\" node \"$REPO_ROOT/dist/bin/armature.js\" run \"say hello\" --provider dummy --plan 2>&1; STATUS=$?; printf \"status=%s\\n%s\\n\" \"$STATUS\" \"$OUTPUT\"); printf \"%s\\n\" \"$OUTPUT\"; printf \"%s\" \"$OUTPUT\" | grep -q \"status=1\"'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

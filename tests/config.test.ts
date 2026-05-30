@@ -43,11 +43,11 @@ describe('config', () => {
   }
 
   beforeEach(() => {
-    tempDir = mkdtempSync(join(tmpdir(), 'orca-test-'))
+    tempDir = mkdtempSync(join(tmpdir(), 'armature-test-'))
   })
 
   afterEach(() => {
-    const configPath = join(tempDir, '.orca.json')
+    const configPath = join(tempDir, '.armature.json')
     if (existsSync(configPath)) {
       unlinkSync(configPath)
     }
@@ -55,8 +55,8 @@ describe('config', () => {
 
   describe('resolveConfig', () => {
     it('returns defaults when no config exists', () => {
-      const originalPermissionMode = process.env.ORCA_PERMISSION_MODE
-      delete process.env.ORCA_PERMISSION_MODE
+      const originalPermissionMode = process.env.ARMATURE_PERMISSION_MODE
+      delete process.env.ARMATURE_PERMISSION_MODE
       try {
         // Override global config defaults so the schema defaults are asserted deterministically.
         const config = resolveConfig({
@@ -67,8 +67,8 @@ describe('config', () => {
         expect(config.maxTurns).toBe(25)
         expect(config.permissionMode).toBe('default')
       } finally {
-        if (originalPermissionMode === undefined) delete process.env.ORCA_PERMISSION_MODE
-        else process.env.ORCA_PERMISSION_MODE = originalPermissionMode
+        if (originalPermissionMode === undefined) delete process.env.ARMATURE_PERMISSION_MODE
+        else process.env.ARMATURE_PERMISSION_MODE = originalPermissionMode
       }
     })
 
@@ -83,30 +83,30 @@ describe('config', () => {
       expect(config.maxTurns).toBe(10)
     })
 
-    it('reads project config from .orca.json', () => {
+    it('reads project config from .armature.json', () => {
       initProjectConfig(tempDir)
       const config = resolveConfig({ cwd: tempDir })
       expect(config.defaultProvider).toBe('auto')
     })
 
     it('env variables override project config', () => {
-      const originalKey = process.env.ORCA_PROVIDER
-      process.env.ORCA_PROVIDER = 'openai'
+      const originalKey = process.env.ARMATURE_PROVIDER
+      process.env.ARMATURE_PROVIDER = 'openai'
       try {
         const config = resolveConfig({ cwd: tempDir })
         expect(config.defaultProvider).toBe('openai')
       } finally {
         if (originalKey) {
-          process.env.ORCA_PROVIDER = originalKey
+          process.env.ARMATURE_PROVIDER = originalKey
         } else {
-          delete process.env.ORCA_PROVIDER
+          delete process.env.ARMATURE_PROVIDER
         }
       }
     })
 
     it('flags override env variables', () => {
-      const originalKey = process.env.ORCA_PROVIDER
-      process.env.ORCA_PROVIDER = 'openai'
+      const originalKey = process.env.ARMATURE_PROVIDER
+      process.env.ARMATURE_PROVIDER = 'openai'
       try {
         const config = resolveConfig({
           cwd: tempDir,
@@ -115,9 +115,9 @@ describe('config', () => {
         expect(config.defaultProvider).toBe('anthropic')
       } finally {
         if (originalKey) {
-          process.env.ORCA_PROVIDER = originalKey
+          process.env.ARMATURE_PROVIDER = originalKey
         } else {
-          delete process.env.ORCA_PROVIDER
+          delete process.env.ARMATURE_PROVIDER
         }
       }
     })
@@ -155,13 +155,13 @@ describe('config', () => {
     it('throws when no API key available', () => {
       // Clear all potential API keys (including POE)
       const saved = {
-        ORCA_API_KEY: process.env.ORCA_API_KEY,
+        ARMATURE_API_KEY: process.env.ARMATURE_API_KEY,
         POE_API_KEY: process.env.POE_API_KEY,
         ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
         OPENAI_API_KEY: process.env.OPENAI_API_KEY,
         GOOGLE_API_KEY: process.env.GOOGLE_API_KEY,
       }
-      delete process.env.ORCA_API_KEY
+      delete process.env.ARMATURE_API_KEY
       delete process.env.POE_API_KEY
       delete process.env.ANTHROPIC_API_KEY
       delete process.env.OPENAI_API_KEY
@@ -354,7 +354,7 @@ describe('config', () => {
   })
 
   describe('initProjectConfig', () => {
-    it('creates .orca.json in target directory', () => {
+    it('creates .armature.json in target directory', () => {
       const path = initProjectConfig(tempDir)
       expect(existsSync(path)).toBe(true)
     })
@@ -384,7 +384,7 @@ describe('config', () => {
 
     it('writes and reads project permission mode', () => {
       const path = setStoredPermissionMode('project', tempDir, 'plan')
-      expect(path).toContain('.orca.json')
+      expect(path).toContain('.armature.json')
       expect(readStoredPermissionMode('project', tempDir)).toBe('plan')
     })
 
@@ -461,10 +461,10 @@ describe('config', () => {
 
     it('normalizes git commit permission rules to the current repository in effective allowlists', async () => {
       const previousHome = process.env.HOME
-      const previousOrcaHome = process.env.ORCA_HOME
-      const isolatedHome = mkdtempSync(join(tmpdir(), 'orca-home-'))
+      const previousArmatureHome = process.env.ARMATURE_HOME
+      const isolatedHome = mkdtempSync(join(tmpdir(), 'armature-home-'))
       process.env.HOME = isolatedHome
-      process.env.ORCA_HOME = join(isolatedHome, '.orca')
+      process.env.ARMATURE_HOME = join(isolatedHome, '.armature')
 
       try {
         vi.resetModules()
@@ -483,8 +483,8 @@ describe('config', () => {
         vi.resetModules()
         if (previousHome === undefined) delete process.env.HOME
         else process.env.HOME = previousHome
-        if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-        else process.env.ORCA_HOME = previousOrcaHome
+        if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+        else process.env.ARMATURE_HOME = previousArmatureHome
       }
     })
 
@@ -500,10 +500,10 @@ describe('config', () => {
 
     it('does not auto-promote legacy global git commit rules into repo-scoped grants', async () => {
       const previousHome = process.env.HOME
-      const previousOrcaHome = process.env.ORCA_HOME
-      const isolatedHome = mkdtempSync(join(tmpdir(), 'orca-home-'))
+      const previousArmatureHome = process.env.ARMATURE_HOME
+      const isolatedHome = mkdtempSync(join(tmpdir(), 'armature-home-'))
       process.env.HOME = isolatedHome
-      process.env.ORCA_HOME = join(isolatedHome, '.orca')
+      process.env.ARMATURE_HOME = join(isolatedHome, '.armature')
 
       try {
         vi.resetModules()
@@ -522,8 +522,8 @@ describe('config', () => {
         vi.resetModules()
         if (previousHome === undefined) delete process.env.HOME
         else process.env.HOME = previousHome
-        if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-        else process.env.ORCA_HOME = previousOrcaHome
+        if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+        else process.env.ARMATURE_HOME = previousArmatureHome
       }
     })
 
@@ -543,11 +543,11 @@ describe('config', () => {
 
     it('merges effective project/global permission allowlists', async () => {
       const previousHome = process.env.HOME
-      const previousOrcaHome = process.env.ORCA_HOME
+      const previousArmatureHome = process.env.ARMATURE_HOME
       const isolatedHome = join(tempDir, 'home')
       mkdirSync(isolatedHome, { recursive: true })
       process.env.HOME = isolatedHome
-      process.env.ORCA_HOME = join(isolatedHome, '.orca')
+      process.env.ARMATURE_HOME = join(isolatedHome, '.armature')
 
       try {
         vi.resetModules()
@@ -565,8 +565,8 @@ describe('config', () => {
         vi.resetModules()
         if (previousHome === undefined) delete process.env.HOME
         else process.env.HOME = previousHome
-        if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-        else process.env.ORCA_HOME = previousOrcaHome
+        if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+        else process.env.ARMATURE_HOME = previousArmatureHome
       }
     })
   })

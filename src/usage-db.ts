@@ -1,8 +1,8 @@
 /**
  * Persistent usage tracking with Node.js built-in SQLite.
  *
- * Stores every API call's token/cost/duration data in ~/.orca/usage.db.
- * Used by `orca stats` and the session summary.
+ * Stores every API call's token/cost/duration data in ~/.armature/usage.db.
+ * Used by `armature stats` and the session summary.
  *
  * Zero external dependencies — uses node:sqlite (Node 22+).
  */
@@ -52,7 +52,7 @@ function ensureUsageSchema(db: DatabaseSync): void {
 
 function getDb(): DatabaseSync {
   if (!_db) {
-    const usageHome = process.env.ORCA_HOME || getGlobalDir()
+    const usageHome = process.env.ARMATURE_HOME || getGlobalDir()
     mkdirSync(usageHome, { recursive: true })
     const dbPath = join(usageHome, 'usage.db')
     _db = new DatabaseSync(dbPath)

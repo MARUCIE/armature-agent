@@ -31,7 +31,7 @@ def is_within_root(path: Path, root: Path) -> bool:
 def main() -> int:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Heuristic secret scan for Orca CLI.")
+    parser = argparse.ArgumentParser(description="Heuristic secret scan for Armature CLI.")
     parser.add_argument("--root", default=str(ROOT), help="Directory to scan (defaults to repo root)")
     args = parser.parse_args()
 

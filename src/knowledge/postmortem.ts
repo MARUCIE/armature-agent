@@ -11,12 +11,12 @@
  * When a new error occurs, the system searches existing postmortems
  * by trigger matching and injects the fix as context.
  *
- * Storage: ~/.orca/knowledge/postmortems/
+ * Storage: ~/.armature/knowledge/postmortems/
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { getOrcaHome } from '../logger.js'
+import { getArmatureHome } from '../logger.js'
 
 export interface Postmortem {
   id: string
@@ -36,7 +36,7 @@ export class PostmortemLog {
   private dir: string
 
   constructor() {
-    this.dir = join(getOrcaHome(), 'knowledge', 'postmortems')
+    this.dir = join(getArmatureHome(), 'knowledge', 'postmortems')
     mkdirSync(this.dir, { recursive: true })
   }
 

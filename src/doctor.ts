@@ -1,5 +1,5 @@
 /**
- * Orca doctor diagnostics.
+ * Armature doctor diagnostics.
  *
  * Hermes-inspired local diagnostics:
  * - config + provider readiness
@@ -14,7 +14,7 @@ import { join, resolve } from 'node:path'
 import { HookManager } from './hooks.js'
 import { MCPClient } from './mcp-client.js'
 import { loadProjectContext } from './context.js'
-import { getOrcaHome, getLogPath } from './logger.js'
+import { getArmatureHome, getLogPath } from './logger.js'
 import { listBackgroundJobs } from './background-jobs.js'
 import { getGlobalConfigPath, listProviders, resolveConfig, resolveProvider } from './config.js'
 import { gatherConfigDiagnostics, type ConfigDiagnostic } from './config-diagnostics.js'
@@ -73,8 +73,8 @@ export function gatherDoctorReport(cwdInput: string): DoctorReport {
   const mcpClient = new MCPClient()
   mcpClient.loadConfigs(cwd)
 
-  const orcaHome = getOrcaHome()
-  const sessionsDir = join(orcaHome, 'sessions')
+  const armatureHome = getArmatureHome()
+  const sessionsDir = join(armatureHome, 'sessions')
   const backgroundJobs = listBackgroundJobs(200)
   const configDiagnostics = gatherConfigDiagnostics(cwd)
 
@@ -155,8 +155,8 @@ export function gatherDoctorReport(cwdInput: string): DoctorReport {
     },
     configPaths: {
       global: getGlobalConfigPath(),
-      project: join(cwd, '.orca.json'),
-      projectExists: existsSync(join(cwd, '.orca.json')),
+      project: join(cwd, '.armature.json'),
+      projectExists: existsSync(join(cwd, '.armature.json')),
     },
     configDiagnostics,
     git: {

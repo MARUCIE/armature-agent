@@ -4,12 +4,12 @@
  * Stores reusable prompt patterns that have proven effective.
  * Tracks usage count and success rate for prompt evolution.
  *
- * Storage: ~/.orca/knowledge/prompts/
+ * Storage: ~/.armature/knowledge/prompts/
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { getOrcaHome } from '../logger.js'
+import { getArmatureHome } from '../logger.js'
 
 export interface PromptTemplate {
   id: string
@@ -27,7 +27,7 @@ export class PromptRepository {
   private dir: string
 
   constructor() {
-    this.dir = join(getOrcaHome(), 'knowledge', 'prompts')
+    this.dir = join(getArmatureHome(), 'knowledge', 'prompts')
     mkdirSync(this.dir, { recursive: true })
   }
 

@@ -22,7 +22,7 @@ describe('ThreadManager: conversation persistence', () => {
 
   beforeAll(() => {
     // Point HOME to temp dir so ThreadManager writes there
-    const tmpHome = join(tmpdir(), `orca-thread-test-${Date.now()}`)
+    const tmpHome = join(tmpdir(), `armature-thread-test-${Date.now()}`)
     mkdirSync(tmpHome, { recursive: true })
     process.env.HOME = tmpHome
     manager = new ThreadManager()
@@ -177,7 +177,7 @@ describe('ThreadManager: conversation persistence', () => {
 import { buildSystemPrompt } from '../src/system-prompt.js'
 
 describe('buildSystemPrompt: guidance injection', () => {
-  const testDir = join(tmpdir(), `orca-guidance-prompt-${Date.now()}`)
+  const testDir = join(tmpdir(), `armature-guidance-prompt-${Date.now()}`)
 
   beforeAll(() => {
     mkdirSync(testDir, { recursive: true })
@@ -202,16 +202,16 @@ describe('buildSystemPrompt: guidance injection', () => {
   })
 
   it('27.3 system prompt works without any guidance files', () => {
-    const emptyDir = join(tmpdir(), `orca-no-guidance-${Date.now()}`)
+    const emptyDir = join(tmpdir(), `armature-no-guidance-${Date.now()}`)
     mkdirSync(emptyDir, { recursive: true })
     const prompt = buildSystemPrompt(emptyDir)
-    expect(prompt).toContain('Orca')
+    expect(prompt).toContain('Armature')
     expect(prompt).toContain('Available Tools')
     rmSync(emptyDir, { recursive: true, force: true })
   })
 
-  it('27.4 includes .orca/rules when present', () => {
-    const rulesDir = join(testDir, '.orca', 'rules')
+  it('27.4 includes .armature/rules when present', () => {
+    const rulesDir = join(testDir, '.armature', 'rules')
     mkdirSync(rulesDir, { recursive: true })
     writeFileSync(join(rulesDir, '01-safety.md'), '# Safety\nNo force push.')
     const prompt = buildSystemPrompt(testDir)

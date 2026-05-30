@@ -12,7 +12,7 @@ vi.mock('../src/agent/sub-agent.js', () => ({
   DELEGATE_TOOLS: ['read_file', 'write_file', 'run_command'],
 }))
 
-import { OrcaWorkflowAgentRunner, buildSchemaContract, parseSchemaResult } from '../src/workflow/runner.js'
+import { ArmatureWorkflowAgentRunner, buildSchemaContract, parseSchemaResult } from '../src/workflow/runner.js'
 
 const parent = { model: 'parent-model', apiKey: 'k', baseURL: 'https://x.invalid/v1' }
 
@@ -29,15 +29,15 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('OrcaWorkflowAgentRunner — dispatch', () => {
+describe('ArmatureWorkflowAgentRunner — dispatch', () => {
   it('returns sub-agent text when no schema is set', async () => {
-    const runner = new OrcaWorkflowAgentRunner({ cwd: '/tmp', parent })
+    const runner = new ArmatureWorkflowAgentRunner({ cwd: '/tmp', parent })
     const out = await runner.run({ prompt: 'do it', label: 'a' })
     expect(out).toBe('hello world')
   })
 
   it('passes the parent model/apiKey/baseURL as the spawn context', async () => {
-    const runner = new OrcaWorkflowAgentRunner({ cwd: '/tmp', parent })
+    const runner = new ArmatureWorkflowAgentRunner({ cwd: '/tmp', parent })
     await runner.run({ prompt: 'p', label: 'a' })
     expect(mockState.spawnSubAgent).toHaveBeenCalledWith(
       expect.objectContaining({ task: 'p', cwd: '/tmp' }),
@@ -46,7 +46,7 @@ describe('OrcaWorkflowAgentRunner — dispatch', () => {
   })
 
   it('selects READ_ONLY_TOOLS for explore agents and DELEGATE_TOOLS otherwise', async () => {
-    const runner = new OrcaWorkflowAgentRunner({ cwd: '/tmp', parent })
+    const runner = new ArmatureWorkflowAgentRunner({ cwd: '/tmp', parent })
     await runner.run({ prompt: 'p', label: 'a', agentType: 'explore' })
     expect(mockState.spawnSubAgent.mock.calls[0][0].tools).toEqual(['read_file', 'search_files'])
 
@@ -55,14 +55,14 @@ describe('OrcaWorkflowAgentRunner — dispatch', () => {
   })
 
   it('forwards a per-agent model override', async () => {
-    const runner = new OrcaWorkflowAgentRunner({ cwd: '/tmp', parent })
+    const runner = new ArmatureWorkflowAgentRunner({ cwd: '/tmp', parent })
     await runner.run({ prompt: 'p', label: 'a', model: 'override-model' })
     expect(mockState.spawnSubAgent.mock.calls[0][0].model).toBe('override-model')
   })
 
   it('appends a JSON schema contract to the prompt when schema is set', async () => {
     mockState.spawnSubAgent.mockResolvedValue(okResult('```json\n{ "ok": true }\n```'))
-    const runner = new OrcaWorkflowAgentRunner({ cwd: '/tmp', parent })
+    const runner = new ArmatureWorkflowAgentRunner({ cwd: '/tmp', parent })
     const out = await runner.run({ prompt: 'find things', label: 'a', schema: { required: ['ok'] } })
     const task = mockState.spawnSubAgent.mock.calls[0][0].task as string
     expect(task).toContain('find things')
@@ -72,20 +72,20 @@ describe('OrcaWorkflowAgentRunner — dispatch', () => {
 
   it('throws when the sub-agent reports failure (so the engine nulls the result)', async () => {
     mockState.spawnSubAgent.mockResolvedValue({ success: false, output: 'kaboom', tokensUsed: 0, duration: 1 })
-    const runner = new OrcaWorkflowAgentRunner({ cwd: '/tmp', parent })
+    const runner = new ArmatureWorkflowAgentRunner({ cwd: '/tmp', parent })
     await expect(runner.run({ prompt: 'p', label: 'a' })).rejects.toThrow(/kaboom/)
   })
 
   it('throws when schema is set but the sub-agent returns no parseable JSON', async () => {
     mockState.spawnSubAgent.mockResolvedValue(okResult('no json here, sorry'))
-    const runner = new OrcaWorkflowAgentRunner({ cwd: '/tmp', parent })
+    const runner = new ArmatureWorkflowAgentRunner({ cwd: '/tmp', parent })
     await expect(runner.run({ prompt: 'p', label: 'a', schema: { required: ['ok'] } })).rejects.toThrow()
   })
 })
 
-describe('OrcaWorkflowAgentRunner — worktree isolation (real git)', () => {
+describe('ArmatureWorkflowAgentRunner — worktree isolation (real git)', () => {
   function initRepo(): string {
-    const dir = mkdtempSync(join(tmpdir(), 'orca-wf-worktree-'))
+    const dir = mkdtempSync(join(tmpdir(), 'armature-wf-worktree-'))
     execFileSync('git', ['init'], { cwd: dir, stdio: 'ignore' })
     execFileSync('git', ['config', 'user.name', 'Test'], { cwd: dir, stdio: 'ignore' })
     execFileSync('git', ['config', 'user.email', 't@e.invalid'], { cwd: dir, stdio: 'ignore' })
@@ -103,10 +103,10 @@ describe('OrcaWorkflowAgentRunner — worktree isolation (real git)', () => {
       ranIn = config.cwd
       return Promise.resolve(okResult('done'))
     })
-    const runner = new OrcaWorkflowAgentRunner({ cwd: dir, parent })
+    const runner = new ArmatureWorkflowAgentRunner({ cwd: dir, parent })
     await runner.run({ prompt: 'p', label: 'wt', isolation: 'worktree' })
 
-    expect(ranIn).toContain('.orca-worktrees')
+    expect(ranIn).toContain('.armature-worktrees')
     expect(ranIn).not.toBe(dir)
     // Clean worktree → removed.
     expect(existsSync(ranIn)).toBe(false)
@@ -118,20 +118,20 @@ describe('OrcaWorkflowAgentRunner — worktree isolation (real git)', () => {
       writeFileSync(join(config.cwd, 'changed.txt'), 'mutation\n')
       return Promise.resolve(okResult('did work'))
     })
-    const runner = new OrcaWorkflowAgentRunner({ cwd: dir, parent })
+    const runner = new ArmatureWorkflowAgentRunner({ cwd: dir, parent })
     const out = await runner.run({ prompt: 'p', label: 'wt', isolation: 'worktree' })
     expect(String(out)).toContain('did work')
     expect(String(out)).toContain('[worktree] branch=')
   })
 
   it('falls back to the base cwd when isolation is requested outside a git repo', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'orca-wf-nogit-'))
+    const dir = mkdtempSync(join(tmpdir(), 'armature-wf-nogit-'))
     let ranIn = ''
     mockState.spawnSubAgent.mockImplementation((config: { cwd: string }) => {
       ranIn = config.cwd
       return Promise.resolve(okResult('done'))
     })
-    const runner = new OrcaWorkflowAgentRunner({ cwd: dir, parent })
+    const runner = new ArmatureWorkflowAgentRunner({ cwd: dir, parent })
     await runner.run({ prompt: 'p', label: 'wt', isolation: 'worktree' })
     expect(ranIn).toBe(dir)
   })

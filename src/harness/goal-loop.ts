@@ -7,7 +7,7 @@
  *   3. Loop detector triggers escalation (stuck)
  *
  * Integration:
- *   - `orca run --done-when "tests pass"` activates goal-loop mode
+ *   - `armature run --done-when "tests pass"` activates goal-loop mode
  *   - Uses LoopDetector for stuck detection
  *   - Uses ContextMonitor for context health
  */

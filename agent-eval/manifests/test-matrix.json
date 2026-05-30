@@ -1,6 +1,6 @@
 {
   "id": "test-matrix",
-  "title": "Orca CLI layered test matrix",
+  "title": "Armature CLI layered test matrix",
   "layers": [
     {
       "id": "static",
@@ -109,7 +109,7 @@
       "label": "Performance",
       "steps": [
         { "argv": ["npm", "run", "build"] },
-        { "argv": ["node", "dist/bin/orca.js", "bench", "--json"] },
+        { "argv": ["node", "dist/bin/armature.js", "bench", "--json"] },
         { "argv": ["node", "--experimental-vm-modules", "node_modules/.bin/vitest", "run", "tests/bench.test.ts"] }
       ],
       "threshold": "bench score=100 and 0 failed tests",

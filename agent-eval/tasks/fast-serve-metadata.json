@@ -1,9 +1,9 @@
 {
   "id": "fast-serve-metadata",
   "title": "Serve exposes doctor and providers metadata endpoints",
-  "description": "Black-box smoke for `orca serve` that fetches both `/doctor` and `/providers` from a temporary isolated runtime home.",
-  "input": "Start `orca serve`, fetch `/doctor` and `/providers`, and verify the server still exposes the same project/provider metadata as the CLI diagnostics surfaces.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); PORT=$(node -e '\"'\"'const net=require(\"node:net\"); const s=net.createServer(); s.listen(0,\"127.0.0.1\",()=>{console.log(s.address().port); s.close();});'\"'\"'); env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ORCA_HOME=\"$TMP_HOME/.orca\" ORCA_PROVIDER=openai OPENAI_API_KEY=test-openai-key node dist/bin/orca.js serve --port \"$PORT\" > \"$TMP_HOME/serve.out\" 2>&1 & SERVER_PID=$!; trap \"kill $SERVER_PID 2>/dev/null\" EXIT; bash agent-eval/scripts/wait-for-http.sh \"http://127.0.0.1:$PORT/providers\" \"^(200)$\" 50 0.1; echo \"--- providers ---\"; curl -sf \"http://127.0.0.1:$PORT/providers\"; echo; echo \"--- doctor ---\"; curl -sf \"http://127.0.0.1:$PORT/doctor\"'",
+  "description": "Black-box smoke for `armature serve` that fetches both `/doctor` and `/providers` from a temporary isolated runtime home.",
+  "input": "Start `armature serve`, fetch `/doctor` and `/providers`, and verify the server still exposes the same project/provider metadata as the CLI diagnostics surfaces.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); PORT=$(node -e '\"'\"'const net=require(\"node:net\"); const s=net.createServer(); s.listen(0,\"127.0.0.1\",()=>{console.log(s.address().port); s.close();});'\"'\"'); env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ARMATURE_HOME=\"$TMP_HOME/.armature\" ARMATURE_PROVIDER=openai OPENAI_API_KEY=test-openai-key node dist/bin/armature.js serve --port \"$PORT\" > \"$TMP_HOME/serve.out\" 2>&1 & SERVER_PID=$!; trap \"kill $SERVER_PID 2>/dev/null\" EXIT; bash agent-eval/scripts/wait-for-http.sh \"http://127.0.0.1:$PORT/providers\" \"^(200)$\" 50 0.1; echo \"--- providers ---\"; curl -sf \"http://127.0.0.1:$PORT/providers\"; echo; echo \"--- doctor ---\"; curl -sf \"http://127.0.0.1:$PORT/doctor\"'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

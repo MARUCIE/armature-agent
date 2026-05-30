@@ -42,7 +42,7 @@ const baseOptions = {
     baseURL: 'https://example.invalid/v1',
   },
   history: [
-    { role: 'system', content: 'You are Orca.' },
+    { role: 'system', content: 'You are Armature.' },
     { role: 'user', content: 'hello' },
     { role: 'assistant', content: 'hi' },
   ],
@@ -52,12 +52,12 @@ const baseOptions = {
     totalOutputTokens: 450,
     startTime: Date.now() - 60_000,
   },
-  cwd: '/tmp/orca-cli',
+  cwd: '/tmp/armature-cli',
   mc: modelControl,
 }
 
 function createDiffRepo(updatedContent: string): string {
-  const cwd = mkdtempSync(join(tmpdir(), 'orca-diff-'))
+  const cwd = mkdtempSync(join(tmpdir(), 'armature-diff-'))
   writeFileSync(join(cwd, 'fixture.txt'), 'before\n', 'utf-8')
   execSync('git init', { cwd, stdio: 'ignore' })
   execSync('git config user.email "test@example.com"', { cwd, stdio: 'ignore' })
@@ -183,7 +183,7 @@ describe('chat readonly slash helpers', () => {
   })
 
   it('renders memory sources through an ink detail panel', () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-memory-panel-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-memory-panel-'))
     mkdirSync(join(cwd, '.claude', 'skills', 'audit-lite'), { recursive: true })
     writeFileSync(join(cwd, 'AGENTS.md'), '# Project guidance\nKeep tests focused.\n', 'utf-8')
     writeFileSync(join(cwd, '.claude', 'skills', 'audit-lite', 'SKILL.md'), '# audit-lite\nInspect risks quickly.\n', 'utf-8')
@@ -210,9 +210,9 @@ describe('chat readonly slash helpers', () => {
   })
 
   it('renders discovered skills through an ink detail panel', () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-skills-panel-'))
-    mkdirSync(join(cwd, '.orca', 'skills', 'local-skill'), { recursive: true })
-    writeFileSync(join(cwd, '.orca', 'skills', 'local-skill', 'SKILL.md'), '# local-skill\nLocal project workflow.\n', 'utf-8')
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-skills-panel-'))
+    mkdirSync(join(cwd, '.armature', 'skills', 'local-skill'), { recursive: true })
+    writeFileSync(join(cwd, '.armature', 'skills', 'local-skill', 'SKILL.md'), '# local-skill\nLocal project workflow.\n', 'utf-8')
     const session = new ChatSessionEmitter()
     const panels: Array<{ title: string; subtitle?: string; body: string }> = []
     session.on('detail_panel', (event) => { panels.push(event.info) })
@@ -236,9 +236,9 @@ describe('chat readonly slash helpers', () => {
   })
 
   it('renders a selected skill detail from the picker command', () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-skill-detail-'))
-    mkdirSync(join(cwd, '.orca', 'skills', 'local-skill'), { recursive: true })
-    writeFileSync(join(cwd, '.orca', 'skills', 'local-skill', 'SKILL.md'), '# local-skill\nLocal project workflow.\n', 'utf-8')
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-skill-detail-'))
+    mkdirSync(join(cwd, '.armature', 'skills', 'local-skill'), { recursive: true })
+    writeFileSync(join(cwd, '.armature', 'skills', 'local-skill', 'SKILL.md'), '# local-skill\nLocal project workflow.\n', 'utf-8')
     const session = new ChatSessionEmitter()
     const panels: Array<{ title: string; subtitle?: string; body: string }> = []
     session.on('detail_panel', (event) => { panels.push(event.info) })
@@ -262,7 +262,7 @@ describe('chat readonly slash helpers', () => {
   })
 
   it('renders built-in and custom agent specs through an ink detail panel', () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-agents-panel-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-agents-panel-'))
     mkdirSync(join(cwd, '.claude', 'agents'), { recursive: true })
     writeFileSync(join(cwd, '.claude', 'agents', 'reviewer.md'), [
       '---',
@@ -294,7 +294,7 @@ describe('chat readonly slash helpers', () => {
   })
 
   it('renders a selected custom agent detail from the picker command', () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'orca-agent-detail-'))
+    const cwd = mkdtempSync(join(tmpdir(), 'armature-agent-detail-'))
     mkdirSync(join(cwd, '.claude', 'agents'), { recursive: true })
     writeFileSync(join(cwd, '.claude', 'agents', 'reviewer.md'), [
       '---',
@@ -325,12 +325,12 @@ describe('chat readonly slash helpers', () => {
   })
 
   it('opens TaskRun evidence in an ink detail panel', async () => {
-    const previousOrcaHome = process.env.ORCA_HOME
-    const orcaHome = mkdtempSync(join(tmpdir(), 'orca-slash-evidence-store-'))
-    const projectDir = mkdtempSync(join(tmpdir(), 'orca-slash-evidence-project-'))
+    const previousArmatureHome = process.env.ARMATURE_HOME
+    const armatureHome = mkdtempSync(join(tmpdir(), 'armature-slash-evidence-store-'))
+    const projectDir = mkdtempSync(join(tmpdir(), 'armature-slash-evidence-project-'))
     mkdirSync(join(projectDir, 'outputs', 'test'), { recursive: true })
     writeFileSync(join(projectDir, 'outputs', 'test', 'chat.log'), 'first\nsecond\nthird\n', 'utf-8')
-    process.env.ORCA_HOME = orcaHome
+    process.env.ARMATURE_HOME = armatureHome
 
     try {
       const {
@@ -379,9 +379,9 @@ describe('chat readonly slash helpers', () => {
       expect(panels[0]?.body).toContain('chat-log')
       expect(panels[0]?.body).toContain('third')
     } finally {
-      if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-      else process.env.ORCA_HOME = previousOrcaHome
-      rmSync(orcaHome, { recursive: true, force: true })
+      if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+      else process.env.ARMATURE_HOME = previousArmatureHome
+      rmSync(armatureHome, { recursive: true, force: true })
       rmSync(projectDir, { recursive: true, force: true })
     }
   })

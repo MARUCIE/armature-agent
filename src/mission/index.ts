@@ -14,7 +14,7 @@
  *
  * Integration:
  *   /mission in REPL — interactive planning + execution
- *   orca run --mission — headless mission execution
+ *   armature run --mission — headless mission execution
  */
 
 export { MissionController } from './controller.js'

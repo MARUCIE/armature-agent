@@ -1,8 +1,8 @@
 /**
- * Centralized runtime logging for Orca CLI.
+ * Centralized runtime logging for Armature CLI.
  *
  * Hermes-inspired behavior:
- * - structured local logs under ~/.orca/logs or $ORCA_HOME/logs
+ * - structured local logs under ~/.armature/logs or $ARMATURE_HOME/logs
  * - agent.log captures info/warn/error
  * - errors.log captures warn/error
  */
@@ -11,14 +11,14 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-export type OrcaLogLevel = 'info' | 'warn' | 'error'
+export type ArmatureLogLevel = 'info' | 'warn' | 'error'
 
-export function getOrcaHome(): string {
-  return process.env.ORCA_HOME || join(process.env.HOME || homedir(), '.orca')
+export function getArmatureHome(): string {
+  return process.env.ARMATURE_HOME || join(process.env.HOME || homedir(), '.armature')
 }
 
 export function getLogsDir(): string {
-  const dir = join(getOrcaHome(), 'logs')
+  const dir = join(getArmatureHome(), 'logs')
   mkdirSync(dir, { recursive: true })
   return dir
 }
@@ -36,7 +36,7 @@ function serializeContext(context?: Record<string, unknown>): string {
   }
 }
 
-export function writeLog(level: OrcaLogLevel, message: string, context?: Record<string, unknown>): void {
+export function writeLog(level: ArmatureLogLevel, message: string, context?: Record<string, unknown>): void {
   try {
     const line = `${new Date().toISOString()} [${level.toUpperCase()}] ${message}${serializeContext(context)}\n`
     appendFileSync(getLogPath('agent'), line, 'utf-8')

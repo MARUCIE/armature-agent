@@ -7,9 +7,9 @@ import { getWorkflowPreset } from '../src/modes/index.js'
 import { resolveWorkflowPresetRuntimeOptions } from '../src/commands/workflows.js'
 
 describe('program', () => {
-  it('creates a program with orca name', () => {
+  it('creates a program with armature name', () => {
     const program = createProgram()
-    expect(program.name()).toBe('orca')
+    expect(program.name()).toBe('armature')
   })
 
   it('has version set', () => {

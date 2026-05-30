@@ -1,10 +1,10 @@
 /**
- * `orca session` — Session management.
+ * `armature session` — Session management.
  *
  * Usage:
- *   orca session list          List saved sessions
- *   orca session show <id>     Show session details
- *   orca session delete <id>   Delete a session
+ *   armature session list          List saved sessions
+ *   armature session show <id>     Show session details
+ *   armature session delete <id>   Delete a session
  */
 
 import { Command } from 'commander'
@@ -23,7 +23,7 @@ import {
 } from '../session-store.js'
 
 /**
- * Get the most recent session for `orca -c` continuation.
+ * Get the most recent session for `armature -c` continuation.
  */
 export function getLastSession() {
   return getLatestSavedSession()
@@ -74,7 +74,7 @@ export function createSessionCommand(): Command {
     }
 
     console.log()
-    console.log(`  \x1b[90m${sessions.length} session(s) · Continue last: orca -c · Specific: orca -c <id>\x1b[0m`)
+    console.log(`  \x1b[90m${sessions.length} session(s) · Continue last: armature -c · Specific: armature -c <id>\x1b[0m`)
     console.log()
   }
 

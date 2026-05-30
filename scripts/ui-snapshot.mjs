@@ -1,7 +1,7 @@
 /**
  * ui-snapshot.mjs — headless render harness for visual verification.
  *
- * Renders the BUILT orca TUI (dist/ui) through ink-testing-library so the
+ * Renders the BUILT armature TUI (dist/ui) through ink-testing-library so the
  * captured frame is the exact output the real binary produces — not a mockup.
  * Two frames are captured: the grok-style welcome and a live conversation
  * (user block + thinking + tool block + assistant markdown). The ANSI frames
@@ -41,8 +41,8 @@ const status = {
 
 const banner = {
   version: '0.4.0',
-  cwd: '/Users/mauricewen/Projects/orca-cli',
-  configFiles: ['ORCA.md'],
+  cwd: '/Users/mauricewen/Projects/armature-cli',
+  configFiles: ['ARMATURE.md'],
   toolCount: 14,
   hookCount: 6,
   model: 'grok-code-fast-1',
@@ -66,7 +66,7 @@ const viewB = render(
   h(TerminalSizeProvider, null, h(App, { session: sessionB, initialStatus: status, banner })),
 )
 await tick(40)
-sessionB.emitUserMessage('replicate grok build ui into orca')
+sessionB.emitUserMessage('replicate grok build ui into armature')
 await tick(20)
 sessionB.emitThinkingStart()
 await tick(20)
@@ -149,7 +149,7 @@ function panel(title, frame) {
 
 const html = `<!doctype html>
 <html lang="zh"><head><meta charset="utf-8">
-<title>Orca TUI · grok 视觉语言复刻验证</title>
+<title>Armature TUI · grok 视觉语言复刻验证</title>
 <style>
   :root { --page-max: 1040px; }
   * { box-sizing: border-box; }
@@ -168,13 +168,13 @@ const html = `<!doctype html>
   footer { text-align:center; padding:48px 20px 0; color:#9B9B9D; font-size:13px; line-height:2.2; }
 </style></head>
 <body><div class="frame">
-  <h1>Orca CLI · Grok Build 视觉语言像素级复刻验证</h1>
+  <h1>Armature CLI · Grok Build 视觉语言像素级复刻验证</h1>
   <p class="sub">渲染自构建产物 dist/ui（ink-testing-library 真实渲染路径），非手绘 mockup · GrokNight 默认主题 · 24-bit truecolor</p>
   ${panel('Welcome — 极简欢迎屏（左强调线 / 小写信息行 / 无 ASCII 字标）', frameWelcome)}
   ${panel('Conversation — 用户块 / Thinking / ◆ 工具块 / 助手 Markdown', frameConversation)}
 </div>
 <footer>
-  <p>Orca CLI v0.4.0 — Grok UI Fidelity Snapshot</p>
+  <p>Armature CLI v0.4.0 — Grok UI Fidelity Snapshot</p>
   <p>Maurice | maurice_wen@proton.me</p>
   <p style="font-size:12px; margin-top:8px;">2026-05-29 · captured from dist/ui via ink-testing-library</p>
 </footer>
@@ -183,7 +183,7 @@ const html = `<!doctype html>
 const stamp = '2026-05-29'
 const outDir = join(repoRoot, 'state/visual-verify')
 mkdirSync(outDir, { recursive: true })
-const outPath = join(outDir, `${stamp}-grok-orca-tui.html`)
+const outPath = join(outDir, `${stamp}-grok-armature-tui.html`)
 writeFileSync(outPath, html, 'utf8')
 console.log(`[ui-snapshot] wrote ${outPath}`)
 console.log(`[ui-snapshot] welcome lines=${frameWelcome.split('\n').length} conversation lines=${frameConversation.split('\n').length}`)

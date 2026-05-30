@@ -603,12 +603,12 @@ function renderConfig(
   const console = createCommandConsole(output)
   console.log('\x1b[90m  Config files:\x1b[0m')
   console.log(`\x1b[90m    global: ${getGlobalConfigPath()}\x1b[0m`)
-  console.log(`\x1b[90m    project: ${join(cwd, '.orca.json')}\x1b[0m`)
+  console.log(`\x1b[90m    project: ${join(cwd, '.armature.json')}\x1b[0m`)
   console.log('\x1b[90m  Current:\x1b[0m')
   console.log(`\x1b[90m    provider: ${mc.getProvider()}\x1b[0m`)
   console.log(`\x1b[90m    model:    ${mc.getModel()}\x1b[0m`)
   console.log(`\x1b[90m    mode:     ${modeLabel}\x1b[0m`)
-  console.log('\x1b[90m  Edit: orca init (project) or ~/.orca/config.json (global)\x1b[0m')
+  console.log('\x1b[90m  Edit: armature init (project) or ~/.armature/config.json (global)\x1b[0m')
 }
 
 function renderKeybindings(output: CommandOutput, session?: ChatSessionEmitter): void {
@@ -768,13 +768,13 @@ function renderSkills(cwd: string, output: CommandOutput, session?: ChatSessionE
   const bySource = skills.reduce<Record<SkillInfo['source'], number>>((acc, skill) => {
     acc[skill.source] += 1
     return acc
-  }, { claude: 0, codex: 0, orca: 0 })
+  }, { claude: 0, codex: 0, armature: 0 })
   const visible = skills.slice(0, 40)
 
   if (session) {
     session.emitDetailPanel({
       title: 'Skills',
-      subtitle: `${skills.length} discovered · claude ${bySource.claude} · codex ${bySource.codex} · orca ${bySource.orca}`,
+      subtitle: `${skills.length} discovered · claude ${bySource.claude} · codex ${bySource.codex} · armature ${bySource.armature}`,
       body: [
         '| Skill | Source | Description |',
         '| --- | --- | --- |',
@@ -789,11 +789,11 @@ function renderSkills(cwd: string, output: CommandOutput, session?: ChatSessionE
   }
 
   if (skills.length === 0) {
-    output.warn('no skills found in .claude/skills, .codex/skills, or .orca/skills.')
+    output.warn('no skills found in .claude/skills, .codex/skills, or .armature/skills.')
     return
   }
   output.info([
-    `skills: ${skills.length} discovered (claude ${bySource.claude}, codex ${bySource.codex}, orca ${bySource.orca})`,
+    `skills: ${skills.length} discovered (claude ${bySource.claude}, codex ${bySource.codex}, armature ${bySource.armature})`,
     ...visible.map((skill) => `${skill.source.padEnd(6)}  ${skill.name.padEnd(28)}  ${skill.description}`),
     skills.length > visible.length ? `... ${skills.length - visible.length} more` : '',
   ].filter(Boolean).join('\n'))
@@ -956,7 +956,7 @@ function renderAgents(cwd: string, output: CommandOutput, session?: ChatSessionE
         'Custom specs:',
         '',
         specs.length === 0
-          ? '(none found in `.claude/agents`, `.codex/agents`, or `.orca/agents`)'
+          ? '(none found in `.claude/agents`, `.codex/agents`, or `.armature/agents`)'
           : [
               '| Agent | Source | Description | Path |',
               '| --- | --- | --- | --- |',

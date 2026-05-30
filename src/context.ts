@@ -257,12 +257,12 @@ function scanLanguages(dir: string, langSet: Set<string>, depth: number): void {
 export interface SkillInfo {
   name: string
   description: string
-  source: 'claude' | 'codex' | 'orca'
+  source: 'claude' | 'codex' | 'armature'
   path: string
 }
 
 /**
- * Load skills from .claude/skills/, .codex/skills/, and .orca/skills/.
+ * Load skills from .claude/skills/, .codex/skills/, and .armature/skills/.
  * Reads each skill's SKILL.md for its description (first non-empty, non-heading line).
  */
 export function loadSkills(cwd: string): SkillInfo[] {
@@ -272,7 +272,7 @@ export function loadSkills(cwd: string): SkillInfo[] {
   const skillDirs: Array<{ path: string; source: SkillInfo['source'] }> = [
     { path: join(cwd, '.claude', 'skills'), source: 'claude' },
     { path: join(cwd, '.codex', 'skills'), source: 'codex' },
-    { path: join(cwd, '.orca', 'skills'), source: 'orca' },
+    { path: join(cwd, '.armature', 'skills'), source: 'armature' },
     { path: join(home, '.claude', 'skills'), source: 'claude' },
     { path: join(home, '.codex', 'skills'), source: 'codex' },
   ]

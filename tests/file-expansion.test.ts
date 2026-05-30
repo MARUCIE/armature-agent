@@ -24,7 +24,7 @@ import { preprocessFile } from '../src/preprocess/pipeline.js'
 // we test its logic by reimplementing the core patterns here.
 // This validates the regex patterns and path resolution logic.
 
-const TMP_DIR = join(tmpdir(), `orca-fileexp-test-${Date.now()}`)
+const TMP_DIR = join(tmpdir(), `armature-fileexp-test-${Date.now()}`)
 
 beforeEach(() => {
   mkdirSync(TMP_DIR, { recursive: true })
@@ -381,15 +381,15 @@ describe('real file reading integration', () => {
   })
 
   it('reads a real JSON file', () => {
-    const fp = createFile('config.json', '{"name": "orca"}')
+    const fp = createFile('config.json', '{"name": "armature"}')
     const content = readFileSync(fp, 'utf-8')
-    expect(JSON.parse(content)).toEqual({ name: 'orca' })
+    expect(JSON.parse(content)).toEqual({ name: 'armature' })
   })
 
   it('reads a real Markdown file', () => {
-    const fp = createFile('README.md', '# Orca\n\nA CLI tool')
+    const fp = createFile('README.md', '# Armature\n\nA CLI tool')
     const content = readFileSync(fp, 'utf-8')
-    expect(content).toContain('# Orca')
+    expect(content).toContain('# Armature')
   })
 
   it('preprocessFile works on real text file', () => {

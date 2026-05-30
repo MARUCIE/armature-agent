@@ -1,6 +1,6 @@
-# Orca CLI Agent Eval Runbook
+# Armature CLI Agent Eval Runbook
 
-本手册说明如何运行 Orca CLI 的 `fast` / `nightly` / `release` gate，并查看 transcript / outcome / grades。
+本手册说明如何运行 Armature CLI 的 `fast` / `nightly` / `release` gate，并查看 transcript / outcome / grades。
 
 ## 1) 预备条件
 
@@ -56,8 +56,8 @@ python3 agent-eval/scripts/run-gate.py --manifest release
    - `lint` / `test` / `build` 先通过
 3. `release`
    - nightly 内容全部执行
-   - `orca bench --json` 必须 100%
-   - tarball 安装到干净 prefix 后，`orca --help` 仍能正常工作
+   - `armature bench --json` 必须 100%
+   - tarball 安装到干净 prefix 后，`armature --help` 仍能正常工作
    - 必须生成 CLI journey artifact
 
 ## 6) 人工评分（可选）

@@ -3,7 +3,7 @@
     "id": "gate_build_writes_dist_artifacts",
     "type": "file_exists",
     "paths": [
-      "dist/bin/orca.js",
+      "dist/bin/armature.js",
       "dist/index.js"
     ]
   },
@@ -11,7 +11,7 @@
     "id": "gate_bench_writes_report",
     "type": "file_exists",
     "paths": [
-      "${ORCA_EVAL_RUN_DIR}/artifacts/gate-bench.json"
+      "${ARMATURE_EVAL_RUN_DIR}/artifacts/gate-bench.json"
     ]
   },
   {
@@ -24,7 +24,7 @@
     "id": "release_cli_journey_written",
     "type": "file_exists",
     "paths": [
-      "${ORCA_EVAL_RUN_DIR}/manual/release-cli-journey.md"
+      "${ARMATURE_EVAL_RUN_DIR}/manual/release-cli-journey.md"
     ]
   },
   {
@@ -49,14 +49,14 @@
     "id": "serve_stream_request_artifact_exists",
     "type": "file_exists",
     "paths": [
-      "${ORCA_EVAL_RUN_DIR}/artifacts/fast-serve-chat-stream-request.json"
+      "${ARMATURE_EVAL_RUN_DIR}/artifacts/fast-serve-chat-stream-request.json"
     ]
   },
   {
     "id": "serve_json_request_artifact_exists",
     "type": "file_exists",
     "paths": [
-      "${ORCA_EVAL_RUN_DIR}/artifacts/fast-serve-chat-json-request.json"
+      "${ARMATURE_EVAL_RUN_DIR}/artifacts/fast-serve-chat-json-request.json"
     ]
   }
 ]

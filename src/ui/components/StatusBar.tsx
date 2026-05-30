@@ -1,7 +1,7 @@
 /**
- * StatusBar — Orca pod status rail, no background colors.
+ * StatusBar — Armature pod status rail, no background colors.
  *
- * Line 1: ◇ ORCA POD │ model │ sonar ██░░ ctx% │ branch
+ * Line 1: ◇ ARMATURE POD │ model │ sonar ██░░ ctx% │ branch
  * Line 2: signal: cost · tok/s · turns · sparkline
  * Line 3: ▸▸ trust: permission mode · mode · effort
  *

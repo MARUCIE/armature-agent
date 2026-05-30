@@ -1,9 +1,9 @@
 {
   "id": "fast-bench-quick-human",
   "title": "Bench quick human-readable output reports a successful quick suite",
-  "description": "Black-box smoke for `orca bench --quick`.",
-  "input": "Run `orca bench --quick` and verify the terminal output reports the quick-suite header, three scenarios, and a perfect score.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; node dist/bin/orca.js bench --quick'",
+  "description": "Black-box smoke for `armature bench --quick`.",
+  "input": "Run `armature bench --quick` and verify the terminal output reports the quick-suite header, three scenarios, and a perfect score.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; node dist/bin/armature.js bench --quick'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

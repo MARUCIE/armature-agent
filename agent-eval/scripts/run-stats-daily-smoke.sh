@@ -12,9 +12,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$TMP_HOME/.orca"
+mkdir -p "$TMP_HOME/.armature"
 
-HOME="$TMP_HOME" ORCA_HOME="$TMP_HOME/.orca" node --input-type=module - <<'EOF'
+HOME="$TMP_HOME" ARMATURE_HOME="$TMP_HOME/.armature" node --input-type=module - <<'EOF'
 import { recordUsage } from './dist/usage-db.js'
 
 recordUsage({
@@ -30,8 +30,8 @@ recordUsage({
 EOF
 
 OUTPUT="$(
-  env -i PATH="$PATH" HOME="$TMP_HOME" ORCA_HOME="$TMP_HOME/.orca" \
-    node dist/bin/orca.js stats daily
+  env -i PATH="$PATH" HOME="$TMP_HOME" ARMATURE_HOME="$TMP_HOME/.armature" \
+    node dist/bin/armature.js stats daily
 )"
 printf '%s\n' "$OUTPUT"
 

@@ -1,5 +1,5 @@
 /**
- * `orca doctor` — Local runtime diagnostics.
+ * `armature doctor` — Local runtime diagnostics.
  */
 
 import { Command } from 'commander'
@@ -7,7 +7,7 @@ import { gatherDoctorReport } from '../doctor.js'
 
 export function createDoctorCommand(): Command {
   return new Command('doctor')
-    .description('Run local Orca diagnostics')
+    .description('Run local Armature diagnostics')
     .option('--json', 'Emit structured JSON')
     .option('--cwd <dir>', 'Working directory to inspect')
     .action((opts: { json?: boolean; cwd?: string }) => {
@@ -24,7 +24,7 @@ export function createDoctorCommand(): Command {
       const gitStatus = report.git.available ? '\x1b[32mOK\x1b[0m' : '\x1b[31mMISSING\x1b[0m'
 
       console.log()
-      console.log('  \x1b[1mOrca Doctor\x1b[0m')
+      console.log('  \x1b[1mArmature Doctor\x1b[0m')
       console.log()
       console.log(`  \x1b[90mproject:\x1b[0m   ${report.project.name} \x1b[90m(${report.project.type})\x1b[0m`)
       console.log(`  \x1b[90mcwd:\x1b[0m       ${report.cwd}`)

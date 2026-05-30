@@ -6,20 +6,20 @@ import { createLogsCommand } from '../src/commands/logs.js'
 import { logError, logInfo } from '../src/logger.js'
 
 describe('logs command', () => {
-  const previousOrcaHome = process.env.ORCA_HOME
-  let orcaHome: string
+  const previousArmatureHome = process.env.ARMATURE_HOME
+  let armatureHome: string
 
   beforeEach(() => {
-    orcaHome = join(tmpdir(), `orca-logs-cmd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
-    mkdirSync(orcaHome, { recursive: true })
-    process.env.ORCA_HOME = orcaHome
+    armatureHome = join(tmpdir(), `armature-logs-cmd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+    mkdirSync(armatureHome, { recursive: true })
+    process.env.ARMATURE_HOME = armatureHome
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
-    if (previousOrcaHome === undefined) delete process.env.ORCA_HOME
-    else process.env.ORCA_HOME = previousOrcaHome
-    try { rmSync(orcaHome, { recursive: true, force: true }) } catch { /* ignore */ }
+    if (previousArmatureHome === undefined) delete process.env.ARMATURE_HOME
+    else process.env.ARMATURE_HOME = previousArmatureHome
+    try { rmSync(armatureHome, { recursive: true, force: true }) } catch { /* ignore */ }
   })
 
   it('shows agent log entries by default', async () => {
@@ -30,7 +30,7 @@ describe('logs command', () => {
     const command = createLogsCommand()
     await command.parseAsync(['node', 'logs'])
 
-    expect(logs.join('\n')).toContain('Orca Logs: agent')
+    expect(logs.join('\n')).toContain('Armature Logs: agent')
     expect(logs.join('\n')).toContain('hello log world')
   })
 
@@ -42,7 +42,7 @@ describe('logs command', () => {
     const command = createLogsCommand()
     await command.parseAsync(['node', 'logs', 'errors'])
 
-    expect(logs.join('\n')).toContain('Orca Logs: errors')
+    expect(logs.join('\n')).toContain('Armature Logs: errors')
     expect(logs.join('\n')).toContain('boom')
   })
 
@@ -55,7 +55,7 @@ describe('logs command', () => {
     await command.parseAsync(['node', 'logs', 'nonsense'])
 
     const output = logs.join('\n')
-    expect(output).toContain('Orca Logs: agent')
+    expect(output).toContain('Armature Logs: agent')
     expect(output).toContain('fallback agent entry')
   })
 

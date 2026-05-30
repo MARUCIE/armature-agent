@@ -1,9 +1,9 @@
 {
   "id": "fast-session-delete",
   "title": "Session delete removes a saved session",
-  "description": "Black-box smoke for `orca session delete <id>` using an isolated ORCA_HOME.",
-  "input": "Create a saved session, run `orca session delete demo`, and verify the file is removed while the CLI prints the deleted session id.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); trap \"rm -rf $TMP_HOME\" EXIT; mkdir -p \"$TMP_HOME/.orca/sessions\"; cat > \"$TMP_HOME/.orca/sessions/2026-04-15T00-00-00-demo.json\" <<'\"'\"'EOF'\"'\"'\n{\n  \"provider\": \"openai\",\n  \"model\": \"gpt-5.4\",\n  \"history\": [{\"role\": \"user\", \"content\": \"hello from session\"}],\n  \"stats\": {\"turns\": 1, \"inputTokens\": 10, \"outputTokens\": 20},\n  \"savedAt\": \"2026-04-15T00:00:00.000Z\"\n}\nEOF\nOUTPUT=$(env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ORCA_HOME=\"$TMP_HOME/.orca\" node dist/bin/orca.js session delete demo); printf \"%s\\n\" \"$OUTPUT\"; test ! -f \"$TMP_HOME/.orca/sessions/2026-04-15T00-00-00-demo.json\"'",
+  "description": "Black-box smoke for `armature session delete <id>` using an isolated ARMATURE_HOME.",
+  "input": "Create a saved session, run `armature session delete demo`, and verify the file is removed while the CLI prints the deleted session id.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); trap \"rm -rf $TMP_HOME\" EXIT; mkdir -p \"$TMP_HOME/.armature/sessions\"; cat > \"$TMP_HOME/.armature/sessions/2026-04-15T00-00-00-demo.json\" <<'\"'\"'EOF'\"'\"'\n{\n  \"provider\": \"openai\",\n  \"model\": \"gpt-5.4\",\n  \"history\": [{\"role\": \"user\", \"content\": \"hello from session\"}],\n  \"stats\": {\"turns\": 1, \"inputTokens\": 10, \"outputTokens\": 20},\n  \"savedAt\": \"2026-04-15T00:00:00.000Z\"\n}\nEOF\nOUTPUT=$(env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ARMATURE_HOME=\"$TMP_HOME/.armature\" node dist/bin/armature.js session delete demo); printf \"%s\\n\" \"$OUTPUT\"; test ! -f \"$TMP_HOME/.armature/sessions/2026-04-15T00-00-00-demo.json\"'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

@@ -375,7 +375,7 @@ describe('executePlan', () => {
   let tmpDir: string
 
   beforeEach(() => {
-    tmpDir = join(tmpdir(), `orca-plan-test-${randomUUID().slice(0, 8)}`)
+    tmpDir = join(tmpdir(), `armature-plan-test-${randomUUID().slice(0, 8)}`)
     mkdirSync(tmpDir, { recursive: true })
     vi.clearAllMocks()
   })
@@ -731,7 +731,7 @@ describe('executePlan — edge cases', () => {
   let tmpDir: string
 
   beforeEach(() => {
-    tmpDir = join(tmpdir(), `orca-plan-edge-test-${randomUUID().slice(0, 8)}`)
+    tmpDir = join(tmpdir(), `armature-plan-edge-test-${randomUUID().slice(0, 8)}`)
     mkdirSync(tmpDir, { recursive: true })
     vi.clearAllMocks()
   })

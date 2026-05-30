@@ -11,12 +11,12 @@
  * This is the "auto-evolution" engine that turns error patterns
  * into reusable knowledge without manual intervention.
  *
- * Storage: ~/.orca/knowledge/learning/
+ * Storage: ~/.armature/knowledge/learning/
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { getOrcaHome } from '../logger.js'
+import { getArmatureHome } from '../logger.js'
 
 export type LearningStatus = 'observation' | 'hypothesis' | 'promoted' | 'rejected'
 
@@ -38,7 +38,7 @@ export class LearningJournal {
   private dir: string
 
   constructor() {
-    this.dir = join(getOrcaHome(), 'knowledge', 'learning')
+    this.dir = join(getArmatureHome(), 'knowledge', 'learning')
     mkdirSync(this.dir, { recursive: true })
   }
 

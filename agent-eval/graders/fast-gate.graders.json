@@ -31,7 +31,7 @@
   {
     "id": "bench_quick_human_has_header",
     "type": "regex",
-    "pattern": "Orca Benchmark",
+    "pattern": "Armature Benchmark",
     "source": "stdout"
   },
   {
@@ -247,7 +247,7 @@
   {
     "id": "providers_empty_has_empty_state",
     "type": "regex",
-    "pattern": "\\(none\\) — configure providers in ~/.orca/config.json",
+    "pattern": "\\(none\\) — configure providers in ~/.armature/config.json",
     "source": "stdout"
   },
   {
@@ -355,13 +355,13 @@
   {
     "id": "run_sdk_missing_has_error",
     "type": "regex",
-    "pattern": "error: @orca/sdk not installed",
+    "pattern": "error: @armature/sdk not installed",
     "source": "stdout"
   },
   {
     "id": "run_sdk_missing_has_package_name",
     "type": "regex",
-    "pattern": "@orca/sdk",
+    "pattern": "@armature/sdk",
     "source": "stdout"
   },
   {
@@ -433,7 +433,7 @@
   {
     "id": "session_list_has_continue_hint",
     "type": "regex",
-    "pattern": "Continue last: orca -c",
+    "pattern": "Continue last: armature -c",
     "source": "stdout"
   },
   {
@@ -613,7 +613,7 @@
   {
     "id": "doctor_human_has_header",
     "type": "regex",
-    "pattern": "Orca Doctor",
+    "pattern": "Armature Doctor",
     "source": "stdout"
   },
   {
@@ -869,9 +869,9 @@
     "source": "stdout"
   },
   {
-    "id": "pack_dry_run_has_orca_bin",
+    "id": "pack_dry_run_has_armature_bin",
     "type": "regex",
-    "pattern": "\"path\"\\s*:\\s*\"dist/bin/orca\\.js\"",
+    "pattern": "\"path\"\\s*:\\s*\"dist/bin/armature\\.js\"",
     "source": "stdout"
   },
   {
@@ -883,7 +883,7 @@
   {
     "id": "logs_empty_has_header",
     "type": "regex",
-    "pattern": "Orca Logs: agent",
+    "pattern": "Armature Logs: agent",
     "source": "stdout"
   },
   {
@@ -895,7 +895,7 @@
   {
     "id": "logs_errors_has_header",
     "type": "regex",
-    "pattern": "Orca Logs: errors",
+    "pattern": "Armature Logs: errors",
     "source": "stdout"
   },
   {
@@ -919,7 +919,7 @@
   {
     "id": "logs_unknown_kind_has_agent_label",
     "type": "regex",
-    "pattern": "Orca Logs: agent",
+    "pattern": "Armature Logs: agent",
     "source": "stdout"
   },
   {

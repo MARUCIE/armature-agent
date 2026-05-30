@@ -8,7 +8,7 @@
  * Integration:
  *   - /plan in REPL — explicit task decomposition
  *   - Auto-detection via isMultiTaskPrompt() hook
- *   - orca run --plan — headless multi-task execution
+ *   - armature run --plan — headless multi-task execution
  */
 
 export { isMultiTaskPrompt, decomposePrompt, decomposeHeuristic } from './decomposer.js'

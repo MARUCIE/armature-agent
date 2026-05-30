@@ -18,7 +18,7 @@ import { randomBytes } from 'node:crypto'
 
 // ── Setup ──────────────────────────────────────────────────────────
 
-const TMP = join(tmpdir(), `orca-skills-test-${randomBytes(6).toString('hex')}`)
+const TMP = join(tmpdir(), `armature-skills-test-${randomBytes(6).toString('hex')}`)
 mkdirSync(TMP, { recursive: true })
 
 afterAll(() => {

@@ -1,9 +1,9 @@
 /**
- * `orca pr <number>` — Checkout a GitHub PR and run agent review.
+ * `armature pr <number>` — Checkout a GitHub PR and run agent review.
  *
  * Usage:
- *   orca pr 123              Checkout PR #123 and start interactive review
- *   orca pr 123 "focus on security"   Review with custom prompt
+ *   armature pr 123              Checkout PR #123 and start interactive review
+ *   armature pr 123 "focus on security"   Review with custom prompt
  */
 
 import { Command } from 'commander'
@@ -99,7 +99,7 @@ ${customPrompt
       console.log()
 
       // Delegate to chat command with the review prompt
-      const args = ['node', 'orca', 'chat', reviewPrompt]
+      const args = ['node', 'armature', 'chat', reviewPrompt]
       if (opts.model) args.push('-m', opts.model)
       if (opts.provider) args.push('-p', opts.provider)
 

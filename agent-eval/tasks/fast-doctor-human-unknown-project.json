@@ -1,9 +1,9 @@
 {
   "id": "fast-doctor-human-unknown-project",
   "title": "Doctor human-readable output reports unknown project targets",
-  "description": "Black-box smoke for `orca doctor --cwd <dir>` when the target directory has no detectable project files.",
-  "input": "Create an empty temporary target directory, run `orca doctor --cwd <dir>`, and verify the human-readable output reports the unknown project type and target cwd.",
-  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); TMP_PROJECT=$(mktemp -d); trap \"rm -rf $TMP_HOME $TMP_PROJECT\" EXIT; mkdir -p \"$TMP_HOME/.orca\"; env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ORCA_HOME=\"$TMP_HOME/.orca\" ORCA_PROVIDER=openai OPENAI_API_KEY=test-openai-key node dist/bin/orca.js doctor --cwd \"$TMP_PROJECT\"'",
+  "description": "Black-box smoke for `armature doctor --cwd <dir>` when the target directory has no detectable project files.",
+  "input": "Create an empty temporary target directory, run `armature doctor --cwd <dir>`, and verify the human-readable output reports the unknown project type and target cwd.",
+  "command": "bash -lc 'REPO_ROOT=${PROJECT_DIR:-$(pwd)}; cd \"$REPO_ROOT\"; bash agent-eval/scripts/prepare-fast-gate.sh >/dev/null; TMP_HOME=$(mktemp -d); TMP_PROJECT=$(mktemp -d); trap \"rm -rf $TMP_HOME $TMP_PROJECT\" EXIT; mkdir -p \"$TMP_HOME/.armature\"; env -i PATH=\"$PATH\" HOME=\"$TMP_HOME\" ARMATURE_HOME=\"$TMP_HOME/.armature\" ARMATURE_PROVIDER=openai OPENAI_API_KEY=test-openai-key node dist/bin/armature.js doctor --cwd \"$TMP_PROJECT\"'",
   "artifacts": [],
   "graders": [
     "exit_code_ok",

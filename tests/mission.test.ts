@@ -181,7 +181,7 @@ describe('MissionController', () => {
   let tmpDir: string
 
   beforeEach(() => {
-    tmpDir = join(tmpdir(), `orca-mission-test-${randomUUID().slice(0, 8)}`)
+    tmpDir = join(tmpdir(), `armature-mission-test-${randomUUID().slice(0, 8)}`)
     mkdirSync(tmpDir, { recursive: true })
     vi.clearAllMocks()
   })
@@ -208,9 +208,9 @@ describe('MissionController', () => {
       expect(state.state.totalRuns).toBe(0)
     })
 
-    it('creates .orca/missions directory', () => {
+    it('creates .armature/missions directory', () => {
       const ctrl = new MissionController('test', tmpDir, apiOptions)
-      const missionDir = join(tmpDir, '.orca', 'missions', ctrl.getState().id)
+      const missionDir = join(tmpDir, '.armature', 'missions', ctrl.getState().id)
       expect(existsSync(missionDir)).toBe(true)
     })
 
@@ -275,7 +275,7 @@ describe('MissionController', () => {
       const ctrl = new MissionController('test persist', tmpDir, apiOptions)
       await ctrl.plan()
 
-      const missionDir = join(tmpDir, '.orca', 'missions', ctrl.getState().id)
+      const missionDir = join(tmpDir, '.armature', 'missions', ctrl.getState().id)
       expect(existsSync(join(missionDir, 'plan.json'))).toBe(true)
       expect(existsSync(join(missionDir, 'validation-contract.json'))).toBe(true)
       expect(existsSync(join(missionDir, 'state.json'))).toBe(true)
@@ -524,7 +524,7 @@ describe('Plan parsing edge cases', () => {
   let tmpDir: string
 
   beforeEach(() => {
-    tmpDir = join(tmpdir(), `orca-parse-test-${randomUUID().slice(0, 8)}`)
+    tmpDir = join(tmpdir(), `armature-parse-test-${randomUUID().slice(0, 8)}`)
     mkdirSync(tmpDir, { recursive: true })
     vi.clearAllMocks()
   })
@@ -692,7 +692,7 @@ describe('Validation criterion types', () => {
   let testFile: string
 
   beforeEach(() => {
-    tmpDir = join(tmpdir(), `orca-criterion-test-${randomUUID().slice(0, 8)}`)
+    tmpDir = join(tmpdir(), `armature-criterion-test-${randomUUID().slice(0, 8)}`)
     mkdirSync(tmpDir, { recursive: true })
     testFile = join(tmpDir, 'test.txt')
     vi.clearAllMocks()
@@ -950,7 +950,7 @@ describe('Controller lifecycle edge cases', () => {
   let tmpDir: string
 
   beforeEach(() => {
-    tmpDir = join(tmpdir(), `orca-lifecycle-test-${randomUUID().slice(0, 8)}`)
+    tmpDir = join(tmpdir(), `armature-lifecycle-test-${randomUUID().slice(0, 8)}`)
     mkdirSync(tmpDir, { recursive: true })
     vi.clearAllMocks()
   })
@@ -1170,7 +1170,7 @@ describe('State persistence', () => {
   let tmpDir: string
 
   beforeEach(() => {
-    tmpDir = join(tmpdir(), `orca-persist-test-${randomUUID().slice(0, 8)}`)
+    tmpDir = join(tmpdir(), `armature-persist-test-${randomUUID().slice(0, 8)}`)
     mkdirSync(tmpDir, { recursive: true })
     vi.clearAllMocks()
   })
@@ -1202,7 +1202,7 @@ describe('State persistence', () => {
 
       const ctrl = new MissionController('persist plan', tmpDir, apiOptions)
       const mission = ctrl.getState()
-      const missionDir = join(tmpDir, '.orca', 'missions', mission.id)
+      const missionDir = join(tmpDir, '.armature', 'missions', mission.id)
 
       await ctrl.plan()
 
@@ -1237,7 +1237,7 @@ describe('State persistence', () => {
 
       const ctrl = new MissionController('persist execute', tmpDir, apiOptions)
       const mission = ctrl.getState()
-      const missionDir = join(tmpDir, '.orca', 'missions', mission.id)
+      const missionDir = join(tmpDir, '.armature', 'missions', mission.id)
 
       await ctrl.plan()
       await ctrl.execute()
@@ -1252,10 +1252,10 @@ describe('State persistence', () => {
   it('Mission directory is created on construction', () => {
     const ctrl = new MissionController('dir creation test', tmpDir, apiOptions)
     const mission = ctrl.getState()
-    const missionDir = join(tmpDir, '.orca', 'missions', mission.id)
+    const missionDir = join(tmpDir, '.armature', 'missions', mission.id)
 
     expect(existsSync(missionDir)).toBe(true)
-    expect(existsSync(join(tmpDir, '.orca'))).toBe(true)
-    expect(existsSync(join(tmpDir, '.orca', 'missions'))).toBe(true)
+    expect(existsSync(join(tmpDir, '.armature'))).toBe(true)
+    expect(existsSync(join(tmpDir, '.armature', 'missions'))).toBe(true)
   })
 })

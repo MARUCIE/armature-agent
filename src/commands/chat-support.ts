@@ -1,7 +1,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import type { OrcaConfig } from '../config.js'
+import type { ArmatureConfig } from '../config.js'
 import type { ChatMessage } from '../providers/openai-compat.js'
 import { writeSavedSession } from '../session-store.js'
 
@@ -24,10 +24,10 @@ export function buildAutoSessionId(now: Date = new Date()): string {
   return `auto-${now.toISOString().replace(/[:.]/g, '-').slice(0, 19)}`
 }
 
-export function buildChatFlags(opts: ChatOptionsLike): Partial<OrcaConfig> {
-  const flags: Partial<OrcaConfig> = {}
+export function buildChatFlags(opts: ChatOptionsLike): Partial<ArmatureConfig> {
+  const flags: Partial<ArmatureConfig> = {}
   if (opts.model) flags.model = opts.model
-  if (opts.provider) flags.provider = opts.provider as OrcaConfig['provider']
+  if (opts.provider) flags.provider = opts.provider as ArmatureConfig['provider']
   if (opts.apiKey) flags.apiKey = opts.apiKey
   if (opts.maxTurns) flags.maxTurns = parseInt(opts.maxTurns, 10)
   if (opts.systemPrompt) flags.systemPrompt = opts.systemPrompt
@@ -38,7 +38,7 @@ export function buildChatFlags(opts: ChatOptionsLike): Partial<OrcaConfig> {
 export function detectConfigFiles(cwd: string): string[] {
   const found: string[] = []
   const candidates = [
-    '.orca.json',
+    '.armature.json',
     'CLAUDE.md',
     '.claude/settings.json',
     'AGENTS.md',
@@ -55,7 +55,7 @@ export function detectConfigFiles(cwd: string): string[] {
 
 const PROJECT_MARKERS = [
   '.git',
-  '.orca.json',
+  '.armature.json',
   'AGENTS.md',
   'CLAUDE.md',
   'CODEX.md',
@@ -65,12 +65,12 @@ const PROJECT_MARKERS = [
   'Cargo.toml',
 ]
 
-function getOrcaHome(): string {
-  return join(process.env.HOME || homedir(), '.orca')
+function getArmatureHome(): string {
+  return join(process.env.HOME || homedir(), '.armature')
 }
 
 function getLastWorkspacePath(): string {
-  return join(getOrcaHome(), 'last-cwd')
+  return join(getArmatureHome(), 'last-cwd')
 }
 
 function hasWorkspaceMarkers(path: string): boolean {
@@ -99,7 +99,7 @@ export function rememberWorkspaceCwd(cwd: string): void {
   const resolved = resolve(cwd)
   if (!readableDirectory(resolved) || !hasWorkspaceMarkers(resolved)) return
   try {
-    mkdirSync(getOrcaHome(), { recursive: true })
+    mkdirSync(getArmatureHome(), { recursive: true })
     writeFileSync(getLastWorkspacePath(), resolved + '\n', 'utf-8')
   } catch {
     // ignore state write failures
@@ -107,7 +107,7 @@ export function rememberWorkspaceCwd(cwd: string): void {
 }
 
 export function resolveWorkspaceCwd(input?: string): string {
-  const explicit = input || process.env.ORCA_CWD || process.env.ORCA_PROJECT_DIR
+  const explicit = input || process.env.ARMATURE_CWD || process.env.ARMATURE_PROJECT_DIR
   if (explicit) return resolve(explicit)
 
   const current = resolve(process.cwd())
