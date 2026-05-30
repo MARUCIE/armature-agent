@@ -6,7 +6,7 @@
 
 - Owner: Maurice
 - LastUpdated: 2026-04-22 (continuity slice)
-- Product: Armature CLI (`armature-cli`)
+- Product: Armature CLI (`armature-agent`)
 - Version: `0.8.0`
 - GitBaseline: `4e642c1`
 - DeterministicBaseline: `npm test` => `1558/1558`

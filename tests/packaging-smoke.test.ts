@@ -74,7 +74,7 @@ describe('packaging and bin entry smokes', () => {
       stdio: ['pipe', 'pipe', 'pipe'],
     })) as Record<string, any>
 
-    expect(report.project.name).toBe('armature-cli')
+    expect(report.project.name).toBe('armature-agent')
     expect(report.provider.activeProvider).toBe('openai')
     expect(report.git).toBeDefined()
     expect(report.configPaths.global).toContain('.armature')

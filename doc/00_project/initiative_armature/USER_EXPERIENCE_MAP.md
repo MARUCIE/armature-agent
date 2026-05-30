@@ -234,7 +234,7 @@ Open UX work:
 - Keep CI gate labels aligned with `agent-eval/manifests/test-matrix.json` and the generated entrypoint snippet.
 
 <!-- AI-FLEET:PROJECT_DIR:START -->
-- `PROJECT_DIR`: `/Users/mauricewen/Projects/armature-cli`
+- `PROJECT_DIR`: `/Users/mauricewen/Projects/armature-agent`
 <!-- AI-FLEET:PROJECT_DIR:END -->
 
 ## Experience Model

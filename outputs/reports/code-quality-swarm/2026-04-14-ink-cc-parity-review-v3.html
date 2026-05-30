@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Orca CLI ink UI — 3轮蜂群深度源码对标审查 v3</title>
+<title>Armature CLI ink UI — 3轮蜂群深度源码对标审查 v3</title>
 <style>
   :root { --primary: #1B3A5C; --accent: #2E6BA6; --bg: #FAFBFD; --card: #FFF; --border: #E3E8EF; --text: #1A2332; --muted: #6B7A8D; --green: #0D7A3F; --red: #C41E3A; --yellow: #B8860B; --orange: #D2691E; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -28,7 +28,7 @@
   tr:hover td { background: #F0F4F8; }
   .tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
   .tag-done { background: #E8F5E9; color: var(--green); }
-  .tag-orca { background: #E8F5E9; color: #00796B; }
+  .tag-armature { background: #E8F5E9; color: #00796B; }
   .tag-gap { background: #FFF3E0; color: var(--orange); }
   .tag-critical { background: #FFEBEE; color: var(--red); }
   .tag-fixed { background: #E0F2F1; color: #00796B; }
@@ -50,7 +50,7 @@
 <body>
 <div class="container">
 
-<h1>Orca CLI ink UI — 3轮蜂群深度源码对标审查 v3</h1>
+<h1>Armature CLI ink UI — 3轮蜂群深度源码对标审查 v3</h1>
 <p class="subtitle">2026-04-14 | Round 1 渲染管线 + Round 2 输入系统 + Round 3 视觉UX | 源码库 claude-code-deep-dive</p>
 
 <div class="summary-grid">
@@ -58,7 +58,7 @@
   <div class="stat"><div class="stat-num">1203</div><div class="stat-label">测试用例</div></div>
   <div class="stat"><div class="stat-num">15</div><div class="stat-label">架构差距已修</div></div>
   <div class="stat"><div class="stat-num">2</div><div class="stat-label">低优剩余</div></div>
-  <div class="stat"><div class="stat-num">6</div><div class="stat-label">Orca 独有优势</div></div>
+  <div class="stat"><div class="stat-num">6</div><div class="stat-label">Armature 独有优势</div></div>
 </div>
 
 <!-- ========== Executive Summary ========== -->
@@ -66,8 +66,8 @@
 
 <div class="card">
   <p>三轮蜂群深度审查覆盖了 CC（Claude Code）源码的<strong>渲染管线</strong>（AlternateScreen / FullscreenLayout / ScrollBox / Resize）、<strong>输入系统</strong>（Cursor 类 / 粘贴处理 / Focus 模型 / 提交流程）、<strong>视觉 UX</strong>（主题系统 / Spinner / 工具调用状态 / 键盘提示）三大核心层。</p>
-  <p style="margin-top: 12px;">结论：Orca 已完成 <strong>6/17</strong> 关键架构差距修复（AlternateScreen + 底部钉定 + stdin 捕获 + 输入缓冲 + 文本可见性 + React 状态修复），解决了全部用户反馈的 UX 阻塞问题。剩余 <strong>11 项</strong>差距中，<strong>3 项 P0</strong>（ScrollBox / 粘贴处理 / 动态 Resize）直接影响长对话可用性，<strong>4 项 P1</strong>（Cursor 模型 / 主题扩展 / Focus 精细控制 / 鼠标追踪）影响编辑体验与专业性，<strong>4 项 P2</strong>（kill/yank / 图片粘贴 / Spinner 升级 / 工具调用分级错误渲染）为体验增强。</p>
-  <p style="margin-top: 12px;">Orca 的 <strong>6 项独有优势</strong>（SIGCONT 恢复 / 双行 StatusBar / 上下文感知键盘提示 / Sparkline / DiffPreview / OSC 8 链接）已超越 CC 对应实现，构成产品差异化。</p>
+  <p style="margin-top: 12px;">结论：Armature 已完成 <strong>6/17</strong> 关键架构差距修复（AlternateScreen + 底部钉定 + stdin 捕获 + 输入缓冲 + 文本可见性 + React 状态修复），解决了全部用户反馈的 UX 阻塞问题。剩余 <strong>11 项</strong>差距中，<strong>3 项 P0</strong>（ScrollBox / 粘贴处理 / 动态 Resize）直接影响长对话可用性，<strong>4 项 P1</strong>（Cursor 模型 / 主题扩展 / Focus 精细控制 / 鼠标追踪）影响编辑体验与专业性，<strong>4 项 P2</strong>（kill/yank / 图片粘贴 / Spinner 升级 / 工具调用分级错误渲染）为体验增强。</p>
+  <p style="margin-top: 12px;">Armature 的 <strong>6 项独有优势</strong>（SIGCONT 恢复 / 双行 StatusBar / 上下文感知键盘提示 / Sparkline / DiffPreview / OSC 8 链接）已超越 CC 对应实现，构成产品差异化。</p>
 </div>
 
 <!-- ========== Section 1: CC Architecture Reference ========== -->
@@ -125,12 +125,12 @@
 <!-- ========== Section 2: 3-Round Diff Matrix ========== -->
 <h2>二、三轮深度对标 — 完整差距矩阵</h2>
 
-<p class="section-intro">每项标注审查轮次来源、CC 实现细节、Orca 当前状态、优先级、影响评估。</p>
+<p class="section-intro">每项标注审查轮次来源、CC 实现细节、Armature 当前状态、优先级、影响评估。</p>
 
 <h3><span class="round-badge round-1">Round 1</span>渲染管线对标</h3>
 
 <table>
-  <tr><th>维度</th><th>CC 实现</th><th>Orca 当前</th><th>状态</th><th>影响</th></tr>
+  <tr><th>维度</th><th>CC 实现</th><th>Armature 当前</th><th>状态</th><th>影响</th></tr>
   <tr>
     <td><strong>AlternateScreen</strong></td>
     <td><code>useInsertionEffect</code> 同步写入 + Ink 实例耦合</td>
@@ -185,7 +185,7 @@
 <h3><span class="round-badge round-2">Round 2</span>输入系统对标</h3>
 
 <table>
-  <tr><th>维度</th><th>CC 实现</th><th>Orca 当前</th><th>状态</th><th>影响</th></tr>
+  <tr><th>维度</th><th>CC 实现</th><th>Armature 当前</th><th>状态</th><th>影响</th></tr>
   <tr>
     <td><strong>Enter 提交</strong></td>
     <td>多步 pipeline：<code>handleEnter()</code> → guard → <code>onSubmit(originalValue)</code></td>
@@ -247,7 +247,7 @@
 <h3><span class="round-badge round-3">Round 3</span>视觉 UX 对标</h3>
 
 <table>
-  <tr><th>维度</th><th>CC 实现</th><th>Orca 当前</th><th>状态</th><th>影响</th></tr>
+  <tr><th>维度</th><th>CC 实现</th><th>Armature 当前</th><th>状态</th><th>影响</th></tr>
   <tr>
     <td><strong>主题深度</strong></td>
     <td>88 色 × 6 主题 × RGB+ANSI 双模式 + daltonized 无障碍 + rainbow shimmer</td>
@@ -271,20 +271,20 @@
   </tr>
 </table>
 
-<!-- ========== Section 3: Orca's Unique Advantages ========== -->
-<h2>三、Orca 独有优势（超越 CC）</h2>
+<!-- ========== Section 3: Armature's Unique Advantages ========== -->
+<h2>三、Armature 独有优势（超越 CC）</h2>
 
-<p class="section-intro">以下 6 项是 Orca 已有但 CC 没有的功能，构成产品差异化亮点。</p>
+<p class="section-intro">以下 6 项是 Armature 已有但 CC 没有的功能，构成产品差异化亮点。</p>
 
 <div class="card card-good">
   <h4>1. SIGCONT Resume Handler</h4>
-  <p>Orca 在 AlternateScreen 中监听 <code>SIGCONT</code> 信号，当用户 Ctrl+Z 挂起 → <code>fg</code> 恢复时，自动重新进入备用屏幕缓冲区。CC 没有这个处理，恢复后显示混乱。</p>
+  <p>Armature 在 AlternateScreen 中监听 <code>SIGCONT</code> 信号，当用户 Ctrl+Z 挂起 → <code>fg</code> 恢复时，自动重新进入备用屏幕缓冲区。CC 没有这个处理，恢复后显示混乱。</p>
   <p><code>AlternateScreen.tsx:42-48</code></p>
 </div>
 
 <div class="card card-good">
   <h4>2. 双行 StatusBar 布局</h4>
-  <p>Line 1：model / permMode / branch / cost / tok/s。Line 2：unicode 进度条 + 百分比 + turns + sparkline。CC 单行合并所有信息，窄终端下可读性差。Orca 的双行设计在窄终端更清晰。</p>
+  <p>Line 1：model / permMode / branch / cost / tok/s。Line 2：unicode 进度条 + 百分比 + turns + sparkline。CC 单行合并所有信息，窄终端下可读性差。Armature 的双行设计在窄终端更清晰。</p>
   <p><code>StatusBar.tsx</code></p>
 </div>
 
@@ -296,13 +296,13 @@
 
 <div class="card card-good">
   <h4>4. 上下文感知键盘提示</h4>
-  <p>Footer 组件根据 3 种状态（generating / inputActive / idle）动态切换快捷键提示。CC 的 KeyboardShortcutHint 较为静态。Orca 的提示更贴合当前操作语境。</p>
+  <p>Footer 组件根据 3 种状态（generating / inputActive / idle）动态切换快捷键提示。CC 的 KeyboardShortcutHint 较为静态。Armature 的提示更贴合当前操作语境。</p>
   <p><code>Footer.tsx:24-40</code></p>
 </div>
 
 <div class="card card-good">
   <h4>5. Inline DiffPreview 组件</h4>
-  <p>文件编辑权限请求时，内联渲染彩色逐行 diff（绿色新增 / 红色删除 / 灰色上下文）。CC 的 FileEditToolDiff 是事后渲染，Orca 是权限审批前预览。</p>
+  <p>文件编辑权限请求时，内联渲染彩色逐行 diff（绿色新增 / 红色删除 / 灰色上下文）。CC 的 FileEditToolDiff 是事后渲染，Armature 是权限审批前预览。</p>
   <p><code>DiffPreview.tsx + PermissionRequest.diff</code></p>
 </div>
 
@@ -463,15 +463,15 @@
 <h2>六、综合评分矩阵</h2>
 
 <table>
-  <tr><th>维度</th><th>CC</th><th>Orca</th><th>差距</th></tr>
+  <tr><th>维度</th><th>CC</th><th>Armature</th><th>差距</th></tr>
   <tr><td>渲染管线（AlternateScreen / Layout）</td><td>9/10</td><td>7/10</td><td>ScrollBox + Resize</td></tr>
   <tr><td>滚动系统（ScrollBox / Mouse）</td><td>10/10</td><td>8/10</td><td>虚拟滚动优化</td></tr>
-  <tr><td>输入系统（Submit / Cursor / Paste）</td><td>9/10</td><td>9/10</td><td><span class="tag tag-orca">Parity</span></td></tr>
+  <tr><td>输入系统（Submit / Cursor / Paste）</td><td>9/10</td><td>9/10</td><td><span class="tag tag-armature">Parity</span></td></tr>
   <tr><td>视觉主题（Theme / Colors）</td><td>9/10</td><td>7/10</td><td>Daltonized + Shimmer</td></tr>
-  <tr><td>状态展示（StatusBar / Footer）</td><td>7/10</td><td><strong>9/10</strong></td><td><span class="tag tag-orca">Orca 领先</span></td></tr>
+  <tr><td>状态展示（StatusBar / Footer）</td><td>7/10</td><td><strong>9/10</strong></td><td><span class="tag tag-armature">Armature 领先</span></td></tr>
   <tr><td>工具调用渲染</td><td>9/10</td><td>8/10</td><td>per-tool 模板</td></tr>
-  <tr><td>差异预览（Diff）</td><td>7/10</td><td><strong>8/10</strong></td><td><span class="tag tag-orca">Orca 领先</span></td></tr>
-  <tr><td>文件链接</td><td>5/10</td><td><strong>8/10</strong></td><td><span class="tag tag-orca">Orca 领先</span></td></tr>
+  <tr><td>差异预览（Diff）</td><td>7/10</td><td><strong>8/10</strong></td><td><span class="tag tag-armature">Armature 领先</span></td></tr>
+  <tr><td>文件链接</td><td>5/10</td><td><strong>8/10</strong></td><td><span class="tag tag-armature">Armature 领先</span></td></tr>
   <tr style="font-weight: 700; background: #F0F4F8;">
     <td>总计</td><td>65/80</td><td>65/80</td><td><strong>100% parity</strong></td>
   </tr>
@@ -479,12 +479,12 @@
 
 <!-- ========== Verdict ========== -->
 <div class="verdict verdict-progress">
-  STATUS: 15/17 架构差距已修复（88%）。P0/P1/P2 全部完成。剩余 2 项为极低优先级（image paste 多模态、useInsertionEffect 微优化）。Orca 在 StatusBar / DiffPreview / FileLink / Sparkline / SIGCONT / 上下文键盘提示六个维度超越 CC。CC parity 达到 65/80（100%），从初始 49/80 提升 16 分。
+  STATUS: 15/17 架构差距已修复（88%）。P0/P1/P2 全部完成。剩余 2 项为极低优先级（image paste 多模态、useInsertionEffect 微优化）。Armature 在 StatusBar / DiffPreview / FileLink / Sparkline / SIGCONT / 上下文键盘提示六个维度超越 CC。CC parity 达到 65/80（100%），从初始 49/80 提升 16 分。
 </div>
 
 </div>
 <footer>
-  <p>Orca CLI v0.8.0 — 3轮蜂群深度源码对标审查 v3 (P0+P1+P2 全完成)</p>
+  <p>Armature CLI v0.8.0 — 3轮蜂群深度源码对标审查 v3 (P0+P1+P2 全完成)</p>
   <p>Maurice | maurice_wen@proton.me</p>
   <p style="font-size:12px; margin-top:8px;">2026-04-14 | Round 1 渲染管线 + Round 2 输入系统 + Round 3 视觉UX | 数据来源：claude-code-deep-dive 源码仓库</p>
 </footer>

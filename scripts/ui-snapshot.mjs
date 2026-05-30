@@ -41,7 +41,7 @@ const status = {
 
 const banner = {
   version: '0.4.0',
-  cwd: '/Users/mauricewen/Projects/armature-cli',
+  cwd: '/Users/mauricewen/Projects/armature-agent',
   configFiles: ['ARMATURE.md'],
   toolCount: 14,
   hookCount: 6,

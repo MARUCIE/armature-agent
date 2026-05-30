@@ -52,7 +52,7 @@ const baseOptions = {
     totalOutputTokens: 450,
     startTime: Date.now() - 60_000,
   },
-  cwd: '/tmp/armature-cli',
+  cwd: '/tmp/armature-agent',
   mc: modelControl,
 }
 

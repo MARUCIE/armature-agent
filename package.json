@@ -1,12 +1,13 @@
 {
-  "name": "armature-cli",
+  "name": "armature-agent",
   "version": "0.8.16",
   "description": "Armature CLI — provider-neutral agent runtime with Claude Code depth",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "armature": "./dist/bin/armature.js"
+    "armature": "./dist/bin/armature.js",
+    "armature-agent": "./dist/bin/armature.js"
   },
   "exports": {
     ".": {
@@ -80,9 +81,9 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/MARUCIE/armature-cli.git"
+    "url": "https://github.com/MARUCIE/armature-agent.git"
   },
-  "homepage": "https://github.com/MARUCIE/armature-cli",
+  "homepage": "https://github.com/MARUCIE/armature-agent",
   "license": "MIT",
   "author": {
     "name": "Maurice",

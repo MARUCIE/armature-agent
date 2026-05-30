@@ -213,7 +213,7 @@ Fix Armature CLI's terminal copyability/flicker regression, launcher cwd drift, 
 - `node dist/bin/armature.js --help` -> `42 tools`, `--cwd`, and `critique` visible
 - `node dist/bin/armature.js chat --help` -> `--cwd`, `--image`, and auto-critique flags visible
 - `node dist/bin/armature.js doctor` -> provider OK (`poe / claude-opus-4.6`), `14` MCP configs discovered
-- Live one-shot: `ARMATURE_NO_INK=1 node dist/bin/armature.js chat --json --cwd /Users/mauricewen/Projects/armature-cli -p poe --max-turns 4 ...` -> model called `read_file`, tool succeeded, final answer `Armature CLI`
+- Live one-shot: `ARMATURE_NO_INK=1 node dist/bin/armature.js chat --json --cwd /Users/mauricewen/Projects/armature-agent -p poe --max-turns 4 ...` -> model called `read_file`, tool succeeded, final answer `Armature CLI`
 - `npm test` -> `90` files / `1651` tests
 
 ### Closeout
@@ -2277,7 +2277,7 @@ Create the canonical planning package for the next Armature CLI quality-expansio
   - seeded grader pack:
     - `agent-eval/graders/fast-gate.graders.json`
   - verification run:
-    - `ai agent-eval /Users/mauricewen/Projects/armature-cli run`
+    - `ai agent-eval /Users/mauricewen/Projects/armature-agent run`
     - run id `20260415-011603`
     - result `6/6` passed
 - Added the first deterministic breadth tranche:
@@ -2311,7 +2311,7 @@ Create the canonical planning package for the next Armature CLI quality-expansio
 ### Verification
 
 - `npm test`
-- `ai agent-eval /Users/mauricewen/Projects/armature-cli plan --owner "Maurice"`
+- `ai agent-eval /Users/mauricewen/Projects/armature-agent plan --owner "Maurice"`
 
 ### Result
 
@@ -2321,7 +2321,7 @@ Create the canonical planning package for the next Armature CLI quality-expansio
   - `npm test` => `1276/1276`
   - `npm run build`
   - `npm run bench` => `10/10`
-  - `ai agent-eval /Users/mauricewen/Projects/armature-cli run` => run id `20260415-012934`, `6/6` passed
+  - `ai agent-eval /Users/mauricewen/Projects/armature-agent run` => run id `20260415-012934`, `6/6` passed
 - Current fast-gate expansion evidence:
   - `agent-eval/runs/20260415-020102/summary.json`
   - `12/12` fast-gate tasks passed with no pending graders
@@ -2924,7 +2924,7 @@ Internalize the first Hermes-inspired runtime capability bundle into Armature CL
 - `npm test` => passed (`93` files / `1704` tests)
 - `node dist/bin/armature.js review-ledger --dry-run --json --out /tmp/armature-review-ledger-smoke "focus on multi-model review ledger command"` => passed and wrote `10` artifacts
 - `git diff --check` on touched code/docs paths => passed
-- `ai check --base-dir /Users/mauricewen/Projects/armature-cli --json` => passed, evidence in `outputs/check/20260529-012813-244bdac2`
+- `ai check --base-dir /Users/mauricewen/Projects/armature-agent --json` => passed, evidence in `outputs/check/20260529-012813-244bdac2`
 
 ### Closeout
 

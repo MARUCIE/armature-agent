@@ -81,7 +81,7 @@ export class MCPServer {
           id: req.id,
           result: {
             capabilities: { tools: {} },
-            serverInfo: { name: 'armature-cli', version: '0.7.1' },
+            serverInfo: { name: 'armature-agent', version: '0.7.1' },
           },
         }
 

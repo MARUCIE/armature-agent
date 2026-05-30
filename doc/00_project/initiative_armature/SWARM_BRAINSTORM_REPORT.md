@@ -269,7 +269,7 @@ The good news: AI-Fleet already has mature implementations for most of these gap
 | Session resume | `-c/--continue` loads most recent session |
 | Effort flag | `--effort low/medium/high/max` tunes system prompt |
 | MaxListeners | `setMaxListeners(20)` prevents EventEmitter warning |
-| Folder rename | `MARUCIE-forge-cli` → `armature-cli` |
+| Folder rename | `MARUCIE-forge-cli` → `armature-agent` |
 
 ### Audit Result (Post-Closure)
 

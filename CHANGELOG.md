@@ -236,10 +236,10 @@ Complete brand rename from Armature/Forge to Armature. Animated armature ASCII a
 
 ### Brand Rename
 - **Armature SDK → Armature Agent SDK** (armature-agent-sdk)
-- **Forge CLI → Armature CLI** (armature-cli), global `armature` command
+- **Forge CLI → Armature CLI** (armature-agent), global `armature` command
 - **AI-Fleet → ArmatureOS** (L3 brand tier)
 - All source, tests, docs, config paths, and launcher updated
-- New GitHub repo: MARUCIE/armature-cli
+- New GitHub repo: MARUCIE/armature-agent
 
 ### Animated Armature Banner
 - Unicode block character killer whale silhouette (dorsal fin, eye patch, belly, tail flukes)

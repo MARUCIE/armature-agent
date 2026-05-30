@@ -6,7 +6,7 @@
 
 Ask three frontier models at once. Have a judge pick the winner. Or chain them as specialists — Claude plans, GPT codes, Gemini reviews. No single-vendor CLI can do this.
 
-[![npm](https://img.shields.io/npm/v/armature-cli.svg)](https://www.npmjs.com/package/armature-cli)
+[![npm](https://img.shields.io/npm/v/armature-agent.svg)](https://www.npmjs.com/package/armature-agent)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/Node-%3E%3D18-green.svg)](https://nodejs.org)
 [![Tests](https://img.shields.io/badge/tests-1776%20passing-brightgreen.svg)](#release-quality-gates)
@@ -14,7 +14,7 @@ Ask three frontier models at once. Have a judge pick the winner. Or chain them a
 </div>
 
 ```bash
-npm install -g armature-cli
+npm install -g armature-agent
 ```
 
 ```bash
@@ -200,8 +200,8 @@ Resolution order: `CLI flags > ENV vars > .armature.json > ~/.armature/config.js
 Contributions welcome. Open an issue to discuss before submitting large PRs.
 
 ```bash
-git clone https://github.com/MARUCIE/armature-cli.git
-cd armature-cli && npm install && npm run build && npm test && npm run eval:fast
+git clone https://github.com/MARUCIE/armature-agent.git
+cd armature-agent && npm install && npm run build && npm test && npm run eval:fast
 ```
 
 ## License

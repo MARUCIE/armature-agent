@@ -2,7 +2,7 @@
 
 - Initiative: `armature`
 - Date: `2026-04-29`
-- Project dir: `/Users/mauricewen/Projects/armature-cli`
+- Project dir: `/Users/mauricewen/Projects/armature-agent`
 - Baseline: dirty working tree audit; existing user changes were preserved
 - Report route: `html-style-router` -> `html-economist-style`
 - Verification baseline before fixes: `npm run lint`, `npm test` (`85` files / `1583` tests), `npm run build`

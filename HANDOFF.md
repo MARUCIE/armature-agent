@@ -1,29 +1,29 @@
-# HANDOFF — Orca CLI SOTA Review Continuation
+# HANDOFF — Armature CLI SOTA Review Continuation
 
 Updated: 2026-04-22
-Project root: `/Users/mauricewen/Projects/orca-cli`
+Project root: `/Users/mauricewen/Projects/armature-agent`
 
 ## Current State
 
 Superseding update (2026-04-22):
 
-- The current repo baseline is no longer the older 2026-04-16 remediation tranche alone. The active product direction now includes trust-policy hardening, continuity footholds, the global native Orca hook surface, the layered test matrix, and a completed one-click full-delivery pass for the current tranche.
+- The current repo baseline is no longer the older 2026-04-16 remediation tranche alone. The active product direction now includes trust-policy hardening, continuity footholds, the global native Armature hook surface, the layered test matrix, and a completed one-click full-delivery pass for the current tranche.
 - Two blocker classes were closed in the 2026-04-22 delivery pass:
   - harness drift from Cloudflare's provider-key fallback (`tests/config.test.ts`)
   - trust-policy gaps around repo-local MCP autospawn, zero-tool fail-open allowlists, MCP stdout framing, `/chat` body limits, and global config test isolation
 - Latest verification baseline:
-  - `npm run lint` ✅
-  - `npm run build` ✅
-  - `npm test` ✅ (`1553/1553`)
-  - `npm run test:matrix:sync` ✅
-  - `npm run test:matrix` ✅ (`run-20260422-061719`; `static` / `security` / `performance` are `partial-pass` by design, all layer exit codes `0`)
-  - `npm run eval:fast` ✅ (`62/62`, run `20260422-063053-333719`)
-  - `npm run eval:nightly` ✅ (`65/65`, run `20260422-061814-339289`)
-  - `npm run eval:release` ✅ (`68/68`, run `20260422-061914-913077`)
+  - `npm run lint` PASS
+  - `npm run build` PASS
+  - `npm test` PASS (`1553/1553`)
+  - `npm run test:matrix:sync` PASS
+  - `npm run test:matrix` PASS (`run-20260422-061719`; `static` / `security` / `performance` are `partial-pass` by design, all layer exit codes `0`)
+  - `npm run eval:fast` PASS (`62/62`, run `20260422-063053-333719`)
+  - `npm run eval:nightly` PASS (`65/65`, run `20260422-061814-339289`)
+  - `npm run eval:release` PASS (`68/68`, run `20260422-061914-913077`)
 - Release/security evidence:
-  - `npm audit --omit=dev` ✅ (`0` prod vulnerabilities)
-  - `npm pack --json --dry-run` ✅
-  - `node dist/bin/orca.js bench --json` ✅ (`score 100`)
+  - `npm audit --omit=dev` PASS (`0` prod vulnerabilities)
+  - `npm pack --json --dry-run` PASS
+  - `node dist/bin/armature.js bench --json` PASS (`score 100`)
 - Delivery artifacts:
   - `outputs/spec/2026-04-22-one-click-full-delivery-spec.md`
   - `outputs/security/2026-04-22-security-readiness.md`
@@ -101,25 +101,25 @@ Search/fetch/discovery tools were also hardened away from shell pipelines where 
 
 Added a zero-dependency VS Code extension skeleton:
 
-- `integrations/vscode-orca/package.json`
-- `integrations/vscode-orca/extension.js`
-- `integrations/vscode-orca/terminal-options.cjs`
-- `integrations/vscode-orca/README.md`
+- `integrations/vscode-armature/package.json`
+- `integrations/vscode-armature/extension.js`
+- `integrations/vscode-armature/terminal-options.cjs`
+- `integrations/vscode-armature/README.md`
 
 Commands included:
 
-- `Orca: Open Chat`
-- `Orca: Analyze Current File`
-- `Orca: Review Selection`
-- `Orca: Start MCP Server`
-- `Orca: Run Doctor`
+- `Armature: Open Chat`
+- `Armature: Analyze Current File`
+- `Armature: Review Selection`
+- `Armature: Start MCP Server`
+- `Armature: Run Doctor`
 
 ### 5. Multimodal One-Shot
 
 - `src/providers/openai-compat.ts`
   - accepts prompt content parts (`text` + `image_url`) on proxy path
 - `src/commands/chat.ts`
-  - `orca chat --image <path...> "prompt"` supported
+  - `armature chat --image <path...> "prompt"` supported
 - `src/token-budget.ts`
 - `src/commands/session.ts`
 - `src/commands/chat.ts`
@@ -206,16 +206,16 @@ Moved out of `src/commands/chat.ts`:
 
 ### IDE Integration
 
-- `integrations/vscode-orca/`
+- `integrations/vscode-armature/`
 
 ### Canonical Project Docs
 
-- `doc/00_project/initiative_orca/task_plan.md`
-- `doc/00_project/initiative_orca/notes.md`
-- `doc/00_project/initiative_orca/deliverable.md`
-- `doc/00_project/initiative_orca/ROLLING_REQUIREMENTS_AND_PROMPTS.md`
-- `doc/00_project/initiative_orca/SYSTEM_ARCHITECTURE.md`
-- `doc/00_project/initiative_orca/USER_EXPERIENCE_MAP.md`
+- `doc/00_project/initiative_armature/task_plan.md`
+- `doc/00_project/initiative_armature/notes.md`
+- `doc/00_project/initiative_armature/deliverable.md`
+- `doc/00_project/initiative_armature/ROLLING_REQUIREMENTS_AND_PROMPTS.md`
+- `doc/00_project/initiative_armature/SYSTEM_ARCHITECTURE.md`
+- `doc/00_project/initiative_armature/USER_EXPERIENCE_MAP.md`
 
 ### SOTA Gate System
 

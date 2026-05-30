@@ -1,11 +1,11 @@
-# Grok Build TUI — Visual Reference (for the armature-cli pixel-port)
+# Grok Build TUI — Visual Reference (for the armature-agent pixel-port)
 
 Reference target: **Grok Build v0.2.8** (xAI), installed at
 `~/.grok/downloads/grok-0.2.8-macos-aarch64`. Renderer = Rust crate
 `xai-grok-pager` (full-screen TUI). Palette + architecture extracted from the
 binary (`strings`) and `~/.grok/docs/user-guide/06-theming.md`.
 
-This doc is the canonical spec the ink port maps onto. armature-cli renders with
+This doc is the canonical spec the ink port maps onto. armature-agent renders with
 **ink** (React + Yoga flexbox), so we replicate grok's *visual language*, not its
 custom renderer. Renderer-engine features are listed as out-of-scope at the end.
 

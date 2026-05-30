@@ -102,7 +102,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'set model-b',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => currentModel,
         setModel: (target) => {
@@ -136,7 +136,7 @@ describe('chat mutating slash helpers', () => {
           { role: 'assistant', content: 'hi there' },
         ],
         stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 5 },
-        cwd: '/tmp/armature-cli',
+        cwd: '/tmp/armature-agent',
         mc: {
           getModel: () => 'model-a',
           setModel: () => true,
@@ -172,7 +172,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history,
       stats,
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -200,7 +200,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'connect demo',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -227,7 +227,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'connect demo',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -254,7 +254,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'enable demo',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -290,7 +290,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'docs',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -320,7 +320,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -348,7 +348,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -365,7 +365,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -389,7 +389,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'set model-b',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => currentModel,
         setModel: (target) => {
@@ -433,7 +433,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'set gpt-5.4',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'gpt-5.4',
         setModel: (target) => {
@@ -457,7 +457,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'model-b',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => currentModel,
         setModel: (target) => {
@@ -481,7 +481,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'set plan',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -504,7 +504,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'save auto global',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -540,7 +540,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -579,7 +579,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -612,7 +612,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'rules session',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -650,7 +650,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -685,7 +685,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'rules project legacy',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -713,7 +713,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'revoke session run_command::run: echo hello',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -742,7 +742,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'revoke project',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -770,7 +770,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'clear project',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -801,7 +801,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -828,7 +828,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'normalize project',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -850,7 +850,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'normalize all',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -885,7 +885,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -924,7 +924,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -955,7 +955,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'set model-b',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => legacyModel,
         setModel: (target) => {
@@ -976,7 +976,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'set model-b',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => inkModel,
         setModel: (target) => {
@@ -1014,7 +1014,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history,
       stats,
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1052,7 +1052,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [{ role: 'system', content: 'System prompt' }],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0, startTime: 1, turnTokens: [] },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1083,7 +1083,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history,
       stats,
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1135,7 +1135,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1207,7 +1207,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'compare the options',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1225,7 +1225,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'why is the parser dropping the last line?',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1246,7 +1246,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'reflect-session',
       history: [{ role: 'system', content: 'You are in reflect mode.\n\nBase prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1277,7 +1277,7 @@ describe('chat mutating slash helpers', () => {
       arg: '../escape',
       history: [{ role: 'system', content: 'System prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1323,7 +1323,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history,
       stats,
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1371,7 +1371,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0, startTime: 1, turnTokens: [] },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1408,7 +1408,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0, startTime: 1, turnTokens: [] },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1448,7 +1448,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history,
       stats,
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: vi.fn(() => true),
@@ -1493,7 +1493,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history,
       stats,
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel,
@@ -1539,7 +1539,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history,
       stats,
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel,
@@ -1571,7 +1571,7 @@ describe('chat mutating slash helpers', () => {
       arg: '../escape',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20, startTime: 123, turnTokens: [5] },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1604,7 +1604,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'missing-load-mode',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20, startTime: 123, turnTokens: [5] },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel,
@@ -1650,7 +1650,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'reflect-load',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20, startTime: 1, turnTokens: [5] },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1710,7 +1710,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20, startTime: 1, turnTokens: [5] },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1762,7 +1762,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'search auth bug',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1821,7 +1821,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'find review',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1850,7 +1850,7 @@ describe('chat mutating slash helpers', () => {
       arg: `export thread-1 ${outFile}`,
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1877,7 +1877,7 @@ describe('chat mutating slash helpers', () => {
       arg: `markdown thread-1 ${outFile}`,
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1904,7 +1904,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'share thread-1',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1937,7 +1937,7 @@ describe('chat mutating slash helpers', () => {
       arg: `import ${inFile}`,
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -1966,7 +1966,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'handoff thread-1',
       history: [],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0 },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -2004,7 +2004,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'reflect-buffered-load',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 0, totalInputTokens: 0, totalOutputTokens: 0, startTime: 1, turnTokens: [] },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -2041,7 +2041,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'legacy-load',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20, startTime: 1, turnTokens: [5] },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -2083,7 +2083,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'broken-load',
       history,
       stats,
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel,
@@ -2130,7 +2130,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'missing-system',
       history,
       stats,
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel,
@@ -2188,7 +2188,7 @@ describe('chat mutating slash helpers', () => {
       arg: 'load t-1',
       history,
       stats,
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel: () => true,
@@ -2243,7 +2243,7 @@ describe('chat mutating slash helpers', () => {
       arg: '',
       history: [{ role: 'system', content: 'Current prompt' }],
       stats: { turns: 1, totalInputTokens: 10, totalOutputTokens: 20, startTime: 123, turnTokens: [5] },
-      cwd: '/tmp/armature-cli',
+      cwd: '/tmp/armature-agent',
       mc: {
         getModel: () => 'model-a',
         setModel,

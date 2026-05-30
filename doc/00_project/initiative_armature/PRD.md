@@ -227,7 +227,7 @@ New product requirements from the SOTA swarm audit:
 ## Product Snapshot
 
 - Product: Armature CLI
-- Package: `armature-cli`
+- Package: `armature-agent`
 - Domain: provider-neutral coding-agent CLI
 - Primary users: developers who need coding-agent workflows across multiple model vendors
 - Current repo status: active TypeScript CLI with runtime, multi-model collaboration, session management, PR review, serve mode, benchmark tooling, and Hermes-inspired runtime ergonomics

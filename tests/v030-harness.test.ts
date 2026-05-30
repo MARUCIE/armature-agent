@@ -33,9 +33,9 @@ describe('version consistency', () => {
     expect(program.version()).toBe(pkg.version)
   })
 
-  it('16.3 package name is armature-cli', () => {
+  it('16.3 package name is armature-agent', () => {
     const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'))
-    expect(pkg.name).toBe('armature-cli')
+    expect(pkg.name).toBe('armature-agent')
   })
 
   it('16.4 binary entry point is armature', () => {

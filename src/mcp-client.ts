@@ -293,7 +293,7 @@ export class MCPClient {
       const initResult = await this.request(name, 'initialize', {
         protocolVersion: '2024-11-05',
         capabilities: {},
-        clientInfo: { name: 'armature-cli', version: '0.1.0' },
+        clientInfo: { name: 'armature-agent', version: '0.1.0' },
       })
 
       if (initResult) {

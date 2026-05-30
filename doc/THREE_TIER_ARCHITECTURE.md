@@ -39,7 +39,7 @@ ArmatureOS ──depends-on──→ Armature CLI ──optional-dep──→ Ar
 | Layer | Repo | URL | Language | Tests |
 |-------|------|-----|----------|-------|
 | L1: SDK | `armature-agent-sdk` | github.com/MARUCIE/armature-agent-sdk | TypeScript | 170 / 27 files |
-| L2: CLI | `armature-cli` | github.com/MARUCIE/armature-cli | TypeScript | 22 / 3 files |
+| L2: CLI | `armature-agent` | github.com/MARUCIE/armature-agent | TypeScript | 22 / 3 files |
 | L3: AI-OS | `00-AI-Fleet` | local (private) | Python + Bash | Harness-gated |
 
 ---

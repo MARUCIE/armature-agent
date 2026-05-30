@@ -450,7 +450,7 @@ Context:
 
 - User asked to optimize local Armature CLI, study Hermes Agent, and build a high-identity visual system across typography, palette, UI, and UX before PDCA execution.
 - The target surface is the Ink terminal UI, not a browser page.
-- Current project root is `/Users/mauricewen/Projects/armature-cli`; docs already contain the correct `PROJECT_DIR` block.
+- Current project root is `/Users/mauricewen/Projects/armature-agent`; docs already contain the correct `PROJECT_DIR` block.
 - Worktree is dirty with many pre-existing changes, so this tranche must stay narrowly scoped.
 
 Design decision:
@@ -779,7 +779,7 @@ PDCA executed:
 
 Context:
 
-- User requested a SOTA swarm audit for `/Users/mauricewen/Projects/armature-cli`, a routed audit report, milestone plan, atomic task queue, and queue/swarm PDCA execution.
+- User requested a SOTA swarm audit for `/Users/mauricewen/Projects/armature-agent`, a routed audit report, milestone plan, atomic task queue, and queue/swarm PDCA execution.
 - Worktree was already dirty at audit start; existing user changes were preserved.
 - Swarm lanes covered architecture, security, UX/TUI, verification/release, and docs/governance.
 
@@ -1424,7 +1424,7 @@ Artifacts:
 
 ## 2026-04-14 — large-scale test expansion planning
 
-- User requested a new large-scale testing plan for `/Users/mauricewen/Projects/armature-cli`, with breadth and depth expansion beyond the old "~1300-case" framing and with PDCA as the canonical planning surface.
+- User requested a new large-scale testing plan for `/Users/mauricewen/Projects/armature-agent`, with breadth and depth expansion beyond the old "~1300-case" framing and with PDCA as the canonical planning surface.
 - Measured planning-start baseline:
   - `npm test` => `1263/1263`
   - this superseded the last explicitly logged maintainability checkpoint of `1260/1260`; the planning tranche measured current repository state before any new quality-program tests were added
@@ -1434,7 +1434,7 @@ Artifacts:
   - `doc/SOTA_TEST_PLAN.md` still captures much earlier `262` / `447` era snapshots and should remain a historical reference only
   - current canonical baseline should live in PDCA docs plus `AGENT_EVAL_PLAN.md`
 - Evaluation-plan bootstrap:
-  - generated repo-root `AGENT_EVAL_PLAN.md` with `ai agent-eval /Users/mauricewen/Projects/armature-cli plan --owner "Maurice"`
+  - generated repo-root `AGENT_EVAL_PLAN.md` with `ai agent-eval /Users/mauricewen/Projects/armature-agent plan --owner "Maurice"`
   - the work no longer sits in `plan-only` mode; `agent-eval/` is scaffolded and the first breadth tranche is now landed
 - Planning decision:
   - initial pass proposed a moderate deterministic target band, but the follow-up test-engineer audit showed the command-surface gap is larger than that first cut suggested
@@ -1452,7 +1452,7 @@ Artifacts:
     - `serve` already has metadata smoke coverage and should not be treated as zero-coverage
     - `session` is exercised indirectly today, but still lacks a dedicated command lifecycle suite
 - agent-eval initialization follow-up:
-  - ran `ai agent-eval /Users/mauricewen/Projects/armature-cli init --owner "Maurice"`
+  - ran `ai agent-eval /Users/mauricewen/Projects/armature-agent init --owner "Maurice"`
   - replaced the generic sample files with the first Armature-specific fast-gate pack:
     - `fast-root-help`
     - `fast-session-help`
@@ -1464,7 +1464,7 @@ Artifacts:
   - first run failed `fast-serve-health`
     - root cause: the original task command backgrounded the full `&&` chain, so shell variables such as `TMP_HOME` and `PORT` were created in a background subshell and disappeared before `curl`
     - fix: keep variable setup in the foreground shell and background only the `armature serve` process
-  - reran `ai agent-eval /Users/mauricewen/Projects/armature-cli run`
+  - reran `ai agent-eval /Users/mauricewen/Projects/armature-agent run`
     - run id: `20260415-011603`
     - result: `6/6` passed
     - seeded pack is now executable, not just scaffolded
@@ -1491,7 +1491,7 @@ Artifacts:
     - `69` passing test files in the latest full run
     - `npm run build` passed
     - `npm run bench` passed (`10/10`, `100%`)
-    - `ai agent-eval /Users/mauricewen/Projects/armature-cli run`
+    - `ai agent-eval /Users/mauricewen/Projects/armature-agent run`
       - run id: `20260415-012934`
       - result: `6/6` passed
   - expanded the fast-gate eval pack to the planned `12`-task baseline:
@@ -1516,7 +1516,7 @@ Artifacts:
 
 ## 2026-04-12
 
-- User provided explicit `PROJECT_DIR`: `/Users/mauricewen/Projects/MARUCIE-armature-cli`
+- User provided explicit `PROJECT_DIR`: `/Users/mauricewen/Projects/MARUCIE-armature-agent`
 - Project root initially lacked repo-level `AGENTS.md` / `CLAUDE.md` / mirror files
 - Existing docs were flat under `doc/` and did not include the required `doc/00_project/initiative_armature/` tree
 - `.omx/tmux-hook.json` existed as untracked runtime state; `.gitignore` was updated to ignore `.omx/`
@@ -1576,7 +1576,7 @@ Artifacts:
   - The stats surface now composes usage-db + doctor + logger instead of showing cost-only data
 - Branding follow-up:
   - Canonical docs and governance files now consistently use `Armature/armature/.armature`
-  - Real filesystem `PROJECT_DIR` references remain `/Users/mauricewen/Projects/MARUCIE-armature-cli` until the repo directory itself is renamed
+  - Real filesystem `PROJECT_DIR` references remain `/Users/mauricewen/Projects/MARUCIE-armature-agent` until the repo directory itself is renamed
 - Verification completed:
   - `npm run lint` passed
   - `npm test` passed (`426/426`)
@@ -1679,7 +1679,7 @@ Artifacts:
 - Re-audit result: report v3 is directionally useful but no longer matches repo state one-to-one.
 - Observed drift:
   - `task_plan.md` / `notes.md` describe the CC-parity branch as effectively complete, but source still retains several behavior-accuracy gaps.
-  - `SYSTEM_ARCHITECTURE.md` and `USER_EXPERIENCE_MAP.md` still point to `/Users/mauricewen/Projects/MARUCIE-armature-cli`, while the real git root is `/Users/mauricewen/Projects/armature-cli`.
+  - `SYSTEM_ARCHITECTURE.md` and `USER_EXPERIENCE_MAP.md` still point to `/Users/mauricewen/Projects/MARUCIE-armature-agent`, while the real git root is `/Users/mauricewen/Projects/armature-agent`.
 - Ranked remaining code gaps after source comparison:
   1. `src/ui/components/ScrollBox.tsx`: `viewportHeight = height ?? rows` uses full terminal rows instead of the rendered viewport height inside the flex layout.
      - Evidence for: App mounts `ScrollBox` above a fixed bottom section; measured visible region is smaller than terminal rows.
@@ -1714,7 +1714,7 @@ Artifacts:
   - `tests/cursor.test.ts`
     - new Unicode word-boundary movement/deletion regression
 - Docs corrected:
-  - `SYSTEM_ARCHITECTURE.md` / `USER_EXPERIENCE_MAP.md` now point to `/Users/mauricewen/Projects/armature-cli`
+  - `SYSTEM_ARCHITECTURE.md` / `USER_EXPERIENCE_MAP.md` now point to `/Users/mauricewen/Projects/armature-agent`
   - Rolling ledger records the `PROJECT_DIR` correction explicitly
 - Verification completed:
   - `npm run lint` passed
@@ -2374,7 +2374,7 @@ Artifacts:
   - built CLI dry-run smoke passed: `node dist/bin/armature.js review-ledger --dry-run --json --out /tmp/armature-review-ledger-smoke "focus on multi-model review ledger command"`
   - dry-run smoke wrote `10` artifacts, including independent prompt files, synthesis prompt, human decision ledger, fix log, review verdict, and E2E evidence template
   - `git diff --check` on the touched code/docs paths passed
-  - `ai check --base-dir /Users/mauricewen/Projects/armature-cli --json` passed in `outputs/check/20260529-012813-244bdac2`
+  - `ai check --base-dir /Users/mauricewen/Projects/armature-agent --json` passed in `outputs/check/20260529-012813-244bdac2`
   - `npm test` passed with `93` files / `1704` tests after isolating usage DB writes under `$ARMATURE_HOME`
 - Validation boundary:
   - live `--pr` execution depends on authenticated `gh` and configured provider credentials, so the local proof used deterministic dry-run and mocked orchestration tests

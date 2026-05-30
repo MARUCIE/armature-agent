@@ -450,7 +450,7 @@ Open architecture work:
 - Keep matrix layer definitions in the manifest; do not add package scripts or CI rows by hand without updating `sync-test-matrix.py` expectations.
 
 <!-- AI-FLEET:PROJECT_DIR:START -->
-- `PROJECT_DIR`: `/Users/mauricewen/Projects/armature-cli`
+- `PROJECT_DIR`: `/Users/mauricewen/Projects/armature-agent`
 <!-- AI-FLEET:PROJECT_DIR:END -->
 
 ## Architecture Summary

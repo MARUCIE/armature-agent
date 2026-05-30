@@ -1,6 +1,6 @@
 # Armature VS Code Extension
 
-Minimal VS Code integration for `armature-cli`.
+Minimal VS Code integration for `armature-agent`.
 
 ## Commands
 

@@ -243,7 +243,7 @@ function shellQuote(value: string): string {
 }
 
 function pasteClipboardImage(currentText: string): string | null {
-  const dir = mkdtempSync(join(tmpdir(), 'armature-clipboard-image-'))
+  const dir = mkdtempSync(join(tmpdir(), 'armature-agentpboard-image-'))
   const filePath = join(dir, 'clipboard.png')
 
   const pngpaste = spawnSync('pngpaste', [filePath], { encoding: 'utf-8' })

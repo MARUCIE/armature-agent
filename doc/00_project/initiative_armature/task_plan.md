@@ -208,7 +208,7 @@ Fix the operator-visible Armature regressions reported from the launcher menu: I
 - `npm run build` -> pass.
 - `node dist/bin/armature.js --help` -> root help exposes `42 tools`, `--cwd`, and `critique`.
 - `node dist/bin/armature.js doctor` -> provider OK (`poe / claude-opus-4.6`), `14` MCP configs discovered.
-- Live one-shot smoke with `ARMATURE_NO_INK=1 node dist/bin/armature.js chat --json --cwd /Users/mauricewen/Projects/armature-cli -p poe --max-turns 4 ...` -> model used `read_file`, tool succeeded, final answer `Armature CLI`.
+- Live one-shot smoke with `ARMATURE_NO_INK=1 node dist/bin/armature.js chat --json --cwd /Users/mauricewen/Projects/armature-agent -p poe --max-turns 4 ...` -> model used `read_file`, tool succeeded, final answer `Armature CLI`.
 - Final `npm test` -> `1663` tests passed across `91` files.
 
 ## 2026-05-02 - Rubber Duck Critique Quality Gate
@@ -1408,7 +1408,7 @@ Run a SOTA swarm audit for Armature, publish the routed audit report, convert fi
    - `AlternateScreen` still enters alt-screen in `useEffect`, later than CC's insertion-phase write.
    - `cursor.ts` still treats word boundaries as ASCII-only, not CC-style Unicode-aware word chars.
 3. Correct doc drift:
-   - canonical `PROJECT_DIR` blocks still point at `/Users/mauricewen/Projects/MARUCIE-armature-cli`
+   - canonical `PROJECT_DIR` blocks still point at `/Users/mauricewen/Projects/MARUCIE-armature-agent`
    - planning notes overstate parity completion and no longer distinguish report-vs-code truth.
 
 ### Acceptance Criteria For This Round
@@ -1416,7 +1416,7 @@ Run a SOTA swarm audit for Armature, publish the routed audit report, convert fi
 - Alternate-screen enter/exit timing moves to insertion/layout-safe path before first frame paint.
 - Cursor word movement/deletion works for Unicode letters/numbers/marks, not only ASCII `\\w`.
 - Regression coverage added for the above behaviors.
-- Canonical docs updated to the real repo path `/Users/mauricewen/Projects/armature-cli`.
+- Canonical docs updated to the real repo path `/Users/mauricewen/Projects/armature-agent`.
 
 ### Completed (2026-04-14)
 1. `ScrollBox` now measures the rendered viewport container instead of assuming full terminal height.
@@ -1648,7 +1648,7 @@ Run a SOTA swarm audit for Armature, publish the routed audit report, convert fi
 - `node --experimental-vm-modules node_modules/.bin/vitest run tests/v030-coverage.test.ts tests/stats-command.test.ts` passed (`19/19` tests).
 - `npm test` passed (`93` files / `1704` tests).
 - `node dist/bin/armature.js review-ledger --dry-run --json --out /tmp/armature-review-ledger-smoke "focus on multi-model review ledger command"` passed and wrote `10` artifacts.
-- `ai check --base-dir /Users/mauricewen/Projects/armature-cli --json` passed in `outputs/check/20260529-012813-244bdac2`; `REQ-041` is closed.
+- `ai check --base-dir /Users/mauricewen/Projects/armature-agent --json` passed in `outputs/check/20260529-012813-244bdac2`; `REQ-041` is closed.
 
 ## Changelog
 

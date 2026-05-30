@@ -323,7 +323,7 @@ LastUpdated: 2026-05-29
 | Should Armature copy Hermes's caduceus and exact gold-only palette? | No. Hermes is a reference for recognition mechanics; Armature uses its own killer-whale `Blackfin Signal` identity. | `ARMATURE_VISUAL_SYSTEM_PLAN.md` |
 | Can the visual refresh add new dependencies? | No. Use existing Ink / React / chalk surface only. | package diff review, build |
 | Can the first screen hide trust and recovery state behind decoration? | No. The banner and HomePanel must keep model, permission, session, tool, and recovery state visible. | `tests/ink-ui.test.tsx` |
-| Can `ai check` be claimed as passed for this tranche? | Yes, after the Armature project gate was reconciled with the TypeScript repo shape and the final `ai check --base-dir /Users/mauricewen/Projects/armature-cli --json` run passed. | `outputs/check/20260529-012813-244bdac2`, `tests/test_all.py` |
+| Can `ai check` be claimed as passed for this tranche? | Yes, after the Armature project gate was reconciled with the TypeScript repo shape and the final `ai check --base-dir /Users/mauricewen/Projects/armature-agent --json` run passed. | `outputs/check/20260529-012813-244bdac2`, `tests/test_all.py` |
 
 ## 2026-04-29 - SOTA Swarm Audit / Queue / Trust PDCA
 
@@ -359,7 +359,7 @@ LastUpdated: 2026-05-29
 
 | ID | Prompt / Trigger | Routing | Output |
 | --- | --- | --- | --- |
-| PROMPT-20260429-001 | `/Users/mauricewen/Projects/armature-cli 对orca 进行sota 蜂群审计，输出走风格路由的审计报告，再制定里程碑计划及原子任务清单，之后再队列及蜂群模式pdca执行` | `$audit` + frontend/design/report style router + native swarm lanes | SOTA audit, routed HTML report, milestone plan, atomic queue, PDCA tranche 1 |
+| PROMPT-20260429-001 | `/Users/mauricewen/Projects/armature-agent 对orca 进行sota 蜂群审计，输出走风格路由的审计报告，再制定里程碑计划及原子任务清单，之后再队列及蜂群模式pdca执行` | `$audit` + frontend/design/report style router + native swarm lanes | SOTA audit, routed HTML report, milestone plan, atomic queue, PDCA tranche 1 |
 | PROMPT-20260429-002 | `继续` | Continue queued PDCA execution | Completed ARMATURE-SWARM-006: `queue follow` |
 | PROMPT-20260429-003 | `继续` | Continue queued PDCA execution | Completed ARMATURE-SWARM-007: `queue takeover` lease model |
 | PROMPT-20260429-004 | `继续` | Continue queued PDCA execution | Completed ARMATURE-SWARM-008: `serve /chat` canonical run records |
@@ -421,7 +421,7 @@ LastUpdated: 2026-05-29
 
 | ID | Date | Type | Requirement | Status | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| REQ-001 | 2026-04-12 | governance | Treat `/Users/mauricewen/Projects/MARUCIE-armature-cli` as canonical `PROJECT_DIR` and bootstrap project-level agent/doc entry files | done | Root docs + canonical initiative tree created |
+| REQ-001 | 2026-04-12 | governance | Treat `/Users/mauricewen/Projects/MARUCIE-armature-agent` as canonical `PROJECT_DIR` and bootstrap project-level agent/doc entry files | done | Root docs + canonical initiative tree created |
 | REQ-002 | 2026-04-12 | docs | Create structured path index, architecture summary, and CLI command-surface map before future code edits | done | `doc/index.md`, `SYSTEM_ARCHITECTURE.md`, `USER_EXPERIENCE_MAP.md` |
 | REQ-003 | 2026-04-12 | docs | Keep planning/architecture HTML companions complete and derived from canonical Markdown rather than hand-maintained summaries | done | 7 companion `.html` files regenerated from `.md` sources |
 | REQ-004 | 2026-04-12 | governance | Keep `CLAUDE.md` as the single project guidance source; `CODEX.md` and `GEMINI.md` should be thin references, not duplicated copies | done | Root mirror files reduced to canonical references |
@@ -437,7 +437,7 @@ LastUpdated: 2026-05-29
 | REQ-014 | 2026-04-12 | feature | Headless server endpoints should expose the same runtime/provider diagnostics already available in CLI surfaces | done | `src/commands/serve.ts`, `tests/serve-command.test.ts` |
 | REQ-015 | 2026-04-12 | feature | `armature stats` should evolve from cost-only output into a runtime dashboard that reuses doctor/logger signals | done | `src/commands/stats.ts`, `tests/stats-command.test.ts` |
 | REQ-016 | 2026-04-12 | branding | Active source-of-truth docs and governance files should use Armature branding while preserving the actual current repo path until the directory itself is renamed | done | `AGENTS.md`, `doc/index.md`, `doc/00_project/initiative_armature/*.md` |
-| REQ-017 | 2026-04-14 | governance | Correct canonical `PROJECT_DIR` references to `/Users/mauricewen/Projects/armature-cli` so planning docs match the real git root used for current work | done | `doc/index.md`, `SYSTEM_ARCHITECTURE.md`, `USER_EXPERIENCE_MAP.md`, task re-audit notes |
+| REQ-017 | 2026-04-14 | governance | Correct canonical `PROJECT_DIR` references to `/Users/mauricewen/Projects/armature-agent` so planning docs match the real git root used for current work | done | `doc/index.md`, `SYSTEM_ARCHITECTURE.md`, `USER_EXPERIENCE_MAP.md`, task re-audit notes |
 | REQ-018 | 2026-04-14 | ui-parity | Close the remaining behavior-accuracy gaps between Armature ink UI and CC reference behavior where the source still materially diverged | done | `ScrollBox` viewport fix, pre-paint `AlternateScreen`, Unicode cursor semantics, targeted regressions |
 | REQ-019 | 2026-04-14 | input-preprocess | Make drag-pasted file paths with spaces or file URLs reliably reach Armature's existing preprocessing pipeline | done | `chat.ts` path normalization + `tests/chat-file-expansion.test.ts` |
 | REQ-020 | 2026-04-14 | project-bootstrap | Make project-directory injection work for quoted and shell-escaped directory paths with spaces | done | `tryExpandDirectory()` hardening + directory-path regression tests |
@@ -504,7 +504,7 @@ LastUpdated: 2026-05-29
 | What does `armature serve` expose now beyond raw chat? | `/health`, `/providers`, and `/doctor` all reuse the same provider/model/runtime diagnostics as the CLI. |
 | What does `armature stats` show now beyond usage? | Runtime health and recent error summaries, sourced from doctor/logger alongside usage-db. |
 | Why is the SDK still unchanged? | These Hermes-inspired slices are still Armature-local runtime ergonomics; no reusable provider-neutral seam has been justified yet. |
-| What is the current canonical repo path? | `/Users/mauricewen/Projects/armature-cli` is the real git root and should be treated as the canonical `PROJECT_DIR` for ongoing work. |
+| What is the current canonical repo path? | `/Users/mauricewen/Projects/armature-agent` is the real git root and should be treated as the canonical `PROJECT_DIR` for ongoing work. |
 | Can Armature now understand drag-pasted file paths with spaces? | Yes for file paths: quoted paths, shell-escaped spaces, and percent-encoded `file:///` URLs now normalize into the existing file-preprocess path. |
 | Can Armature now understand project directory paths with spaces? | Yes for quoted and shell-escaped directory paths in common prompt positions; they now trigger project-context injection correctly. |
 | What security hardening was added in this review tranche? | High-risk shell-built path/git invocations were moved to `execFileSync(...args)` so user/model-controlled strings stop flowing through shell interpolation. |

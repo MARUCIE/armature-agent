@@ -1,5 +1,5 @@
 /**
- * armature-cli — Armature CLI entry point.
+ * armature-agent — Armature CLI entry point.
  *
  * Assembles the CLI program from individual commands and exports
  * both the program instance (for testing) and a run() function.

@@ -34,7 +34,7 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     expect(res!.result).toBeDefined()
     const result = res!.result as Record<string, unknown>
     expect(result.serverInfo).toEqual(
-      expect.objectContaining({ name: 'armature-cli' }),
+      expect.objectContaining({ name: 'armature-agent' }),
     )
     expect(result.capabilities).toBeDefined()
   })
@@ -69,7 +69,7 @@ describe('MCPServer: JSON-RPC 2.0 protocol', () => {
     const result = res!.result as { content: Array<{ type: string; text: string }>; isError: boolean }
     expect(result.isError).toBe(false)
     expect(result.content[0].type).toBe('text')
-    expect(result.content[0].text).toContain('armature-cli')
+    expect(result.content[0].text).toContain('armature-agent')
   })
 
   it('24.4 tools/call with unknown tool returns isError=true', async () => {

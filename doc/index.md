@@ -19,7 +19,7 @@ This file is the canonical path index for the `Armature CLI` repository.
 <!-- AI-FLEET:PATH_INDEX:START -->
 | Area | Path | Notes |
 | --- | --- | --- |
-| Project root | `/Users/mauricewen/Projects/armature-cli` | Git root and canonical `PROJECT_DIR` |
+| Project root | `/Users/mauricewen/Projects/armature-agent` | Git root and canonical `PROJECT_DIR` |
 | CLI entry | `src/bin/armature.ts` | Node executable entry point |
 | Program assembly | `src/program.ts` | Registers all top-level commands |
 | Commands | `src/commands/` | `chat`, `doctor`, `run`, `multi`, `bench`, `logs`, `providers`, `stats`, `session`, `queue`, `permissions`, `pr`, `serve`, `init`, `evolve`, workflow presets |
