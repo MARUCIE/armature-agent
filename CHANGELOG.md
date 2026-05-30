@@ -2,7 +2,7 @@
 
 This file is a historical release log. Version-specific counts and examples reflect the release date they were recorded, not the current repo head.
 
-## Unreleased — Dynamic Workflows (2026-05-30)
+## v0.8.16 — Dynamic Workflows (2026-05-30)
 
 A `workflow` tool that lets the model write a small, deterministic JavaScript
 orchestration script which fans work out across many isolated sub-agents and
