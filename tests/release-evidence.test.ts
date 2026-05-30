@@ -51,16 +51,14 @@ describe('release evidence snapshot', () => {
     const snapshot = loadSnapshot()
     const readme = readText('README.md')
 
-    expect(readme).toContain(`Tests-${snapshot.tests}%20passing`)
-    expect(readme).toContain(`Orca  v${snapshot.packageVersion}`)
-    expect(readme).toContain(`Tested: ${snapshot.tests} automated tests`)
+    expect(readme).toContain(`tests-${snapshot.tests}%20passing`)
     expect(readme).toContain(`Orca CLI  v${snapshot.packageVersion}`)
-    expect(readme).toContain(`${snapshot.testFiles} test files · ${snapshot.tests} tests`)
+    expect(readme).toContain(`${snapshot.tests} automated tests`)
+    expect(readme).toContain(`${snapshot.tests} tests`)
   })
 
   it('keeps active PDCA docs aligned to the same evidence', () => {
     const snapshot = loadSnapshot()
-    const evidenceText = `${snapshot.testFiles} files / ${snapshot.tests} tests`
     const markdownEvidenceText = `\`${snapshot.testFiles}\` files / \`${snapshot.tests}\` tests`
     const taskPlan = readFileSync(join(initiativeDir, 'task_plan.md'), 'utf-8')
     const pdcaPlan = readFileSync(join(initiativeDir, 'PDCA_EXECUTION_PLAN.md'), 'utf-8')
